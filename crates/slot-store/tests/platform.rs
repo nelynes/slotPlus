@@ -8,7 +8,7 @@ fn every_platform_has_a_directory() {
 
 #[test]
 fn every_platform_is_a_shelf_of_its_own() {
-    assert_eq!(Platform::ALL, [Platform::Gba, Platform::Gb, Platform::Gbc]);
+    assert_eq!(Platform::ALL, [Platform::Gba, Platform::Gb, Platform::Gbc, Platform::Ws]);
     for (i, p) in Platform::ALL.iter().enumerate() {
         assert!(
             !Platform::ALL[..i].contains(p),

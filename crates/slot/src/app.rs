@@ -1043,7 +1043,7 @@ impl App {
     pub fn screen_shader(&self) -> Shader {
         match self.platform {
             Platform::Gba => self.state.shader_gba,
-            Platform::Gb | Platform::Gbc => self.state.shader_gb,
+            Platform::Gb | Platform::Gbc | Platform::Ws => self.state.shader_gb,
         }
     }
 
@@ -1406,7 +1406,7 @@ impl App {
         }
         let (shader, choices) = match self.platform {
             Platform::Gba => (&mut self.state.shader_gba, &Shader::GBA[..]),
-            Platform::Gb | Platform::Gbc => (&mut self.state.shader_gb, &Shader::GB[..]),
+            Platform::Gb | Platform::Gbc | Platform::Ws => (&mut self.state.shader_gb, &Shader::GB[..]),
         };
         *shader = shader.step(choices, right);
         let said = match *shader {

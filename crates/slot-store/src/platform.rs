@@ -10,7 +10,7 @@ pub enum Platform {
 }
 
 impl Platform {
-    pub const ALL: [Platform; 3] = [Platform::Gba, Platform::Gb, Platform::Gbc, Platform::Ws];
+    pub const ALL: [Platform; 4] = [Platform::Gba, Platform::Gb, Platform::Gbc, Platform::Ws];
 
     pub fn name(self) -> &'static str {
         match self {

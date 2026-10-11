@@ -125,7 +125,9 @@ pub fn palette_for(
     rom: &Path,
     link: Option<u8>,
 ) -> Option<GbPalette> {
-    chosen.filter(|_| link.is_none() && platform != Platform::Gba && dmg_only(rom))
+    chosen.filter(|_| {
+    link.is_none() && matches!(platform, Platform::Gb | Platform::Gbc) && dmg_only(rom)
+})
 }
 
 pub fn dmg_only(rom: &Path) -> bool {
@@ -151,6 +153,7 @@ fn report_missing(core: Core, paths: &[PathBuf]) {
 pub fn colour_option(which: Core, on: bool) -> Option<(&'static str, &'static str)> {
     match which {
         Core::Mgba => Some(("mgba_color_correction", if on { "Auto" } else { "OFF" })),
+        Core::Cygne => None,
         Core::Gpsp => Some((
             "gpsp_color_correction",
             if on { "enabled" } else { "disabled" },
