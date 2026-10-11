@@ -28,6 +28,10 @@ impl Core {
         self as usize
     }
 
+    pub fn choices(platform: Platform) -> Vec<Core> {
+         Core::ALL.into_iter().filter(|c| c.runs(platform)).collect()
+    }
+
     pub fn text(self) -> &'static str {
         match self {
             Core::Mgba => "mGBA",

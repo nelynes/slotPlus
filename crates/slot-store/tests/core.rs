@@ -199,6 +199,20 @@ fn a_line_naming_a_core_the_platform_cannot_run_is_dropped() {
 }
 
 #[test]
+fn the_picker_board_has_one_socket_per_core_that_runs_the_cart() {
+    assert_eq!(Core::choices(Platform::Gba), vec![Core::Mgba, Core::Gpsp]);
+    assert_eq!(Core::choices(Platform::Gb), vec![Core::Mgba]);
+    assert_eq!(Core::choices(Platform::Gbc), vec![Core::Mgba]);
+    assert_eq!(Core::choices(Platform::Ws), vec![Core::Cygne]);
+}
+#[test]
 fn the_picker_board_has_exactly_two_sockets() {
-    assert_eq!(Core::ALL.len(), 2);
+    assert_eq!(Core::choices(Platform::Gba).len(), 2);
+}
+
+#[test]
+fn only_gba_carts_have_a_core_choice() {
+    assert_eq!(Core::choices(Platform::Gb), vec![Core::Mgba]);
+    assert_eq!(Core::choices(Platform::Gbc), vec![Core::Mgba]);
+    assert_eq!(Core::choices(Platform::Ws), vec![Core::Cygne]);
 }

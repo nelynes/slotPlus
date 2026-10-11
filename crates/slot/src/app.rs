@@ -2685,6 +2685,9 @@ impl App {
         if self.link_active() {
             return self.refuse();
         }
+        if self.core == Core::Cygne {
+        return self.refuse();
+        }
         if self.core == Core::Mgba {
             let wireless = self
                 .seated()
