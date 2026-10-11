@@ -34,7 +34,7 @@ impl Platform {
         match self {
             Platform::Gba => &["gba"],
             Platform::Gb | Platform::Gbc => &["gb", "gbc"],
-            Platform::Ws => &["ws"],
+            Platform::Ws => &["ws", "wsc"],
         }
     }
 

@@ -157,3 +157,19 @@ fn the_same_stem_on_two_platforms_is_two_carts_with_two_labels() {
         "the GBA cart borrowed the Game Boy label"
     );
 }
+
+#[test]
+fn wonderswan_roms_scan_into_their_own_platform() {
+    let root = std::env::temp_dir().join(format!("slot-ws-scan-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    let dir = root.join("Games").join("WS");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("Test Game.ws"), b"rom").unwrap();
+    std::fs::write(dir.join("Colour Game.WSC"), b"rom").unwrap();
+
+    let carts = slot_store::scan(&root).unwrap();
+    std::fs::remove_dir_all(&root).ok();
+
+    assert_eq!(carts.len(), 2);
+    assert!(carts.iter().all(|c| c.platform == slot_store::Platform::Ws));
+}
