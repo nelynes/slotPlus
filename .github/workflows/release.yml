@@ -40,6 +40,10 @@ jobs:
           gpsp_src_sha="$(cat vendor/gpsp-src.sha)"
           test -f "$out/System/licenses/gpsp-${gpsp_src_sha}.tar.gz"
           test -f "$out/System/licenses/gpsp-${gpsp_src_sha}.meta"
+          file "$out/System/cygne_libretro.so" | grep -q aarch64
+          cygne_src_sha="$(cat vendor/cygne-src.sha)"
+          test -f "$out/System/licenses/cygne-${cygne_src_sha}.tar.gz"
+          test -f "$out/System/licenses/cygne-${cygne_src_sha}.meta"
           for p in cores/gpsp/*.patch; do
             test -f "$out/System/licenses/gpsp-$(basename "$p")"
           done
