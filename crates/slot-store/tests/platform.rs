@@ -3,7 +3,7 @@ use slot_store::Platform;
 #[test]
 fn every_platform_has_a_directory() {
     let names: Vec<&str> = Platform::ALL.iter().map(|p| p.dir_name()).collect();
-    assert_eq!(names, vec!["GBA", "GB", "GBC"]);
+    assert_eq!(names, vec!["GBA", "GB", "GBC", "WS"]);
 }
 
 #[test]
