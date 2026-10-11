@@ -349,11 +349,9 @@ tasks:
       - 'echo "device tree ready at {{.OUT}}, copy its contents to SD2"'
       - |
         set -euo pipefail
-        commit="$(grep '^commit=' vendor/cygne_libretro.so.meta | cut -d= -f2)"
-        cp vendor/cygne_libretro.so.meta "{{.OUT}}/System/licenses/cygne-${commit}.meta"
-        for p in cores/cygne/*.patch; do
-          cp "$p" "{{.OUT}}/System/licenses/cygne-$(basename "$p")"
-        done
+        sha="$(cat vendor/cygne-src.sha)"
+        cp vendor/cygne-src.tar.gz "{{.OUT}}/System/licenses/cygne-${sha}.tar.gz"
+        cp vendor/cygne-src.meta "{{.OUT}}/System/licenses/cygne-${sha}.meta"
       - 'echo "device tree ready at {{.OUT}}, copy its contents to SD2"'
 
   deploy:device:
@@ -389,11 +387,9 @@ tasks:
         done
       - |
         set -euo pipefail
-        commit="$(grep '^commit=' vendor/cygne_libretro.so.meta | cut -d= -f2)"
-        adb push vendor/cygne_libretro.so.meta "{{.SD}}/System/licenses/cygne-${commit}.meta"
-        for p in cores/cygne/*.patch; do
-          adb push "$p" "{{.SD}}/System/licenses/cygne-$(basename "$p")"
-        done
+        sha="$(cat vendor/cygne-src.sha)"
+        adb push vendor/cygne-src.tar.gz "{{.SD}}/System/licenses/cygne-${sha}.tar.gz"
+        adb push vendor/cygne-src.meta "{{.SD}}/System/licenses/cygne-${sha}.meta"
       - adb shell 'chmod +x {{.SD}}/System/slot && sync'
       - adb reboot
       - adb wait-for-device
