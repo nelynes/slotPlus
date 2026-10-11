@@ -852,7 +852,8 @@ impl App {
     }
 
     fn slot_owns_the_shoulders(&self) -> bool {
-        matches!(self.phase, Phase::Playing { .. }) && self.platform != Platform::Gba
+        matches!(self.phase, Phase::Playing { .. })
+            && matches!(self.platform, Platform::Gb | Platform::Gbc)
     }
 
     pub fn taken_buttons(&self) -> &'static [Btn] {
@@ -1406,7 +1407,9 @@ impl App {
         }
         let (shader, choices) = match self.platform {
             Platform::Gba => (&mut self.state.shader_gba, &Shader::GBA[..]),
-            Platform::Gb | Platform::Gbc | Platform::Ws => (&mut self.state.shader_gb, &Shader::GB[..]),
+            Platform::Gb | Platform::Gbc | Platform::Ws => {
+                (&mut self.state.shader_gb, &Shader::GB[..])
+            }
         };
         *shader = shader.step(choices, right);
         let said = match *shader {
@@ -2686,7 +2689,7 @@ impl App {
             return self.refuse();
         }
         if self.core == Core::Cygne {
-        return self.refuse();
+            return self.refuse();
         }
         if self.core == Core::Mgba {
             let wireless = self

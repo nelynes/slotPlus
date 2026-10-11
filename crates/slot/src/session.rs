@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use slot_input::{Action, Gestures, Millis, RawEvent};
 use slot_retro::Rumble;
-use slot_store::Platform;
+use slot_store::{Core, Platform};
 use slot_ui::FfState;
 
 pub const RUMBLE_MIN_MS: Millis = 100;
@@ -169,7 +169,12 @@ impl Session {
             self.pad.apply(Action::GbaUp(*btn));
         }
         if let Some(emu) = &self.emu {
-            emu.set_input(self.pad.mask());
+            let mask = self.pad.mask();
+            let mask = match self.app.core() {
+                Core::Cygne => mask.wonderswan(),
+                _ => mask,
+            };
+            emu.set_input(mask);
         }
     }
 

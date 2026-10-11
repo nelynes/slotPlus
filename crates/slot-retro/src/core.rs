@@ -23,6 +23,50 @@ impl ButtonMask {
     pub const X: u16 = 1 << 9;
     pub const L: u16 = 1 << 10;
     pub const R: u16 = 1 << 11;
+    pub const L2: u16 = 1 << 12;
+    pub const R2: u16 = 1 << 13;
+
+    /// WonderSwan has two four-way pads. The X pad is the D-pad as usual; the
+    /// Y pad is reached through a shoulder-button modifier, because the SP has
+    /// no spare buttons for it. Cygne reads the Y pad as R2 (up), R (right),
+    /// L2 (down) and L (left).
+    ///
+    /// - L held: the D-pad drives the Y pad instead of the X pad.
+    /// - R held: the face diamond (X up, A right, B down, Y left) drives the Y
+    ///   pad instead of acting as A, B and the turbo buttons.
+    ///
+    /// L and R are modifiers only and never reach the core as themselves.
+    pub fn wonderswan(self) -> ButtonMask {
+        let held = |bit: u16| self.0 & bit != 0;
+        let mut out = self.0 & !(Self::L | Self::R);
+        if held(Self::L) {
+            out &= !(Self::UP | Self::DOWN | Self::LEFT | Self::RIGHT);
+            for (from, to) in [
+                (Self::UP, Self::R2),
+                (Self::RIGHT, Self::R),
+                (Self::DOWN, Self::L2),
+                (Self::LEFT, Self::L),
+            ] {
+                if held(from) {
+                    out |= to;
+                }
+            }
+        }
+        if held(Self::R) {
+            out &= !(Self::X | Self::A | Self::B | Self::Y);
+            for (from, to) in [
+                (Self::X, Self::R2),
+                (Self::A, Self::R),
+                (Self::B, Self::L2),
+                (Self::Y, Self::L),
+            ] {
+                if held(from) {
+                    out |= to;
+                }
+            }
+        }
+        ButtonMask(out)
+    }
 
     pub fn without_turbo(self) -> ButtonMask {
         ButtonMask(self.0 & !(Self::X | Self::Y))
