@@ -12,6 +12,12 @@
 
 ---
 
+# What is slotPlus?
+
+A slightly modified Slot. Has support for GBA, GBC, and GB titles as well as WonderSwan and WonderSwan Color.
+
+---
+
 # What is slot?
 
 A bespoke, Game Boy-centric frontend for the Anbernic RG SP.
