@@ -1,5 +1,5 @@
 use slot_gfx::{Draw, TexId, OUT_H, OUT_W};
-use slot_store::Cart;
+use slot_store::{Cart, Platform};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::cart::{cart_box, gb_shell_of, label_colour, label_text, CART_H, CART_W};
@@ -52,6 +52,7 @@ pub struct Shelf {
     shadow: Option<TexId>,
     gb_shadow: Option<TexId>,
     gbc_shadow: Option<TexId>,
+    ws_shadow: Option<TexId>,
     shells: Vec<Option<GbShell>>,
     ride: f32,
     vel: f32,
@@ -69,6 +70,7 @@ impl Shelf {
             shadow: None,
             gb_shadow: None,
             gbc_shadow: None,
+            ws_shadow: None,
             ride: 0.0,
             vel: 0.0,
             held: None,
@@ -84,6 +86,10 @@ impl Shelf {
 
     pub fn set_shadow(&mut self, face: TexId) {
         self.shadow = Some(face);
+    }
+
+    pub fn set_ws_shadow(&mut self, face: TexId) {
+        self.ws_shadow = Some(face);
     }
 
     pub fn set_gb_shadow(&mut self, shell: GbShell, face: TexId) {
@@ -334,10 +340,14 @@ impl Shelf {
             let x = x + shake;
             let y = foot_y(ch as f32) - h;
             if alpha < 1.0 {
-                let backing = match self.shells.get(i).copied().flatten() {
-                    None => self.shadow,
-                    Some(GbShell::Notched) => self.gb_shadow,
-                    Some(GbShell::Rounded) => self.gbc_shadow,
+                let backing = if cart.platform == Platform::Ws {
+                    self.ws_shadow
+                } else {
+                    match self.shells.get(i).copied().flatten() {
+                        None => self.shadow,
+                        Some(GbShell::Notched) => self.gb_shadow,
+                        Some(GbShell::Rounded) => self.gbc_shadow,
+                    }
                 };
                 if let Some(tex) = backing {
                     out.push(Draw::Tex {

@@ -4,8 +4,8 @@ use slot_store::{Cart, Outline, Platform};
 use crate::art;
 use crate::shell::{shell_for, Finish, Shell};
 use crate::silhouette::{
-    cart_depth, cart_mask, detail_mask, gb_cart_depth, gb_cart_mask, gb_detail_mask, Detail,
-    GbShell,
+    cart_depth, cart_mask, detail_mask, gb_cart_depth, gb_cart_mask, gb_detail_mask, ws_cart_depth,
+    ws_cart_mask, ws_detail_mask, Detail, GbShell,
 };
 use crate::text;
 
@@ -44,14 +44,35 @@ pub const GB_LABEL_Y: u32 = gb_label_panel(GB_CART_W, GB_CART_H).1;
 pub const GB_LABEL_W: u32 = gb_label_panel(GB_CART_W, GB_CART_H).2 - GB_LABEL_X;
 pub const GB_LABEL_H: u32 = gb_label_panel(GB_CART_W, GB_CART_H).3 - GB_LABEL_Y;
 
+// WonderSwan: a 66 x 41 mm shell, drawn at 352 wide so it stays no taller than
+// a GBA cart and shares its foot line on the shelf.
+pub const WS_CART_W: u32 = 352;
+pub const WS_CART_H: u32 = (WS_CART_W * WS_SEATED_H + SEATED_W / 2) / SEATED_W;
+
+pub const fn ws_label_panel(w: u32, h: u32) -> (u32, u32, u32, u32) {
+    (
+        (w * 34 + 500) / 1000,
+        (h * 144 + 500) / 1000,
+        (w * 966 + 500) / 1000,
+        (h * 728 + 500) / 1000,
+    )
+}
+
+pub const WS_LABEL_X: u32 = ws_label_panel(WS_CART_W, WS_CART_H).0;
+pub const WS_LABEL_Y: u32 = ws_label_panel(WS_CART_W, WS_CART_H).1;
+pub const WS_LABEL_W: u32 = ws_label_panel(WS_CART_W, WS_CART_H).2 - WS_LABEL_X;
+pub const WS_LABEL_H: u32 = ws_label_panel(WS_CART_W, WS_CART_H).3 - WS_LABEL_Y;
+
 const PAD: u32 = 10;
 const MAX_LINES: usize = 3;
 const MAX_PX: f32 = LABEL_H as f32 / (MAX_LINES as f32 * 1.36);
+const WS_MAX_PX: f32 = WS_LABEL_H as f32 / (MAX_LINES as f32 * 1.36);
 const GB_MAX_PX: f32 = (GB_LABEL_H - 2 * PAD) as f32 / MAX_LINES as f32;
 const MIN_PX: f32 = 10.0;
 
 const RIM: u32 = (4 * CART_W + SEATED_W / 2) / SEATED_W;
 const GB_RIM: u32 = (7 * GB_CART_W + SEATED_W / 2) / SEATED_W;
+const WS_RIM: u32 = (4 * WS_CART_W + SEATED_W / 2) / SEATED_W;
 
 pub struct CartFace {
     pub rgba: Vec<u8>,
@@ -83,6 +104,7 @@ struct Board {
 enum Shape {
     Gba,
     Gb(GbShell),
+    Ws,
 }
 
 pub fn gb_shell_of(cart: &Cart) -> Option<GbShell> {
@@ -100,6 +122,9 @@ pub fn gb_shell_of(cart: &Cart) -> Option<GbShell> {
 }
 
 fn shape_of(cart: &Cart) -> Shape {
+    if cart.platform == Platform::Ws {
+        return Shape::Ws;
+    }
     match gb_shell_of(cart) {
         None => Shape::Gba,
         Some(shell) => Shape::Gb(shell),
@@ -126,6 +151,24 @@ fn spec(shape: Shape) -> Spec {
                 traces_from: 0.76,
             },
         },
+        Shape::Ws => Spec {
+            w: WS_CART_W,
+            h: WS_CART_H,
+            label: (WS_LABEL_X, WS_LABEL_Y, WS_LABEL_W, WS_LABEL_H),
+            mask: ws_cart_mask(),
+            depth: ws_cart_depth(),
+            detail: ws_detail_mask(),
+            max_px: WS_MAX_PX,
+            max_h: f32::INFINITY,
+            rim: WS_RIM,
+            board: Board {
+                x: (0.04, 0.96),
+                top: WS_LABEL_Y as f32 / WS_CART_H as f32,
+                pins: (0.07, 0.926),
+                contacts_from: 0.84,
+                traces_from: 0.78,
+            },
+        },
         Shape::Gb(shell) => Spec {
             w: GB_CART_W,
             h: GB_CART_H,
@@ -150,17 +193,20 @@ fn spec(shape: Shape) -> Spec {
 pub const SEATED_W: u32 = 240;
 const SEATED_H: u32 = 141;
 const GB_SEATED_H: u32 = 259;
+const WS_SEATED_H: u32 = 144;
 
 pub fn seated_box(platform: Platform) -> (u32, u32) {
     match platform {
-        Platform::Gba | Platform::Ws => (SEATED_W, SEATED_H),
+        Platform::Gba => (SEATED_W, SEATED_H),
+        Platform::Ws => (SEATED_W, WS_SEATED_H),
         Platform::Gb | Platform::Gbc => (SEATED_W, GB_SEATED_H),
     }
 }
 
 pub fn cart_box(platform: Platform) -> (u32, u32) {
     let s = spec(match platform {
-        Platform::Gba | Platform::Ws => Shape::Gba,
+        Platform::Gba => Shape::Gba,
+        Platform::Ws => Shape::Ws,
         Platform::Gb | Platform::Gbc => Shape::Gb(GbShell::Notched),
     });
     (s.w, s.h)
@@ -168,6 +214,10 @@ pub fn cart_box(platform: Platform) -> (u32, u32) {
 
 pub fn cart_shadow() -> CartFace {
     shadow(CART_W, CART_H, cart_mask())
+}
+
+pub fn ws_cart_shadow() -> CartFace {
+    shadow(WS_CART_W, WS_CART_H, ws_cart_mask())
 }
 
 pub fn gb_cart_shadow(shell: GbShell) -> CartFace {

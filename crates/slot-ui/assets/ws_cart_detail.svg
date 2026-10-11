@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 144">
+  <defs>
+    <g id="mark">
+      <rect x="66" y="2" width="108" height="13.5" rx="6.75"/>
+    </g>
+    <g id="step">
+      <rect x="6.5" y="112" width="227" height="1.5"/>
+    </g>
+  </defs>
+  <g fill="#fff">
+    <use href="#mark" x="1" y="1"/>
+    <use href="#step" y="1.2"/>
+  </g>
+  <g fill="#000">
+    <use href="#mark"/>
+    <use href="#step"/>
+  </g>
+</svg>

@@ -1,7 +1,9 @@
 use std::sync::OnceLock;
 
-use crate::cart::{CART_H, CART_W, GB_CART_H, GB_CART_W};
+use crate::cart::{CART_H, CART_W, GB_CART_H, GB_CART_W, WS_CART_H, WS_CART_W};
 
+const WS_CART_SVG: &str = include_str!("../assets/ws_cart.svg");
+const WS_DETAIL_SVG: &str = include_str!("../assets/ws_cart_detail.svg");
 const CART_SVG: &str = include_str!("../assets/cart.svg");
 const DETAIL_SVG: &str = include_str!("../assets/cart_detail.svg");
 const GB_CART_SVG: &str = include_str!("../assets/gb_cart.svg");
@@ -40,6 +42,27 @@ pub(crate) fn gb_cart_mask(shell: GbShell) -> &'static [u8] {
         GbShell::Rounded => &ROUNDED,
     };
     lock.get_or_init(|| gb_silhouette(shell, GB_CART_W, GB_CART_H))
+}
+
+pub(crate) fn ws_cart_mask() -> &'static [u8] {
+    static MASK: OnceLock<Vec<u8>> = OnceLock::new();
+    MASK.get_or_init(|| {
+        rasterise_svg(WS_CART_SVG, WS_CART_W, WS_CART_H)
+            .unwrap_or_else(|| vec![255; (WS_CART_W * WS_CART_H) as usize])
+    })
+}
+
+pub(crate) fn ws_cart_depth() -> &'static [u8] {
+    static DEPTH: OnceLock<Vec<u8>> = OnceLock::new();
+    DEPTH.get_or_init(|| depth_map(ws_cart_mask(), WS_CART_W as usize, WS_CART_H as usize))
+}
+
+pub(crate) fn ws_detail_mask() -> &'static Detail {
+    static MASK: OnceLock<Detail> = OnceLock::new();
+    MASK.get_or_init(|| {
+        rasterise_detail(WS_DETAIL_SVG, WS_CART_W, WS_CART_H)
+            .unwrap_or_else(|| Detail::blank(WS_CART_W, WS_CART_H))
+    })
 }
 
 pub(crate) fn cart_depth() -> &'static [u8] {
