@@ -29,7 +29,7 @@ impl Core {
     }
 
     pub fn choices(platform: Platform) -> Vec<Core> {
-         Core::ALL.into_iter().filter(|c| c.runs(platform)).collect()
+        Core::ALL.into_iter().filter(|c| c.runs(platform)).collect()
     }
 
     pub fn text(self) -> &'static str {

@@ -23,7 +23,7 @@ A slightly modified Slot. Has support for GBA, GBC, and GB titles as well as Won
 - **Core:** WonderSwan games run on Beetle WonderSwan (Cygne). The core picker and the link menu are GBA-only, so neither opens for WonderSwan games.
 - **Carts:** WonderSwan carts have their own wide shape with a stepped plug, and default to a smoke-translucent shell. Set `Config/cart_shell.txt` to give a single game a different shell.
 
-### Controls
+### Controls (horizontal games)
 
 The WonderSwan has two sets of four direction buttons: the X pad (left side) and the Y pad (right side).
 
@@ -38,8 +38,17 @@ The WonderSwan has two sets of four direction buttons: the X pad (left side) and
 
 Turbo and the picture-mode shortcuts are turned off for WonderSwan games, so L1 and R1 are free to act as the Y-pad modifiers.
 
+### Vertical games
+
+Games made for vertical play are recognised from the ROM. Play them one of two ways:
+
+- **Device upright:** press SELECT and the picture turns upright (it shows at 2x with black bars at the sides).
+- **Device turned 90 degrees counter-clockwise:** leave the picture sideways at full size.
+
+Either way the D-pad is the Y pad, the four face buttons are the X pad, L1 is A and R1 is B. Upright, D-pad up is up in the game. Turned sideways, the buttons keep the WonderSwan's own directions. The L1 / R1 Y-pad modifiers above are for horizontal games only.
+
 > [!NOTE]
-> Press SELECT to rotate a game. The whole vertical picture shows on screen. The L1 / R1 Y-pad modifiers haven't been tested much in vertical play yet, so if the controls feel wrong after rotating, please open an issue.
+> Vertical controls are new and have had little testing. If something feels wrong, please open an issue.
 
 ---
 

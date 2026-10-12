@@ -865,6 +865,11 @@ impl App {
         self.portrait = shown.1 > shown.0;
     }
 
+    /// Whether the core is drawing a frame taller than wide.
+    pub fn frame_is_tall(&self) -> bool {
+        self.portrait
+    }
+
     fn portrait(&self) -> bool {
         self.portrait && self.platform == Platform::Ws
     }

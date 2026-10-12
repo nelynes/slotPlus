@@ -202,6 +202,11 @@ pub fn apply_core_options(
             core.set_option(key, value);
         }
     }
+    if which == Core::Cygne {
+        // Slot does all the button mapping, so the core must always read the
+        // landscape map whatever way up it draws the picture.
+        core.set_option("wswan_rotate_keymap", "disabled");
+    }
     if which == Core::Gpsp {
         core.set_option("gpsp_serial", serial);
         core.set_option("gpsp_rtc_time_source", "system");

@@ -8,6 +8,7 @@ slotPlus: Slot 1.6.0 plus WonderSwan.
 - WonderSwan carts have their own wide shape with a stepped plug, a wide label (art goes in `Labels/WS/`), and a smoke-translucent default shell.
 - The WonderSwan's Y pad is reachable: hold L1 and the D-pad becomes the Y pad, hold R1 and X / A / B / Y become the Y pad.
 - Turbo and the picture-mode shortcuts are off for WonderSwan games so the shoulder buttons can act as modifiers. SELECT toggles the screen between horizontal and vertical.
+- Vertical games get their own buttons: the D-pad is the Y pad, the face buttons are the X pad, L1 is A and R1 is B. The mapping follows whether the picture is upright (SELECT) or the device is turned counter-clockwise.
 - Vertical games fit the screen: the whole picture shows at 2x with black bars at the sides. GBA, GB and GBC are unchanged.
 - The `WS` folders under `Games`, `Labels`, `Saves` and `States` are created for you on first boot.
 - The core picker works again on GBA games.

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use slot_input::{Action, Gestures, Millis, RawEvent};
-use slot_retro::Rumble;
+use slot_retro::{Rumble, WsLayout};
 use slot_store::{Core, Platform};
 use slot_ui::FfState;
 
@@ -32,6 +32,7 @@ pub struct Session {
     prefetch: Prefetch,
     reloading: bool,
     driven: bool,
+    ws_vertical: bool,
 }
 
 impl Session {
@@ -54,6 +55,7 @@ impl Session {
             prefetch: Prefetch::default(),
             reloading: false,
             driven: false,
+            ws_vertical: false,
         }
     }
 
@@ -171,10 +173,18 @@ impl Session {
         if let Some(emu) = &self.emu {
             let mask = self.pad.mask();
             let mask = match self.app.core() {
-                Core::Cygne => mask.wonderswan(),
+                Core::Cygne => mask.wonderswan_for(self.ws_layout()),
                 _ => mask,
             };
             emu.set_input(mask);
+        }
+    }
+
+    fn ws_layout(&self) -> WsLayout {
+        match (self.ws_vertical, self.app.frame_is_tall()) {
+            (false, _) => WsLayout::Horizontal,
+            (true, true) => WsLayout::Upright,
+            (true, false) => WsLayout::Sideways,
         }
     }
 
@@ -464,6 +474,7 @@ impl Session {
         );
         self.app.set_named_core(opened.named);
         launch("core opened");
+        self.ws_vertical = platform == Platform::Ws && slot_store::ws_vertical(&rom);
         let sav = persist::read_sav(&self.root, platform, stem);
         launch("save read");
         let ring = self.sink.ring();

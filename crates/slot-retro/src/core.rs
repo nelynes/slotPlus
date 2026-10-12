@@ -68,6 +68,66 @@ impl ButtonMask {
         ButtonMask(out)
     }
 
+    /// The WonderSwan remap for a game laid out `layout`. Horizontal games
+    /// use the shoulder-modifier scheme above. Vertical games drop the
+    /// modifiers: the D-pad is the Y pad, the face diamond is the X pad and
+    /// the shoulders are A (L) and B (R), as in the core's own portrait map.
+    /// The core is told to read the landscape map, so this is the only mapping.
+    pub fn wonderswan_for(self, layout: WsLayout) -> ButtonMask {
+        let held = |bit: u16| self.0 & bit != 0;
+        let sideways = match layout {
+            WsLayout::Horizontal => return self.wonderswan(),
+            WsLayout::Upright => false,
+            WsLayout::Sideways => true,
+        };
+        let mut out = self.0 & (Self::SELECT | Self::START);
+        // Y pad is R2 (up), R (right), L2 (down), L (left) as the core sees it.
+        // Turned upright, the game's up is the hardware's Y-right, and so on.
+        let (dpad, face) = if sideways {
+            (
+                [
+                    (Self::UP, Self::R2),
+                    (Self::RIGHT, Self::R),
+                    (Self::DOWN, Self::L2),
+                    (Self::LEFT, Self::L),
+                ],
+                [
+                    (Self::X, Self::UP),
+                    (Self::A, Self::RIGHT),
+                    (Self::B, Self::DOWN),
+                    (Self::Y, Self::LEFT),
+                ],
+            )
+        } else {
+            (
+                [
+                    (Self::UP, Self::R),
+                    (Self::RIGHT, Self::L2),
+                    (Self::DOWN, Self::L),
+                    (Self::LEFT, Self::R2),
+                ],
+                [
+                    (Self::X, Self::RIGHT),
+                    (Self::A, Self::DOWN),
+                    (Self::B, Self::LEFT),
+                    (Self::Y, Self::UP),
+                ],
+            )
+        };
+        for (from, to) in dpad.into_iter().chain(face) {
+            if held(from) {
+                out |= to;
+            }
+        }
+        if held(Self::L) {
+            out |= Self::A;
+        }
+        if held(Self::R) {
+            out |= Self::B;
+        }
+        ButtonMask(out)
+    }
+
     pub fn without_turbo(self) -> ButtonMask {
         ButtonMask(self.0 & !(Self::X | Self::Y))
     }
@@ -84,6 +144,18 @@ impl ButtonMask {
         }
         ButtonMask(mask)
     }
+}
+
+/// How a WonderSwan game wants to be played.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum WsLayout {
+    /// A horizontal game.
+    Horizontal,
+    /// A vertical game shown upright on a device that stays upright.
+    Upright,
+    /// A vertical game shown sideways on a device turned 90 degrees
+    /// counter-clockwise.
+    Sideways,
 }
 
 #[derive(Copy, Clone, Debug)]

@@ -82,3 +82,103 @@ fn y_pad_bits_match_libretros_joypad_ids() {
     assert_eq!(ButtonMask::L2, 1 << 12);
     assert_eq!(ButtonMask::R2, 1 << 13);
 }
+
+mod vertical {
+    use slot_retro::{ButtonMask, WsLayout};
+
+    fn upright(held: u16) -> u16 {
+        ButtonMask(held).wonderswan_for(WsLayout::Upright).0
+    }
+
+    fn sideways(held: u16) -> u16 {
+        ButtonMask(held).wonderswan_for(WsLayout::Sideways).0
+    }
+
+    #[test]
+    fn a_horizontal_game_keeps_the_modifier_scheme() {
+        for held in [
+            ButtonMask::UP | ButtonMask::A,
+            ButtonMask::L | ButtonMask::LEFT,
+            ButtonMask::R | ButtonMask::X,
+            ButtonMask::X | ButtonMask::Y,
+        ] {
+            assert_eq!(
+                ButtonMask(held).wonderswan_for(WsLayout::Horizontal),
+                ButtonMask(held).wonderswan()
+            );
+        }
+    }
+
+    #[test]
+    fn upright_the_dpad_is_the_y_pad_turned_so_up_is_the_games_up() {
+        // The game's up is the hardware's Y-right, its right is Y-down, and so on.
+        for (dpad, y) in [
+            (ButtonMask::UP, ButtonMask::R),
+            (ButtonMask::RIGHT, ButtonMask::L2),
+            (ButtonMask::DOWN, ButtonMask::L),
+            (ButtonMask::LEFT, ButtonMask::R2),
+        ] {
+            assert_eq!(upright(dpad), y);
+        }
+    }
+
+    #[test]
+    fn upright_the_face_diamond_is_the_x_pad_turned_the_same_way() {
+        for (face, x) in [
+            (ButtonMask::X, ButtonMask::RIGHT),
+            (ButtonMask::A, ButtonMask::DOWN),
+            (ButtonMask::B, ButtonMask::LEFT),
+            (ButtonMask::Y, ButtonMask::UP),
+        ] {
+            assert_eq!(upright(face), x);
+        }
+    }
+
+    #[test]
+    fn sideways_the_dpad_and_face_diamond_keep_the_hardware_directions() {
+        for (dpad, y) in [
+            (ButtonMask::UP, ButtonMask::R2),
+            (ButtonMask::RIGHT, ButtonMask::R),
+            (ButtonMask::DOWN, ButtonMask::L2),
+            (ButtonMask::LEFT, ButtonMask::L),
+        ] {
+            assert_eq!(sideways(dpad), y);
+        }
+        for (face, x) in [
+            (ButtonMask::X, ButtonMask::UP),
+            (ButtonMask::A, ButtonMask::RIGHT),
+            (ButtonMask::B, ButtonMask::DOWN),
+            (ButtonMask::Y, ButtonMask::LEFT),
+        ] {
+            assert_eq!(sideways(face), x);
+        }
+    }
+
+    #[test]
+    fn the_shoulders_are_a_and_b_whichever_way_up() {
+        for f in [upright, sideways] {
+            assert_eq!(f(ButtonMask::L), ButtonMask::A);
+            assert_eq!(f(ButtonMask::R), ButtonMask::B);
+            assert_eq!(
+                f(ButtonMask::L | ButtonMask::R),
+                ButtonMask::A | ButtonMask::B
+            );
+        }
+    }
+
+    #[test]
+    fn start_and_select_pass_straight_through() {
+        for f in [upright, sideways] {
+            assert_eq!(f(ButtonMask::START), ButtonMask::START);
+            assert_eq!(f(ButtonMask::SELECT), ButtonMask::SELECT);
+        }
+    }
+
+    #[test]
+    fn nothing_is_left_for_turbo_in_a_vertical_game() {
+        for f in [upright, sideways] {
+            let out = f(ButtonMask::X | ButtonMask::Y | ButtonMask::A | ButtonMask::B);
+            assert_eq!(out & (ButtonMask::X | ButtonMask::Y), 0);
+        }
+    }
+}
