@@ -46,14 +46,14 @@ fn upload_faces(app: &mut App, c: &mut Compositor) {
     let rounded = tex(c, rounded.w, rounded.h, &rounded.rgba);
     app.set_gb_cart_shadows(notched, rounded);
 
-    let sockets = Core::ALL
+    let sockets = Core::choices(slot_store::Platform::Gba)
         .iter()
         .map(|k| {
             let f = socket_face(*k);
             tex(c, f.w, f.h, &f.rgba)
         })
         .collect();
-    let chips = Core::ALL
+    let chips = Core::choices(slot_store::Platform::Gba)
         .iter()
         .map(|k| {
             let f = chip_face(Some(*k));

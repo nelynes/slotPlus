@@ -2249,7 +2249,13 @@ impl App {
                     alpha: 1.0,
                 });
             }
-            for (i, tex) in self.core_socket_faces.iter().copied().enumerate() {
+            for (i, tex) in self
+                .core_socket_faces
+                .iter()
+                .copied()
+                .enumerate()
+                .take(SOCKET_U.len())
+            {
                 let (x, y) = on_board(board, SOCKET_U[i], SOCKET_V);
                 out.push(Draw::Tex {
                     x: x.round(),

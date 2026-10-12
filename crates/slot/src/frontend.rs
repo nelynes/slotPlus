@@ -602,11 +602,11 @@ impl UiFaces {
                 .collect(),
             quick_carets: [false, true].map(quick_caret_face),
             quick_legend: quick_legend_faces(),
-            sockets: slot_store::Core::ALL
+            sockets: slot_store::Core::choices(slot_store::Platform::Gba)
                 .iter()
                 .map(|c| socket_face(*c))
                 .collect(),
-            chips: slot_store::Core::ALL
+            chips: slot_store::Core::choices(slot_store::Platform::Gba)
                 .iter()
                 .map(|c| chip_face(Some(*c)))
                 .collect(),
