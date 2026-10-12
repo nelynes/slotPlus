@@ -140,7 +140,7 @@ tasks:
       ROOT: '{{.ROOT | default "./sdcard"}}'
     cmds:
       - ./target/debug/slot --init-root {{.ROOT}}
-      - 'echo "content root ready at {{.ROOT}}: roms in Games/GBA, Games/GB or Games/GBC, labels in the matching Labels/GBA, Labels/GB or Labels/GBC, battery saves in the matching Saves/GBA, Saves/GB or Saves/GBC, save states under the matching States/GBA, States/GB or States/GBC, gba_bios.bin in BIOS, pngs in Wallpapers, palette in Config/theme.txt"'
+      - 'echo "content root ready at {{.ROOT}}: roms in Games/GBA, Games/GB, Games/GBC or Games/WS, labels in the matching Labels/GBA, Labels/GB, Labels/GBC or Labels/WS, battery saves in the matching Saves/GBA, Saves/GB, Saves/GBC or Saves/WS, save states under the matching States/GBA, States/GB, States/GBC or States/WS, gba_bios.bin in BIOS, pngs in Wallpapers, palette in Config/theme.txt"'
       - 'echo "nothing is moved for you: a file loose at the top of Games/, Saves/, Labels/ or States/ is left where it is and never reaches the shelf"'
 
   run:

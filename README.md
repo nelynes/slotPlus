@@ -18,7 +18,7 @@ A slightly modified Slot. Has support for GBA, GBC, and GB titles as well as Won
 
 ## WonderSwan / WonderSwan Color
 
-- **Games:** put `.ws` and `.wsc` files in `Games/WS/`. They get their own shelf next to GBA, GB and GBC.
+- **Games:** put `.ws` and `.wsc` files in `Games/WS/`. They get their own shelf next to GBA, GB and GBC. The `WS` folders (`Games`, `Labels`, `Saves`, `States`) are created for you on first boot.
 - **Label art:** optional PNGs go in `Labels/WS/<game name>.png`, roughly 328x124 px (about 2.65:1).
 - **Core:** WonderSwan games run on Beetle WonderSwan (Cygne). The core picker and the link menu are GBA-only, so neither opens for WonderSwan games.
 - **Carts:** WonderSwan carts have their own wide shape with a stepped plug, and default to a smoke-translucent shell. Set `Config/cart_shell.txt` to give a single game a different shell.
