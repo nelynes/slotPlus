@@ -174,6 +174,15 @@ pub fn apply_link_options(core: &mut LibretroCore, which: Core, player: u8) {
     eprintln!("slot: core: link mode on, player {player}");
 }
 
+/// The prefix a core puts on its option keys. It is not always the core's own
+/// name: Cygne is built from beetle-wswan, whose keys all start `wswan_`.
+pub fn option_prefix(which: Core) -> &'static str {
+    match which {
+        Core::Cygne => "wswan",
+        other => other.as_str(),
+    }
+}
+
 pub fn apply_core_options(
     core: &mut LibretroCore,
     which: Core,
@@ -182,7 +191,7 @@ pub fn apply_core_options(
     colour: bool,
     palette: Option<GbPalette>,
 ) {
-    core.set_option(&format!("{}_frameskip", which.as_str()), "auto");
+    core.set_option(&format!("{}_frameskip", option_prefix(which)), "auto");
     if which == Core::Mgba {
         core.set_option("mgba_sgb_borders", "OFF");
         core.set_option("mgba_force_gbp", "ON");
@@ -225,6 +234,15 @@ mod tests {
     use std::sync::Mutex;
 
     static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    #[test]
+    fn each_core_prefixes_its_option_keys_the_way_its_source_does() {
+        assert_eq!(option_prefix(Core::Mgba), "mgba");
+        assert_eq!(option_prefix(Core::Gpsp), "gpsp");
+        // beetle-wswan names every key wswan_*, not cygne_*, and a key it does
+        // not know is dropped without a word.
+        assert_eq!(option_prefix(Core::Cygne), "wswan");
+    }
 
     #[test]
     fn each_core_spells_colour_correction_its_own_way() {
