@@ -39,7 +39,7 @@ The WonderSwan has two sets of four direction buttons: the X pad (left side) and
 Turbo and the picture-mode shortcuts are turned off for WonderSwan games, so L1 and R1 are free to act as the Y-pad modifiers.
 
 > [!NOTE]
-> Vertical games are still being tested. If the controls feel wrong after rotating, please open an issue.
+> Press SELECT to rotate a game. The whole vertical picture shows on screen. The L1 / R1 Y-pad modifiers haven't been tested much in vertical play yet, so if the controls feel wrong after rotating, please open an issue.
 
 ---
 
