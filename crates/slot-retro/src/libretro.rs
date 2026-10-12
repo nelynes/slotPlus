@@ -24,6 +24,10 @@ enum PixelFormat {
 
 struct Host {
     video: Vec<u8>,
+    video_w: u32,
+    video_h: u32,
+    shown_w: u32,
+    shown_h: u32,
     format: PixelFormat,
     audio: Vec<i16>,
     inputs: [u16; 2],
@@ -318,16 +322,19 @@ unsafe extern "C" fn video_refresh(
         return;
     }
     with_host(|h| {
-        let cols = width.min(GBA_W) as usize;
-        let rows = height.min(GBA_H) as usize;
-        let ox = (GBA_W as usize - cols) / 2;
-        let oy = (GBA_H as usize - rows) / 2;
-        if cols != GBA_W as usize || rows != GBA_H as usize {
+        let (bw, bh) = (h.video_w as usize, h.video_h as usize);
+        let cols = (width as usize).min(bw);
+        let rows = (height as usize).min(bh);
+        let ox = (bw - cols) / 2;
+        let oy = (bh - rows) / 2;
+        if cols != bw || rows != bh {
             h.video.fill(0);
         }
+        h.shown_w = cols as u32;
+        h.shown_h = rows as u32;
         for y in 0..rows {
             let src = (data as *const u8).add(y * pitch);
-            let row = ((y + oy) * GBA_W as usize + ox) * 4;
+            let row = ((y + oy) * bw + ox) * 4;
             match h.format {
                 PixelFormat::Xrgb8888 => {
                     ptr::copy_nonoverlapping(src, h.video.as_mut_ptr().add(row), cols * 4);
@@ -412,6 +419,16 @@ impl LibretroCore {
             .inspect_err(|_| LIVE.store(false, Ordering::SeqCst))
     }
 
+    /// Resize the host's video buffer. Frames the core draws are centred in
+    /// it; anything bigger than the buffer is cropped. Call before running.
+    pub fn set_video_size(&mut self, w: u32, h: u32) {
+        self.host.video_w = w;
+        self.host.video_h = h;
+        self.host.shown_w = w;
+        self.host.shown_h = h;
+        self.host.video = vec![0; (w * h * 4) as usize];
+    }
+
     pub fn reported_system_dir(&self) -> String {
         self.host.system_dir.to_string_lossy().into_owned()
     }
@@ -470,6 +487,10 @@ impl LibretroCore {
         }
         let mut host = Box::new(Host {
             video: vec![0; VIDEO_BYTES],
+            video_w: GBA_W,
+            video_h: GBA_H,
+            shown_w: GBA_W,
+            shown_h: GBA_H,
             format: PixelFormat::Xrgb8888,
             audio: Vec::new(),
             inputs: [0; 2],
@@ -608,6 +629,14 @@ impl RetroCore for LibretroCore {
         &self.host.video
     }
 
+    fn video_size(&self) -> (u32, u32) {
+        (self.host.video_w, self.host.video_h)
+    }
+
+    fn frame_size(&self) -> (u32, u32) {
+        (self.host.shown_w, self.host.shown_h)
+    }
+
     fn take_audio(&mut self) -> Vec<i16> {
         std::mem::take(&mut self.host.audio)
     }
@@ -701,6 +730,10 @@ mod tests {
     fn host_with(options: HashMap<String, CString>, options_dirty: bool) -> Box<Host> {
         Box::new(Host {
             video: vec![0; VIDEO_BYTES],
+            video_w: GBA_W,
+            video_h: GBA_H,
+            shown_w: GBA_W,
+            shown_h: GBA_H,
             format: PixelFormat::Xrgb8888,
             audio: Vec::new(),
             inputs: [0; 2],
@@ -1635,6 +1668,41 @@ mod tests {
         };
 
         assert_eq!(unsafe { with_host(|h| h.video.clone()) }.unwrap(), frame);
+    }
+
+    #[test]
+    fn a_tall_picture_fits_a_bigger_buffer_whole() {
+        let mut host = host_with(HashMap::new(), false);
+        host.video_w = 360;
+        host.video_h = 240;
+        host.video = vec![0; 360 * 240 * 4];
+        let _active = Active::bind(&mut host);
+        let frame = vec![0xffu8; 144 * 224 * 4];
+        unsafe { video_refresh(frame.as_ptr() as *const c_void, 144, 224, 144 * 4) };
+
+        let lit =
+            |x: usize, y: usize| unsafe { with_host(|h| h.video[(y * 360 + x) * 4]) }.unwrap() != 0;
+        assert!(lit(108, 8), "the top left is not at (108, 8)");
+        assert!(lit(251, 231), "the bottom right is not at (251, 231)");
+        assert!(!lit(107, 8), "the picture starts one column too early");
+        assert!(!lit(108, 7), "the picture starts one row too early");
+        assert!(!lit(108, 232), "the picture runs one row too long");
+        assert_eq!(
+            unsafe { with_host(|h| (h.shown_w, h.shown_h)) }.unwrap(),
+            (144, 224)
+        );
+    }
+
+    #[test]
+    fn a_tall_picture_is_still_cropped_to_the_gba_buffer() {
+        let mut host = host_with(HashMap::new(), false);
+        let _active = Active::bind(&mut host);
+        let frame = vec![0xffu8; 144 * 224 * 4];
+        unsafe { video_refresh(frame.as_ptr() as *const c_void, 144, 224, 144 * 4) };
+        assert_eq!(
+            unsafe { with_host(|h| (h.video.len(), h.shown_w, h.shown_h)) }.unwrap(),
+            ((GBA_W * GBA_H * 4) as usize, 144, GBA_H)
+        );
     }
 
     #[test]

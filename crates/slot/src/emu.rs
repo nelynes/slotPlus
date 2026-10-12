@@ -6,9 +6,7 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use crate::cable::{self, Cable};
-use slot_retro::{
-    ButtonMask, Link, LinkChannel, RetroCore, Rumble, GBA_H, GBA_W, NETPACKET_RELIABLE,
-};
+use slot_retro::{ButtonMask, Link, LinkChannel, RetroCore, Rumble, NETPACKET_RELIABLE};
 
 use crate::audio::Ring;
 use crate::drc::{drc_ratio, drc_target};
@@ -148,7 +146,8 @@ impl EmuHandle {
     ) -> Self {
         let rumble = core.rumble();
         let link = core.net();
-        let frames = Frames::new((GBA_W * GBA_H * 4) as usize);
+        let (vw, vh) = core.video_size();
+        let frames = Frames::sized(vw, vh);
         let shared = Arc::new(Shared {
             input: AtomicU16::new(0),
             speed: AtomicU8::new(Speed::Paused as u8),
@@ -640,7 +639,7 @@ impl Worker {
                     }
                     core.set_frame_skip(false);
                     core.run_frame(ButtonMask(0));
-                    self.publish(core.video_xrgb8888());
+                    self.publish(core.video_xrgb8888(), core.frame_size());
                 }
                 self.shared
                     .rewind_fill
@@ -758,7 +757,7 @@ impl Worker {
                     }
                 }
                 flush_outbound(&mut transport, &link);
-                self.publish(core.video_xrgb8888());
+                self.publish(core.video_xrgb8888(), core.frame_size());
                 self.frame_done(served);
 
                 since_snapshot += 1;
@@ -881,7 +880,10 @@ impl Worker {
                 let _ = reply.send(core.save_ram());
             }
             Cmd::Thumb(reply) => {
-                let _ = reply.send(crate::thumb::png(core.video_xrgb8888()));
+                let _ = reply.send(crate::thumb::png_of(
+                    core.video_xrgb8888(),
+                    core.video_size(),
+                ));
             }
             Cmd::BeginLink(client_id, t) => {
                 self.shared.link_lost.store(false, Ordering::Relaxed);
@@ -972,7 +974,8 @@ impl Worker {
         }
     }
 
-    fn publish(&self, video: &[u8]) {
+    fn publish(&self, video: &[u8], shown: (u32, u32)) {
+        self.frames.set_shown(shown);
         let mut buf = self.frames.take_write();
         buf.clear();
         buf.extend_from_slice(video);

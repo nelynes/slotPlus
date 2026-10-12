@@ -41,16 +41,30 @@ pub fn write_video_mode(root: &Path, stem: &str, mode: VideoMode) -> std::io::Re
 }
 
 pub fn source_rect(platform: Platform, mode: VideoMode) -> [f32; 4] {
-    let (w, h) = platform.picture();
-    if mode == VideoMode::Actual || (w, h) == (SRC_W, SRC_H) {
+    source_rect_for(platform, mode, false)
+}
+
+/// Which part of the platform's video buffer to stretch over the canvas.
+/// A vertical frame (`portrait`) always shows the whole buffer, which is
+/// sized so it lands at an exact 2x.
+pub fn source_rect_for(platform: Platform, mode: VideoMode, portrait: bool) -> [f32; 4] {
+    let (bw, bh) = platform.source_size();
+    if portrait {
         return WHOLE_TEXTURE;
     }
-    let x = SRC_W.saturating_sub(w) / 2;
-    let y = SRC_H.saturating_sub(h) / 2;
+    let (w, h) = match mode {
+        VideoMode::Actual => (SRC_W, SRC_H),
+        VideoMode::Stretch => platform.picture(),
+    };
+    if (w, h) == (bw, bh) {
+        return WHOLE_TEXTURE;
+    }
+    let x = bw.saturating_sub(w) / 2;
+    let y = bh.saturating_sub(h) / 2;
     [
-        x as f32 / SRC_W as f32,
-        y as f32 / SRC_H as f32,
-        w as f32 / SRC_W as f32,
-        h as f32 / SRC_H as f32,
+        x as f32 / bw as f32,
+        y as f32 / bh as f32,
+        w as f32 / bw as f32,
+        h as f32 / bh as f32,
     ]
 }

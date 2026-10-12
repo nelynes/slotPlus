@@ -348,7 +348,9 @@ impl Frontend {
             return;
         }
         if let Some(frame) = self.session.frame() {
-            compositor.upload_game(&frame);
+            let (w, h) = frame.dims();
+            compositor.upload_game_sized(w, h, &frame);
+            self.session.app_mut().set_frame_shape(frame.shown());
             crate::latency::taken();
         }
         self.cart_faces.sync(self.session.app_mut(), compositor);

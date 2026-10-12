@@ -110,6 +110,10 @@ fn open_named(
                 if let Some(player) = link {
                     apply_link_options(&mut opened, core, player);
                 }
+                if core == Core::Cygne {
+                    let (w, h) = Platform::Ws.source_size();
+                    opened.set_video_size(w, h);
+                }
                 eprintln!("slot: core {}", path.display());
                 return Some(Box::new(opened));
             }
@@ -126,8 +130,8 @@ pub fn palette_for(
     link: Option<u8>,
 ) -> Option<GbPalette> {
     chosen.filter(|_| {
-    link.is_none() && matches!(platform, Platform::Gb | Platform::Gbc) && dmg_only(rom)
-})
+        link.is_none() && matches!(platform, Platform::Gb | Platform::Gbc) && dmg_only(rom)
+    })
 }
 
 pub fn dmg_only(rom: &Path) -> bool {

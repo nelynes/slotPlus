@@ -129,6 +129,10 @@ impl Compositor {
         self.game.upload(xrgb8888);
     }
 
+    pub fn upload_game_sized(&mut self, w: u32, h: u32, xrgb8888: &[u8]) {
+        self.game.upload_sized(w, h, xrgb8888);
+    }
+
     pub fn draw_game(&mut self) {
         self.game.draw(&self.quad);
     }

@@ -46,6 +46,16 @@ impl Platform {
         }
     }
 
+    /// Size of the video buffer the host keeps for this platform. GBA and
+    /// Game Boy keep the 240x160 buffer; WonderSwan needs room for a
+    /// 144x224 vertical frame, so it gets 360x240 (the canvas at 2x).
+    pub fn source_size(self) -> (u32, u32) {
+        match self {
+            Platform::Gba | Platform::Gb | Platform::Gbc => (240, 160),
+            Platform::Ws => (360, 240),
+        }
+    }
+
     pub fn accepts(self, path: &Path) -> bool {
         path.extension()
             .and_then(|e| e.to_str())

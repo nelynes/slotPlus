@@ -308,6 +308,7 @@ pub struct App {
     platform: Platform,
     named_core: bool,
     video_mode: VideoMode,
+    portrait: bool,
     link: Option<LinkSession>,
     sfx: Option<Sfx>,
     polaroids: Option<Polaroids>,
@@ -433,6 +434,7 @@ impl App {
             platform: Platform::default(),
             named_core: false,
             video_mode: VideoMode::default(),
+            portrait: false,
             link: None,
             sfx: None,
             polaroids: None,
@@ -854,7 +856,22 @@ impl App {
     }
 
     pub fn source_rect(&self) -> [f32; 4] {
-        video_mode::source_rect(self.platform, self.video_mode)
+        video_mode::source_rect_for(self.platform, self.video_mode, self.portrait())
+    }
+
+    /// Tell the app the size of the picture the core last drew. Only a
+    /// WonderSwan game turned on its side makes it taller than wide.
+    pub fn set_frame_shape(&mut self, shown: (u32, u32)) {
+        self.portrait = shown.1 > shown.0;
+    }
+
+    fn portrait(&self) -> bool {
+        self.portrait && self.platform == Platform::Ws
+    }
+
+    /// Size of the video buffer the running platform's frames are in.
+    pub fn source_size(&self) -> (u32, u32) {
+        self.platform.source_size()
     }
 
     fn slot_owns_the_shoulders(&self) -> bool {
@@ -933,8 +950,12 @@ impl App {
     }
 
     pub fn picture_rect(&self) -> [f32; 4] {
-        let (w, h) = self.platform.picture();
-        let (sw, sh) = (slot_gfx::SRC_W as f32, slot_gfx::SRC_H as f32);
+        let (w, h) = match self.portrait() {
+            true => (self.platform.picture().1, self.platform.picture().0),
+            false => self.platform.picture(),
+        };
+        let (sw, sh) = self.platform.source_size();
+        let (sw, sh) = (sw as f32, sh as f32);
         let (x, y) = ((sw - w as f32) / 2.0, (sh - h as f32) / 2.0);
         [x / sw, y / sh, (x + w as f32) / sw, (y + h as f32) / sh]
     }
