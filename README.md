@@ -16,6 +16,31 @@
 
 A slightly modified Slot. Has support for GBA, GBC, and GB titles as well as WonderSwan and WonderSwan Color.
 
+## WonderSwan / WonderSwan Color
+
+- **Games:** put `.ws` and `.wsc` files in `Games/WS/`. They get their own shelf next to GBA, GB and GBC.
+- **Label art:** optional PNGs go in `Labels/WS/<game name>.png`, roughly 328x124 px (about 2.65:1).
+- **Core:** WonderSwan games run on Beetle WonderSwan (Cygne). The core picker and the link menu are GBA-only, so neither opens for WonderSwan games.
+- **Carts:** WonderSwan carts have their own wide shape with a stepped plug, and default to a smoke-translucent shell. Set `Config/cart_shell.txt` to give a single game a different shell.
+
+### Controls
+
+The WonderSwan has two sets of four direction buttons: the X pad (left side) and the Y pad (right side).
+
+| Press                  | Does                                              |
+|------------------------|---------------------------------------------------|
+| D-pad                  | X pad                                             |
+| A / B                  | A / B                                             |
+| Start                  | Start                                             |
+| Hold **L1** + D-pad    | Y pad (up / right / down / left) |
+| Hold **R1** + X / A / B / Y | Y pad (X = up, A = right, B = down, Y = left) |
+| Select                 | Cygne's rotate-screen toggle (horizontal / vertical) |
+
+Turbo and the picture-mode shortcuts are turned off for WonderSwan games, so L1 and R1 are free to act as the Y-pad modifiers.
+
+> [!NOTE]
+> Vertical games are still being tested. If the controls feel wrong after rotating, please open an issue.
+
 ---
 
 # What is slot?
