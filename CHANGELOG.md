@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.6.0-ws1](https://github.com/nelynes/slotPlus/releases/tag/v1.6.0-ws1)
+## [1.6.0-ws2](https://github.com/nelynes/slotPlus/releases/tag/v1.6.0-ws2)
 
 slotPlus: Slot 1.6.0 plus WonderSwan.
 
