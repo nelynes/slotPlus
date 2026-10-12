@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.6.0-ws1](https://github.com/nelynes/slotPlus/releases/tag/v1.6.0-ws1)
+
+slotPlus: Slot 1.6.0 plus WonderSwan.
+
+- WonderSwan and WonderSwan Color games (`.ws`, `.wsc`) get their own shelf. Put them in `Games/WS/`. They run on the Beetle WonderSwan (Cygne) core.
+- WonderSwan carts have their own wide shape with a stepped plug, a wide label (art goes in `Labels/WS/`), and a smoke-translucent default shell.
+- The WonderSwan's Y pad is reachable: hold L1 and the D-pad becomes the Y pad, hold R1 and X / A / B / Y become the Y pad.
+- Turbo and the picture-mode shortcuts are off for WonderSwan games so the shoulder buttons can act as modifiers. SELECT toggles the screen between horizontal and vertical.
+- Vertical games are still being tested.
+
 ## [1.6.0](https://github.com/BrandonKowalski/slot/releases/tag/v1.6.0)
 
 - Runs on the RG28XX: its panel is mounted portrait, so slot turns the picture onto it. (#35)
