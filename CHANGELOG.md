@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- WonderSwan games now run on automatic frameskip, like GBA and GB. The setting was being sent to the Cygne core under the wrong name and ignored, so it ran with frameskip off. Heavy scenes hold their speed better.
+
 ## [1.6.0-ws2](https://github.com/nelynes/slotPlus/releases/tag/v1.6.0-ws2)
 
 slotPlus: Slot 1.6.0 plus WonderSwan.
