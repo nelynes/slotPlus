@@ -89,7 +89,7 @@ jobs:
           cat > notes.md <<NOTES
           Unzip and copy the contents of \`slot-${GITHUB_REF_NAME}/\` onto SD2.
 
-          Emulation by mGBA (MPL-2.0) and gpSP (GPL-2.0). Their licences, patches and gpSP's source are in \`System/licenses/\`.
+          Emulation by mGBA (MPL-2.0), gpSP (GPL-2.0) and Beetle WonderSwan / Cygne (GPL-2.0). Their licences, patches and the gpSP and Cygne source are in \`System/licenses/\`.
           NOTES
           gh release create "$GITHUB_REF_NAME" "$ZIP" --repo "$GITHUB_REPOSITORY" \
             --title "$GITHUB_REF_NAME" --notes-file notes.md
