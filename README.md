@@ -34,7 +34,7 @@ The WonderSwan has two sets of four direction buttons: the X pad (left side) and
 | Start                  | Start                                             |
 | Hold **L1** + D-pad    | Y pad (up / right / down / left) |
 | Hold **R1** + X / A / B / Y | Y pad (X = up, A = right, B = down, Y = left) |
-| Select                 | Cygne's rotate-screen toggle (horizontal / vertical) |
+| Select                 | Nothing in horizontal games (they can't be rotated) |
 
 Turbo and the picture-mode shortcuts are turned off for WonderSwan games, so L1 and R1 are free to act as the Y-pad modifiers.
 

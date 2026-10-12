@@ -110,6 +110,13 @@ mod vertical {
     }
 
     #[test]
+    fn select_does_nothing_in_a_horizontal_game_so_it_cannot_be_turned() {
+        let out = ButtonMask(ButtonMask::SELECT | ButtonMask::START | ButtonMask::A)
+            .wonderswan_for(WsLayout::Horizontal);
+        assert_eq!(out.0, ButtonMask::START | ButtonMask::A);
+    }
+
+    #[test]
     fn upright_the_dpad_is_the_y_pad_turned_so_up_is_the_games_up() {
         // The game's up is the hardware's Y-right, its right is Y-down, and so on.
         for (dpad, y) in [

@@ -69,14 +69,17 @@ impl ButtonMask {
     }
 
     /// The WonderSwan remap for a game laid out `layout`. Horizontal games
-    /// use the shoulder-modifier scheme above. Vertical games drop the
+    /// use the shoulder-modifier scheme above and never see SELECT, so the
+    /// core cannot rotate them. Vertical games drop the
     /// modifiers: the D-pad is the Y pad, the face diamond is the X pad and
     /// the shoulders are A (L) and B (R), as in the core's own portrait map.
     /// The core is told to read the landscape map, so this is the only mapping.
     pub fn wonderswan_for(self, layout: WsLayout) -> ButtonMask {
         let held = |bit: u16| self.0 & bit != 0;
         let sideways = match layout {
-            WsLayout::Horizontal => return self.wonderswan(),
+            // A horizontal game has nothing to gain from turning the picture, and
+            // the buttons would not follow it, so SELECT does nothing.
+            WsLayout::Horizontal => return ButtonMask(self.wonderswan().0 & !Self::SELECT),
             WsLayout::Upright => false,
             WsLayout::Sideways => true,
         };
