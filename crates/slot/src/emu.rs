@@ -61,12 +61,33 @@ impl Owed {
         }
     }
 
+    /// How many core frames a present is owed on average: 1.0 for a core near
+    /// 60 frames a second, 1.25 for the Lynx's 75.
+    fn average(&self) -> f64 {
+        self.per_present
+    }
+
     fn take(&mut self) -> u32 {
         self.carry += self.per_present;
         let whole = self.carry.floor();
         self.carry -= whole;
         whole as u32
     }
+}
+
+/// The resampler's ratio is built so that `expected` core frames of audio fill
+/// one present. At normal speed that is the *average* number of frames a
+/// present is owed, not the number this present happened to run: a 75 fps core
+/// runs one frame in some presents and two in others, and scaling by the
+/// count each time would stretch the sound in one present and squash it in the
+/// next, a pitch wobble on every note. Fast forward runs a chosen number of
+/// frames a present, so there the count that ran is the right divisor.
+fn audio_span(speed: Speed, owed: f64, span: u32, ran: u32) -> f64 {
+    let expected = match speed {
+        Speed::Normal => owed,
+        _ => f64::from(ran),
+    };
+    f64::from(span) / expected
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -691,7 +712,12 @@ impl Worker {
                 let (mut skipped, mut drawn) = (None::<Duration>, Duration::ZERO);
                 loop {
                     ran += 1;
-                    let last = ran >= ceiling || cost.last(began.elapsed(), budget);
+                    // At normal speed the frames a present is owed are all
+                    // run: dropping one when the estimate says it won't fit
+                    // never gets it back, and the game just runs slow. Only
+                    // fast forward trims to the time it has.
+                    let last = ran >= ceiling
+                        || (speed != Speed::Normal && cost.last(began.elapsed(), budget));
                     let input = match self.shared.turbo.load(Ordering::Relaxed) {
                         true => input.turbo(turbo_frame),
                         false => input.without_turbo(),
@@ -821,7 +847,9 @@ impl Worker {
                     }
                     let base = if lock { scale } else { 1.0 };
                     resampler.set_ratio(
-                        drc_ratio(queued, target) * base * f64::from(span) / f64::from(ran),
+                        drc_ratio(queued, target)
+                            * base
+                            * audio_span(speed, owed.average(), span, ran),
                     );
                     resampler.process(&audio, &mut out);
                     crate::audio::volume::apply(
@@ -1155,6 +1183,34 @@ mod tests {
                 assert_eq!(owed.take(), 1, "{fps} fps, present {present}");
             }
         }
+    }
+
+    #[test]
+    fn audio_is_stretched_by_the_same_amount_every_present_at_normal_speed() {
+        let mut owed = Owed::new(75.0);
+        let ratios: Vec<f64> = (0..40)
+            .map(|_| {
+                let ran = owed.take();
+                audio_span(Speed::Normal, owed.average(), 1, ran)
+            })
+            .collect();
+        assert!(
+            ratios.windows(2).all(|w| (w[0] - w[1]).abs() < 1e-12),
+            "the ratio changed from present to present: {ratios:?}"
+        );
+        assert!((ratios[0] - 0.8).abs() < 1e-6);
+    }
+
+    #[test]
+    fn a_core_near_sixty_keeps_a_ratio_of_one_at_normal_speed() {
+        let owed = Owed::new(59.7);
+        assert_eq!(audio_span(Speed::Normal, owed.average(), 1, 1), 1.0);
+    }
+
+    #[test]
+    fn fast_forward_still_divides_by_the_frames_that_ran() {
+        assert_eq!(audio_span(Speed::Fast, 1.25, 1, 4), 0.25);
+        assert_eq!(audio_span(Speed::Fast, 1.0, 2, 6), 2.0 / 6.0);
     }
 
     #[test]
