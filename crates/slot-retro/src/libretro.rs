@@ -90,6 +90,7 @@ unsafe extern "C" fn environment(cmd: c_uint, data: *mut c_void) -> bool {
             if turns > 3 {
                 return false;
             }
+            eprintln!("slot-retro: the core turned the picture {turns} quarter turn(s)");
             with_host(|h| h.rotation = turns).is_some()
         }
         GET_CAN_DUPE => {

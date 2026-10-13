@@ -353,7 +353,9 @@ impl Frontend {
         if let Some(frame) = self.session.frame() {
             let (w, h) = frame.dims();
             compositor.upload_game_sized(w, h, &frame);
-            self.session.app_mut().set_frame_shape(frame.shown());
+            let shown = frame.shown();
+            note_frame_shape(w, h, shown);
+            self.session.app_mut().set_frame_shape(shown);
             crate::latency::taken();
         }
         self.cart_faces.sync(self.session.app_mut(), compositor);
@@ -828,5 +830,24 @@ fn upload_rgba(
             *slot = Some(id);
             id
         }
+    }
+}
+
+/// Say, once per change, how big the buffer is and how much of it holds the
+/// picture, so a log shows whether a game arrived turned.
+fn note_frame_shape(w: u32, h: u32, shown: (u32, u32)) {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static LAST: AtomicU64 = AtomicU64::new(0);
+    let key = (u64::from(w) << 48)
+        | (u64::from(h) << 32)
+        | (u64::from(shown.0) << 16)
+        | u64::from(shown.1);
+    if LAST.swap(key, Ordering::Relaxed) != key {
+        eprintln!(
+            "slot: frame: buffer {w}x{h}, picture {}x{}{}",
+            shown.0,
+            shown.1,
+            if shown.1 > shown.0 { " (tall)" } else { "" }
+        );
     }
 }
