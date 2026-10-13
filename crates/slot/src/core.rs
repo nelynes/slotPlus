@@ -192,9 +192,11 @@ fn has_frameskip(which: Core) -> bool {
 pub const LYNX_ROTATION_FILE: &str = "Config/lynx_rotation.txt";
 
 /// Lynx games made to be held on their side, by title, with the turn Beetle
-/// Lynx asks for. The core finds these from its own list of checksums, which
-/// knows only some dumps of each: a "(World)" Klax is not on it, so it stays
-/// upright. Matching on the title catches every dump of the same game.
+/// Lynx asks for (270 is a cart flagged right, 90 one flagged left). The
+/// core finds these from its own list of checksums, which knows only some
+/// dumps of each: a "(World)" Klax is not on it, so the core would not turn
+/// it. Matching on the title catches every dump of the same game. A game
+/// that is turned is drawn for a handheld held turned a quarter anticlockwise.
 const LYNX_SIDEWAYS: [(&str, &str); 4] = [
     ("klax", "270"),
     ("gauntlet - the third encounter", "270"),
@@ -213,11 +215,16 @@ fn lynx_title(stem: &str) -> String {
 }
 
 /// What to give Beetle Lynx's `lynx_rot_screen` for a game: `auto` lets the
-/// core decide from the cart, `0`, `90`, `180` and `270` turn the picture that
-/// many degrees anticlockwise, and `manual` turns it a quarter each time
-/// SELECT is pressed. `Config/lynx_rotation.txt` can set any of these for a
-/// game by name; without an entry, a game known to be played on its side is
+/// core decide from the cart, `0`, `90`, `180` and `270` say how far the game
+/// is made to be turned (anticlockwise), and `manual` turns it a quarter each
+/// time SELECT is pressed. `Config/lynx_rotation.txt` can set any of these for
+/// a game by name; without an entry, a game known to be played on its side is
 /// turned and everything else is left to the core.
+///
+/// The core turns the picture upright for a handheld held the usual way. Slot
+/// tells the host the handheld is held turned a quarter anticlockwise, which
+/// draws a turned game one quarter less (so it fills the screen) and turns
+/// the pad to match.
 pub fn lynx_rotation(root: &Path, stem: &str) -> &'static str {
     const CHOICES: [&str; 6] = ["auto", "manual", "0", "90", "180", "270"];
     if let Some(asked) = slot_store::ini::value(root, LYNX_ROTATION_FILE, stem) {

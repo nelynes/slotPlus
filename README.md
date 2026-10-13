@@ -34,18 +34,20 @@ A slightly modified Slot. Has support for GBA, GBC, and GB titles as well as Won
 
 ### Games that turn
 
-Some Lynx games were made to be held on their side. Beetle Lynx knows many of them and turns the picture for you, and slot also recognises Klax, Gauntlet III, Lexis and NFL Football by name, whichever dump you have. The core turns the D-pad to match.
+Some Lynx games were made to be held on their side. Play these with the handheld turned 90 degrees counter-clockwise, like the vertical WonderSwan games: the picture is drawn sideways at full size and comes out upright once you turn the handheld, and the D-pad follows the picture. Press toward the top of the picture for up. A, B, Option 1, Option 2 and Start are unchanged.
 
-For any other game, add a line to `Config/lynx_rotation.txt`, using the game's file name without the extension:
+Beetle Lynx knows many of these games, and slot also recognises Klax, Gauntlet III, Lexis and NFL Football by name, whichever dump you have. Every other game is drawn as normal.
+
+For a game that needs it and is not recognised, add a line to `Config/lynx_rotation.txt`, using the game's file name without the extension:
 
 ```
-Game Name (USA) = 90
+Game Name (USA) = 270
 ```
 
-The values are `auto` (let the core decide), `0`, `90`, `180` and `270` (degrees anticlockwise), and `manual`. With `manual`, each press of SELECT turns the picture another quarter, so you can find the right way round and then write it into the file. An entry in the file wins over everything else.
+The values are `auto` (let the core decide), `0` (never turn), `90` and `270` (the two ways a game can be made to be turned), `180`, and `manual`. If a game comes up upside down with the handheld turned, swap 90 for 270. With `manual`, each press of SELECT turns the picture another quarter, so you can find the right setting and then write it into the file. An entry in the file wins over everything else.
 
 > [!NOTE]
-> Rotation direction and D-pad feel are new. If something feels wrong, please open an issue.
+> The turned layout and its D-pad feel are new. If something feels wrong, please open an issue.
 
 ## WonderSwan / WonderSwan Color
 

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use slot_input::{Action, Gestures, Millis, RawEvent};
-use slot_retro::{Rumble, WsLayout};
+use slot_retro::{Rumble, WsLayout, HANDHELD_TURN_OPTION};
 use slot_store::{Core, Platform};
 use slot_ui::FfState;
 
@@ -486,6 +486,7 @@ impl Session {
             let turn = crate::core::lynx_rotation(&self.root, stem);
             eprintln!("slot: lynx: lynx_rot_screen={turn}");
             emu.set_option("lynx_rot_screen", turn);
+            emu.set_option(HANDHELD_TURN_OPTION, "ccw");
         }
         emu.set_volume(self.app.output_volume());
         emu.set_driven(self.driven);
