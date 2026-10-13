@@ -243,6 +243,23 @@ pub fn lynx_rotation(root: &Path, stem: &str) -> &'static str {
         .map_or("auto", |(_, turn)| *turn)
 }
 
+/// Whether SELECT flips a Lynx game between the turned and the upright layout.
+/// With `manual` the core owns SELECT: each press steps its picture a quarter.
+pub fn lynx_select_toggles(turn: &str) -> bool {
+    turn != "manual"
+}
+
+/// What to tell the host about how the handheld is held. Turned a quarter
+/// anticlockwise, a game that turns fills the screen sideways. Held the usual
+/// way (`upright`), it is drawn upright, tall, with bars at the sides.
+pub fn handheld_turn_value(upright: bool) -> &'static str {
+    if upright {
+        "off"
+    } else {
+        "ccw"
+    }
+}
+
 pub fn apply_core_options(
     core: &mut LibretroCore,
     which: Core,
@@ -331,6 +348,20 @@ mod tests {
         ] {
             assert_eq!(lynx_rotation(root.path(), stem), "auto", "{stem}");
         }
+    }
+
+    #[test]
+    fn select_flips_the_layout_unless_the_core_was_given_it_to_turn_the_picture() {
+        for turn in ["auto", "0", "90", "180", "270"] {
+            assert!(lynx_select_toggles(turn), "{turn}");
+        }
+        assert!(!lynx_select_toggles("manual"));
+    }
+
+    #[test]
+    fn the_handheld_starts_turned_and_select_holds_it_the_usual_way() {
+        assert_eq!(handheld_turn_value(false), "ccw");
+        assert_eq!(handheld_turn_value(true), "off");
     }
 
     #[test]

@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use slot_input::{Action, Gestures, Millis, RawEvent};
+use slot_input::{Action, Btn, Gestures, Millis, RawEvent};
 use slot_retro::{Rumble, WsLayout, HANDHELD_TURN_OPTION};
 use slot_store::{Core, Platform};
 use slot_ui::FfState;
@@ -33,6 +33,10 @@ pub struct Session {
     reloading: bool,
     driven: bool,
     ws_vertical: bool,
+    /// SELECT flips this Lynx game between the turned and the upright layout.
+    lynx_select: bool,
+    /// The Lynx game is held the usual way, drawn upright with bars at the sides.
+    lynx_upright: bool,
 }
 
 impl Session {
@@ -56,6 +60,8 @@ impl Session {
             reloading: false,
             driven: false,
             ws_vertical: false,
+            lynx_select: false,
+            lynx_upright: false,
         }
     }
 
@@ -174,6 +180,7 @@ impl Session {
             let mask = self.pad.mask();
             let mask = match self.app.core() {
                 Core::Cygne => mask.wonderswan_for(self.ws_layout()),
+                Core::Lynx if self.lynx_select => mask.without_select(),
                 _ => mask,
             };
             emu.set_input(mask);
@@ -185,6 +192,17 @@ impl Session {
             (false, _) => WsLayout::Horizontal,
             (true, true) => WsLayout::Upright,
             (true, false) => WsLayout::Sideways,
+        }
+    }
+
+    fn flip_lynx_layout(&mut self) {
+        self.lynx_upright = !self.lynx_upright;
+        let value = crate::core::handheld_turn_value(self.lynx_upright);
+        if trace() {
+            eprintln!("slot: lynx: {HANDHELD_TURN_OPTION}={value}");
+        }
+        if let Some(emu) = &self.emu {
+            emu.set_option(HANDHELD_TURN_OPTION, value);
         }
     }
 
@@ -201,6 +219,13 @@ impl Session {
     fn act(&mut self, action: Action) {
         if trace() {
             eprintln!("slot: {action:?} in {:?}", self.app.phase());
+        }
+        if matches!(action, Action::GbaDown(Btn::Select))
+            && self.lynx_select
+            && self.playing()
+            && !self.overlaid()
+        {
+            self.flip_lynx_layout();
         }
         match action {
             Action::RewindStart => self.rewinding = true,
@@ -482,11 +507,17 @@ impl Session {
             Some(p) => EmuHandle::spawn_linked(opened.core, rom, ring, sav, resume, p),
             None => EmuHandle::spawn(opened.core, rom, ring, sav, resume),
         };
+        self.lynx_select = false;
+        self.lynx_upright = false;
         if platform == Platform::Lynx {
             let turn = crate::core::lynx_rotation(&self.root, stem);
             eprintln!("slot: lynx: lynx_rot_screen={turn}");
             emu.set_option("lynx_rot_screen", turn);
-            emu.set_option(HANDHELD_TURN_OPTION, "ccw");
+            emu.set_option(
+                HANDHELD_TURN_OPTION,
+                crate::core::handheld_turn_value(false),
+            );
+            self.lynx_select = crate::core::lynx_select_toggles(turn);
         }
         emu.set_volume(self.app.output_volume());
         emu.set_driven(self.driven);

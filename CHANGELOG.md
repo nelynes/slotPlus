@@ -6,6 +6,7 @@
 - Atari Lynx games need `lynxboot.img`, which is not included. Put your own copy in `BIOS/`.
 - Lynx carts have their own shape, a label (art goes in `Labels/Lynx/`) and a dark default shell.
 - Games made to be held on their side are played with the handheld turned 90 degrees counter-clockwise, like the vertical WonderSwan games: the picture fills the screen and the D-pad follows it. Klax, Gauntlet III, Lexis and NFL Football are recognised by name, so any dump of them works. `Config/lynx_rotation.txt` sets it for any other game.
+- SELECT in a Lynx game that turns flips it to the usual way of holding the handheld: the picture upright and tall with bars at the sides. Press it again to turn the handheld back. Each launch starts turned.
 - The `Lynx` folders under `Games`, `Labels`, `Saves` and `States` are created for you on first boot.
 - Lynx games run at their own refresh rate. The core calls it 75 frames a second, but each game sets its own, so slot reads the real rate from the game's audio and runs it at that.
 - Lynx has no battery saves. Use save states.

@@ -26,6 +26,11 @@ impl ButtonMask {
     pub const L2: u16 = 1 << 12;
     pub const R2: u16 = 1 << 13;
 
+    /// The same buttons with SELECT let go, for a game that never sees it.
+    pub fn without_select(self) -> ButtonMask {
+        ButtonMask(self.0 & !Self::SELECT)
+    }
+
     /// WonderSwan has two four-way pads. The X pad is the D-pad as usual; the
     /// Y pad is reached through a shoulder-button modifier, because the SP has
     /// no spare buttons for it. Cygne reads the Y pad as R2 (up), R (right),
