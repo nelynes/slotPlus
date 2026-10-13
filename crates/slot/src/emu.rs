@@ -44,27 +44,68 @@ const MAX_LINK_PACKETS_PER_PRESENT: u32 = 256;
 /// How many core frames to run for each present. A core near 60 frames a
 /// second is owed one. A faster one (the Lynx's 75) is owed a fraction more,
 /// so it runs one or two, carrying the remainder from present to present.
+///
+/// The Lynx's 75 is only a nominal figure: each game sets its own screen
+/// refresh, so the audio a frame carries says how long the frame really is.
+/// A fast core's `per_present` therefore follows the rate its audio implies,
+/// and the game runs at its own speed rather than at 75 whatever it asked for.
 struct Owed {
+    nominal: f64,
     per_present: f64,
     carry: f64,
+    adapts: bool,
+    frames: f64,
+    samples: f64,
 }
+
+/// How much of the running audio tally a present keeps: about 1 / (1 - this)
+/// presents of history, a little over half a second.
+const OWED_MEMORY: f64 = 0.97;
+
+/// The slowest and fastest a game's refresh may be taken to be.
+const OWED_FPS_RANGE: (f64, f64) = (50.0, 85.0);
 
 impl Owed {
     fn new(fps: f64) -> Owed {
-        let per_present = match fps > FAST_CORE_FPS {
+        let adapts = fps > FAST_CORE_FPS;
+        let nominal = match adapts {
             true => fps * PRESENT.as_secs_f64(),
             false => 1.0,
         };
         Owed {
-            per_present,
+            nominal,
+            per_present: nominal,
             carry: 0.0,
+            adapts,
+            frames: 0.0,
+            samples: 0.0,
         }
     }
 
-    /// How many core frames a present is owed on average: 1.0 for a core near
-    /// 60 frames a second, 1.25 for the Lynx's 75.
-    fn average(&self) -> f64 {
-        self.per_present
+    /// How many core frames a present is owed on the core's nominal rate:
+    /// 1.0 for a core near 60 frames a second, 1.25 for the Lynx's 75. The
+    /// audio ratio is built on this, and it never changes.
+    fn nominal(&self) -> f64 {
+        self.nominal
+    }
+
+    /// Fold in a present that ran `ran` frames and made `samples` stereo
+    /// samples (frames of audio) at `rate` Hz.
+    fn observe(&mut self, ran: u32, samples: usize, rate: f64) {
+        if !self.adapts || ran == 0 || samples == 0 || rate <= 0.0 {
+            return;
+        }
+        self.frames = self.frames * OWED_MEMORY + f64::from(ran);
+        self.samples = self.samples * OWED_MEMORY + samples as f64;
+        let fps = (rate * self.frames / self.samples).clamp(OWED_FPS_RANGE.0, OWED_FPS_RANGE.1);
+        self.per_present = fps * PRESENT.as_secs_f64();
+    }
+
+    /// The frame rate the audio implies, or None for a core that keeps one
+    /// frame a present.
+    fn implied_fps(&self) -> Option<f64> {
+        self.adapts
+            .then(|| self.per_present / PRESENT.as_secs_f64())
     }
 
     fn take(&mut self) -> u32 {
@@ -838,6 +879,9 @@ impl Worker {
                 }
 
                 let audio = core.take_audio();
+                if speed == Speed::Normal {
+                    owed.observe(ran, audio.len() / 2, av.sample_rate);
+                }
                 if speed == Speed::Normal || ff_sound {
                     let target = drc_target(ring.capacity_frames());
                     let queued = ring.queued_frames();
@@ -849,7 +893,7 @@ impl Worker {
                     resampler.set_ratio(
                         drc_ratio(queued, target)
                             * base
-                            * audio_span(speed, owed.average(), span, ran),
+                            * audio_span(speed, owed.nominal(), span, ran),
                     );
                     resampler.process(&audio, &mut out);
                     crate::audio::volume::apply(
@@ -861,7 +905,8 @@ impl Worker {
                     if crate::session::trace() && paced.is_multiple_of(TRACE_EVERY) {
                         let (dropped, starved) = (ring.overruns(), ring.underruns());
                         eprintln!(
-                            "slot: audio: {queued}/{target} queued, {dropped} dropped, {starved} starved, locked {lock} at {scale:.5}"
+                            "slot: audio: {queued}/{target} queued, {dropped} dropped, {starved} starved, locked {lock} at {scale:.5}, core {:.2} fps",
+                            owed.implied_fps().unwrap_or(av.fps)
                         );
                     }
                 }
@@ -1191,7 +1236,7 @@ mod tests {
         let ratios: Vec<f64> = (0..40)
             .map(|_| {
                 let ran = owed.take();
-                audio_span(Speed::Normal, owed.average(), 1, ran)
+                audio_span(Speed::Normal, owed.nominal(), 1, ran)
             })
             .collect();
         assert!(
@@ -1204,7 +1249,7 @@ mod tests {
     #[test]
     fn a_core_near_sixty_keeps_a_ratio_of_one_at_normal_speed() {
         let owed = Owed::new(59.7);
-        assert_eq!(audio_span(Speed::Normal, owed.average(), 1, 1), 1.0);
+        assert_eq!(audio_span(Speed::Normal, owed.nominal(), 1, 1), 1.0);
     }
 
     #[test]
@@ -1220,6 +1265,62 @@ mod tests {
         assert!(runs.iter().all(|n| (1..=2).contains(n)), "{runs:?}");
         assert_eq!(runs.iter().sum::<u32>(), 500);
         assert_eq!(&runs[..4], &[1, 1, 1, 2]);
+    }
+
+    /// Run `presents` presents of a game whose frames each carry
+    /// `samples_per_frame` stereo samples, and return what the core is then
+    /// taken to run at.
+    fn settled_fps(owed: &mut Owed, samples_per_frame: usize, presents: u32) -> f64 {
+        for _ in 0..presents {
+            let ran = owed.take();
+            owed.observe(ran, ran as usize * samples_per_frame, 44_100.0);
+        }
+        owed.implied_fps().unwrap()
+    }
+
+    #[test]
+    fn a_fast_core_follows_the_refresh_its_audio_implies() {
+        let mut owed = Owed::new(75.0);
+        let fps = settled_fps(&mut owed, 630, 600);
+        assert!((fps - 70.0).abs() < 0.5, "{fps}");
+        let runs: u32 = (0..700).map(|_| owed.take()).sum();
+        assert!(
+            (runs as i32 - 817).abs() <= 2,
+            "{runs} frames in 700 presents"
+        );
+    }
+
+    #[test]
+    fn a_game_at_the_nominal_rate_stays_there() {
+        let mut owed = Owed::new(75.0);
+        let fps = settled_fps(&mut owed, 588, 600);
+        assert!((fps - 75.0).abs() < 0.5, "{fps}");
+    }
+
+    #[test]
+    fn a_wild_audio_reading_cannot_push_the_rate_out_of_range() {
+        let mut owed = Owed::new(75.0);
+        let fps = settled_fps(&mut owed, 5_000, 600);
+        assert_eq!(fps, OWED_FPS_RANGE.0);
+        let mut owed = Owed::new(75.0);
+        let fps = settled_fps(&mut owed, 10, 600);
+        assert_eq!(fps, OWED_FPS_RANGE.1);
+    }
+
+    #[test]
+    fn a_core_near_sixty_never_adapts() {
+        let mut owed = Owed::new(59.7);
+        owed.observe(1, 100, 44_100.0);
+        assert!(owed.implied_fps().is_none());
+        assert_eq!((0..5).map(|_| owed.take()).collect::<Vec<_>>(), [1; 5]);
+    }
+
+    #[test]
+    fn a_present_with_no_audio_is_ignored() {
+        let mut owed = Owed::new(75.0);
+        owed.observe(2, 0, 44_100.0);
+        owed.observe(0, 600, 44_100.0);
+        assert!((owed.implied_fps().unwrap() - 75.0).abs() < 1e-6);
     }
 
     use super::*;
