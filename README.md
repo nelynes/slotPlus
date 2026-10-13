@@ -42,10 +42,6 @@ Beetle Lynx knows many of these games, and slot also recognises Klax, Gauntlet I
 
 For a game that needs it and is not recognised, add a line to `Config/lynx_rotation.txt`, using the game's file name without the extension:
 
-```
-Game Name (USA) = 270
-```
-
 The values are `auto` (let the core decide), `0` (never turn), `90` and `270` (the two ways a game can be made to be turned), `180`, and `manual`. If a game comes up upside down with the handheld turned, swap 90 for 270. With `manual`, SELECT goes to the core instead and each press turns the picture another quarter, so you can find the right setting and then write it into the file. An entry in the file wins over everything else.
 
 > [!NOTE]
