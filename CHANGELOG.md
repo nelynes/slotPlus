@@ -5,9 +5,9 @@
 - Atari Lynx games (`.lnx`, `.lyx`) get their own shelf. Put them in `Games/Lynx/`. They run on the Beetle Lynx core.
 - Atari Lynx games need `lynxboot.img`, which is not included. Put your own copy in `BIOS/`.
 - Lynx carts have their own shape, a label (art goes in `Labels/Lynx/`) and a dark default shell.
-- Games made to be held on their side are turned automatically, and the picture is drawn turned.
+- Games made to be held on their side are turned automatically, and the picture is drawn turned. Klax, Gauntlet III, Lexis and NFL Football are recognised by name, so any dump of them turns. `Config/lynx_rotation.txt` sets the turn for any other game.
 - The `Lynx` folders under `Games`, `Labels`, `Saves` and `States` are created for you on first boot.
-- Beetle Lynx runs at about 75 frames a second, and slot now paces those games to match.
+- Lynx games run at their own refresh rate. The core calls it 75 frames a second, but each game sets its own, so slot reads the real rate from the game's audio and runs it at that.
 - Lynx has no battery saves. Use save states.
 
 ## [1.6.0-ws3](https://github.com/nelynes/slotPlus/releases/tag/v1.6.0-ws3)

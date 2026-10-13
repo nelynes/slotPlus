@@ -34,7 +34,15 @@ A slightly modified Slot. Has support for GBA, GBC, and GB titles as well as Won
 
 ### Games that turn
 
-Some Lynx games were made to be held on their side. Beetle Lynx knows which, and slot turns the picture for them automatically. The core also turns the D-pad to match.
+Some Lynx games were made to be held on their side. Beetle Lynx knows many of them and turns the picture for you, and slot also recognises Klax, Gauntlet III, Lexis and NFL Football by name, whichever dump you have. The core turns the D-pad to match.
+
+For any other game, add a line to `Config/lynx_rotation.txt`, using the game's file name without the extension:
+
+```
+Game Name (USA) = 90
+```
+
+The values are `auto` (let the core decide), `0`, `90`, `180` and `270` (degrees anticlockwise), and `manual`. With `manual`, each press of SELECT turns the picture another quarter, so you can find the right way round and then write it into the file. An entry in the file wins over everything else.
 
 > [!NOTE]
 > Rotation direction and D-pad feel are new. If something feels wrong, please open an issue.
