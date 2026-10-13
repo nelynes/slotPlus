@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## [1.6.0-lyx](https://github.com/nelynes/slotPlus/releases/tag/v1.6.0-lyx)
+
+slotPlus: Slot 1.6.0 plus WonderSwan and Atari Lynx.
 
 - Atari Lynx games (`.lnx`, `.lyx`) get their own shelf. Put them in `Games/Lynx/`. They run on the Beetle Lynx core.
 - Atari Lynx games need `lynxboot.img`, which is not included. Put your own copy in `BIOS/`.
