@@ -3,8 +3,9 @@ use slot_ui::{
     cart_face, clean_label, foot_y, gb_label_panel, gb_silhouette, label_colour, label_panel,
     label_text, rest_y, seated_box, shell_for, silhouette, Finish, GbShell, CART_H, CART_W,
     GB_CART_H, GB_CART_W, GB_LABEL_H, GB_LABEL_W, GB_LABEL_X, GB_LABEL_Y, LABEL_H, LABEL_W,
-    LABEL_X, LABEL_Y, MOUTH_H, OUT_H, PLATE_H, WS_CART_H, WS_CART_W, WS_LABEL_H, WS_LABEL_W,
-    WS_LABEL_X, WS_LABEL_Y, WS_SHELL,
+    LABEL_X, LABEL_Y, LYNX_CART_H, LYNX_CART_W, LYNX_LABEL_H, LYNX_LABEL_W, LYNX_LABEL_X,
+    LYNX_LABEL_Y, LYNX_SHELL, MOUTH_H, OUT_H, PLATE_H, WS_CART_H, WS_CART_W, WS_LABEL_H,
+    WS_LABEL_W, WS_LABEL_X, WS_LABEL_Y, WS_SHELL,
 };
 use tempfile::TempDir;
 
@@ -825,7 +826,7 @@ fn the_wonderswan_plug_is_narrower_than_its_body() {
         body > plug + 8,
         "body {body}px, plug {plug}px: the stepped plug is missing"
     );
-    assert_eq!(pixel_alpha(&f, 1, 1), 0, "the corner is not rounded off");
+    assert_eq!(pixel_alpha(&f, 0, 0), 0, "the corner is not rounded off");
     assert!(pixel_alpha(&f, f.w / 2, f.h / 2) > 250);
 }
 
@@ -851,4 +852,72 @@ fn the_wonderswan_label_sits_inside_the_body() {
 fn a_wonderswan_cart_defaults_to_the_wonderswan_shell() {
     assert_eq!(shell_for(&ws_cart()), WS_SHELL);
     assert_eq!(WS_SHELL.finish, Finish::Translucent);
+}
+
+fn lynx_cart() -> slot_store::Cart {
+    slot_store::Cart {
+        platform: Platform::Lynx,
+        stem: "California Games".into(),
+        rom: "Games/Lynx/California Games.lnx".into(),
+        label: None,
+        title: String::new(),
+        code: String::new(),
+        shell: None,
+    }
+}
+
+#[test]
+fn the_lynx_cart_is_nearly_square_and_matches_its_box() {
+    assert_eq!(
+        slot_ui::cart_box(Platform::Lynx),
+        (LYNX_CART_W, LYNX_CART_H)
+    );
+    assert!(LYNX_CART_H * 9 >= LYNX_CART_W * 9 && LYNX_CART_H * 10 <= LYNX_CART_W * 11);
+    let f = cart_face(&lynx_cart());
+    assert_eq!((f.w, f.h), (LYNX_CART_W, LYNX_CART_H));
+}
+
+#[test]
+fn the_lynx_plug_is_narrower_than_its_body_and_its_top_corners_are_clipped() {
+    let f = cart_face(&lynx_cart());
+    let width_at = |y: u32| (0..f.w).filter(|&x| pixel_alpha(&f, x, y) > 128).count();
+    let body = width_at(LYNX_CART_H / 3);
+    let plug = width_at(LYNX_CART_H - 8);
+    assert!(
+        body > plug + 8,
+        "body {body}px, plug {plug}px: the stepped plug is missing"
+    );
+    assert_eq!(pixel_alpha(&f, 1, 1), 0, "the top corner is not clipped");
+    assert!(pixel_alpha(&f, f.w / 2, f.h / 2) > 250);
+}
+
+#[test]
+fn the_lynx_label_sits_inside_the_body_and_is_the_size_the_cart_asks_art_for() {
+    assert!(LYNX_LABEL_X + LYNX_LABEL_W < LYNX_CART_W);
+    assert!(LYNX_LABEL_Y + LYNX_LABEL_H < LYNX_CART_H);
+    assert_eq!(
+        slot_ui::label_size(&lynx_cart()),
+        (LYNX_LABEL_W, LYNX_LABEL_H)
+    );
+    let f = cart_face(&lynx_cart());
+    for (x, y) in [
+        (LYNX_LABEL_X, LYNX_LABEL_Y),
+        (LYNX_LABEL_X + LYNX_LABEL_W - 1, LYNX_LABEL_Y),
+        (LYNX_LABEL_X, LYNX_LABEL_Y + LYNX_LABEL_H - 1),
+        (
+            LYNX_LABEL_X + LYNX_LABEL_W - 1,
+            LYNX_LABEL_Y + LYNX_LABEL_H - 1,
+        ),
+    ] {
+        assert!(
+            pixel_alpha(&f, x, y) > 250,
+            "label corner {x},{y} is off the shell"
+        );
+    }
+}
+
+#[test]
+fn a_lynx_cart_defaults_to_the_lynx_shell() {
+    assert_eq!(shell_for(&lynx_cart()), LYNX_SHELL);
+    assert_eq!(LYNX_SHELL.finish, Finish::Solid);
 }

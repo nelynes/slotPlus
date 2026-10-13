@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use slot_gfx::{SRC_H, SRC_W, WHOLE_TEXTURE};
+use slot_gfx::WHOLE_TEXTURE;
 use slot_store::{ini, Platform};
 
 pub const VIDEO_MODE_FILE: &str = "Config/video_mode.txt";
@@ -53,7 +53,7 @@ pub fn source_rect_for(platform: Platform, mode: VideoMode, portrait: bool) -> [
         return WHOLE_TEXTURE;
     }
     let (w, h) = match mode {
-        VideoMode::Actual => (SRC_W, SRC_H),
+        VideoMode::Actual => platform.actual_window(),
         VideoMode::Stretch => platform.picture(),
     };
     if (w, h) == (bw, bh) {

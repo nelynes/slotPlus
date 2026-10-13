@@ -52,6 +52,8 @@ pub const DMG_SHELL: Shell = shell([0x9a, 0x97, 0x8f], Finish::Solid);
 
 pub const WS_SHELL: Shell = shell([0x3a, 0x3a, 0x40], Finish::Translucent);
 
+pub const LYNX_SHELL: Shell = shell([0x2a, 0x2a, 0x2e], Finish::Solid);
+
 pub const DUAL_MODE_SHELL: Shell = shell([0x33, 0x30, 0x31], Finish::Solid);
 
 pub const GB_CLEAR_SHELL: Shell = shell([0x7c, 0x7a, 0x8a], Finish::Translucent);
@@ -92,6 +94,7 @@ pub fn shell_for(cart: &Cart) -> Shell {
     match cart.platform {
         Platform::Gba => gba_shell_for(&gba_code(cart)),
         Platform::Ws => WS_SHELL,
+        Platform::Lynx => LYNX_SHELL,
         Platform::Gb | Platform::Gbc => gb_shell_for(&cart.rom),
     }
 }

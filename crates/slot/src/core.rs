@@ -157,7 +157,7 @@ fn report_missing(core: Core, paths: &[PathBuf]) {
 pub fn colour_option(which: Core, on: bool) -> Option<(&'static str, &'static str)> {
     match which {
         Core::Mgba => Some(("mgba_color_correction", if on { "Auto" } else { "OFF" })),
-        Core::Cygne => None,
+        Core::Cygne | Core::Lynx => None,
         Core::Gpsp => Some((
             "gpsp_color_correction",
             if on { "enabled" } else { "disabled" },
@@ -183,6 +183,12 @@ pub fn option_prefix(which: Core) -> &'static str {
     }
 }
 
+/// Whether the core has a `<prefix>_frameskip` option to set. Beetle Lynx
+/// does not: it is cheap to run and has no frameskip setting.
+fn has_frameskip(which: Core) -> bool {
+    which != Core::Lynx
+}
+
 pub fn apply_core_options(
     core: &mut LibretroCore,
     which: Core,
@@ -191,7 +197,9 @@ pub fn apply_core_options(
     colour: bool,
     palette: Option<GbPalette>,
 ) {
-    core.set_option(&format!("{}_frameskip", option_prefix(which)), "auto");
+    if has_frameskip(which) {
+        core.set_option(&format!("{}_frameskip", option_prefix(which)), "auto");
+    }
     if which == Core::Mgba {
         core.set_option("mgba_sgb_borders", "OFF");
         core.set_option("mgba_force_gbp", "ON");
@@ -216,6 +224,12 @@ pub fn apply_core_options(
         // landscape map whatever way up it draws the picture.
         core.set_option("wswan_rotate_keymap", "disabled");
     }
+    if which == Core::Lynx {
+        // The core turns the picture itself to the way the cart was made to be
+        // held, and asks Slot to draw it that way; it also turns the D-pad to
+        // match. SELECT is left unused so nothing else can fight it.
+        core.set_option("lynx_rot_screen", "auto");
+    }
     if which == Core::Gpsp {
         core.set_option("gpsp_serial", serial);
         core.set_option("gpsp_rtc_time_source", "system");
@@ -236,12 +250,21 @@ mod tests {
     static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
+    fn only_beetle_lynx_has_no_frameskip_option() {
+        assert!(has_frameskip(Core::Mgba));
+        assert!(has_frameskip(Core::Gpsp));
+        assert!(has_frameskip(Core::Cygne));
+        assert!(!has_frameskip(Core::Lynx));
+    }
+
+    #[test]
     fn each_core_prefixes_its_option_keys_the_way_its_source_does() {
         assert_eq!(option_prefix(Core::Mgba), "mgba");
         assert_eq!(option_prefix(Core::Gpsp), "gpsp");
         // beetle-wswan names every key wswan_*, not cygne_*, and a key it does
         // not know is dropped without a word.
         assert_eq!(option_prefix(Core::Cygne), "wswan");
+        assert_eq!(option_prefix(Core::Lynx), "lynx");
     }
 
     #[test]

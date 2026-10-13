@@ -57,7 +57,7 @@ fn every_option_slot_sets_is_one_the_core_declares() {
     let _g = common::core_lock();
     let mut ran = 0;
     for which in Core::ALL {
-        if which == Core::Cygne {
+        if matches!(which, Core::Cygne | Core::Lynx) {
             continue;
         }
         let path = dylib_for(which);

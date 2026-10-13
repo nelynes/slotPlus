@@ -694,6 +694,12 @@ impl App {
         }
     }
 
+    pub fn set_lynx_cart_shadow(&mut self, face: TexId) {
+        for (_, shelf) in &mut self.shelves {
+            shelf.set_lynx_shadow(face);
+        }
+    }
+
     pub fn set_gb_cart_shadows(&mut self, notched: TexId, rounded: TexId) {
         for (_, shelf) in &mut self.shelves {
             shelf.set_gb_shadow(GbShell::Notched, notched);
@@ -860,7 +866,7 @@ impl App {
     }
 
     /// Tell the app the size of the picture the core last drew. Only a
-    /// WonderSwan game turned on its side makes it taller than wide.
+    /// WonderSwan or Lynx game turned on its side makes it taller than wide.
     pub fn set_frame_shape(&mut self, shown: (u32, u32)) {
         self.portrait = shown.1 > shown.0;
     }
@@ -871,7 +877,7 @@ impl App {
     }
 
     fn portrait(&self) -> bool {
-        self.portrait && self.platform == Platform::Ws
+        self.portrait && self.platform.turns()
     }
 
     /// Size of the video buffer the running platform's frames are in.
@@ -1075,7 +1081,7 @@ impl App {
 
     pub fn screen_shader(&self) -> Shader {
         match self.platform {
-            Platform::Gba => self.state.shader_gba,
+            Platform::Gba | Platform::Lynx => self.state.shader_gba,
             Platform::Gb | Platform::Gbc | Platform::Ws => self.state.shader_gb,
         }
     }
@@ -1438,7 +1444,7 @@ impl App {
             return;
         }
         let (shader, choices) = match self.platform {
-            Platform::Gba => (&mut self.state.shader_gba, &Shader::GBA[..]),
+            Platform::Gba | Platform::Lynx => (&mut self.state.shader_gba, &Shader::GBA[..]),
             Platform::Gb | Platform::Gbc | Platform::Ws => {
                 (&mut self.state.shader_gb, &Shader::GB[..])
             }
@@ -2726,7 +2732,7 @@ impl App {
         if self.link_active() {
             return self.refuse();
         }
-        if self.core == Core::Cygne {
+        if matches!(self.core, Core::Cygne | Core::Lynx) {
             return self.refuse();
         }
         if self.core == Core::Mgba {

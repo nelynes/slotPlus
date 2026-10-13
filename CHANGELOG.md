@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Atari Lynx games (`.lnx`, `.lyx`) get their own shelf. Put them in `Games/Lynx/`. They run on the Beetle Lynx core.
+- Atari Lynx games need `lynxboot.img`, which is not included. Put your own copy in `BIOS/`.
+- Lynx carts have their own shape, a label (art goes in `Labels/Lynx/`) and a dark default shell.
+- Games made to be held on their side are turned automatically, and the picture is drawn turned.
+- The `Lynx` folders under `Games`, `Labels`, `Saves` and `States` are created for you on first boot.
+- Beetle Lynx runs at about 75 frames a second, and slot now paces those games to match.
+- Lynx has no battery saves. Use save states.
+
 ## [1.6.0-ws3](https://github.com/nelynes/slotPlus/releases/tag/v1.6.0-ws3)
 
 - WonderSwan games now run on automatic frameskip, like GBA and GB. The setting was being sent to the Cygne core under the wrong name and ignored, so it ran with frameskip off. Heavy scenes hold their speed better.

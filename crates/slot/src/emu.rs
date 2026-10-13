@@ -30,11 +30,44 @@ const SNAPSHOT_EVERY: u32 = 2;
 
 const STALL: Duration = Duration::from_millis(25);
 
+/// A core above this many frames a second is owed more than one frame a
+/// present. Every core Slot ran before sits at or just under 60, and keeps
+/// the one frame a present it always had.
+const FAST_CORE_FPS: f64 = 62.0;
+
 const RATE_WINDOW: u32 = 300;
 
 const TRACE_EVERY: u64 = 300;
 
 const MAX_LINK_PACKETS_PER_PRESENT: u32 = 256;
+
+/// How many core frames to run for each present. A core near 60 frames a
+/// second is owed one. A faster one (the Lynx's 75) is owed a fraction more,
+/// so it runs one or two, carrying the remainder from present to present.
+struct Owed {
+    per_present: f64,
+    carry: f64,
+}
+
+impl Owed {
+    fn new(fps: f64) -> Owed {
+        let per_present = match fps > FAST_CORE_FPS {
+            true => fps * PRESENT.as_secs_f64(),
+            false => 1.0,
+        };
+        Owed {
+            per_present,
+            carry: 0.0,
+        }
+    }
+
+    fn take(&mut self) -> u32 {
+        self.carry += self.per_present;
+        let whole = self.carry.floor();
+        self.carry -= whole;
+        whole as u32
+    }
+}
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Speed {
@@ -549,6 +582,7 @@ impl Worker {
         let mut rate = TickRate::new(Instant::now(), 0);
         let mut stalled = false;
         let mut turbo_frame = 0u32;
+        let mut owed = Owed::new(av.fps);
         let mut transport: Option<Box<dyn LinkChannel>> = None;
         let mut cable: Option<Cable> = None;
         let mut cable_presents = 0u32;
@@ -629,7 +663,7 @@ impl Worker {
             let ceiling = match speed {
                 Speed::Paused => 0,
                 Speed::Normal if lock && !ticked => 0,
-                Speed::Normal => 1,
+                Speed::Normal => owed.take(),
                 Speed::Fast => self.shared.fast_steps.load(Ordering::Relaxed),
             };
             if rewinding {
@@ -1113,6 +1147,25 @@ fn drain_transport(transport: &mut dyn LinkChannel, link: &Link, cap: u32) {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_core_near_sixty_is_owed_one_frame_every_present() {
+        for fps in [0.0, 59.73, 59.8, 60.0] {
+            let mut owed = Owed::new(fps);
+            for present in 0..1000 {
+                assert_eq!(owed.take(), 1, "{fps} fps, present {present}");
+            }
+        }
+    }
+
+    #[test]
+    fn a_75_fps_core_is_owed_five_frames_every_four_presents() {
+        let mut owed = Owed::new(75.0);
+        let runs: Vec<u32> = (0..400).map(|_| owed.take()).collect();
+        assert!(runs.iter().all(|n| (1..=2).contains(n)), "{runs:?}");
+        assert_eq!(runs.iter().sum::<u32>(), 500);
+        assert_eq!(&runs[..4], &[1, 1, 1, 2]);
+    }
+
     use super::*;
     use slot_retro::LoopbackLink;
 

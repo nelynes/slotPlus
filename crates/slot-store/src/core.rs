@@ -11,16 +11,18 @@ pub enum Core {
     Mgba,
     Gpsp,
     Cygne,
+    Lynx,
 }
 
 impl Core {
-    pub const ALL: [Core; 3] = [Core::Mgba, Core::Gpsp, Core::Cygne];
+    pub const ALL: [Core; 4] = [Core::Mgba, Core::Gpsp, Core::Cygne, Core::Lynx];
 
     pub fn as_str(&self) -> &'static str {
         match self {
             Core::Mgba => "mgba",
             Core::Gpsp => "gpsp",
             Core::Cygne => "cygne",
+            Core::Lynx => "lynx",
         }
     }
 
@@ -37,6 +39,7 @@ impl Core {
             Core::Mgba => "mGBA",
             Core::Gpsp => "gpSP",
             Core::Cygne => "Beetle Cygne",
+            Core::Lynx => "Beetle Lynx",
         }
     }
 
@@ -45,15 +48,17 @@ impl Core {
             "mgba" => Some(Core::Mgba),
             "gpsp" => Some(Core::Gpsp),
             "cygne" => Some(Core::Cygne),
+            "lynx" => Some(Core::Lynx),
             _ => None,
         }
     }
 
     pub fn runs(self, platform: Platform) -> bool {
         match self {
-            Core::Mgba => platform != Platform::Ws,
+            Core::Mgba => matches!(platform, Platform::Gba | Platform::Gb | Platform::Gbc),
             Core::Gpsp => platform == Platform::Gba,
             Core::Cygne => platform == Platform::Ws,
+            Core::Lynx => platform == Platform::Lynx,
         }
     }
 
@@ -61,6 +66,7 @@ impl Core {
         match platform {
             Platform::Gba | Platform::Gb | Platform::Gbc => Core::Mgba,
             Platform::Ws => Core::Cygne,
+            Platform::Lynx => Core::Lynx,
         }
     }
 }

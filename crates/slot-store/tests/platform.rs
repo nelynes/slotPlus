@@ -3,14 +3,20 @@ use slot_store::Platform;
 #[test]
 fn every_platform_has_a_directory() {
     let names: Vec<&str> = Platform::ALL.iter().map(|p| p.dir_name()).collect();
-    assert_eq!(names, vec!["GBA", "GB", "GBC", "WS"]);
+    assert_eq!(names, vec!["GBA", "GB", "GBC", "WS", "Lynx"]);
 }
 
 #[test]
 fn every_platform_is_a_shelf_of_its_own() {
     assert_eq!(
         Platform::ALL,
-        [Platform::Gba, Platform::Gb, Platform::Gbc, Platform::Ws]
+        [
+            Platform::Gba,
+            Platform::Gb,
+            Platform::Gbc,
+            Platform::Ws,
+            Platform::Lynx
+        ]
     );
     for (i, p) in Platform::ALL.iter().enumerate() {
         assert!(
@@ -28,11 +34,15 @@ fn each_platform_takes_only_its_own_extensions() {
     assert!(Platform::Gb.accepts(std::path::Path::new("Tetris.gbc")));
     assert!(!Platform::Gb.accepts(std::path::Path::new("Metroid Fusion.gba")));
     assert!(Platform::Gba.accepts(std::path::Path::new("Shrek.GBA")));
+    assert!(Platform::Lynx.accepts(std::path::Path::new("California Games.lnx")));
+    assert!(Platform::Lynx.accepts(std::path::Path::new("Klax.LYX")));
+    assert!(!Platform::Lynx.accepts(std::path::Path::new("Tetris.gb")));
+    assert!(!Platform::Ws.accepts(std::path::Path::new("Klax.lnx")));
 }
 
 #[test]
 fn only_wonderswan_gets_a_bigger_video_buffer() {
-    for p in [Platform::Gba, Platform::Gb, Platform::Gbc] {
+    for p in [Platform::Gba, Platform::Gb, Platform::Gbc, Platform::Lynx] {
         assert_eq!(p.source_size(), (240, 160), "{p:?} must keep its buffer");
     }
     let (w, h) = Platform::Ws.source_size();

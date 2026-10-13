@@ -25,6 +25,8 @@ impl Cart {
                     self.code = code;
                 }
             }
+            // A Lynx file has no Game Boy header to read a title from.
+            Platform::Lynx => {}
             _ => {
                 if let Some(title) = crate::gb::title(&self.rom) {
                     self.title = title;

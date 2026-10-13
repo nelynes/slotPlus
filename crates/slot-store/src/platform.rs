@@ -7,10 +7,17 @@ pub enum Platform {
     Gb,
     Gbc,
     Ws,
+    Lynx,
 }
 
 impl Platform {
-    pub const ALL: [Platform; 4] = [Platform::Gba, Platform::Gb, Platform::Gbc, Platform::Ws];
+    pub const ALL: [Platform; 5] = [
+        Platform::Gba,
+        Platform::Gb,
+        Platform::Gbc,
+        Platform::Ws,
+        Platform::Lynx,
+    ];
 
     pub fn name(self) -> &'static str {
         match self {
@@ -18,6 +25,7 @@ impl Platform {
             Platform::Gb => "Game Boy",
             Platform::Gbc => "Game Boy Color",
             Platform::Ws => "WonderSwan",
+            Platform::Lynx => "Atari Lynx",
         }
     }
 
@@ -27,6 +35,7 @@ impl Platform {
             Platform::Gb => "GB",
             Platform::Gbc => "GBC",
             Platform::Ws => "WS",
+            Platform::Lynx => "Lynx",
         }
     }
 
@@ -35,6 +44,7 @@ impl Platform {
             Platform::Gba => &["gba"],
             Platform::Gb | Platform::Gbc => &["gb", "gbc"],
             Platform::Ws => &["ws", "wsc"],
+            Platform::Lynx => &["lnx", "lyx"],
         }
     }
 
@@ -43,15 +53,35 @@ impl Platform {
             Platform::Gba => (240, 160),
             Platform::Gb | Platform::Gbc => (160, 144),
             Platform::Ws => (224, 144),
+            Platform::Lynx => (160, 102),
         }
     }
 
-    /// Size of the video buffer the host keeps for this platform. GBA and
-    /// Game Boy keep the 240x160 buffer; WonderSwan needs room for a
-    /// 144x224 vertical frame, so it gets 360x240 (the canvas at 2x).
+    /// The part of the video buffer an "actual size" picture is drawn into,
+    /// centred. Most platforms fill the whole 240x160 buffer, which the
+    /// canvas shows at 3x. A Lynx picture is only 160x102, so it gets a
+    /// 180x120 window and lands at 4x instead of floating in a 3x frame.
+    pub fn actual_window(self) -> (u32, u32) {
+        match self {
+            Platform::Lynx => (180, 120),
+            _ => (240, 160),
+        }
+    }
+
+    /// Whether a game on this platform can turn its picture a quarter turn
+    /// (a vertical WonderSwan game, or a Lynx game held on its side), which
+    /// makes the frame taller than it is wide.
+    pub fn turns(self) -> bool {
+        matches!(self, Platform::Ws | Platform::Lynx)
+    }
+
+    /// Size of the video buffer the host keeps for this platform. GBA, Game
+    /// Boy and Lynx keep the 240x160 buffer (a turned Lynx frame is 102x160,
+    /// which fits and lands at 3x); WonderSwan needs room for a 144x224
+    /// vertical frame, so it gets 360x240 (the canvas at 2x).
     pub fn source_size(self) -> (u32, u32) {
         match self {
-            Platform::Gba | Platform::Gb | Platform::Gbc => (240, 160),
+            Platform::Gba | Platform::Gb | Platform::Gbc | Platform::Lynx => (240, 160),
             Platform::Ws => (360, 240),
         }
     }

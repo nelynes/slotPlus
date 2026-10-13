@@ -173,3 +173,21 @@ fn wonderswan_roms_scan_into_their_own_platform() {
     assert_eq!(carts.len(), 2);
     assert!(carts.iter().all(|c| c.platform == slot_store::Platform::Ws));
 }
+#[test]
+fn lynx_roms_scan_into_their_own_platform() {
+    let root = std::env::temp_dir().join(format!("slot-lynx-scan-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    let dir = root.join("Games").join("Lynx");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("California Games.lnx"), b"rom").unwrap();
+    std::fs::write(dir.join("Klax.LYX"), b"rom").unwrap();
+    std::fs::write(dir.join("Readme.txt"), b"not a rom").unwrap();
+
+    let carts = slot_store::scan(&root).unwrap();
+    std::fs::remove_dir_all(&root).ok();
+
+    assert_eq!(carts.len(), 2);
+    assert!(carts
+        .iter()
+        .all(|c| c.platform == slot_store::Platform::Lynx));
+}

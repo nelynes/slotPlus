@@ -204,6 +204,7 @@ fn the_picker_board_has_one_socket_per_core_that_runs_the_cart() {
     assert_eq!(Core::choices(Platform::Gb), vec![Core::Mgba]);
     assert_eq!(Core::choices(Platform::Gbc), vec![Core::Mgba]);
     assert_eq!(Core::choices(Platform::Ws), vec![Core::Cygne]);
+    assert_eq!(Core::choices(Platform::Lynx), vec![Core::Lynx]);
 }
 #[test]
 fn the_picker_board_has_exactly_two_sockets() {
@@ -215,4 +216,18 @@ fn only_gba_carts_have_a_core_choice() {
     assert_eq!(Core::choices(Platform::Gb), vec![Core::Mgba]);
     assert_eq!(Core::choices(Platform::Gbc), vec![Core::Mgba]);
     assert_eq!(Core::choices(Platform::Ws), vec![Core::Cygne]);
+    assert_eq!(Core::choices(Platform::Lynx), vec![Core::Lynx]);
+}
+
+#[test]
+fn a_lynx_cart_always_gets_beetle_lynx_whatever_the_card_says() {
+    let d = root_with(Some("Chips Challenge = mgba\n"));
+    assert_eq!(
+        core_for_platform(d.path(), "Chips Challenge", Platform::Lynx),
+        Core::Lynx
+    );
+    assert_eq!(Core::default_for(Platform::Lynx), Core::Lynx);
+    assert!(!Core::Mgba.runs(Platform::Lynx));
+    assert!(!Core::Gpsp.runs(Platform::Lynx));
+    assert!(!Core::Lynx.runs(Platform::Gba));
 }

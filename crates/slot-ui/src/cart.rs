@@ -4,8 +4,9 @@ use slot_store::{Cart, Outline, Platform};
 use crate::art;
 use crate::shell::{shell_for, Finish, Shell};
 use crate::silhouette::{
-    cart_depth, cart_mask, detail_mask, gb_cart_depth, gb_cart_mask, gb_detail_mask, ws_cart_depth,
-    ws_cart_mask, ws_detail_mask, Detail, GbShell,
+    cart_depth, cart_mask, detail_mask, gb_cart_depth, gb_cart_mask, gb_detail_mask,
+    lynx_cart_depth, lynx_cart_mask, lynx_detail_mask, ws_cart_depth, ws_cart_mask, ws_detail_mask,
+    Detail, GbShell,
 };
 use crate::text;
 
@@ -63,16 +64,37 @@ pub const WS_LABEL_Y: u32 = ws_label_panel(WS_CART_W, WS_CART_H).1;
 pub const WS_LABEL_W: u32 = ws_label_panel(WS_CART_W, WS_CART_H).2 - WS_LABEL_X;
 pub const WS_LABEL_H: u32 = ws_label_panel(WS_CART_W, WS_CART_H).3 - WS_LABEL_Y;
 
+// Atari Lynx: a 58 x 61 mm shell, drawn at the same scale as the Game Boy pak
+// (312 wide), so it is nearly square and about as tall.
+pub const LYNX_CART_W: u32 = 312;
+pub const LYNX_CART_H: u32 = (LYNX_CART_W * LYNX_SEATED_H + SEATED_W / 2) / SEATED_W;
+
+pub const fn lynx_label_panel(w: u32, h: u32) -> (u32, u32, u32, u32) {
+    (
+        (w * 70 + 500) / 1000,
+        (h * 85 + 500) / 1000,
+        (w * 930 + 500) / 1000,
+        (h * 760 + 500) / 1000,
+    )
+}
+
+pub const LYNX_LABEL_X: u32 = lynx_label_panel(LYNX_CART_W, LYNX_CART_H).0;
+pub const LYNX_LABEL_Y: u32 = lynx_label_panel(LYNX_CART_W, LYNX_CART_H).1;
+pub const LYNX_LABEL_W: u32 = lynx_label_panel(LYNX_CART_W, LYNX_CART_H).2 - LYNX_LABEL_X;
+pub const LYNX_LABEL_H: u32 = lynx_label_panel(LYNX_CART_W, LYNX_CART_H).3 - LYNX_LABEL_Y;
+
 const PAD: u32 = 10;
 const MAX_LINES: usize = 3;
 const MAX_PX: f32 = LABEL_H as f32 / (MAX_LINES as f32 * 1.36);
 const WS_MAX_PX: f32 = WS_LABEL_H as f32 / (MAX_LINES as f32 * 1.36);
+const LYNX_MAX_PX: f32 = LYNX_LABEL_H as f32 / (MAX_LINES as f32 * 1.36);
 const GB_MAX_PX: f32 = (GB_LABEL_H - 2 * PAD) as f32 / MAX_LINES as f32;
 const MIN_PX: f32 = 10.0;
 
 const RIM: u32 = (4 * CART_W + SEATED_W / 2) / SEATED_W;
 const GB_RIM: u32 = (7 * GB_CART_W + SEATED_W / 2) / SEATED_W;
 const WS_RIM: u32 = (4 * WS_CART_W + SEATED_W / 2) / SEATED_W;
+const LYNX_RIM: u32 = (4 * LYNX_CART_W + SEATED_W / 2) / SEATED_W;
 
 pub struct CartFace {
     pub rgba: Vec<u8>,
@@ -105,11 +127,12 @@ enum Shape {
     Gba,
     Gb(GbShell),
     Ws,
+    Lynx,
 }
 
 pub fn gb_shell_of(cart: &Cart) -> Option<GbShell> {
     match cart.platform {
-        Platform::Gba | Platform::Ws => None,
+        Platform::Gba | Platform::Ws | Platform::Lynx => None,
         Platform::Gb | Platform::Gbc => Some(match cart.shell.map(|c| c.outline) {
             Some(Outline::Notched) => GbShell::Notched,
             Some(Outline::Rounded) => GbShell::Rounded,
@@ -122,8 +145,10 @@ pub fn gb_shell_of(cart: &Cart) -> Option<GbShell> {
 }
 
 fn shape_of(cart: &Cart) -> Shape {
-    if cart.platform == Platform::Ws {
-        return Shape::Ws;
+    match cart.platform {
+        Platform::Ws => return Shape::Ws,
+        Platform::Lynx => return Shape::Lynx,
+        _ => {}
     }
     match gb_shell_of(cart) {
         None => Shape::Gba,
@@ -169,6 +194,24 @@ fn spec(shape: Shape) -> Spec {
                 traces_from: 0.78,
             },
         },
+        Shape::Lynx => Spec {
+            w: LYNX_CART_W,
+            h: LYNX_CART_H,
+            label: (LYNX_LABEL_X, LYNX_LABEL_Y, LYNX_LABEL_W, LYNX_LABEL_H),
+            mask: lynx_cart_mask(),
+            depth: lynx_cart_depth(),
+            detail: lynx_detail_mask(),
+            max_px: LYNX_MAX_PX,
+            max_h: f32::INFINITY,
+            rim: LYNX_RIM,
+            board: Board {
+                x: (0.07, 0.93),
+                top: LYNX_LABEL_Y as f32 / LYNX_CART_H as f32,
+                pins: (0.12, 0.88),
+                contacts_from: 0.84,
+                traces_from: 0.76,
+            },
+        },
         Shape::Gb(shell) => Spec {
             w: GB_CART_W,
             h: GB_CART_H,
@@ -194,11 +237,13 @@ pub const SEATED_W: u32 = 240;
 const SEATED_H: u32 = 141;
 const GB_SEATED_H: u32 = 259;
 const WS_SEATED_H: u32 = 144;
+const LYNX_SEATED_H: u32 = 252;
 
 pub fn seated_box(platform: Platform) -> (u32, u32) {
     match platform {
         Platform::Gba => (SEATED_W, SEATED_H),
         Platform::Ws => (SEATED_W, WS_SEATED_H),
+        Platform::Lynx => (SEATED_W, LYNX_SEATED_H),
         Platform::Gb | Platform::Gbc => (SEATED_W, GB_SEATED_H),
     }
 }
@@ -207,6 +252,7 @@ pub fn cart_box(platform: Platform) -> (u32, u32) {
     let s = spec(match platform {
         Platform::Gba => Shape::Gba,
         Platform::Ws => Shape::Ws,
+        Platform::Lynx => Shape::Lynx,
         Platform::Gb | Platform::Gbc => Shape::Gb(GbShell::Notched),
     });
     (s.w, s.h)
@@ -218,6 +264,10 @@ pub fn cart_shadow() -> CartFace {
 
 pub fn ws_cart_shadow() -> CartFace {
     shadow(WS_CART_W, WS_CART_H, ws_cart_mask())
+}
+
+pub fn lynx_cart_shadow() -> CartFace {
+    shadow(LYNX_CART_W, LYNX_CART_H, lynx_cart_mask())
 }
 
 pub fn gb_cart_shadow(shell: GbShell) -> CartFace {

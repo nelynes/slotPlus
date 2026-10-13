@@ -1,9 +1,13 @@
 use std::sync::OnceLock;
 
-use crate::cart::{CART_H, CART_W, GB_CART_H, GB_CART_W, WS_CART_H, WS_CART_W};
+use crate::cart::{
+    CART_H, CART_W, GB_CART_H, GB_CART_W, LYNX_CART_H, LYNX_CART_W, WS_CART_H, WS_CART_W,
+};
 
 const WS_CART_SVG: &str = include_str!("../assets/ws_cart.svg");
 const WS_DETAIL_SVG: &str = include_str!("../assets/ws_cart_detail.svg");
+const LYNX_CART_SVG: &str = include_str!("../assets/lynx_cart.svg");
+const LYNX_DETAIL_SVG: &str = include_str!("../assets/lynx_cart_detail.svg");
 const CART_SVG: &str = include_str!("../assets/cart.svg");
 const DETAIL_SVG: &str = include_str!("../assets/cart_detail.svg");
 const GB_CART_SVG: &str = include_str!("../assets/gb_cart.svg");
@@ -62,6 +66,27 @@ pub(crate) fn ws_detail_mask() -> &'static Detail {
     MASK.get_or_init(|| {
         rasterise_detail(WS_DETAIL_SVG, WS_CART_W, WS_CART_H)
             .unwrap_or_else(|| Detail::blank(WS_CART_W, WS_CART_H))
+    })
+}
+
+pub(crate) fn lynx_cart_mask() -> &'static [u8] {
+    static MASK: OnceLock<Vec<u8>> = OnceLock::new();
+    MASK.get_or_init(|| {
+        rasterise_svg(LYNX_CART_SVG, LYNX_CART_W, LYNX_CART_H)
+            .unwrap_or_else(|| vec![255; (LYNX_CART_W * LYNX_CART_H) as usize])
+    })
+}
+
+pub(crate) fn lynx_cart_depth() -> &'static [u8] {
+    static DEPTH: OnceLock<Vec<u8>> = OnceLock::new();
+    DEPTH.get_or_init(|| depth_map(lynx_cart_mask(), LYNX_CART_W as usize, LYNX_CART_H as usize))
+}
+
+pub(crate) fn lynx_detail_mask() -> &'static Detail {
+    static MASK: OnceLock<Detail> = OnceLock::new();
+    MASK.get_or_init(|| {
+        rasterise_detail(LYNX_DETAIL_SVG, LYNX_CART_W, LYNX_CART_H)
+            .unwrap_or_else(|| Detail::blank(LYNX_CART_W, LYNX_CART_H))
     })
 }
 

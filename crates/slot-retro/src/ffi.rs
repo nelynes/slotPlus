@@ -6,6 +6,7 @@ use crate::core::CoreError;
 
 pub const API_VERSION: c_uint = 1;
 
+pub const SET_ROTATION: c_uint = 1;
 pub const GET_CAN_DUPE: c_uint = 3;
 pub const GET_SYSTEM_DIRECTORY: c_uint = 9;
 pub const SET_PIXEL_FORMAT: c_uint = 10;

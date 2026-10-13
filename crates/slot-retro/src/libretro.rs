@@ -28,6 +28,9 @@ struct Host {
     video_h: u32,
     shown_w: u32,
     shown_h: u32,
+    /// Quarter turns anticlockwise the core asked the frontend to draw its
+    /// picture at (libretro's SET_ROTATION). 0 is upright.
+    rotation: u32,
     format: PixelFormat,
     audio: Vec<i16>,
     inputs: [u16; 2],
@@ -79,6 +82,16 @@ unsafe extern "C" fn set_rumble_state(port: c_uint, effect: c_uint, strength: u1
 
 unsafe extern "C" fn environment(cmd: c_uint, data: *mut c_void) -> bool {
     match cmd {
+        SET_ROTATION => {
+            if data.is_null() {
+                return false;
+            }
+            let turns = *(data as *const c_uint);
+            if turns > 3 {
+                return false;
+            }
+            with_host(|h| h.rotation = turns).is_some()
+        }
         GET_CAN_DUPE => {
             if data.is_null() {
                 return false;
@@ -322,6 +335,10 @@ unsafe extern "C" fn video_refresh(
         return;
     }
     with_host(|h| {
+        if h.rotation != 0 {
+            draw_turned(h, data as *const u8, width as usize, height as usize, pitch);
+            return;
+        }
         let (bw, bh) = (h.video_w as usize, h.video_h as usize);
         let cols = (width as usize).min(bw);
         let rows = (height as usize).min(bh);
@@ -355,6 +372,62 @@ unsafe extern "C" fn video_refresh(
             }
         }
     });
+}
+
+/// One pixel of a core frame as the host stores it: B, G, R, 0.
+unsafe fn frame_pixel(format: PixelFormat, row: *const u8, x: usize) -> [u8; 4] {
+    match format {
+        PixelFormat::Xrgb8888 => {
+            let p = ptr::read_unaligned((row as *const u32).add(x));
+            let [b, g, r, _] = p.to_le_bytes();
+            [b, g, r, 0]
+        }
+        PixelFormat::Rgb565 => {
+            let p = ptr::read_unaligned((row as *const u16).add(x));
+            let r = ((p >> 11) & 0x1f) as u8;
+            let g = ((p >> 5) & 0x3f) as u8;
+            let b = (p & 0x1f) as u8;
+            [
+                (b << 3) | (b >> 2),
+                (g << 2) | (g >> 4),
+                (r << 3) | (r >> 2),
+                0,
+            ]
+        }
+    }
+}
+
+/// Draw a frame the core left upright, turned `h.rotation` quarter turns
+/// anticlockwise, centred in the buffer. A turned frame swaps its width and
+/// height, and `shown_w` / `shown_h` say so.
+unsafe fn draw_turned(h: &mut Host, data: *const u8, fw: usize, fh: usize, pitch: usize) {
+    let (bw, bh) = (h.video_w as usize, h.video_h as usize);
+    let (dw, dh) = if h.rotation & 1 == 1 {
+        (fh, fw)
+    } else {
+        (fw, fh)
+    };
+    let cols = dw.min(bw);
+    let rows = dh.min(bh);
+    let ox = (bw - cols) / 2;
+    let oy = (bh - rows) / 2;
+    if cols != bw || rows != bh {
+        h.video.fill(0);
+    }
+    h.shown_w = cols as u32;
+    h.shown_h = rows as u32;
+    for dy in 0..rows {
+        for dx in 0..cols {
+            let (sx, sy) = match h.rotation {
+                1 => (fw - 1 - dy, dx),
+                2 => (fw - 1 - dx, fh - 1 - dy),
+                _ => (dy, fh - 1 - dx),
+            };
+            let px = frame_pixel(h.format, data.add(sy * pitch), sx);
+            let o = ((dy + oy) * bw + dx + ox) * 4;
+            h.video[o..o + 4].copy_from_slice(&px);
+        }
+    }
 }
 
 unsafe extern "C" fn audio_sample(left: i16, right: i16) {
@@ -491,6 +564,7 @@ impl LibretroCore {
             video_h: GBA_H,
             shown_w: GBA_W,
             shown_h: GBA_H,
+            rotation: 0,
             format: PixelFormat::Xrgb8888,
             audio: Vec::new(),
             inputs: [0; 2],
@@ -734,6 +808,7 @@ mod tests {
             video_h: GBA_H,
             shown_w: GBA_W,
             shown_h: GBA_H,
+            rotation: 0,
             format: PixelFormat::Xrgb8888,
             audio: Vec::new(),
             inputs: [0; 2],
@@ -1703,6 +1778,96 @@ mod tests {
             unsafe { with_host(|h| (h.video.len(), h.shown_w, h.shown_h)) }.unwrap(),
             ((GBA_W * GBA_H * 4) as usize, 144, GBA_H)
         );
+    }
+
+    #[test]
+    fn set_rotation_stores_the_quarter_turns_the_core_asks_for() {
+        let mut host = host_with(HashMap::new(), false);
+        let _active = Active::bind(&mut host);
+        let mut turns: c_uint = 1;
+        let ok = unsafe { environment(SET_ROTATION, &mut turns as *mut c_uint as *mut c_void) };
+        assert!(ok, "a core that asks to be turned has to be answered");
+        assert_eq!(unsafe { with_host(|h| h.rotation) }.unwrap(), 1);
+
+        let mut nonsense: c_uint = 4;
+        let ok = unsafe { environment(SET_ROTATION, &mut nonsense as *mut c_uint as *mut c_void) };
+        assert!(!ok, "there are only four quarter turns");
+        assert_eq!(unsafe { with_host(|h| h.rotation) }.unwrap(), 1);
+        assert!(!unsafe { environment(SET_ROTATION, ptr::null_mut()) });
+    }
+
+    /// A 3 wide, 2 tall frame whose pixels are numbered 1 to 6, row by row,
+    /// drawn turned. Returns what lands at each place in the shown picture.
+    fn turned(rotation: u32) -> (Vec<Vec<u8>>, (u32, u32)) {
+        let mut host = host_with(HashMap::new(), false);
+        host.rotation = rotation;
+        let _active = Active::bind(&mut host);
+        let mut frame = vec![0u8; 3 * 2 * 4];
+        for n in 0..6 {
+            frame[n * 4] = n as u8 + 1;
+        }
+        unsafe { video_refresh(frame.as_ptr() as *const c_void, 3, 2, 3 * 4) };
+        let (w, h) = unsafe { with_host(|h| (h.shown_w, h.shown_h)) }.unwrap();
+        let (ox, oy) = ((GBA_W - w) / 2, (GBA_H - h) / 2);
+        let rows = (0..h)
+            .map(|y| {
+                (0..w)
+                    .map(|x| {
+                        let i = (((oy + y) * GBA_W + ox + x) * 4) as usize;
+                        unsafe { with_host(|h| h.video[i]) }.unwrap()
+                    })
+                    .collect()
+            })
+            .collect();
+        (rows, (w, h))
+    }
+
+    #[test]
+    fn a_frame_turned_one_quarter_anticlockwise_swaps_its_size() {
+        let (rows, size) = turned(1);
+        assert_eq!(size, (2, 3));
+        assert_eq!(rows, vec![vec![3, 6], vec![2, 5], vec![1, 4]]);
+    }
+
+    #[test]
+    fn a_frame_turned_three_quarters_anticlockwise_is_a_clockwise_quarter() {
+        let (rows, size) = turned(3);
+        assert_eq!(size, (2, 3));
+        assert_eq!(rows, vec![vec![4, 1], vec![5, 2], vec![6, 3]]);
+    }
+
+    #[test]
+    fn a_frame_turned_a_half_keeps_its_size_and_reverses_it() {
+        let (rows, size) = turned(2);
+        assert_eq!(size, (3, 2));
+        assert_eq!(rows, vec![vec![6, 5, 4], vec![3, 2, 1]]);
+    }
+
+    #[test]
+    fn an_upright_frame_is_drawn_as_it_always_was() {
+        let (rows, size) = turned(0);
+        assert_eq!(size, (3, 2));
+        assert_eq!(rows, vec![vec![1, 2, 3], vec![4, 5, 6]]);
+    }
+
+    #[test]
+    fn a_turned_565_frame_is_widened_like_an_upright_one() {
+        let mut host = host_with(HashMap::new(), false);
+        host.rotation = 1;
+        host.format = PixelFormat::Rgb565;
+        let _active = Active::bind(&mut host);
+        let frame: Vec<u8> = [0xffffu16, 0x0000]
+            .iter()
+            .flat_map(|p| p.to_le_bytes())
+            .collect();
+        unsafe { video_refresh(frame.as_ptr() as *const c_void, 2, 1, 2 * 2) };
+        let (ox, oy) = ((GBA_W - 1) / 2, (GBA_H - 2) / 2);
+        let at = |y: u32| {
+            let i = (((oy + y) * GBA_W + ox) * 4) as usize;
+            unsafe { with_host(|h| h.video[i..i + 4].to_vec()) }.unwrap()
+        };
+        assert_eq!(at(0), vec![0, 0, 0, 0], "the right pixel turns to the top");
+        assert_eq!(at(1), vec![255, 255, 255, 0]);
     }
 
     #[test]

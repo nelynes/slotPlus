@@ -8,13 +8,42 @@
 
 # What is slotPlus?
 
-A slightly modified Slot. Has support for GBA, GBC, and GB titles as well as WonderSwan and WonderSwan Color.
+A slightly modified Slot. Has support for GBA, GBC, and GB titles as well as WonderSwan, WonderSwan Color and Atari Lynx.
+
+## Atari Lynx
+
+> [!IMPORTANT]
+> Atari Lynx games need `lynxboot.img`, the Lynx boot ROM. It is **not included**. Put your own copy in `BIOS/`.
+
+- **Games:** put `.lnx` and `.lyx` files in `Games/Lynx/`. They get their own shelf. The `Lynx` folders (`Games`, `Labels`, `Saves`, `States`) are created for you on first boot.
+- **Label art:** optional PNGs go in `Labels/Lynx/<game name>.png`, roughly 268x221 px (about 1.21:1).
+- **Core:** Lynx games run on Beetle Lynx.
+- **Carts:** Lynx carts have their own shape with a stepped plug and a dark shell. Set `Config/cart_shell.txt` to give a single game a different shell.
+- **Saves:** Beetle Lynx has no battery saves. Use save states and the resume state.
+
+### Controls
+
+| Press        | Does                                  |
+|--------------|---------------------------------------|
+| D-pad        | D-pad                                 |
+| A / B        | A / B                                 |
+| L1 / R1      | Option 1 / Option 2                   |
+| Start        | Pause (the Lynx's Option button)      |
+| Select       | Nothing                               |
+| Hold X / Y   | Turbo A / Turbo B                     |
+
+### Games that turn
+
+Some Lynx games were made to be held on their side. Beetle Lynx knows which, and slot turns the picture for them automatically. The core also turns the D-pad to match.
+
+> [!NOTE]
+> Rotation direction and D-pad feel are new. If something feels wrong, please open an issue.
 
 ## WonderSwan / WonderSwan Color
 
 - **Games:** put `.ws` and `.wsc` files in `Games/WS/`. They get their own shelf next to GBA, GB and GBC. The `WS` folders (`Games`, `Labels`, `Saves`, `States`) are created for you on first boot.
 - **Label art:** optional PNGs go in `Labels/WS/<game name>.png`, roughly 328x124 px (about 2.65:1).
-- **Core:** WonderSwan games run on Beetle WonderSwan (Cygne). The core picker and the link menu are GBA-only, so neither opens for WonderSwan games.
+- **Core:** WonderSwan games run on Beetle WonderSwan (Cygne).
 - **Carts:** WonderSwan carts have their own wide shape with a stepped plug, and default to a smoke-translucent shell. Set `Config/cart_shell.txt` to give a single game a different shell.
 
 ### Controls (horizontal games)
