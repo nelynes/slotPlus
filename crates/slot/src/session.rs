@@ -482,6 +482,11 @@ impl Session {
             Some(p) => EmuHandle::spawn_linked(opened.core, rom, ring, sav, resume, p),
             None => EmuHandle::spawn(opened.core, rom, ring, sav, resume),
         };
+        if platform == Platform::Lynx {
+            let turn = crate::core::lynx_rotation(&self.root, stem);
+            eprintln!("slot: lynx: lynx_rot_screen={turn}");
+            emu.set_option("lynx_rot_screen", turn);
+        }
         emu.set_volume(self.app.output_volume());
         emu.set_driven(self.driven);
         self.app.set_snapshot(Box::new(emu.snapshot()));

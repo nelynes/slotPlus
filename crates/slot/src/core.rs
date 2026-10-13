@@ -189,6 +189,53 @@ fn has_frameskip(which: Core) -> bool {
     which != Core::Lynx
 }
 
+pub const LYNX_ROTATION_FILE: &str = "Config/lynx_rotation.txt";
+
+/// Lynx games made to be held on their side, by title, with the turn Beetle
+/// Lynx asks for. The core finds these from its own list of checksums, which
+/// knows only some dumps of each: a "(World)" Klax is not on it, so it stays
+/// upright. Matching on the title catches every dump of the same game.
+const LYNX_SIDEWAYS: [(&str, &str); 4] = [
+    ("klax", "270"),
+    ("gauntlet - the third encounter", "270"),
+    ("lexis", "90"),
+    ("nfl football", "90"),
+];
+
+fn lynx_title(stem: &str) -> String {
+    let cut = stem
+        .find(" (")
+        .into_iter()
+        .chain(stem.find(" ["))
+        .min()
+        .unwrap_or(stem.len());
+    stem[..cut].trim().to_ascii_lowercase()
+}
+
+/// What to give Beetle Lynx's `lynx_rot_screen` for a game: `auto` lets the
+/// core decide from the cart, `0`, `90`, `180` and `270` turn the picture that
+/// many degrees anticlockwise, and `manual` turns it a quarter each time
+/// SELECT is pressed. `Config/lynx_rotation.txt` can set any of these for a
+/// game by name; without an entry, a game known to be played on its side is
+/// turned and everything else is left to the core.
+pub fn lynx_rotation(root: &Path, stem: &str) -> &'static str {
+    const CHOICES: [&str; 6] = ["auto", "manual", "0", "90", "180", "270"];
+    if let Some(asked) = slot_store::ini::value(root, LYNX_ROTATION_FILE, stem) {
+        let asked = asked.trim().to_ascii_lowercase();
+        if let Some(choice) = CHOICES.iter().find(|c| **c == asked) {
+            return choice;
+        }
+        eprintln!(
+            "slot: lynx: {LYNX_ROTATION_FILE}: {asked:?} for {stem} is not one of {CHOICES:?}"
+        );
+    }
+    let title = lynx_title(stem);
+    LYNX_SIDEWAYS
+        .iter()
+        .find(|(name, _)| *name == title)
+        .map_or("auto", |(_, turn)| *turn)
+}
+
 pub fn apply_core_options(
     core: &mut LibretroCore,
     which: Core,
@@ -248,6 +295,54 @@ mod tests {
     use std::sync::Mutex;
 
     static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    #[test]
+    fn a_lynx_game_known_to_be_played_on_its_side_is_turned_whatever_its_dump() {
+        let root = tempfile::tempdir().unwrap();
+        for stem in [
+            "Klax (World)",
+            "Klax (USA, Europe)",
+            "Klax",
+            "Gauntlet - The Third Encounter (World)",
+            "KLAX (World) [!]",
+        ] {
+            assert_eq!(lynx_rotation(root.path(), stem), "270", "{stem}");
+        }
+        for stem in ["Lexis (USA)", "NFL Football (USA, Europe)"] {
+            assert_eq!(lynx_rotation(root.path(), stem), "90", "{stem}");
+        }
+    }
+
+    #[test]
+    fn other_lynx_games_are_left_to_the_core() {
+        let root = tempfile::tempdir().unwrap();
+        for stem in [
+            "Double Dragon (USA, Europe)",
+            "Klaxon (World)",
+            "Super Klax (World)",
+            "Gauntlet (World)",
+        ] {
+            assert_eq!(lynx_rotation(root.path(), stem), "auto", "{stem}");
+        }
+    }
+
+    #[test]
+    fn a_game_named_in_the_rotation_file_gets_what_the_file_says() {
+        let root = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(root.path().join("Config")).unwrap();
+        std::fs::write(
+            root.path().join(LYNX_ROTATION_FILE),
+            "Klax (World) = auto\nDouble Dragon (USA, Europe) = 90\nLexis (USA) = Manual\nRaiden = sideways\n",
+        )
+        .unwrap();
+        assert_eq!(lynx_rotation(root.path(), "Klax (World)"), "auto");
+        assert_eq!(
+            lynx_rotation(root.path(), "Double Dragon (USA, Europe)"),
+            "90"
+        );
+        assert_eq!(lynx_rotation(root.path(), "Lexis (USA)"), "manual");
+        assert_eq!(lynx_rotation(root.path(), "Raiden"), "auto");
+    }
 
     #[test]
     fn only_beetle_lynx_has_no_frameskip_option() {
