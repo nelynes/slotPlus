@@ -52,7 +52,7 @@ pub const DMG_SHELL: Shell = shell([0x9a, 0x97, 0x8f], Finish::Solid);
 
 pub const WS_SHELL: Shell = shell([0x3a, 0x3a, 0x40], Finish::Translucent);
 
-pub const LYNX_SHELL: Shell = shell([0x2a, 0x2a, 0x2e], Finish::Solid);
+pub const LYNX_SHELL: Shell = shell([0x32, 0x3f, 0x41], Finish::Solid);
 
 pub const DUAL_MODE_SHELL: Shell = shell([0x33, 0x30, 0x31], Finish::Solid);
 

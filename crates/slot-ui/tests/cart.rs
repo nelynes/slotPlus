@@ -878,17 +878,44 @@ fn the_lynx_cart_is_nearly_square_and_matches_its_box() {
 }
 
 #[test]
-fn the_lynx_plug_is_narrower_than_its_body_and_its_top_corners_are_clipped() {
+fn the_lynx_is_a_flat_card_with_small_top_corners_and_rounder_bottom_ones() {
     let f = cart_face(&lynx_cart());
     let width_at = |y: u32| (0..f.w).filter(|&x| pixel_alpha(&f, x, y) > 128).count();
     let body = width_at(LYNX_CART_H / 3);
-    let plug = width_at(LYNX_CART_H - 8);
+    let foot = width_at(LYNX_CART_H - 8);
     assert!(
-        body > plug + 8,
-        "body {body}px, plug {plug}px: the stepped plug is missing"
+        foot + 4 >= body,
+        "body {body}px, foot {foot}px: the card should have no stepped plug"
     );
-    assert_eq!(pixel_alpha(&f, 1, 1), 0, "the top corner is not clipped");
+    assert!(pixel_alpha(&f, 0, 0) < 64, "the top corner is not rounded");
+    assert_eq!(
+        pixel_alpha(&f, 0, f.h - 1),
+        0,
+        "the bottom corner is square"
+    );
+    assert_eq!(pixel_alpha(&f, f.w - 1, f.h - 1), 0);
     assert!(pixel_alpha(&f, f.w / 2, f.h / 2) > 250);
+}
+
+#[test]
+fn the_lynx_shows_a_row_of_gold_contacts_along_its_foot() {
+    let f = cart_face(&lynx_cart());
+    let y = LYNX_CART_H * 915 / 1000;
+    let gold = (0..f.w)
+        .filter(|&x| {
+            let [r, g, b] = pixel(&f, x, y);
+            r > 180 && g > 120 && b < 120
+        })
+        .count();
+    assert!(gold > 100, "only {gold} gold pixels across the contacts");
+    let above = LYNX_CART_H * 150 / 1000;
+    let none = (0..f.w)
+        .filter(|&x| {
+            let [r, _, b] = pixel(&f, x, above);
+            r > 180 && b < 120
+        })
+        .count();
+    assert!(none < 20, "{none} gold pixels above the contact strip");
 }
 
 #[test]

@@ -64,17 +64,19 @@ pub const WS_LABEL_Y: u32 = ws_label_panel(WS_CART_W, WS_CART_H).1;
 pub const WS_LABEL_W: u32 = ws_label_panel(WS_CART_W, WS_CART_H).2 - WS_LABEL_X;
 pub const WS_LABEL_H: u32 = ws_label_panel(WS_CART_W, WS_CART_H).3 - WS_LABEL_Y;
 
-// Atari Lynx: a 58 x 61 mm shell, drawn at the same scale as the Game Boy pak
-// (312 wide), so it is nearly square and about as tall.
+// Atari Lynx: a flat 58 x 61 mm card, drawn at the same scale as the Game Boy
+// pak (312 wide), so it is nearly square and about as tall. The printed label
+// spans almost the full width, and 34 contacts (1.59 mm pitch) run along the
+// bottom edge behind clear plastic.
 pub const LYNX_CART_W: u32 = 312;
 pub const LYNX_CART_H: u32 = (LYNX_CART_W * LYNX_SEATED_H + SEATED_W / 2) / SEATED_W;
 
 pub const fn lynx_label_panel(w: u32, h: u32) -> (u32, u32, u32, u32) {
     (
-        (w * 70 + 500) / 1000,
-        (h * 85 + 500) / 1000,
-        (w * 930 + 500) / 1000,
-        (h * 760 + 500) / 1000,
+        (w * 14 + 500) / 1000,
+        (h * 226 + 500) / 1000,
+        (w * 986 + 500) / 1000,
+        (h * 867 + 500) / 1000,
     )
 }
 
@@ -205,11 +207,11 @@ fn spec(shape: Shape) -> Spec {
             max_h: f32::INFINITY,
             rim: LYNX_RIM,
             board: Board {
-                x: (0.07, 0.93),
+                x: (0.03, 0.97),
                 top: LYNX_LABEL_Y as f32 / LYNX_CART_H as f32,
-                pins: (0.12, 0.88),
-                contacts_from: 0.84,
-                traces_from: 0.76,
+                pins: (0.047, 0.953),
+                contacts_from: 0.87,
+                traces_from: 0.8,
             },
         },
         Shape::Gb(shell) => Spec {
@@ -304,6 +306,9 @@ pub fn cart_face_with(cart: &Cart, art: Option<Vec<u8>>) -> CartFace {
     mould_detail(&s, &mut face);
     recess_label(&s, &mut face, &shell);
     paste_label(&s, &mut face, &label);
+    if matches!(shape_of(cart), Shape::Lynx) {
+        lynx_contacts(&s, &mut face);
+    }
     clip_to_silhouette(&s, &mut face);
     face
 }
@@ -542,6 +547,36 @@ fn recess_label(s: &Spec, face: &mut CartFace, shell: &Shell) {
             let upper = from_top.min(from_left);
             let lower = from_bottom.min(from_right);
             put(x, y, upper <= lower);
+        }
+    }
+}
+
+/// The Lynx's 34 gold contacts, seen through the clear strip at the foot of the
+/// card. 1.59 mm pitch on a 58 mm card, centred, each stripe a little over half
+/// the pitch wide.
+fn lynx_contacts(s: &Spec, face: &mut CartFace) {
+    const PINS: u32 = 34;
+    let pitch = s.w as f32 * 1.59 / 58.0;
+    let first = (s.w as f32 - pitch * (PINS - 1) as f32) / 2.0;
+    let (top, bottom) = (s.h * 874 / 1000, s.h * 957 / 1000);
+    for y in top..bottom {
+        for x in 0..s.w {
+            let d = (((y * s.w) + x) * 4) as usize;
+            let k = ((x as f32 - first) / pitch + 0.5).floor();
+            if k < 0.0 || k >= PINS as f32 {
+                continue;
+            }
+            let within = x as f32 - (first + k * pitch);
+            let c = if within.abs() < pitch * 0.28 {
+                GOLD
+            } else {
+                // The clear plastic between stripes, a little lighter than the shell.
+                let under = [face.rgba[d], face.rgba[d + 1], face.rgba[d + 2]];
+                lerp(under, [0x9a, 0xa0, 0x9c], 70, 255)
+            };
+            face.rgba[d] = c[0];
+            face.rgba[d + 1] = c[1];
+            face.rgba[d + 2] = c[2];
         }
     }
 }

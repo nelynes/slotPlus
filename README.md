@@ -16,9 +16,9 @@ A slightly modified Slot. Has support for GBA, GBC, and GB titles as well as Won
 > Atari Lynx games need `lynxboot.img`, the Lynx boot ROM. It is **not included**. Put your own copy in `BIOS/`.
 
 - **Games:** put `.lnx` and `.lyx` files in `Games/Lynx/`. They get their own shelf. The `Lynx` folders (`Games`, `Labels`, `Saves`, `States`) are created for you on first boot.
-- **Label art:** optional PNGs go in `Labels/Lynx/<game name>.png`, roughly 268x221 px (about 1.21:1).
+- **Label art:** optional PNGs go in `Labels/Lynx/<game name>.png`, roughly 304x210 px (about 1.45:1).
 - **Core:** Lynx games run on Beetle Lynx.
-- **Carts:** Lynx carts have their own shape with a stepped plug and a dark shell. Set `Config/cart_shell.txt` to give a single game a different shell.
+- **Carts:** Lynx carts are drawn as a flat card with gold contacts along the bottom. Set `Config/cart_shell.txt` to give a single game a different shell.
 - **Saves:** Beetle Lynx has no battery saves. Use save states and the resume state.
 
 ### Controls
