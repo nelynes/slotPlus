@@ -2,12 +2,6 @@
 
 <img src=".github/resources/banner.png" width="100%" alt="slot. A bespoke, Game Boy-centric frontend for the Anbernic RG SP.">
 
-<a href="LICENSE"><img src="https://img.shields.io/github/license/BrandonKowalski/slot?style=for-the-badge&labelColor=242429&color=4d4d57" height="36" alt="License"></a>
-<a href="https://github.com/BrandonKowalski/slot/stargazers"><img src="https://img.shields.io/github/stars/BrandonKowalski/slot?style=for-the-badge&labelColor=242429&color=4d4d57" height="36" alt="Stars"></a>
-<a href="https://github.com/BrandonKowalski/slot/releases"><img src="https://img.shields.io/github/downloads/BrandonKowalski/slot/total?style=for-the-badge&labelColor=242429&color=4d4d57" height="36" alt="Downloads"></a>
-<a href="https://slot-cfw.fyi"><img src="https://img.shields.io/badge/Guide-slot--cfw.fyi-4d4d57?style=for-the-badge&labelColor=242429" height="36" alt="Guide"></a>
-<a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Changelog-4d4d57?style=for-the-badge&labelColor=242429" height="36" alt="Changelog"></a>
-
 </div>
 
 ---
@@ -36,11 +30,11 @@ The WonderSwan has two sets of four direction buttons: the X pad (left side) and
 | Hold **R1** + X / A / B / Y | Y pad (X = up, A = right, B = down, Y = left) |
 | Select                 | Nothing in horizontal games (they can't be rotated) |
 
-Turbo and the picture-mode shortcuts are turned off for WonderSwan games, so L1 and R1 are free to act as the Y-pad modifiers.
+Picture-mode shortcuts are turned off for WonderSwan games, so L1 and R1 can act as the Y-pad modifiers.
 
 ### Vertical games
 
-Games made for vertical play are recognised from the ROM. Play them one of two ways:
+Games made for vertical play are recognized from the ROM. Play them one of two ways:
 
 - **Device upright:** press SELECT and the picture turns upright (it shows at 2x with black bars at the sides).
 - **Device turned 90 degrees counter-clockwise:** leave the picture sideways at full size.
@@ -48,7 +42,7 @@ Games made for vertical play are recognised from the ROM. Play them one of two w
 Either way the D-pad is the Y pad, the four face buttons are the X pad, L1 is A and R1 is B. Upright, D-pad up is up in the game. Turned sideways, the buttons keep the WonderSwan's own directions. The L1 / R1 Y-pad modifiers above are for horizontal games only.
 
 > [!NOTE]
-> Vertical controls are new and have had little testing. If something feels wrong, please open an issue.
+> Vertical controls are new but I have tested with multiple games. If something feels wrong, please open an issue.
 
 ---
 
@@ -72,10 +66,6 @@ Release notes can be found in the [changelog](CHANGELOG.md).
 <p align="center">
 <img src=".github/resources/screenshots/carousel.gif" width="48%" alt="Scrolling the cart carousel across the Game Boy Advance, Game Boy and Game Boy Color shelves">
 <img src=".github/resources/screenshots/core-picker.gif" width="48%" alt="Flipping a cart to its circuit board to choose mGBA or gpSP">
-</p>
-
-<p align="center">
-<img src=".github/resources/screenshots/link.gif" width="96.5%" alt="Two SPs racing in Mario Kart over the emulated link">
 </p>
 
 ---
