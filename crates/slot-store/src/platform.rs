@@ -8,15 +8,17 @@ pub enum Platform {
     Gbc,
     Ws,
     Lynx,
+    Gg,
 }
 
 impl Platform {
-    pub const ALL: [Platform; 5] = [
+    pub const ALL: [Platform; 6] = [
         Platform::Gba,
         Platform::Gb,
         Platform::Gbc,
         Platform::Ws,
         Platform::Lynx,
+        Platform::Gg,
     ];
 
     pub fn name(self) -> &'static str {
@@ -26,6 +28,7 @@ impl Platform {
             Platform::Gbc => "Game Boy Color",
             Platform::Ws => "WonderSwan",
             Platform::Lynx => "Atari Lynx",
+            Platform::Gg => "Game Gear",
         }
     }
 
@@ -36,6 +39,7 @@ impl Platform {
             Platform::Gbc => "GBC",
             Platform::Ws => "WS",
             Platform::Lynx => "Lynx",
+            Platform::Gg => "GG",
         }
     }
 
@@ -45,13 +49,14 @@ impl Platform {
             Platform::Gb | Platform::Gbc => &["gb", "gbc"],
             Platform::Ws => &["ws", "wsc"],
             Platform::Lynx => &["lnx", "lyx"],
+            Platform::Gg => &["gg"],
         }
     }
 
     pub fn picture(self) -> (u32, u32) {
         match self {
             Platform::Gba => (240, 160),
-            Platform::Gb | Platform::Gbc => (160, 144),
+            Platform::Gb | Platform::Gbc | Platform::Gg => (160, 144),
             Platform::Ws => (224, 144),
             Platform::Lynx => (160, 102),
         }
@@ -76,12 +81,14 @@ impl Platform {
     }
 
     /// Size of the video buffer the host keeps for this platform. GBA, Game
-    /// Boy and Lynx keep the 240x160 buffer (a turned Lynx frame is 102x160,
-    /// which fits and lands at 3x); WonderSwan needs room for a 144x224
-    /// vertical frame, so it gets 360x240 (the canvas at 2x).
+    /// Boy, Game Gear and Lynx keep the 240x160 buffer (a turned Lynx frame is
+    /// 102x160, which fits and lands at 3x); WonderSwan needs room for a
+    /// 144x224 vertical frame, so it gets 360x240 (the canvas at 2x).
     pub fn source_size(self) -> (u32, u32) {
         match self {
-            Platform::Gba | Platform::Gb | Platform::Gbc | Platform::Lynx => (240, 160),
+            Platform::Gba | Platform::Gb | Platform::Gbc | Platform::Lynx | Platform::Gg => {
+                (240, 160)
+            }
             Platform::Ws => (360, 240),
         }
     }

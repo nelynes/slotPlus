@@ -3,7 +3,7 @@ use slot_store::Platform;
 #[test]
 fn every_platform_has_a_directory() {
     let names: Vec<&str> = Platform::ALL.iter().map(|p| p.dir_name()).collect();
-    assert_eq!(names, vec!["GBA", "GB", "GBC", "WS", "Lynx"]);
+    assert_eq!(names, vec!["GBA", "GB", "GBC", "WS", "Lynx", "GG"]);
 }
 
 #[test]
@@ -15,7 +15,8 @@ fn every_platform_is_a_shelf_of_its_own() {
             Platform::Gb,
             Platform::Gbc,
             Platform::Ws,
-            Platform::Lynx
+            Platform::Lynx,
+            Platform::Gg
         ]
     );
     for (i, p) in Platform::ALL.iter().enumerate() {
@@ -38,11 +39,33 @@ fn each_platform_takes_only_its_own_extensions() {
     assert!(Platform::Lynx.accepts(std::path::Path::new("Klax.LYX")));
     assert!(!Platform::Lynx.accepts(std::path::Path::new("Tetris.gb")));
     assert!(!Platform::Ws.accepts(std::path::Path::new("Klax.lnx")));
+    assert!(Platform::Gg.accepts(std::path::Path::new("Sonic Chaos.gg")));
+    assert!(Platform::Gg.accepts(std::path::Path::new("Shinobi.GG")));
+    assert!(!Platform::Gg.accepts(std::path::Path::new("Tetris.gb")));
+    assert!(!Platform::Gg.accepts(std::path::Path::new("Alex Kidd.sms")));
+    assert!(!Platform::Gb.accepts(std::path::Path::new("Sonic Chaos.gg")));
+}
+
+#[test]
+fn a_game_gear_picture_is_the_size_of_a_game_boy_one() {
+    assert_eq!(Platform::Gg.picture(), (160, 144));
+    assert_eq!(Platform::Gg.picture(), Platform::Gb.picture());
+    assert_eq!(Platform::Gg.name(), "Game Gear");
+    assert!(
+        !Platform::Gg.turns(),
+        "no Game Gear game is held on its side"
+    );
 }
 
 #[test]
 fn only_wonderswan_gets_a_bigger_video_buffer() {
-    for p in [Platform::Gba, Platform::Gb, Platform::Gbc, Platform::Lynx] {
+    for p in [
+        Platform::Gba,
+        Platform::Gb,
+        Platform::Gbc,
+        Platform::Lynx,
+        Platform::Gg,
+    ] {
         assert_eq!(p.source_size(), (240, 160), "{p:?} must keep its buffer");
     }
     let (w, h) = Platform::Ws.source_size();

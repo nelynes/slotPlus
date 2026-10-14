@@ -157,7 +157,7 @@ fn report_missing(core: Core, paths: &[PathBuf]) {
 pub fn colour_option(which: Core, on: bool) -> Option<(&'static str, &'static str)> {
     match which {
         Core::Mgba => Some(("mgba_color_correction", if on { "Auto" } else { "OFF" })),
-        Core::Cygne | Core::Lynx => None,
+        Core::Cygne | Core::Lynx | Core::Gearsystem => None,
         Core::Gpsp => Some((
             "gpsp_color_correction",
             if on { "enabled" } else { "disabled" },
@@ -184,9 +184,9 @@ pub fn option_prefix(which: Core) -> &'static str {
 }
 
 /// Whether the core has a `<prefix>_frameskip` option to set. Beetle Lynx
-/// does not: it is cheap to run and has no frameskip setting.
+/// and Gearsystem do not: both are cheap to run and have no frameskip setting.
 fn has_frameskip(which: Core) -> bool {
-    which != Core::Lynx
+    !matches!(which, Core::Lynx | Core::Gearsystem)
 }
 
 pub const LYNX_ROTATION_FILE: &str = "Config/lynx_rotation.txt";
@@ -301,6 +301,19 @@ pub fn apply_core_options(
         // match. SELECT is left unused so nothing else can fight it.
         core.set_option("lynx_rot_screen", "auto");
     }
+    if which == Core::Gearsystem {
+        // No BIOS: Game Gear games boot straight in, and Gearsystem never
+        // looks for bios.gg.
+        core.set_option("gearsystem_bios_gg", "Disabled");
+        core.set_option("gearsystem_bios_sms", "Disabled");
+        // The bare 160x144 Game Gear screen at square pixels, the same picture
+        // a Game Boy draws, so it lands at 3x like one.
+        core.set_option("gearsystem_overscan", "Disabled");
+        core.set_option("gearsystem_aspect_ratio", "1:1 PAR");
+        // One game on one screen: Slot does not drive the core's two-console
+        // link mode.
+        core.set_option("gearsystem_link_enable", "Disabled");
+    }
     if which == Core::Gpsp {
         core.set_option("gpsp_serial", serial);
         core.set_option("gpsp_rtc_time_source", "system");
@@ -383,11 +396,12 @@ mod tests {
     }
 
     #[test]
-    fn only_beetle_lynx_has_no_frameskip_option() {
+    fn beetle_lynx_and_gearsystem_have_no_frameskip_option() {
         assert!(has_frameskip(Core::Mgba));
         assert!(has_frameskip(Core::Gpsp));
         assert!(has_frameskip(Core::Cygne));
         assert!(!has_frameskip(Core::Lynx));
+        assert!(!has_frameskip(Core::Gearsystem));
     }
 
     #[test]
@@ -398,6 +412,7 @@ mod tests {
         // not know is dropped without a word.
         assert_eq!(option_prefix(Core::Cygne), "wswan");
         assert_eq!(option_prefix(Core::Lynx), "lynx");
+        assert_eq!(option_prefix(Core::Gearsystem), "gearsystem");
     }
 
     #[test]

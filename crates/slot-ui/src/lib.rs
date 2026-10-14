@@ -37,9 +37,10 @@ pub use board::{
 };
 pub use cart::{
     cart_box, cart_face, cart_face_with, cart_shadow, clean_label, gb_cart_shadow, gb_label_panel,
-    gb_shell_of, label_colour, label_panel, label_size, label_tags, label_text, lynx_cart_shadow,
-    lynx_label_panel, seated_box, ws_cart_shadow, ws_label_panel, CartFace, CART_H, CART_W,
-    GB_CART_H, GB_CART_W, GB_LABEL_H, GB_LABEL_W, GB_LABEL_X, GB_LABEL_Y, LABEL_H, LABEL_W,
+    gb_shell_of, gg_cart_shadow, gg_label_panel, label_colour, label_panel, label_size, label_tags,
+    label_text, lynx_cart_shadow, lynx_label_panel, seated_box, ws_cart_shadow, ws_label_panel,
+    CartFace, CART_H, CART_W, GB_CART_H, GB_CART_W, GB_LABEL_H, GB_LABEL_W, GB_LABEL_X, GB_LABEL_Y,
+    GG_CART_H, GG_CART_W, GG_LABEL_H, GG_LABEL_W, GG_LABEL_X, GG_LABEL_Y, LABEL_H, LABEL_W,
     LABEL_X, LABEL_Y, LYNX_CART_H, LYNX_CART_W, LYNX_LABEL_H, LYNX_LABEL_W, LYNX_LABEL_X,
     LYNX_LABEL_Y, WS_CART_H, WS_CART_W, WS_LABEL_H, WS_LABEL_W, WS_LABEL_X, WS_LABEL_Y,
 };
@@ -73,7 +74,7 @@ pub use shelf::{foot_y, rest_y, set_shelf_slack, Shelf};
 pub use shell::{
     gb_table_shells, gba_shell_for, lookup_order_is_exact_then_family_then_default, shell_for,
     shell_presets, table_keys, Finish, Shell, DEFAULT_SHELL, DMG_SHELL, DUAL_MODE_SHELL,
-    GB_CLEAR_SHELL, LYNX_SHELL, WS_SHELL,
+    GB_CLEAR_SHELL, GG_SHELL, LYNX_SHELL, WS_SHELL,
 };
 pub use silhouette::{gb_silhouette, silhouette, GbShell};
 pub use slot_chrome::{

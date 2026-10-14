@@ -191,3 +191,27 @@ fn lynx_roms_scan_into_their_own_platform() {
         .iter()
         .all(|c| c.platform == slot_store::Platform::Lynx));
 }
+
+#[test]
+fn game_gear_roms_scan_into_their_own_platform_with_no_header_title() {
+    let root = std::env::temp_dir().join(format!("slot-gg-scan-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    let dir = root.join("Games").join("GG");
+    std::fs::create_dir_all(&dir).unwrap();
+    // Bytes where a Game Boy header keeps its title. A Game Gear rom has no
+    // such header, so reading the header must not take them as a title.
+    let mut rom = vec![0u8; 0x8000];
+    rom[0x134..0x13c].copy_from_slice(b"GARBAGE!");
+    std::fs::write(dir.join("Sonic Chaos.gg"), &rom).unwrap();
+    std::fs::write(dir.join("Shinobi.GG"), &rom).unwrap();
+    std::fs::write(dir.join("Alex Kidd.sms"), b"not this shelf").unwrap();
+
+    let mut carts = slot_store::scan(&root).unwrap();
+    assert_eq!(carts.len(), 2);
+    assert!(carts.iter().all(|c| c.platform == slot_store::Platform::Gg));
+    for c in &mut carts {
+        c.read_header();
+        assert_eq!(c.title, "", "{c:?}");
+    }
+    std::fs::remove_dir_all(&root).ok();
+}

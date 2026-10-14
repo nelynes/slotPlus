@@ -54,6 +54,7 @@ pub struct Shelf {
     gbc_shadow: Option<TexId>,
     ws_shadow: Option<TexId>,
     lynx_shadow: Option<TexId>,
+    gg_shadow: Option<TexId>,
     shells: Vec<Option<GbShell>>,
     ride: f32,
     vel: f32,
@@ -73,6 +74,7 @@ impl Shelf {
             gbc_shadow: None,
             ws_shadow: None,
             lynx_shadow: None,
+            gg_shadow: None,
             ride: 0.0,
             vel: 0.0,
             held: None,
@@ -96,6 +98,10 @@ impl Shelf {
 
     pub fn set_lynx_shadow(&mut self, face: TexId) {
         self.lynx_shadow = Some(face);
+    }
+
+    pub fn set_gg_shadow(&mut self, face: TexId) {
+        self.gg_shadow = Some(face);
     }
 
     pub fn set_gb_shadow(&mut self, shell: GbShell, face: TexId) {
@@ -349,6 +355,7 @@ impl Shelf {
                 let backing = match cart.platform {
                     Platform::Ws => self.ws_shadow,
                     Platform::Lynx => self.lynx_shadow,
+                    Platform::Gg => self.gg_shadow,
                     _ => match self.shells.get(i).copied().flatten() {
                         None => self.shadow,
                         Some(GbShell::Notched) => self.gb_shadow,

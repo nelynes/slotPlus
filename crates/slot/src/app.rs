@@ -700,6 +700,12 @@ impl App {
         }
     }
 
+    pub fn set_gg_cart_shadow(&mut self, face: TexId) {
+        for (_, shelf) in &mut self.shelves {
+            shelf.set_gg_shadow(face);
+        }
+    }
+
     pub fn set_gb_cart_shadows(&mut self, notched: TexId, rounded: TexId) {
         for (_, shelf) in &mut self.shelves {
             shelf.set_gb_shadow(GbShell::Notched, notched);
@@ -887,7 +893,7 @@ impl App {
 
     fn slot_owns_the_shoulders(&self) -> bool {
         matches!(self.phase, Phase::Playing { .. })
-            && matches!(self.platform, Platform::Gb | Platform::Gbc)
+            && matches!(self.platform, Platform::Gb | Platform::Gbc | Platform::Gg)
     }
 
     pub fn taken_buttons(&self) -> &'static [Btn] {
@@ -1082,7 +1088,7 @@ impl App {
     pub fn screen_shader(&self) -> Shader {
         match self.platform {
             Platform::Gba | Platform::Lynx => self.state.shader_gba,
-            Platform::Gb | Platform::Gbc | Platform::Ws => self.state.shader_gb,
+            Platform::Gb | Platform::Gbc | Platform::Ws | Platform::Gg => self.state.shader_gb,
         }
     }
 
@@ -1445,7 +1451,7 @@ impl App {
         }
         let (shader, choices) = match self.platform {
             Platform::Gba | Platform::Lynx => (&mut self.state.shader_gba, &Shader::GBA[..]),
-            Platform::Gb | Platform::Gbc | Platform::Ws => {
+            Platform::Gb | Platform::Gbc | Platform::Ws | Platform::Gg => {
                 (&mut self.state.shader_gb, &Shader::GB[..])
             }
         };
@@ -2732,7 +2738,7 @@ impl App {
         if self.link_active() {
             return self.refuse();
         }
-        if matches!(self.core, Core::Cygne | Core::Lynx) {
+        if matches!(self.core, Core::Cygne | Core::Lynx | Core::Gearsystem) {
             return self.refuse();
         }
         if self.core == Core::Mgba {

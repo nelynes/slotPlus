@@ -8,12 +8,12 @@ use slot_power::{Platform, Power};
 use slot_store::format_stamp;
 use slot_ui::{
     arrows_hint_face, badge_face, bezel_face, cart_shadow, chip_face, chip_shadow_face,
-    date_time_text, gb_cart_shadow, hhmm, hint_face, icon_face, lynx_cart_shadow, menu_face,
-    photo_face, quick_caret_face, quick_label_face, quick_legend_faces, quick_value_face,
-    rebuild_count_face, rebuild_title_face, set_clock_hint_face, socket_face, sticker_face,
-    title_face, toast_face, wallpaper_face, word_face, ws_cart_shadow, CartFace, GbShell, Icon,
-    LinkBadge, PowerChoice, QuickMenuFaces, QuickRow, QuickValue, RebuildScreen, StickerFields,
-    Toast, UndoFace, ALERT_PX, BOLT_PX, HUD_ICON_PX, HUD_INK, LEGEND,
+    date_time_text, gb_cart_shadow, gg_cart_shadow, hhmm, hint_face, icon_face, lynx_cart_shadow,
+    menu_face, photo_face, quick_caret_face, quick_label_face, quick_legend_faces,
+    quick_value_face, rebuild_count_face, rebuild_title_face, set_clock_hint_face, socket_face,
+    sticker_face, title_face, toast_face, wallpaper_face, word_face, ws_cart_shadow, CartFace,
+    GbShell, Icon, LinkBadge, PowerChoice, QuickMenuFaces, QuickRow, QuickValue, RebuildScreen,
+    StickerFields, Toast, UndoFace, ALERT_PX, BOLT_PX, HUD_ICON_PX, HUD_INK, LEGEND,
 };
 
 use crate::app::{App, LinkRow, Phase};
@@ -208,6 +208,9 @@ impl Frontend {
         let lynx = lynx_cart_shadow();
         let lynx = compositor.create_texture(lynx.w, lynx.h, &lynx.rgba);
         self.session.app_mut().set_lynx_cart_shadow(lynx);
+        let gg = gg_cart_shadow();
+        let gg = compositor.create_texture(gg.w, gg.h, &gg.rgba);
+        self.session.app_mut().set_gg_cart_shadow(gg);
         let bolt = icon_face(Icon::Charging, BOLT_PX, HUD_INK);
         let bolt_id = compositor.create_texture(bolt.w, bolt.h, &bolt.rgba);
         self.session.app_mut().set_bolt_face(bolt_id);

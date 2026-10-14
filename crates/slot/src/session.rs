@@ -181,6 +181,9 @@ impl Session {
             let mask = match self.app.core() {
                 Core::Cygne => mask.wonderswan_for(self.ws_layout()),
                 Core::Lynx if self.lynx_select => mask.without_select(),
+                // Gearsystem takes SELECT as a console reset, which the Game
+                // Gear does not have.
+                Core::Gearsystem => mask.without_select(),
                 _ => mask,
             };
             emu.set_input(mask);

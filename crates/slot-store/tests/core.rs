@@ -205,6 +205,7 @@ fn the_picker_board_has_one_socket_per_core_that_runs_the_cart() {
     assert_eq!(Core::choices(Platform::Gbc), vec![Core::Mgba]);
     assert_eq!(Core::choices(Platform::Ws), vec![Core::Cygne]);
     assert_eq!(Core::choices(Platform::Lynx), vec![Core::Lynx]);
+    assert_eq!(Core::choices(Platform::Gg), vec![Core::Gearsystem]);
 }
 #[test]
 fn the_picker_board_has_exactly_two_sockets() {
@@ -217,6 +218,7 @@ fn only_gba_carts_have_a_core_choice() {
     assert_eq!(Core::choices(Platform::Gbc), vec![Core::Mgba]);
     assert_eq!(Core::choices(Platform::Ws), vec![Core::Cygne]);
     assert_eq!(Core::choices(Platform::Lynx), vec![Core::Lynx]);
+    assert_eq!(Core::choices(Platform::Gg), vec![Core::Gearsystem]);
 }
 
 #[test]
@@ -230,4 +232,25 @@ fn a_lynx_cart_always_gets_beetle_lynx_whatever_the_card_says() {
     assert!(!Core::Mgba.runs(Platform::Lynx));
     assert!(!Core::Gpsp.runs(Platform::Lynx));
     assert!(!Core::Lynx.runs(Platform::Gba));
+}
+
+#[test]
+fn a_game_gear_cart_always_gets_gearsystem_whatever_the_card_says() {
+    let d = root_with(Some("Sonic Chaos = mgba\n"));
+    assert_eq!(
+        core_for_platform(d.path(), "Sonic Chaos", Platform::Gg),
+        Core::Gearsystem
+    );
+    assert_eq!(Core::default_for(Platform::Gg), Core::Gearsystem);
+    assert!(!Core::Mgba.runs(Platform::Gg));
+    assert!(!Core::Gearsystem.runs(Platform::Gb));
+    assert!(!Core::Gearsystem.runs(Platform::Gba));
+}
+
+#[test]
+fn gearsystem_is_named_and_parsed_the_way_its_library_is() {
+    assert_eq!(Core::Gearsystem.as_str(), "gearsystem");
+    assert_eq!(Core::parse("Gearsystem"), Some(Core::Gearsystem));
+    assert_eq!(Core::Gearsystem.text(), "Gearsystem");
+    assert_eq!(Core::ALL[Core::Gearsystem.index()], Core::Gearsystem);
 }

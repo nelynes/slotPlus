@@ -1846,6 +1846,75 @@ fn l_and_r_change_the_mode_on_a_game_boy_cart_and_not_on_a_gba_one() {
     );
 }
 
+fn tmp_root_with_gg_carts(stems: &[&str]) -> tempfile::TempDir {
+    let d = common::tmp_root_with_gb_carts(&[]);
+    for stem in stems {
+        let path = d.path().join("Games").join("GG").join(format!("{stem}.gg"));
+        std::fs::write(path, vec![0u8; 0x8000]).expect("write rom");
+    }
+    d
+}
+
+#[test]
+fn l_and_r_change_the_mode_on_a_game_gear_cart_like_a_game_boy_one() {
+    let d = tmp_root_with_gg_carts(&["Sonic Chaos", "Zzz"]);
+    let mut s = session_playing(d.path());
+    assert_eq!(s.app().core(), Core::Gearsystem);
+    assert_eq!(
+        s.app().source_rect(),
+        WHOLE_TEXTURE,
+        "it did not open actual size"
+    );
+
+    s.feed([RawEvent::Down(Btn::L1)], 100);
+    assert_eq!(
+        s.app().source_rect(),
+        GB_WINDOW,
+        "L did not stretch the 160x144 picture"
+    );
+    assert_eq!(pad(&s) & ButtonMask::L, 0, "L reached the game as well");
+    s.feed([RawEvent::Up(Btn::L1)], 120);
+
+    s.feed([RawEvent::Down(Btn::R1)], 200);
+    assert_eq!(
+        s.app().source_rect(),
+        WHOLE_TEXTURE,
+        "R did not give it back"
+    );
+    assert_eq!(pad(&s) & ButtonMask::R, 0, "R reached the game as well");
+}
+
+#[test]
+fn select_never_reaches_gearsystem_where_it_would_reset_the_console() {
+    let d = tmp_root_with_gg_carts(&["Sonic Chaos", "Zzz"]);
+    let mut s = session_playing(d.path());
+    // A tap of SELECT is handed to the game when it is let go, once Slot
+    // knows it did not start a shortcut.
+    s.feed([RawEvent::Down(Btn::Select)], 100);
+    s.feed([RawEvent::Up(Btn::Select)], 120);
+    assert_eq!(pad(&s) & ButtonMask::SELECT, 0, "SELECT reached the core");
+
+    s.feed([RawEvent::Down(Btn::Start)], 200);
+    assert_ne!(
+        pad(&s) & ButtonMask::START,
+        0,
+        "START did not reach the core"
+    );
+    s.feed([RawEvent::Up(Btn::Start)], 220);
+    s.feed([RawEvent::Down(Btn::A)], 300);
+    s.feed([RawEvent::Down(Btn::B)], 310);
+    assert_ne!(
+        pad(&s) & ButtonMask::A,
+        0,
+        "A (button 2) did not reach the core"
+    );
+    assert_ne!(
+        pad(&s) & ButtonMask::B,
+        0,
+        "B (button 1) did not reach the core"
+    );
+}
+
 #[test]
 fn a_shoulder_held_across_the_insert_does_not_stick_on_the_pad() {
     let d = common::tmp_root_with_gb_carts(&["Tetris", "Zzz"]);

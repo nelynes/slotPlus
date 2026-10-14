@@ -2,10 +2,11 @@ use slot_store::{scan, Platform};
 use slot_ui::{
     cart_face, clean_label, foot_y, gb_label_panel, gb_silhouette, label_colour, label_panel,
     label_text, rest_y, seated_box, shell_for, silhouette, Finish, GbShell, CART_H, CART_W,
-    GB_CART_H, GB_CART_W, GB_LABEL_H, GB_LABEL_W, GB_LABEL_X, GB_LABEL_Y, LABEL_H, LABEL_W,
-    LABEL_X, LABEL_Y, LYNX_CART_H, LYNX_CART_W, LYNX_LABEL_H, LYNX_LABEL_W, LYNX_LABEL_X,
-    LYNX_LABEL_Y, LYNX_SHELL, MOUTH_H, OUT_H, PLATE_H, WS_CART_H, WS_CART_W, WS_LABEL_H,
-    WS_LABEL_W, WS_LABEL_X, WS_LABEL_Y, WS_SHELL,
+    GB_CART_H, GB_CART_W, GB_LABEL_H, GB_LABEL_W, GB_LABEL_X, GB_LABEL_Y, GG_CART_H, GG_CART_W,
+    GG_LABEL_H, GG_LABEL_W, GG_LABEL_X, GG_LABEL_Y, GG_SHELL, LABEL_H, LABEL_W, LABEL_X, LABEL_Y,
+    LYNX_CART_H, LYNX_CART_W, LYNX_LABEL_H, LYNX_LABEL_W, LYNX_LABEL_X, LYNX_LABEL_Y, LYNX_SHELL,
+    MOUTH_H, OUT_H, PLATE_H, WS_CART_H, WS_CART_W, WS_LABEL_H, WS_LABEL_W, WS_LABEL_X, WS_LABEL_Y,
+    WS_SHELL,
 };
 use tempfile::TempDir;
 
@@ -947,4 +948,72 @@ fn the_lynx_label_sits_inside_the_body_and_is_the_size_the_cart_asks_art_for() {
 fn a_lynx_cart_defaults_to_the_lynx_shell() {
     assert_eq!(shell_for(&lynx_cart()), LYNX_SHELL);
     assert_eq!(LYNX_SHELL.finish, Finish::Solid);
+}
+
+fn gg_cart() -> slot_store::Cart {
+    slot_store::Cart {
+        platform: Platform::Gg,
+        stem: "Sonic Chaos".into(),
+        rom: "Games/GG/Sonic Chaos.gg".into(),
+        label: None,
+        title: String::new(),
+        code: String::new(),
+        shell: None,
+    }
+}
+
+#[test]
+fn the_game_gear_pak_is_wider_than_tall_and_matches_its_box() {
+    assert_eq!(slot_ui::cart_box(Platform::Gg), (GG_CART_W, GG_CART_H));
+    // A 68 x 53 mm pak: about 1.28 times as wide as it is tall.
+    assert!(GG_CART_W * 100 >= GG_CART_H * 124 && GG_CART_W * 100 <= GG_CART_H * 132);
+    let f = cart_face(&gg_cart());
+    assert_eq!((f.w, f.h), (GG_CART_W, GG_CART_H));
+    assert!(
+        GG_CART_H <= GB_CART_H,
+        "no taller than the Game Boy pak on the shelf"
+    );
+}
+
+#[test]
+fn the_game_gear_pak_has_round_top_corners_and_a_slightly_narrower_foot() {
+    let f = cart_face(&gg_cart());
+    let width_at = |y: u32| (0..f.w).filter(|&x| pixel_alpha(&f, x, y) > 128).count();
+    let body = width_at(GG_CART_H / 2);
+    let foot = width_at(GG_CART_H - 6);
+    assert!(
+        foot < body,
+        "body {body}px, foot {foot}px: the foot should step in"
+    );
+    assert!(
+        foot + 20 > body,
+        "body {body}px, foot {foot}px: only a small step, not a plug"
+    );
+    assert!(pixel_alpha(&f, 0, 0) < 64, "the top corner is not rounded");
+    assert!(pixel_alpha(&f, f.w / 2, f.h / 2) > 250);
+}
+
+#[test]
+fn the_game_gear_label_sits_inside_the_body_and_is_the_size_the_cart_asks_art_for() {
+    assert!(GG_LABEL_X + GG_LABEL_W < GG_CART_W);
+    assert!(GG_LABEL_Y + GG_LABEL_H < GG_CART_H);
+    assert_eq!(slot_ui::label_size(&gg_cart()), (GG_LABEL_W, GG_LABEL_H));
+    let f = cart_face(&gg_cart());
+    for (x, y) in [
+        (GG_LABEL_X, GG_LABEL_Y),
+        (GG_LABEL_X + GG_LABEL_W - 1, GG_LABEL_Y),
+        (GG_LABEL_X, GG_LABEL_Y + GG_LABEL_H - 1),
+        (GG_LABEL_X + GG_LABEL_W - 1, GG_LABEL_Y + GG_LABEL_H - 1),
+    ] {
+        assert!(
+            pixel_alpha(&f, x, y) > 250,
+            "label corner {x},{y} is off the shell"
+        );
+    }
+}
+
+#[test]
+fn a_game_gear_cart_defaults_to_the_black_game_gear_shell() {
+    assert_eq!(shell_for(&gg_cart()), GG_SHELL);
+    assert_eq!(GG_SHELL.finish, Finish::Solid);
 }

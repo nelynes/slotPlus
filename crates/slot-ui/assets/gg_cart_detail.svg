@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 188">
+  <defs>
+    <g id="grip">
+      <rect x="45" y="8" width="150" height="1.6" rx="0.8"/>
+    </g>
+    <g id="step">
+      <rect x="5" y="170" width="230" height="1.5"/>
+    </g>
+  </defs>
+  <g fill="#fff">
+    <use href="#grip" y="1"/>
+    <use href="#grip" y="9"/>
+    <use href="#grip" y="17"/>
+    <use href="#step" y="1.2"/>
+  </g>
+  <g fill="#000">
+    <use href="#grip"/>
+    <use href="#grip" y="8"/>
+    <use href="#grip" y="16"/>
+    <use href="#step"/>
+  </g>
+</svg>
