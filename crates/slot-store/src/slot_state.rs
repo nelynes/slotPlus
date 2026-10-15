@@ -49,15 +49,21 @@ pub enum Shader {
     Grid,
     Dot,
     Simpletex,
+    Transparent,
 }
 
 impl Shader {
     pub const GBA: [Shader; 4] = [Shader::Off, Shader::Lcd3x, Shader::Grid, Shader::Dot];
-    pub const GB: [Shader; 3] = [Shader::Off, Shader::Grid, Shader::Simpletex];
-    /// The WonderSwan picks from the same filters as the Game Boy, and the
-    /// Lynx from the same ones as the GBA, as they did when they shared those
-    /// settings.
-    pub const WS: [Shader; 3] = Shader::GB;
+    pub const GB: [Shader; 4] = [
+        Shader::Off,
+        Shader::Grid,
+        Shader::Simpletex,
+        Shader::Transparent,
+    ];
+    /// The WonderSwan picks from the Game Boy's filters bar Transparent, which
+    /// is made for the Game Boy's unlit screen, and the Lynx from the GBA's,
+    /// as they did when they shared those settings.
+    pub const WS: [Shader; 3] = [Shader::Off, Shader::Grid, Shader::Simpletex];
     pub const LYNX: [Shader; 4] = Shader::GBA;
 
     pub fn name(self) -> &'static str {
@@ -67,6 +73,7 @@ impl Shader {
             Shader::Grid => "grid",
             Shader::Dot => "dot",
             Shader::Simpletex => "simpletex",
+            Shader::Transparent => "transparent",
         }
     }
 
@@ -77,6 +84,7 @@ impl Shader {
             Shader::Grid,
             Shader::Dot,
             Shader::Simpletex,
+            Shader::Transparent,
         ]
         .into_iter()
         .find(|s| s.name() == name)
@@ -243,7 +251,9 @@ fn parse(text: &str) -> Option<SlotState> {
         shader_gb: shader_gb.unwrap_or(fallback.shader_gb),
         // A card from before the WonderSwan and Lynx had shaders of their own
         // keeps what they used: the Game Boy's and the GBA's.
-        shader_ws: shader_ws.or(shader_gb).unwrap_or(fallback.shader_ws),
+        shader_ws: shader_ws
+            .or(shader_gb.filter(|s| Shader::WS.contains(s)))
+            .unwrap_or(fallback.shader_ws),
         shader_lynx: shader_lynx.or(shader_gba).unwrap_or(fallback.shader_lynx),
         eject_save: eject_save.unwrap_or(fallback.eject_save),
         turbo: turbo.unwrap_or(fallback.turbo),

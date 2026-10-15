@@ -295,6 +295,31 @@ fn each_platform_keeps_its_own_shader_wraps_and_starts_on_grid_and_simpletex() {
 }
 
 #[test]
+fn the_game_boy_shader_steps_through_transparent_and_the_wonderswan_does_not() {
+    let (d, mut a, _) = on_carousel();
+    open_at(&mut a, QuickRow::GbShader);
+    press(&mut a, Btn::Right);
+    assert_eq!(read_slot_state(d.path()).shader_gb, Shader::Transparent);
+    assert_eq!(
+        a.quick_value(QuickRow::GbShader),
+        Some(QuickValue::Transparent)
+    );
+    press(&mut a, Btn::Right);
+    assert_eq!(
+        read_slot_state(d.path()).shader_gb,
+        Shader::Off,
+        "it did not wrap"
+    );
+
+    press(&mut a, Btn::Down);
+    assert_eq!(a.quick_menu(), Some(QuickRow::WsShader));
+    for _ in 0..6 {
+        press(&mut a, Btn::Right);
+        assert_ne!(read_slot_state(d.path()).shader_ws, Shader::Transparent);
+    }
+}
+
+#[test]
 fn the_wonderswan_and_the_lynx_each_keep_their_own_shader() {
     let (d, mut a, _) = on_carousel();
     open_at(&mut a, QuickRow::WsShader);
