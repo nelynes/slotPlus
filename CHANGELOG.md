@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- A new Transparent screen shader for Game Boy and Game Boy Color games. It is LCD3x with the screen left unlit: light pixels let a warm, grainy backing show through instead of glaring white, and dark pixels cast soft drop shadows onto it. Pick it from the GB / GBC Shader row in the Screen menu, or with SELECT + B / A in a game. The idea comes from Matt Akins' Pixel Transparency shader for RetroArch; slot's version is written from scratch.
+
 ## [1.6.0-lyx2](https://github.com/nelynes/slotPlus/releases/tag/v1.6.0-lyx2)
 
 - WonderSwan and Atari Lynx games get their own screen shaders. The Screen menu has a WS / WSC Shader row (Off, Grid or Simpletex) and a Lynx Shader row (Off, LCD3x, Grid or Dot), and SELECT + B / A in a game changes that system's shader alone. Before, the WonderSwan shared the Game Boy's shader and the Lynx shared the GBA's.

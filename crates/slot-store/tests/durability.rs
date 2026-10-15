@@ -440,3 +440,36 @@ fn wonderswan_and_lynx_shaders_only_take_the_filters_on_their_lists() {
     assert_eq!(s.shader_ws, SlotState::default().shader_ws);
     assert_eq!(s.shader_lynx, SlotState::default().shader_lynx);
 }
+
+#[test]
+fn transparent_is_a_game_boy_shader_only() {
+    assert!(Shader::GB.contains(&Shader::Transparent));
+    assert!(!Shader::WS.contains(&Shader::Transparent));
+    assert!(!Shader::GBA.contains(&Shader::Transparent));
+    assert!(!Shader::LYNX.contains(&Shader::Transparent));
+    assert_eq!(Shader::parse("transparent"), Some(Shader::Transparent));
+    assert_eq!(Shader::Transparent.name(), "transparent");
+}
+
+#[test]
+fn a_transparent_game_boy_shader_round_trips_and_is_not_handed_to_the_wonderswan() {
+    let d = tmp_root();
+    let s = SlotState {
+        clock_set: true,
+        shader_gb: Shader::Transparent,
+        ..SlotState::default()
+    };
+    write_slot_state(d.path(), &s).unwrap();
+    assert_eq!(read_slot_state(d.path()).shader_gb, Shader::Transparent);
+
+    // A card from before the WonderSwan had its own shader, whose Game Boy
+    // shader is Transparent, must not give the WonderSwan a filter it lacks.
+    std::fs::write(
+        d.path().join("Config/slot.state"),
+        "cart=Emerald\nbrightness=3\nblue_light=1\nvolume=40\nmuted=1\nclock_set=1\nutc_offset_min=-300\nshader_gb=transparent\n",
+    )
+    .unwrap();
+    let s = read_slot_state(d.path());
+    assert_eq!(s.shader_gb, Shader::Transparent);
+    assert_eq!(s.shader_ws, SlotState::default().shader_ws);
+}
