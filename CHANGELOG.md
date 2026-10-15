@@ -3,7 +3,7 @@
 ## Unreleased (slotPlusUltra)
 
 - Sega Game Gear games (`.gg`) get their own shelf. Put them in `Games/GG/`. They run on the Gearsystem core. No BIOS is needed.
-- Game Gear paks have their own shape, a label (art goes in `Labels/GG/`) and a black default shell.
+- Game Gear paks have their own nearly square shape with a raised hood over a squarish label (art goes in `Labels/GG/`), and a black default shell.
 - The Game Gear picture is shown like a Game Boy one: actual size at 3x, L1 / R1 to stretch it and give it back, and the Game Boy screen filters.
 - SELECT does nothing in a Game Gear game. Gearsystem would take it as a console reset, which the Game Gear does not have.
 - The `GG` folders under `Games`, `Labels`, `Saves` and `States` are created for you on first boot.

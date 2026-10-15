@@ -85,19 +85,20 @@ pub const LYNX_LABEL_Y: u32 = lynx_label_panel(LYNX_CART_W, LYNX_CART_H).1;
 pub const LYNX_LABEL_W: u32 = lynx_label_panel(LYNX_CART_W, LYNX_CART_H).2 - LYNX_LABEL_X;
 pub const LYNX_LABEL_H: u32 = lynx_label_panel(LYNX_CART_W, LYNX_CART_H).3 - LYNX_LABEL_Y;
 
-// Game Gear: a 68 x 53 mm pak, wider than it is tall, drawn at about the
-// WonderSwan's scale (360 wide). A grip of three ridges runs along the top,
-// the label fills most of the front, and the foot steps in a little where the
-// pak goes into the slot.
-pub const GG_CART_W: u32 = 360;
+// Game Gear: a nearly square pak, a little wider than it is tall, drawn at
+// the WonderSwan's width (352). A raised hood with three grip ridges arches
+// over the top of the label and its side flanges stand a touch proud of the
+// body; the squarish label sits under the arch, and a raised oval plaque
+// sits at the foot.
+pub const GG_CART_W: u32 = 352;
 pub const GG_CART_H: u32 = (GG_CART_W * GG_SEATED_H + SEATED_W / 2) / SEATED_W;
 
 pub const fn gg_label_panel(w: u32, h: u32) -> (u32, u32, u32, u32) {
     (
-        (w * 55 + 500) / 1000,
-        (h * 205 + 500) / 1000,
-        (w * 945 + 500) / 1000,
-        (h * 875 + 500) / 1000,
+        (w * 130 + 500) / 1000,
+        (h * 190 + 500) / 1000,
+        (w * 870 + 500) / 1000,
+        (h * 790 + 500) / 1000,
     )
 }
 
@@ -250,9 +251,9 @@ fn spec(shape: Shape) -> Spec {
             max_h: f32::INFINITY,
             rim: GG_RIM,
             board: Board {
-                x: (0.055, 0.945),
+                x: (0.13, 0.87),
                 top: GG_LABEL_Y as f32 / GG_CART_H as f32,
-                pins: (0.08, 0.92),
+                pins: (0.16, 0.84),
                 contacts_from: 0.9,
                 traces_from: 0.82,
             },
@@ -283,7 +284,7 @@ const SEATED_H: u32 = 141;
 const GB_SEATED_H: u32 = 259;
 const WS_SEATED_H: u32 = 144;
 const LYNX_SEATED_H: u32 = 252;
-const GG_SEATED_H: u32 = 188;
+const GG_SEATED_H: u32 = 226;
 
 pub fn seated_box(platform: Platform) -> (u32, u32) {
     match platform {

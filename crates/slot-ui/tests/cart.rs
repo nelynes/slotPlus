@@ -963,10 +963,10 @@ fn gg_cart() -> slot_store::Cart {
 }
 
 #[test]
-fn the_game_gear_pak_is_wider_than_tall_and_matches_its_box() {
+fn the_game_gear_pak_is_nearly_square_and_matches_its_box() {
     assert_eq!(slot_ui::cart_box(Platform::Gg), (GG_CART_W, GG_CART_H));
-    // A 68 x 53 mm pak: about 1.28 times as wide as it is tall.
-    assert!(GG_CART_W * 100 >= GG_CART_H * 124 && GG_CART_W * 100 <= GG_CART_H * 132);
+    // A little wider than it is tall, as the real pak is.
+    assert!(GG_CART_W * 100 >= GG_CART_H * 102 && GG_CART_W * 100 <= GG_CART_H * 112);
     let f = cart_face(&gg_cart());
     assert_eq!((f.w, f.h), (GG_CART_W, GG_CART_H));
     assert!(
@@ -976,21 +976,28 @@ fn the_game_gear_pak_is_wider_than_tall_and_matches_its_box() {
 }
 
 #[test]
-fn the_game_gear_pak_has_round_top_corners_and_a_slightly_narrower_foot() {
+fn the_game_gear_hood_has_round_top_corners_and_stands_proud_of_the_body() {
     let f = cart_face(&gg_cart());
     let width_at = |y: u32| (0..f.w).filter(|&x| pixel_alpha(&f, x, y) > 128).count();
-    let body = width_at(GG_CART_H / 2);
-    let foot = width_at(GG_CART_H - 6);
+    let hood = width_at(GG_CART_H / 5);
+    let body = width_at(GG_CART_H * 2 / 3);
     assert!(
-        foot < body,
-        "body {body}px, foot {foot}px: the foot should step in"
+        body < hood,
+        "hood {hood}px, body {body}px: the hood should stand proud"
     );
     assert!(
-        foot + 20 > body,
-        "body {body}px, foot {foot}px: only a small step, not a plug"
+        body + 12 > hood,
+        "hood {hood}px, body {body}px: only a small shoulder"
     );
     assert!(pixel_alpha(&f, 0, 0) < 64, "the top corner is not rounded");
     assert!(pixel_alpha(&f, f.w / 2, f.h / 2) > 250);
+}
+
+#[test]
+fn the_game_gear_label_is_squarish() {
+    // Real labels run about 1.3 to 1 across, not the wide strip of the
+    // WonderSwan.
+    assert!(GG_LABEL_W * 100 >= GG_LABEL_H * 120 && GG_LABEL_W * 100 <= GG_LABEL_H * 140);
 }
 
 #[test]

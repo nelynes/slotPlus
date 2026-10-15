@@ -15,9 +15,9 @@ A slightly modified Slot. Has support for GBA, GBC, and GB titles as well as Won
 No BIOS is needed. Game Gear games boot straight in.
 
 - **Games:** put `.gg` files in `Games/GG/`. They get their own shelf. The `GG` folders (`Games`, `Labels`, `Saves`, `States`) are created for you on first boot.
-- **Label art:** optional PNGs go in `Labels/GG/<game name>.png`, roughly 320x189 px (about 1.69:1).
+- **Label art:** optional PNGs go in `Labels/GG/<game name>.png`, roughly 260x198 px (about 1.31:1).
 - **Core:** Game Gear games run on Gearsystem.
-- **Carts:** Game Gear paks have their own shape, wider than tall with a ridged grip along the top, and default to a black shell. Set `Config/cart_shell.txt` to give a single game a different shell.
+- **Carts:** Game Gear paks have their own nearly square shape, with a raised hood arching over the label and an oval plaque at the foot, and default to a black shell. Set `Config/cart_shell.txt` to give a single game a different shell.
 - **Picture:** the Game Gear screen is the same 160x144 as the Game Boy's, so it is shown the same way: actual size at 3x, or stretched, with the Game Boy screen filters. On 4:3 handhelds such as the RG 35XXSP it is fitted to the screen the same way the Game Boy is.
 - **Saves:** games with battery saves keep them in `Saves/GG/`. Save states work as they do for every other system.
 

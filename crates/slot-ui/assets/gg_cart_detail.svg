@@ -1,22 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 188">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 226">
   <defs>
     <g id="grip">
-      <rect x="45" y="8" width="150" height="1.6" rx="0.8"/>
+      <rect x="86" y="6" width="68" height="1.6" rx="0.8"/>
     </g>
-    <g id="step">
-      <rect x="5" y="170" width="230" height="1.5"/>
-    </g>
+    <path id="hood" d="M 18 84 L 18 48 A 18 18 0 0 1 36 30 L 204 30 A 18 18 0 0 1 222 48 L 222 84" fill="none" stroke-width="2"/>
+    <rect id="plaque" x="80" y="190" width="80" height="22" rx="11" fill="none" stroke-width="1.6"/>
   </defs>
-  <g fill="#fff">
+  <g fill="#fff" stroke="#fff">
     <use href="#grip" y="1"/>
-    <use href="#grip" y="9"/>
-    <use href="#grip" y="17"/>
-    <use href="#step" y="1.2"/>
+    <use href="#grip" y="5.5"/>
+    <use href="#grip" y="10"/>
+    <use href="#hood" y="-1.6"/>
+    <use href="#plaque" x="1" y="1"/>
   </g>
-  <g fill="#000">
+  <g fill="#000" stroke="#000">
     <use href="#grip"/>
-    <use href="#grip" y="8"/>
-    <use href="#grip" y="16"/>
-    <use href="#step"/>
+    <use href="#grip" y="4.5"/>
+    <use href="#grip" y="9"/>
+    <use href="#hood" y="0.6"/>
+    <use href="#plaque"/>
   </g>
 </svg>
