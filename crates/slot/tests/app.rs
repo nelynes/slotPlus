@@ -12,7 +12,7 @@ use slot::video_mode::{video_mode_for, VideoMode, VIDEO_MODE_FILE};
 use slot_gfx::WHOLE_TEXTURE;
 use slot_input::{Action, Btn, RawEvent};
 use slot_retro::ButtonMask;
-use slot_store::{write_slot_state, Cart, Core, Platform, SlotState};
+use slot_store::{write_slot_state, Cart, Core, Platform, Shader, SlotState};
 use slot_ui::{
     board_at, grown, lid_at, lid_from, on_board, opening, shelf_cart_at, Draw, Icon, Placed, TexId,
     BOARD_W, CART_H, CART_W, CHIP_H, CHIP_U, CHIP_V, CHIP_W, HINT_EDGE, HINT_H, LID_TURN, SLIDE_UP,
@@ -2211,6 +2211,48 @@ fn the_shader_shortcut_steps_the_seated_carts_shader_both_ways_and_names_it() {
         slot_store::read_slot_state(d.path()).shader_gb,
         Shader::Simpletex,
         "a GBA cart moved the Game Boy shader"
+    );
+}
+
+fn root_with_one_cart(dir: &str, file: &str) -> tempfile::TempDir {
+    let d = common::tmp_root_with_gb_carts(&[]);
+    std::fs::write(
+        d.path().join("Games").join(dir).join(file),
+        vec![0u8; 0x10000],
+    )
+    .expect("write rom");
+    d
+}
+
+#[test]
+fn the_shader_shortcut_steps_only_the_wonderswan_shader_in_a_wonderswan_game() {
+    let d = root_with_one_cart("WS", "Klonoa.ws");
+    let mut s = session_playing(d.path());
+    assert_eq!(s.app().screen_shader(), Shader::Simpletex);
+    s.app_mut().apply(slot_input::Action::ShaderNext);
+    let after = slot_store::read_slot_state(d.path());
+    assert_eq!(after.shader_ws, Shader::Off);
+    assert_eq!(s.app().screen_shader(), Shader::Off);
+    assert_eq!(
+        (after.shader_gb, after.shader_gba, after.shader_lynx),
+        (Shader::Simpletex, Shader::Grid, Shader::Grid),
+        "a WonderSwan game moved another system's shader"
+    );
+}
+
+#[test]
+fn the_shader_shortcut_steps_only_the_lynx_shader_in_a_lynx_game() {
+    let d = root_with_one_cart("Lynx", "Klax.lnx");
+    let mut s = session_playing(d.path());
+    assert_eq!(s.app().screen_shader(), Shader::Grid);
+    s.app_mut().apply(slot_input::Action::ShaderPrev);
+    let after = slot_store::read_slot_state(d.path());
+    assert_eq!(after.shader_lynx, Shader::Lcd3x);
+    assert_eq!(s.app().screen_shader(), Shader::Lcd3x);
+    assert_eq!(
+        (after.shader_gba, after.shader_gb, after.shader_ws),
+        (Shader::Grid, Shader::Simpletex, Shader::Simpletex),
+        "a Lynx game moved another system's shader"
     );
 }
 

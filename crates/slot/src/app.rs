@@ -658,6 +658,8 @@ impl App {
             QuickRow::GbPalettes => Some(QuickValue::flag(self.state.gb_palettes)),
             QuickRow::GbaShader => Some(shader_value(self.state.shader_gba)),
             QuickRow::GbShader => Some(shader_value(self.state.shader_gb)),
+            QuickRow::WsShader => Some(shader_value(self.state.shader_ws)),
+            QuickRow::LynxShader => Some(shader_value(self.state.shader_lynx)),
             QuickRow::Rumble => Some(QuickValue::flag(self.state.rumble)),
             QuickRow::EjectSave => Some(QuickValue::flag(self.state.eject_save)),
             QuickRow::Turbo => Some(QuickValue::flag(self.state.turbo)),
@@ -1081,8 +1083,10 @@ impl App {
 
     pub fn screen_shader(&self) -> Shader {
         match self.platform {
-            Platform::Gba | Platform::Lynx => self.state.shader_gba,
-            Platform::Gb | Platform::Gbc | Platform::Ws => self.state.shader_gb,
+            Platform::Gba => self.state.shader_gba,
+            Platform::Gb | Platform::Gbc => self.state.shader_gb,
+            Platform::Ws => self.state.shader_ws,
+            Platform::Lynx => self.state.shader_lynx,
         }
     }
 
@@ -1390,6 +1394,8 @@ impl App {
             | QuickRow::ColourCorrection
             | QuickRow::GbaShader
             | QuickRow::GbShader
+            | QuickRow::WsShader
+            | QuickRow::LynxShader
             | QuickRow::GbPalettes
             | QuickRow::Rumble => {}
         }
@@ -1424,6 +1430,20 @@ impl App {
                 }
                 s.shader_gb = to;
             }
+            QuickRow::WsShader => {
+                let to = s.shader_ws.step(&Shader::WS, right);
+                if to == s.shader_ws {
+                    return;
+                }
+                s.shader_ws = to;
+            }
+            QuickRow::LynxShader => {
+                let to = s.shader_lynx.step(&Shader::LYNX, right);
+                if to == s.shader_lynx {
+                    return;
+                }
+                s.shader_lynx = to;
+            }
             QuickRow::Rumble => s.rumble = !s.rumble,
             QuickRow::EjectSave => s.eject_save = !s.eject_save,
             QuickRow::Turbo => s.turbo = !s.turbo,
@@ -1444,10 +1464,10 @@ impl App {
             return;
         }
         let (shader, choices) = match self.platform {
-            Platform::Gba | Platform::Lynx => (&mut self.state.shader_gba, &Shader::GBA[..]),
-            Platform::Gb | Platform::Gbc | Platform::Ws => {
-                (&mut self.state.shader_gb, &Shader::GB[..])
-            }
+            Platform::Gba => (&mut self.state.shader_gba, &Shader::GBA[..]),
+            Platform::Gb | Platform::Gbc => (&mut self.state.shader_gb, &Shader::GB[..]),
+            Platform::Ws => (&mut self.state.shader_ws, &Shader::WS[..]),
+            Platform::Lynx => (&mut self.state.shader_lynx, &Shader::LYNX[..]),
         };
         *shader = shader.step(choices, right);
         let said = match *shader {

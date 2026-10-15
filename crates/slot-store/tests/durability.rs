@@ -167,6 +167,8 @@ fn a_first_boot_rumbles_and_fast_forwards_silently_at_the_default() {
     assert!(!s.colour_correction, "boots with the picture tinted");
     assert_eq!(s.shader_gba, Shader::Grid);
     assert_eq!(s.shader_gb, Shader::Simpletex);
+    assert_eq!(s.shader_ws, Shader::Simpletex);
+    assert_eq!(s.shader_lynx, Shader::Grid);
 }
 
 #[test]
@@ -196,6 +198,8 @@ fn a_card_from_before_the_settings_keeps_all_its_values() {
             colour_correction: false,
             shader_gba: Shader::Grid,
             shader_gb: Shader::Simpletex,
+            shader_ws: Shader::Simpletex,
+            shader_lynx: Shader::Grid,
             eject_save: true,
             turbo: true,
             rewind: true,
@@ -216,6 +220,8 @@ fn the_quick_menu_settings_round_trip_as_their_own_lines() {
         colour_correction: true,
         shader_gba: Shader::Dot,
         shader_gb: Shader::Off,
+        shader_ws: Shader::Grid,
+        shader_lynx: Shader::Lcd3x,
         eject_save: false,
         turbo: false,
         rewind: false,
@@ -233,6 +239,8 @@ fn the_quick_menu_settings_round_trip_as_their_own_lines() {
         "colour_correction=1",
         "shader_gba=dot",
         "shader_gb=off",
+        "shader_ws=grid",
+        "shader_lynx=lcd3x",
         "eject_save=0",
         "turbo=0",
         "rewind=0",
@@ -401,4 +409,34 @@ fn a_missing_or_unknown_palette_falls_back_to_dmg_green() {
         assert!(!s.gb_palettes, "{bad:?} turned palettes on");
         assert_eq!(s.gb_palette, GbPalette::DEFAULT, "{bad:?}");
     }
+}
+
+#[test]
+fn a_card_from_before_wonderswan_and_lynx_shaders_keeps_the_ones_they_used() {
+    let d = tmp_root();
+    std::fs::write(
+        d.path().join("Config/slot.state"),
+        "cart=Emerald\nbrightness=3\nblue_light=1\nvolume=40\nmuted=1\nclock_set=1\nutc_offset_min=-300\nshader_gba=dot\nshader_gb=off\n",
+    )
+    .unwrap();
+    let s = read_slot_state(d.path());
+    assert_eq!(
+        s.shader_ws,
+        Shader::Off,
+        "the WonderSwan used the GB shader"
+    );
+    assert_eq!(s.shader_lynx, Shader::Dot, "the Lynx used the GBA shader");
+}
+
+#[test]
+fn wonderswan_and_lynx_shaders_only_take_the_filters_on_their_lists() {
+    let d = tmp_root();
+    std::fs::write(
+        d.path().join("Config/slot.state"),
+        "cart=Emerald\nbrightness=3\nblue_light=1\nvolume=40\nmuted=1\nclock_set=1\nutc_offset_min=-300\nshader_ws=lcd3x\nshader_lynx=simpletex\n",
+    )
+    .unwrap();
+    let s = read_slot_state(d.path());
+    assert_eq!(s.shader_ws, SlotState::default().shader_ws);
+    assert_eq!(s.shader_lynx, SlotState::default().shader_lynx);
 }

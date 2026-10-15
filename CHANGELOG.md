@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- WonderSwan and Atari Lynx games get their own screen shaders. The Screen menu has a WS / WSC Shader row (Off, Grid or Simpletex) and a Lynx Shader row (Off, LCD3x, Grid or Dot), and SELECT + B / A in a game changes that system's shader alone. Before, the WonderSwan shared the Game Boy's shader and the Lynx shared the GBA's.
+- Each starts on the shader it was sharing, so nothing changes until you pick a different one.
+
 ## [1.6.0-lyx](https://github.com/nelynes/slotPlus/releases/tag/v1.6.0-lyx)
 
 slotPlus: Slot 1.6.0 plus WonderSwan and Atari Lynx.

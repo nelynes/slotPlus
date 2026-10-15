@@ -33,6 +33,8 @@ pub struct SlotState {
     pub colour_correction: bool,
     pub shader_gba: Shader,
     pub shader_gb: Shader,
+    pub shader_ws: Shader,
+    pub shader_lynx: Shader,
     pub eject_save: bool,
     pub turbo: bool,
     pub rewind: bool,
@@ -52,6 +54,11 @@ pub enum Shader {
 impl Shader {
     pub const GBA: [Shader; 4] = [Shader::Off, Shader::Lcd3x, Shader::Grid, Shader::Dot];
     pub const GB: [Shader; 3] = [Shader::Off, Shader::Grid, Shader::Simpletex];
+    /// The WonderSwan picks from the same filters as the Game Boy, and the
+    /// Lynx from the same ones as the GBA, as they did when they shared those
+    /// settings.
+    pub const WS: [Shader; 3] = Shader::GB;
+    pub const LYNX: [Shader; 4] = Shader::GBA;
 
     pub fn name(self) -> &'static str {
         match self {
@@ -105,6 +112,8 @@ impl Default for SlotState {
             colour_correction: false,
             shader_gba: Shader::Grid,
             shader_gb: Shader::Simpletex,
+            shader_ws: Shader::Simpletex,
+            shader_lynx: Shader::Grid,
             eject_save: true,
             turbo: true,
             rewind: true,
@@ -128,7 +137,7 @@ pub fn read_slot_state(root: &Path) -> SlotState {
 
 pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     let text = format!(
-        "cart={}\ncart_platform={}\nbrightness={}\nblue_light={}\nvolume={}\nvolume_hp={}\nmuted={}\nmuted_hp={}\nclock_set={}\nutc_offset_min={}\nrumble={}\nff_speed={}\nff_sound={}\ncolour_correction={}\nshader_gba={}\nshader_gb={}\neject_save={}\nturbo={}\nrewind={}\ngb_palettes={}\ngb_palette={}\n",
+        "cart={}\ncart_platform={}\nbrightness={}\nblue_light={}\nvolume={}\nvolume_hp={}\nmuted={}\nmuted_hp={}\nclock_set={}\nutc_offset_min={}\nrumble={}\nff_speed={}\nff_sound={}\ncolour_correction={}\nshader_gba={}\nshader_gb={}\nshader_ws={}\nshader_lynx={}\neject_save={}\nturbo={}\nrewind={}\ngb_palettes={}\ngb_palette={}\n",
         s.cart.as_deref().unwrap_or(""),
         s.cart_platform.map_or(String::new(), platform_key),
         s.brightness,
@@ -145,6 +154,8 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
         s.colour_correction as u8,
         s.shader_gba.name(),
         s.shader_gb.name(),
+        s.shader_ws.name(),
+        s.shader_lynx.name(),
         s.eject_save as u8,
         s.turbo as u8,
         s.rewind as u8,
@@ -171,6 +182,8 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut colour_correction = None;
     let mut shader_gba = None;
     let mut shader_gb = None;
+    let mut shader_ws = None;
+    let mut shader_lynx = None;
     let mut eject_save = None;
     let mut turbo = None;
     let mut rewind = None;
@@ -202,6 +215,10 @@ fn parse(text: &str) -> Option<SlotState> {
             "gb_palettes" => gb_palettes = flag(value),
             "gb_palette" => gb_palette = GbPalette::parse(value),
             "shader_gb" => shader_gb = Shader::parse(value).filter(|s| Shader::GB.contains(s)),
+            "shader_ws" => shader_ws = Shader::parse(value).filter(|s| Shader::WS.contains(s)),
+            "shader_lynx" => {
+                shader_lynx = Shader::parse(value).filter(|s| Shader::LYNX.contains(s))
+            }
             _ => {}
         }
     }
@@ -224,6 +241,10 @@ fn parse(text: &str) -> Option<SlotState> {
         colour_correction: colour_correction.unwrap_or(fallback.colour_correction),
         shader_gba: shader_gba.unwrap_or(fallback.shader_gba),
         shader_gb: shader_gb.unwrap_or(fallback.shader_gb),
+        // A card from before the WonderSwan and Lynx had shaders of their own
+        // keeps what they used: the Game Boy's and the GBA's.
+        shader_ws: shader_ws.or(shader_gb).unwrap_or(fallback.shader_ws),
+        shader_lynx: shader_lynx.or(shader_gba).unwrap_or(fallback.shader_lynx),
         eject_save: eject_save.unwrap_or(fallback.eject_save),
         turbo: turbo.unwrap_or(fallback.turbo),
         rewind: rewind.unwrap_or(fallback.rewind),

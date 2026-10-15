@@ -243,6 +243,8 @@ fn screen_opens_a_page_of_its_own_and_b_comes_back_to_it() {
     assert_eq!(a.quick_menu(), Some(QuickRow::GbaShader));
     for want in [
         QuickRow::GbShader,
+        QuickRow::WsShader,
+        QuickRow::LynxShader,
         QuickRow::ColourCorrection,
         QuickRow::GbPalettes,
         QuickRow::GbaShader,
@@ -290,6 +292,40 @@ fn each_platform_keeps_its_own_shader_wraps_and_starts_on_grid_and_simpletex() {
     press(&mut a, Btn::Left);
     assert_eq!(read_slot_state(d.path()).shader_gb, Shader::Grid);
     assert_eq!(read_slot_state(d.path()).shader_gba, Shader::Off);
+}
+
+#[test]
+fn the_wonderswan_and_the_lynx_each_keep_their_own_shader() {
+    let (d, mut a, _) = on_carousel();
+    open_at(&mut a, QuickRow::WsShader);
+    assert_eq!(
+        a.quick_value(QuickRow::WsShader),
+        Some(QuickValue::Simpletex)
+    );
+    assert_eq!(a.quick_value(QuickRow::LynxShader), Some(QuickValue::Grid));
+
+    press(&mut a, Btn::Right);
+    assert_eq!(
+        read_slot_state(d.path()).shader_ws,
+        Shader::Off,
+        "it did not wrap"
+    );
+    press(&mut a, Btn::Right);
+    assert_eq!(read_slot_state(d.path()).shader_ws, Shader::Grid);
+    assert_eq!(a.quick_value(QuickRow::WsShader), Some(QuickValue::Grid));
+
+    press(&mut a, Btn::Down);
+    assert_eq!(a.quick_menu(), Some(QuickRow::LynxShader));
+    press(&mut a, Btn::Left);
+    assert_eq!(read_slot_state(d.path()).shader_lynx, Shader::Lcd3x);
+    assert_eq!(a.quick_value(QuickRow::LynxShader), Some(QuickValue::Lcd3x));
+
+    let s = read_slot_state(d.path());
+    assert_eq!(
+        (s.shader_gba, s.shader_gb),
+        (Shader::Grid, Shader::Simpletex),
+        "the GBA and Game Boy shaders moved with them"
+    );
 }
 
 #[test]
