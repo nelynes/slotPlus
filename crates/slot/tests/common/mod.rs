@@ -55,6 +55,19 @@ pub fn tmp_root_with_gb_carts(stems: &[&str]) -> TempDir {
     d
 }
 
+pub fn tmp_root_with_gbc_carts(stems: &[&str]) -> TempDir {
+    let d = tmp_root_with_gb_carts(&[]);
+    for stem in stems {
+        let title = stem.to_uppercase();
+        let mut rom = vec![0u8; 0x150];
+        rom[0x134..0x134 + title.len().min(11)]
+            .copy_from_slice(&title.as_bytes()[..title.len().min(11)]);
+        rom[0x143] = 0x80;
+        std::fs::write(cart_path(&d, CartPlatform::Gbc, stem), rom).expect("write rom");
+    }
+    d
+}
+
 pub fn write_gb_cart(d: &TempDir, stem: &str, title: &str) {
     assert!(
         title.len() <= 11,
@@ -284,6 +297,7 @@ pub struct StubPlatform {
     led_writes: Arc<AtomicUsize>,
     headphones: Arc<std::sync::atomic::AtomicBool>,
     read_only: Arc<std::sync::atomic::AtomicBool>,
+    card_log: Option<PathBuf>,
 }
 
 pub fn led_code(state: LedState) -> u8 {
@@ -362,6 +376,7 @@ fn rig_with_led(
         led_writes: led_writes.clone(),
         headphones: Arc::new(std::sync::atomic::AtomicBool::new(false)),
         read_only: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+        card_log: None,
     };
     (
         Power::new(Box::new(platform), timeout),
@@ -451,6 +466,14 @@ impl Platform for StubPlatform {
     fn card_read_only(&self) -> bool {
         self.read_only.load(Ordering::Relaxed)
     }
+
+    fn card_log(&self) -> Option<PathBuf> {
+        self.card_log.clone()
+    }
+
+    fn card_kernel_lines(&self) -> Vec<String> {
+        vec![STUB_KERNEL_LINE.to_owned()]
+    }
 }
 
 pub fn clocked(root: &Path) {
@@ -481,12 +504,23 @@ pub fn app_playing_with_jack(root: &Path, stem: &str) -> (App, Arc<std::sync::at
         led_writes: Arc::new(AtomicUsize::new(0)),
         headphones: jack.clone(),
         read_only: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+        card_log: None,
     };
     a.set_power(Power::new(Box::new(platform), Duration::from_secs(300)));
     (a, jack)
 }
 
+pub const STUB_KERNEL_LINE: &str = "FAT-fs (mmcblk0p7): error, invalid access to FAT";
+
 pub fn app_playing_with_card(root: &Path, stem: &str) -> (App, Arc<std::sync::atomic::AtomicBool>) {
+    app_playing_with_card_log(root, stem, None)
+}
+
+pub fn app_playing_with_card_log(
+    root: &Path,
+    stem: &str,
+    card_log: Option<PathBuf>,
+) -> (App, Arc<std::sync::atomic::AtomicBool>) {
     let mut a = app_playing_with(root, stem, StubSnapshot::boxed());
     let read_only = Arc::new(std::sync::atomic::AtomicBool::new(false));
     let platform = StubPlatform {
@@ -499,6 +533,7 @@ pub fn app_playing_with_card(root: &Path, stem: &str) -> (App, Arc<std::sync::at
         led_writes: Arc::new(AtomicUsize::new(0)),
         headphones: Arc::new(std::sync::atomic::AtomicBool::new(false)),
         read_only: read_only.clone(),
+        card_log,
     };
     a.set_power(Power::new(Box::new(platform), Duration::from_secs(300)));
     (a, read_only)

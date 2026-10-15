@@ -10,6 +10,8 @@ use slot_retro::{
     AvInfo, ButtonMask, CoreError, LinkChannel, MockCore, RetroCore, NETPACKET_RELIABLE,
 };
 
+const PRESENT: Duration = Duration::from_nanos(16_666_667);
+
 fn spawn() -> EmuHandle {
     spawn_with(None)
 }
@@ -343,26 +345,36 @@ fn a_fast_present_draws_only_its_last_frame() {
 
 #[test]
 fn a_present_runs_what_it_can_afford_rather_than_the_whole_ceiling() {
-    let (emu, _log) = spawn_probe(Duration::from_millis(5));
+    let cost = Duration::from_millis(8);
+    let (emu, log) = spawn_probe(cost);
     emu.set_fast_steps(FAST_STEPS_MAX);
-    let (frames, presents) = held_counts(&emu);
+    held_counts(&emu);
+    log.lock().expect("the skip log").clear();
     emu.set_speed(Speed::Fast);
     std::thread::sleep(Duration::from_millis(400));
-    let (frames_after, presents_after) = held_counts(&emu);
+    let (_, presents) = held_counts(&emu);
+    assert!(presents > 0, "nothing was presented");
 
-    let (ran, shown) = (frames_after - frames, presents_after - presents);
-    assert!(shown > 0, "nothing was presented");
-    let per = ran as f64 / shown as f64;
-    assert!(
-        per >= 1.0,
-        "{per:.1} frames a present is less than one, so a present ran nothing"
-    );
-    assert!(
-        per <= 4.0,
-        "{per:.1} frames a present at 5 ms each is {:.0} ms of a 16.67 ms present: the budget \
-         never stopped it and the ceiling of {FAST_STEPS_MAX} did",
-        per * 5.0
-    );
+    let got = log.lock().expect("the skip log").clone();
+    let mut runs = Vec::new();
+    let mut ran = 0;
+    for skipped in got {
+        ran += 1;
+        if !skipped {
+            runs.push(ran);
+            ran = 0;
+        }
+    }
+    assert!(!runs.is_empty(), "no present drew a frame");
+    let afford = (2 * PRESENT.as_micros() / cost.as_micros()) as usize;
+    for (i, ran) in runs.iter().enumerate() {
+        assert!(
+            *ran <= afford,
+            "present {i} ran {ran} frames at {} ms each, more than the {afford} two refreshes \
+             afford: the budget never stopped it and the ceiling did ({runs:?})",
+            cost.as_millis()
+        );
+    }
 }
 
 fn counting(sink: StubSink) -> Arc<AtomicUsize> {
@@ -1088,4 +1100,19 @@ fn waiting_on_an_unlocked_worker_does_not_block() {
         began.elapsed() < Duration::from_millis(20),
         "the wait blocked"
     );
+}
+
+#[test]
+fn a_refresh_redraws_a_paused_core_without_moving_it() {
+    let emu = spawn();
+    emu.set_speed(Speed::Paused);
+    std::thread::sleep(Duration::from_millis(100));
+    let held = frame_count(&emu);
+    let shown = emu.published_count();
+    emu.refresh();
+    assert!(
+        wait_for(|| emu.published_count() > shown),
+        "the refresh never published a frame"
+    );
+    assert_eq!(frame_count(&emu), held, "the refresh moved the game on");
 }

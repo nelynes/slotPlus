@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use common::{core_lock, repo_root, vendored_core};
 use slot_retro::{ButtonMask, LibretroCore, RetroCore, GBA_H, GBA_W};
-use slot_store::{Core, GbPalette};
+use slot_store::{Core, GbPalette, Platform};
 
 const DEFAULT_BG: [[u8; 3]; 3] = [[255, 251, 255], [123, 251, 49], [0, 97, 198]];
 
@@ -63,6 +63,7 @@ fn shipped(root: &Path, dylib: &Path, rom: &Path, palette: Option<GbPalette>) ->
     let mut core = slot::core::open_core_for_palette(
         root,
         Core::Mgba,
+        Platform::Gb,
         "auto",
         false,
         palette,

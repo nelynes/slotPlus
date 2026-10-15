@@ -2,7 +2,7 @@ mod common;
 
 use slot::link_kind::{serial_option, LinkKind};
 use slot_retro::LibretroCore;
-use slot_store::Core;
+use slot_store::{Core, Platform};
 
 fn dylib_for(core: Core) -> std::path::PathBuf {
     std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -67,18 +67,22 @@ fn every_option_slot_sets_is_one_the_core_declares() {
         }
         for serial in every_serial_mode() {
             for bios in [false, true] {
-                for colour in [false, true] {
+                for (colour, platform) in [false, true]
+                    .into_iter()
+                    .flat_map(|c| Platform::ALL.map(|p| (c, p)))
+                {
                     for palette in
                         std::iter::once(None).chain(slot_store::GbPalette::all().map(Some))
                     {
                         let mut core = LibretroCore::open(&path).expect("open core");
                         slot::core::apply_core_options(
-                            &mut core, which, serial, bios, colour, palette,
+                            &mut core, which, platform, serial, bios, colour, palette,
                         );
                         every_option_is_one_the_core_has(
                             &core,
                             &format!(
-                                "{} serial={serial} bios={bios} colour={colour} palette={palette:?}",
+                                "{} {platform:?} serial={serial} bios={bios} colour={colour} \
+                                 palette={palette:?}",
                                 which.as_str()
                             ),
                         );
@@ -165,7 +169,15 @@ fn a_named_palette_forces_a_plain_game_boy_without_hardware_presets() {
     }
     let p = slot_store::GbPalette::parse("SGB 1-A").unwrap();
     let mut core = LibretroCore::open(&path).expect("open core");
-    slot::core::apply_core_options(&mut core, Core::Mgba, "auto", false, false, Some(p));
+    slot::core::apply_core_options(
+        &mut core,
+        Core::Mgba,
+        Platform::Gb,
+        "auto",
+        false,
+        false,
+        Some(p),
+    );
     let set: std::collections::HashMap<String, String> = core.options().into_iter().collect();
     assert_eq!(
         set.get("mgba_gb_model").map(String::as_str),
@@ -182,7 +194,15 @@ fn a_named_palette_forces_a_plain_game_boy_without_hardware_presets() {
     drop(core);
 
     let mut core = LibretroCore::open(&path).expect("open core");
-    slot::core::apply_core_options(&mut core, Core::Mgba, "auto", false, false, None);
+    slot::core::apply_core_options(
+        &mut core,
+        Core::Mgba,
+        Platform::Gb,
+        "auto",
+        false,
+        false,
+        None,
+    );
     let set: std::collections::HashMap<String, String> = core.options().into_iter().collect();
     assert_eq!(
         set.get("mgba_gb_model").map(String::as_str),
@@ -249,7 +269,15 @@ fn mgba_always_answers_the_game_boy_player_logo() {
     }
     for palette in [None, slot_store::GbPalette::parse("SGB 1-A")] {
         let mut core = LibretroCore::open(&path).expect("open core");
-        slot::core::apply_core_options(&mut core, Core::Mgba, "auto", false, false, palette);
+        slot::core::apply_core_options(
+            &mut core,
+            Core::Mgba,
+            Platform::Gb,
+            "auto",
+            false,
+            false,
+            palette,
+        );
         let set: std::collections::HashMap<String, String> = core.options().into_iter().collect();
         assert_eq!(
             set.get("mgba_force_gbp").map(String::as_str),

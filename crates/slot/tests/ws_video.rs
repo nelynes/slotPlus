@@ -14,7 +14,8 @@ fn gba_and_game_boy_views_are_unchanged() {
     assert_eq!(source_rect(Platform::Gb, VideoMode::Actual), WHOLE_TEXTURE);
     assert_eq!(
         source_rect(Platform::Gb, VideoMode::Stretch),
-        [40.0 / 240.0, 8.0 / 160.0, 160.0 / 240.0, 144.0 / 160.0]
+        [40.0 / 240.0, 0.0, 160.0 / 240.0, 1.0],
+        "a Game Boy picture is stretched sideways only"
     );
 }
 

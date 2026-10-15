@@ -7,6 +7,21 @@ vars:
   GPSP_COMMIT: 7b2dd37394e2822110cacef321e9bb291a305b77
   CYGNE_COMMIT: 4b01295838ea89e3f1355bbe4cb5cf98aa6108cd
   LYNX_COMMIT: fcdefcfb3c11d6d2e71be076a5d3df2e88ab73ed
+  SLOT_IN_PROCESS: >-
+    --test bios --test core --test core_options --test e2e --test emu --test gb_palette_recolour --test gpsp
+    --test link_ui --test mgba_gb_link --test mgba_link --test render_colour_correction
+    --test render_gb_palette --test render_picture_modes --test runahead --test render
+    --test render_in_game_menu --test render_power_wake --test render_quick_menu
+    --test render_shelf --test render_shelves
+  IN_PROCESS: >-
+    (package(slot) & (binary(bios) | binary(core) | binary(core_options) | binary(e2e) | binary(emu)
+    | binary(gb_palette_recolour) | binary(gpsp) | binary(link_ui) | binary(mgba_gb_link)
+    | binary(mgba_link) | binary(render_colour_correction) | binary(render_gb_palette)
+    | binary(render_picture_modes) | binary(runahead) | binary(render) | binary(render_in_game_menu)
+    | binary(render_power_wake) | binary(render_quick_menu) | binary(render_shelf)
+    | binary(render_shelves)))
+    | (package(slot-gfx) & binary(pipeline)) | (package(slot-ui) & binary(render_row_edges))
+    | (package(slot-retro) & (binary(options) | binary(netpacket) | binary(libretro)))
 
 tasks:
   default:
@@ -26,16 +41,24 @@ tasks:
       - cargo build --release -p slot
 
   test:
-    desc: Run the whole test suite
+    desc: Run the whole test suite in parallel with cargo-nextest, silent
+    env:
+      SLOT_SILENT: '1'
     cmds:
-      - cargo test --workspace
+      - cargo nextest run --workspace --no-fail-fast -E 'not ({{.IN_PROCESS}})'
+      - cargo test -p slot --no-fail-fast {{.SLOT_IN_PROCESS}}
+      - cargo test -p slot-gfx --test pipeline
+      - cargo test -p slot-ui --test render_row_edges
+      - cargo test -p slot-retro --test options --test netpacket --test libretro
 
   test:one:
     desc: Run tests matching FILTER, eg task test:one FILTER=gesture
     requires:
       vars: [FILTER]
+    env:
+      SLOT_SILENT: '1'
     cmds:
-      - cargo test --workspace {{.FILTER}}
+      - cargo nextest run --workspace {{.FILTER}}
 
   fmt:
     desc: Format the workspace
@@ -72,6 +95,7 @@ tasks:
       - sh card/test-slotlink.sh
       - sh card/test-led.sh
       - sh card/test-coresave.sh
+      - sh card/test-launch.sh
 
   core:
     desc: >-
@@ -317,7 +341,7 @@ tasks:
         if [ "$(uname -s)-$(uname -m)" = "Linux-aarch64" ]; then
           sh -c '{{.CMD}}'
         else
-          docker run --rm -v "$PWD":/src -w /src rust:1-bullseye sh -c '{{.CMD}}'
+          docker run --rm --platform linux/arm64 -v "$PWD":/src -w /src rust:1-bullseye sh -c '{{.CMD}}'
         fi
 
   build:device:
@@ -444,7 +468,7 @@ tasks:
     vars:
       SD: '{{.SD | default "/mnt/sdcard"}}'
     cmds:
-      - adb shell 'cat {{.SD}}/slot.log'
+      - adb shell 'cat {{.SD}}/Logs/slot.log'
 
   clean:
     desc: Remove build output and dist

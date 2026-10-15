@@ -1,0 +1,28 @@
+diff --git a/src/gb/video.c b/src/gb/video.c
+index fd481d4..191a490 100644
+--- a/src/gb/video.c
++++ b/src/gb/video.c
+@@ -884,6 +884,11 @@ void GBVideoSetPalette(struct GBVideo* video, unsigned index, uint32_t color) {
+ 		return;
+ 	}
+ 	video->dmgPalette[index] = M_RGB8_TO_RGB5(color);
++	if (video->p->model < GB_MODEL_SGB) {
++		GBVideoWritePalette(video, GB_REG_BGP, video->p->memory.io[GB_REG_BGP]);
++		GBVideoWritePalette(video, GB_REG_OBP0, video->p->memory.io[GB_REG_OBP0]);
++		GBVideoWritePalette(video, GB_REG_OBP1, video->p->memory.io[GB_REG_OBP1]);
++	}
+ }
+ 
+ void GBVideoDisableCGB(struct GBVideo* video) {
+@@ -1209,6 +1214,11 @@ void GBVideoDeserialize(struct GBVideo* video, const struct GBSerializedState* s
+ 		LOAD_16LE(video->palette[i], i * 2, state->video.palette);
+ 		video->renderer->writePalette(video->renderer, i, video->palette[i]);
+ 	}
++	if (video->p->model < GB_MODEL_SGB) {
++		GBVideoWritePalette(video, GB_REG_BGP, state->io[GB_REG_BGP]);
++		GBVideoWritePalette(video, GB_REG_OBP0, state->io[GB_REG_OBP0]);
++		GBVideoWritePalette(video, GB_REG_OBP1, state->io[GB_REG_OBP1]);
++	}
+ 
+ 	memcpy(video->vram, state->vram, GB_SIZE_VRAM);
+ 	memcpy(&video->oam.raw, state->oam, GB_SIZE_OAM);

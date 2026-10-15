@@ -2,6 +2,15 @@ use std::path::Path;
 
 pub fn cover(path: &Path, w: u32, h: u32) -> Option<Vec<u8>> {
     let (src, sw, sh) = decode(path)?;
+    cover_rgba(&src, sw, sh, w, h)
+}
+
+pub fn cover_bytes(bytes: &[u8], w: u32, h: u32) -> Option<Vec<u8>> {
+    let (src, sw, sh) = decode_png_bytes(bytes)?;
+    cover_rgba(&src, sw, sh, w, h)
+}
+
+fn cover_rgba(src: &[u8], sw: u32, sh: u32, w: u32, h: u32) -> Option<Vec<u8>> {
     if sw == 0 || sh == 0 {
         return None;
     }
@@ -17,7 +26,7 @@ pub fn cover(path: &Path, w: u32, h: u32) -> Option<Vec<u8>> {
         for x in 0..w {
             let x0 = ox + x as f32 / scale;
             let x1 = ox + (x + 1) as f32 / scale;
-            let px = box_average(&src, sw, sh, x0, y0, x1, y1);
+            let px = box_average(src, sw, sh, x0, y0, x1, y1);
             out[((y * w + x) * 4) as usize..][..4].copy_from_slice(&px);
         }
     }
@@ -50,8 +59,12 @@ fn box_average(src: &[u8], sw: u32, sh: u32, x0: f32, y0: f32, x1: f32, y1: f32)
 
 fn decode(path: &Path) -> Option<(Vec<u8>, u32, u32)> {
     let bytes = std::fs::read(path).ok()?;
-    let orientation = exif_chunk(&bytes).and_then(exif_orientation).unwrap_or(1);
-    let mut dec = png::Decoder::new(bytes.as_slice());
+    decode_png_bytes(&bytes)
+}
+
+pub(crate) fn decode_png_bytes(bytes: &[u8]) -> Option<(Vec<u8>, u32, u32)> {
+    let orientation = exif_chunk(bytes).and_then(exif_orientation).unwrap_or(1);
+    let mut dec = png::Decoder::new(bytes);
     dec.set_transformations(png::Transformations::normalize_to_color8());
     dec.set_limits(png::Limits { bytes: 64 << 20 });
 

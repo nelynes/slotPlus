@@ -1,4 +1,6 @@
 # cart:
+# state: show_recents=0
+# state: show_titles=0
 # Game Boy Color: from the shelf, start Pokemon Crystal fresh (hold A), skip to its title, then
 # L1 stretches the picture over the panel and R1 gives it back at its own size.
 wait 60

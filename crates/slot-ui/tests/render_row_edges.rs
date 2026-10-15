@@ -2,7 +2,7 @@
 
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
-use slot_gfx::{Compositor, HeadlessSurface};
+use slot_gfx::{Canvas, Compositor, HeadlessSurface};
 use slot_store::{Cart, Platform};
 use slot_ui::{cart_face, cart_shadow, Draw, Shelf, SlotChrome, TexId, CART_W, OUT_H, OUT_W};
 
@@ -49,7 +49,7 @@ fn uploaded(n: usize, c: &mut Compositor) -> (Shelf, Vec<TexId>) {
 }
 
 fn composed(c: &mut Compositor, list: &[Draw]) -> Vec<u8> {
-    c.begin_frame();
+    c.begin_frame(slot_gfx::Layout::Framed);
     c.draw_list(list);
     c.read_frame()
 }
@@ -95,7 +95,7 @@ fn held_scroll(c: &mut Compositor, n: usize, frames: usize) -> Vec<Vec<u8>> {
             s.tick(f as u64 * 1000 / 60);
             s.update(1.0 / 60.0);
             let mut list = Vec::new();
-            s.draw(0.0, &mut list);
+            s.draw(Canvas::FRAMED, 0.0, None, &mut list);
             composed(c, &list)
         })
         .collect()
@@ -164,14 +164,14 @@ fn the_slot_takes_over_the_cart_where_the_row_had_it() {
     s.update(1.0 / 60.0);
     s.update(1.0 / 60.0);
     let mut before = Vec::new();
-    s.draw_row(None, 0.0, 0.0, 1.0, &mut before);
+    s.draw_row(Canvas::FRAMED, None, 0.0, 0.0, 1.0, &mut before);
     let before = composed(&mut c, &before);
     shot(&before, "handover-before");
 
     let cart = s.carts[s.index].clone();
-    let (rest, scale) = s.selected_at();
+    let (rest, scale) = s.selected_at(Canvas::FRAMED);
     let mut after = Vec::new();
-    s.draw_row(Some(&cart.stem), 0.0, 0.0, 1.0, &mut after);
+    s.draw_row(Canvas::FRAMED, Some(&cart.stem), 0.0, 0.0, 1.0, &mut after);
     SlotChrome {
         cart: &cart,
         face: Some(faces[s.index]),
@@ -182,6 +182,10 @@ fn the_slot_takes_over_the_cart_where_the_row_had_it() {
         dim: 0.0,
         screen: 0.0,
         game: false,
+        over: true,
+        behind: [None, None],
+        slot: None,
+        canvas: Canvas::FRAMED,
     }
     .draw(&mut after);
     let after = composed(&mut c, &after);

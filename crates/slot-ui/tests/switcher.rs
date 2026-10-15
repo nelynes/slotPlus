@@ -50,6 +50,9 @@ fn quads(out: &[Draw]) -> Vec<Quad> {
             Draw::Tex {
                 x, y, w, h, alpha, ..
             } => Quad { x, y, w, h, alpha },
+            Draw::Part {
+                x, y, w, h, alpha, ..
+            } => Quad { x, y, w, h, alpha },
             Draw::Turned {
                 x, y, w, h, alpha, ..
             } => Quad { x, y, w, h, alpha },

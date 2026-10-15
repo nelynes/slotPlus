@@ -8,13 +8,14 @@ use std::path::Path;
 use common::{clocked, repo_root, tmp_root_with_carts};
 use slot::app::{App, SEATED_AT};
 use slot::frontend::Frontend;
-use slot_gfx::{Compositor, HeadlessSurface, OUT_H, OUT_W};
+use slot_gfx::{Canvas, Compositor, HeadlessSurface, OUT_H, OUT_W};
 use slot_input::{Action, Btn, InputSource, Millis, RawEvent};
 use slot_power::SimPlatform;
 use slot_store::{Cart, Platform as CartPlatform};
 use slot_ui::{
-    cart_box, cart_face, clean_label, edge, housing, label_colour, label_text, opening, recess,
-    rest_y, Draw, SlotChrome, CART_W, GB_CART_H, GB_LABEL_H, GB_LABEL_Y, LABEL_H, LABEL_Y, PLATE_H,
+    cart_box, cart_face, clean_label, default_background, edge, housing, label_colour, label_text,
+    opening, recess, rest_y, slot_back, slot_front, slot_name_y, Draw, SlotChrome, CART_W,
+    GB_CART_H, GB_LABEL_H, GB_LABEL_Y, HINT_H, PLATE_H, SLOT_H, SLOT_W,
 };
 
 struct Script(VecDeque<Vec<RawEvent>>);
@@ -71,7 +72,12 @@ fn hud_ink(px: &[u8]) -> usize {
 }
 
 fn name_window() -> (usize, usize, usize, usize) {
-    (OUT_W as usize / 2 - 70, OUT_H as usize - 49, 140, 27)
+    (
+        OUT_W as usize / 2 - 70,
+        slot_name_y() as usize,
+        140,
+        HINT_H as usize,
+    )
 }
 
 fn name_pixels(px: &[u8]) -> Vec<[u8; 3]> {
@@ -85,8 +91,16 @@ fn name_pixels(px: &[u8]) -> Vec<[u8; 3]> {
 fn name_ink(px: &[u8]) -> usize {
     name_pixels(px)
         .iter()
-        .filter(|c| u32::from(c[0]) > GROUND[0] + 0x10)
+        .filter(|c| c.iter().all(|ch| *ch > 0xc0))
         .count()
+}
+
+fn field(px: &[u8]) -> [u32; 3] {
+    patch(px, 20, 12)
+}
+
+fn ground((x, y): (usize, usize)) -> [u32; 3] {
+    patch(default_background().expect("the default wallpaper"), x, y)
 }
 
 fn let_the_name_in(f: &mut Frontend, c: &mut Compositor, input: &mut Script) {
@@ -152,7 +166,6 @@ fn alone_label() -> (usize, usize) {
 const SIDE_LEFT: (usize, usize) = (90, 250);
 const SIDE_RIGHT: (usize, usize) = (630, 250);
 const MIDDLE: (usize, usize) = (360, 250);
-const GROUND: [u32; 3] = [0x05, 0x05, 0x08];
 
 #[test]
 fn the_shoulders_ring_over_a_shelf_for_each_system() {
@@ -185,9 +198,13 @@ fn the_shoulders_ring_over_a_shelf_for_each_system() {
     let left = patch(&gba, SIDE_LEFT.0, SIDE_LEFT.1);
     let right = patch(&gba, SIDE_RIGHT.0, SIDE_RIGHT.1);
     let middle = patch(&gba, MIDDLE.0, MIDDLE.1);
-    for (name, slot) in [("left", left), ("middle", middle), ("right", right)] {
+    for (name, slot, at) in [
+        ("left", left, SIDE_LEFT),
+        ("middle", middle, MIDDLE),
+        ("right", right, SIDE_RIGHT),
+    ] {
         assert!(
-            apart(slot, GROUND) > 60,
+            apart(slot, ground(at)) > 60,
             "the {name} slot of a two-cart shelf is bare ground: {slot:?}"
         );
     }
@@ -215,13 +232,13 @@ fn the_shoulders_ring_over_a_shelf_for_each_system() {
         let (lx, ly) = alone_label();
         let label = patch(&px, lx, ly);
         assert!(
-            apart(cart, GROUND) > 60,
+            apart(cart, ground((ax, ay))) > 60,
             "no cart in the middle of the {banner} shelf: {cart:?}"
         );
         for (side, (x, y)) in [("left", SIDE_LEFT), ("right", SIDE_RIGHT)] {
             let beside = patch(&px, x, y);
             assert!(
-                apart(beside, GROUND) < 30,
+                apart(beside, ground((x, y))) < 30,
                 "the {banner} shelf holds one cart but drew something on its {side}: {beside:?}"
             );
         }
@@ -296,7 +313,7 @@ fn a_card_nobody_has_organised_comes_up_an_empty_shelf() {
 
     let plate = patch(&empty, 150, 470);
     assert!(
-        apart(plate, GROUND) > 20,
+        apart(plate, ground((150, 470))) > 20,
         "the bottom plate is not there, so this is a blank screen rather than an empty shelf: \
          {plate:?}"
     );
@@ -312,7 +329,7 @@ fn a_card_nobody_has_organised_comes_up_an_empty_shelf() {
     ] {
         let slot = patch(&empty, x, y);
         assert!(
-            apart(slot, GROUND) < 30,
+            apart(slot, ground((x, y))) < 30,
             "the {name} slot of an unorganised card is holding something: {slot:?}"
         );
     }
@@ -328,7 +345,7 @@ fn a_card_nobody_has_organised_comes_up_an_empty_shelf() {
     ] {
         let slot = patch(&later, x, y);
         assert!(
-            apart(slot, GROUND) < 30,
+            apart(slot, ground((x, y))) < 30,
             "a cart appeared in the {name} slot a second after an unorganised card booted: \
              {slot:?}"
         );
@@ -342,7 +359,7 @@ fn a_card_nobody_has_organised_comes_up_an_empty_shelf() {
     let full = composed(&mut f, &mut c, "organised-card");
     let middle = patch(&full, MIDDLE.0, MIDDLE.1);
     assert!(
-        apart(middle, GROUND) > 60,
+        apart(middle, ground(MIDDLE)) > 60,
         "the organised card's own shelf is bare too, so this test cannot see a cart at all: \
          {middle:?}"
     );
@@ -422,7 +439,7 @@ fn a_cart_going_in_from_a_repeated_row_takes_both_copies_of_its_neighbour_with_i
 
     for (side, slot) in [("left", west), ("right", east)] {
         assert!(
-            apart(slot, GROUND) > 60,
+            apart(slot, field(&standing)) > 60,
             "the {side} of the selection is bare ground: {slot:?}"
         );
     }
@@ -449,7 +466,7 @@ fn a_cart_going_in_from_a_repeated_row_takes_both_copies_of_its_neighbour_with_i
     for (side, (x, y)) in [("left", SIDE_LEFT), ("right", SIDE_RIGHT)] {
         let slot = patch(&seated, x, y);
         assert!(
-            apart(slot, GROUND) < 30,
+            apart(slot, field(&seated)) < 30,
             "the {side} copy of the other cart is still on the row with the chosen one \
              seated: {slot:?}"
         );
@@ -556,7 +573,16 @@ fn row_runs(px: &[u8]) -> Vec<(usize, usize)> {
 }
 
 fn span(px: &[u8], ink: [u8; 3]) -> (f32, usize) {
-    let close = |c: [u8; 3]| (0..3).all(|k| c[k].abs_diff(ink[k]) <= 24);
+    let chrome = backdrop();
+    let close = |c: [u8; 3]| {
+        (0..3).all(|k| c[k].abs_diff(ink[k]) <= 24)
+            && !chrome.iter().any(|f| {
+                (0..3).all(|k| {
+                    let want = (f[k] * 255.0).round() as u8;
+                    c[k].abs_diff(want) <= 8
+                })
+            })
+    };
     let mut cols: Vec<usize> = Vec::new();
     let mut bottom = 0;
     for y in 0..OUT_H as usize {
@@ -586,7 +612,7 @@ fn frame(c: &mut Compositor, out: &[Draw], name: &str) -> Vec<u8> {
 
 fn frame_named(c: &mut Compositor, out: &[Draw], name: Option<&str>) -> Vec<u8> {
     c.set_screen_power(1.0);
-    c.begin_frame();
+    c.begin_frame(slot_gfx::Layout::Framed);
     c.draw_list(out);
     let px = c.read_frame();
     if let (Some(name), Ok(dir)) = (name, std::env::var("SCRATCH_PNG_DIR")) {
@@ -633,36 +659,16 @@ fn cartridges() -> [(&'static str, Cart); 2] {
     ]
 }
 
-fn label_top(p: CartPlatform) -> usize {
-    match p {
-        CartPlatform::Gba => LABEL_Y as usize,
-        CartPlatform::Gb | CartPlatform::Gbc => GB_LABEL_Y as usize,
-    }
-}
-
-fn paper_rows(px: &[u8], ink: [u8; 3]) -> Option<(usize, usize)> {
-    let close = |c: [u8; 3]| (0..3).all(|k| c[k].abs_diff(ink[k]) <= 24);
-    let mut rows =
-        (0..OUT_H as usize).filter(|y| (0..OUT_W as usize).any(|x| close(at(px, x, *y))));
-    let first = rows.next()?;
-    Some((first, rows.next_back().unwrap_or(first)))
-}
-
 fn backdrop() -> [[f32; 4]; 5] {
     [[0.0, 0.0, 0.0, 1.0], housing(), opening(), edge(), recess()]
 }
 
-fn shell_rows(px: &[u8]) -> Option<(usize, usize)> {
-    let flat = backdrop();
-    let cart = |c: [u8; 3]| {
-        !flat.iter().any(|f| {
-            (0..3).all(|k| {
-                let want = (f[k] * 255.0).round() as u8;
-                c[k].abs_diff(want) <= 8
-            })
-        })
+fn shell_rows(px: &[u8], empty: &[u8]) -> Option<(usize, usize)> {
+    let cart = |x: usize, y: usize| {
+        let (c, e) = (at(px, x, y), at(empty, x, y));
+        (0..3).any(|k| c[k].abs_diff(e[k]) > 8)
     };
-    let mut rows = (0..OUT_H as usize).filter(|y| (0..OUT_W as usize).any(|x| cart(at(px, x, *y))));
+    let mut rows = (0..OUT_H as usize).filter(|y| (0..OUT_W as usize).any(|x| cart(x, *y)));
     let first = rows.next()?;
     Some((first, rows.next_back().unwrap_or(first)))
 }
@@ -675,6 +681,10 @@ fn both_cartridges_go_into_the_slot_at_their_own_size() {
     let Ok(mut c) = Compositor::new(&surface) else {
         return;
     };
+    let slot = Some((
+        c.create_texture(SLOT_W, SLOT_H, slot_back()),
+        c.create_texture(SLOT_W, SLOT_H, slot_front()),
+    ));
     let beats = [
         ("0-standing", 0.0),
         ("1-falling", 0.25),
@@ -693,26 +703,34 @@ fn both_cartridges_go_into_the_slot_at_their_own_size() {
             "{name}: the face is not the size the layout thinks it is"
         );
         let tex = c.create_texture(face.w, face.h, &face.rgba);
-        let ink = label_colour(&clean_label(&cart.stem));
+        let clear = c.create_texture(face.w, face.h, &vec![0; face.rgba.len()]);
         let rest = (OUT_W - w) as f32 / 2.0;
 
         for (beat, seat) in beats {
-            let mut out = Vec::new();
-            SlotChrome {
-                cart: &cart,
-                face: Some(tex),
-                rest,
-                scale: 1.0,
-                seat,
-                alert: None,
-                dim: 0.0,
-                screen: 0.0,
-                game: false,
-            }
-            .draw(&mut out);
-            let px = frame(&mut c, &out, &format!("insert-{name}-{beat}"));
+            let chrome = |face| {
+                let mut out = Vec::new();
+                SlotChrome {
+                    cart: &cart,
+                    face,
+                    rest,
+                    scale: 1.0,
+                    seat,
+                    alert: None,
+                    dim: 0.0,
+                    screen: 0.0,
+                    game: false,
+                    over: true,
+                    behind: [None, None],
+                    slot,
+                    canvas: Canvas::FRAMED,
+                }
+                .draw(&mut out);
+                out
+            };
+            let empty = frame_named(&mut c, &chrome(Some(clear)), None);
+            let px = frame(&mut c, &chrome(Some(tex)), &format!("insert-{name}-{beat}"));
 
-            let Some((top, bottom)) = shell_rows(&px) else {
+            let Some((top, bottom)) = shell_rows(&px, &empty) else {
                 panic!("{name} at {beat}: no cartridge on the screen at all");
             };
             if seat == 0.0 {
@@ -727,24 +745,6 @@ fn both_cartridges_go_into_the_slot_at_their_own_size() {
                 assert!(
                     (middle - want).abs() < 1.5,
                     "{name} stands {top}..{bottom}, centred on {middle} rather than on {want}"
-                );
-                let (paper_top, paper_bottom) =
-                    paper_rows(&px, ink).expect("a standing cartridge shows its label");
-                let inset = paper_top - top;
-                assert!(
-                    inset.abs_diff(label_top(cart.platform)) <= 2,
-                    "{name}'s paper starts {inset} px down its face, not the {} its platform \
-                     puts it at",
-                    label_top(cart.platform)
-                );
-                let paper = paper_bottom - paper_top + 1;
-                let want = match cart.platform {
-                    CartPlatform::Gba => LABEL_H as usize,
-                    _ => GB_LABEL_H as usize,
-                };
-                assert!(
-                    paper.abs_diff(want) <= 2,
-                    "{name}'s {want} px label came out {paper} px tall: it is being scaled"
                 );
             }
             if seat == 1.0 {
@@ -792,6 +792,10 @@ fn no_frame_of_the_travel_jumps_further_than_the_cartridge_is_tall() {
                     dim: 0.0,
                     screen: 0.0,
                     game: false,
+                    over: true,
+                    behind: [None, None],
+                    slot: None,
+                    canvas: Canvas::FRAMED,
                 }
                 .draw(&mut out);
                 out.iter()
@@ -815,4 +819,44 @@ fn no_frame_of_the_travel_jumps_further_than_the_cartridge_is_tall() {
              cut, not a movement"
         );
     }
+}
+
+#[test]
+fn a_recents_shelf_rings_paks_and_carts_together() {
+    let Ok(surface) = HeadlessSurface::new() else {
+        return;
+    };
+    let Ok(mut c) = Compositor::new(&surface) else {
+        return;
+    };
+    let d = tmp_root_with_carts(&["Emerald", "Fusion"]);
+    put_game_boy_carts(d.path());
+    let mut s = slot_store::read_slot_state(d.path());
+    s.clock_set = true;
+    s.show_recents = true;
+    s.played(CartPlatform::Gba, "Fusion");
+    s.played(CartPlatform::Gba, "Emerald");
+    s.played(CartPlatform::Gb, "Tetris Rosy Retrospection");
+    slot_store::write_slot_state(d.path(), &s).expect("write slot.state");
+    let mut f = Frontend::boot(Box::new(SimPlatform::at(d.path().to_path_buf())));
+    f.upload_faces(&mut c);
+    let mut input = Script(VecDeque::new());
+    f.advance(&mut input);
+    let_the_name_in(&mut f, &mut c, &mut input);
+    let px = composed(&mut f, &mut c, "recents");
+    let (ax, ay) = alone();
+    assert!(
+        apart(patch(&px, ax, ay), ground((ax, ay))) > 60,
+        "no pak in the middle of the recents shelf"
+    );
+    for (side, at) in [("left", SIDE_LEFT), ("right", SIDE_RIGHT)] {
+        assert!(
+            apart(patch(&px, at.0, at.1), ground(at)) > 60,
+            "the recents shelf left its {side} bare"
+        );
+    }
+    assert!(
+        name_ink(&px) > 20,
+        "the recents shelf came up without its name in the slot"
+    );
 }

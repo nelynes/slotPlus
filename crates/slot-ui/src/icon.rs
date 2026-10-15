@@ -142,6 +142,45 @@ impl Badge {
     }
 }
 
+const STAR: [&str; 9] = [
+    "....#....",
+    "...###...",
+    "...###...",
+    "#########",
+    ".#######.",
+    "..#####..",
+    "..#####..",
+    ".###.###.",
+    ".##...##.",
+];
+
+pub fn star_face(scale: u32, colour: [u8; 3]) -> CartFace {
+    let (gw, gh) = (STAR[0].len() as i32, STAR.len() as i32);
+    let ink = |x: i32, y: i32| {
+        (0..gw).contains(&x)
+            && (0..gh).contains(&y)
+            && STAR[y as usize].as_bytes()[x as usize] == b'#'
+    };
+    let (w, h) = ((gw + 2) as u32 * scale, (gh + 2) as u32 * scale);
+    let mut rgba = vec![0u8; (w * h * 4) as usize];
+    for py in 0..h {
+        for px in 0..w {
+            let (x, y) = ((px / scale) as i32 - 1, (py / scale) as i32 - 1);
+            let rim = [(0, -1), (0, 1), (-1, 0), (1, 0)]
+                .iter()
+                .any(|(dx, dy)| ink(x + dx, y + dy));
+            let c = match (ink(x, y), rim) {
+                (true, _) => [colour[0], colour[1], colour[2], 255],
+                (false, true) => [HALO[0], HALO[1], HALO[2], 255],
+                _ => continue,
+            };
+            let o = ((py * w + px) * 4) as usize;
+            rgba[o..o + 4].copy_from_slice(&c);
+        }
+    }
+    CartFace { rgba, w, h }
+}
+
 pub fn badge_face(badge: Badge, px: f32, colour: [u8; 3]) -> CartFace {
     let Some(font) = symbols_font() else {
         return CartFace {

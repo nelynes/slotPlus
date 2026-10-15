@@ -29,6 +29,15 @@ pub enum Draw {
         tex: TexId,
         alpha: f32,
     },
+    Part {
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        tex: TexId,
+        alpha: f32,
+        uv: [f32; 4],
+    },
     Turned {
         x: f32,
         y: f32,
@@ -51,6 +60,8 @@ pub struct Sprites {
     u_rect: gl::types::GLint,
     u_colour: gl::types::GLint,
     u_turn: gl::types::GLint,
+    u_target: gl::types::GLint,
+    u_src: gl::types::GLint,
 }
 
 impl Sprites {
@@ -64,15 +75,13 @@ impl Sprites {
             gl::RGBA,
             Some(&[255u8; 4]),
         );
-        let (u_rect, u_colour, u_turn);
+        let (u_rect, u_colour, u_turn, u_target, u_src);
         unsafe {
             gl::UseProgram(prog);
             gl::Uniform1i(crate::gl::uniform_location(prog, "u_tex"), 0);
-            gl::Uniform2f(
-                crate::gl::uniform_location(prog, "u_target"),
-                OUT_W as f32,
-                OUT_H as f32,
-            );
+            u_target = crate::gl::uniform_location(prog, "u_target");
+            gl::Uniform2f(u_target, OUT_W as f32, OUT_H as f32);
+            u_src = crate::gl::uniform_location(prog, "u_src");
             u_rect = crate::gl::uniform_location(prog, "u_rect");
             u_colour = crate::gl::uniform_location(prog, "u_colour");
             u_turn = crate::gl::uniform_location(prog, "u_turn");
@@ -84,7 +93,16 @@ impl Sprites {
             u_rect,
             u_colour,
             u_turn,
+            u_target,
+            u_src,
         })
+    }
+
+    pub fn set_target(&mut self, canvas: crate::Canvas) {
+        unsafe {
+            gl::UseProgram(self.prog);
+            gl::Uniform2f(self.u_target, canvas.w, canvas.h);
+        }
     }
 
     pub fn create_texture(&mut self, w: u32, h: u32, rgba: &[u8]) -> TexId {
@@ -137,8 +155,9 @@ impl Sprites {
             gl::ActiveTexture(gl::TEXTURE0);
         }
         for item in items {
-            let (x, y, w, h, tex, colour, turn) = match *item {
-                Draw::Rect { x, y, w, h, colour } => (x, y, w, h, self.white, colour, 0.0),
+            let whole = [0.0, 0.0, 1.0, 1.0];
+            let (x, y, w, h, tex, colour, turn, uv) = match *item {
+                Draw::Rect { x, y, w, h, colour } => (x, y, w, h, self.white, colour, 0.0, whole),
                 Draw::Tex {
                     x,
                     y,
@@ -147,7 +166,19 @@ impl Sprites {
                     tex,
                     alpha,
                 } => match self.textures.get(tex.0) {
-                    Some(t) => (x, y, w, h, *t, [1.0, 1.0, 1.0, alpha], 0.0),
+                    Some(t) => (x, y, w, h, *t, [1.0, 1.0, 1.0, alpha], 0.0, whole),
+                    None => continue,
+                },
+                Draw::Part {
+                    x,
+                    y,
+                    w,
+                    h,
+                    tex,
+                    alpha,
+                    uv,
+                } => match self.textures.get(tex.0) {
+                    Some(t) => (x, y, w, h, *t, [1.0, 1.0, 1.0, alpha], 0.0, uv),
                     None => continue,
                 },
                 Draw::Turned {
@@ -159,7 +190,7 @@ impl Sprites {
                     alpha,
                     turn,
                 } => match self.textures.get(tex.0) {
-                    Some(t) => (x, y, w, h, *t, [1.0, 1.0, 1.0, alpha], turn),
+                    Some(t) => (x, y, w, h, *t, [1.0, 1.0, 1.0, alpha], turn, whole),
                     None => continue,
                 },
                 Draw::Game | Draw::Shot { .. } => continue,
@@ -173,6 +204,7 @@ impl Sprites {
                 gl::BindTexture(gl::TEXTURE_2D, tex);
                 gl::Uniform4f(self.u_rect, x, y, w, h);
                 gl::Uniform2f(self.u_turn, cos, sin);
+                gl::Uniform4f(self.u_src, uv[0], uv[1], uv[2], uv[3]);
                 gl::Uniform4f(self.u_colour, colour[0], colour[1], colour[2], colour[3]);
             }
             quad.draw();
