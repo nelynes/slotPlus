@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## [1.7.0-lyx](https://github.com/nelynes/slotPlus/releases/tag/v1.7.0-lyx)
 
 slotPlus: Slot 1.7.0 plus WonderSwan and Atari Lynx.
 
