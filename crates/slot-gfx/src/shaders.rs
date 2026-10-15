@@ -74,7 +74,7 @@ float dot_weight(vec2 f, vec2 o, float bloom) {
 // show through, and the dark pixels above it cast soft shadows onto it.
 const vec3 clear_backing = vec3(0.60, 0.62, 0.50);
 const float clear_see = 0.5;
-const float clear_shadow_px = 1.5;
+const float clear_shadow_px = 2.0;
 const float clear_blur_px = 1.0;
 const float clear_shadow = 0.4;
 float darkness_at(vec2 at) {
