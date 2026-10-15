@@ -169,6 +169,7 @@ fn a_first_boot_rumbles_and_fast_forwards_silently_at_the_default() {
     assert_eq!(s.shader_gb, Shader::Simpletex);
     assert_eq!(s.shader_ws, Shader::Simpletex);
     assert_eq!(s.shader_lynx, Shader::Grid);
+    assert_eq!(s.shader_gg, Shader::Simpletex);
 }
 
 #[test]
@@ -200,6 +201,7 @@ fn a_card_from_before_the_settings_keeps_all_its_values() {
             shader_gb: Shader::Simpletex,
             shader_ws: Shader::Simpletex,
             shader_lynx: Shader::Grid,
+            shader_gg: Shader::Simpletex,
             eject_save: true,
             turbo: true,
             rewind: true,
@@ -222,6 +224,7 @@ fn the_quick_menu_settings_round_trip_as_their_own_lines() {
         shader_gb: Shader::Off,
         shader_ws: Shader::Grid,
         shader_lynx: Shader::Lcd3x,
+        shader_gg: Shader::Grid,
         eject_save: false,
         turbo: false,
         rewind: false,
@@ -241,6 +244,7 @@ fn the_quick_menu_settings_round_trip_as_their_own_lines() {
         "shader_gb=off",
         "shader_ws=grid",
         "shader_lynx=lcd3x",
+        "shader_gg=grid",
         "eject_save=0",
         "turbo=0",
         "rewind=0",
@@ -426,6 +430,7 @@ fn a_card_from_before_wonderswan_and_lynx_shaders_keeps_the_ones_they_used() {
         "the WonderSwan used the GB shader"
     );
     assert_eq!(s.shader_lynx, Shader::Dot, "the Lynx used the GBA shader");
+    assert_eq!(s.shader_gg, Shader::Off, "the Game Gear used the GB shader");
 }
 
 #[test]

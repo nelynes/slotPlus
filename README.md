@@ -18,7 +18,7 @@ No BIOS is needed. Game Gear games boot straight in.
 - **Label art:** optional PNGs go in `Labels/GG/<game name>.png`, roughly 260x198 px (about 1.31:1).
 - **Core:** Game Gear games run on Gearsystem.
 - **Carts:** Game Gear paks have their own nearly square shape, with a raised hood arching over the label and an oval plaque at the foot, and default to a black shell. Set `Config/cart_shell.txt` to give a single game a different shell.
-- **Picture:** the Game Gear screen is the same 160x144 as the Game Boy's, so it is shown the same way: actual size at 3x, or stretched, with the Game Boy screen filters. On 4:3 handhelds such as the RG 35XXSP it is fitted to the screen the same way the Game Boy is.
+- **Picture:** the Game Gear screen is the same 160x144 as the Game Boy's, so it is shown the same way: actual size at 3x, or stretched. It has its own GG Shader setting in the Screen menu (Off, Grid or Simpletex), and SELECT + B / A changes it in a game. On 4:3 handhelds such as the RG 35XXSP it is fitted to the screen the same way the Game Boy is.
 - **Saves:** games with battery saves keep them in `Saves/GG/`. Save states work as they do for every other system.
 
 ### Controls

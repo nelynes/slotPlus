@@ -22,10 +22,11 @@ pub enum QuickRow {
     GbPalettes,
     WsShader,
     LynxShader,
+    GgShader,
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 16] = [
+    pub const ALL: [QuickRow; 17] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -42,6 +43,7 @@ impl QuickRow {
         QuickRow::GbPalettes,
         QuickRow::WsShader,
         QuickRow::LynxShader,
+        QuickRow::GgShader,
     ];
 
     pub const MAIN: [QuickRow; 4] = [
@@ -51,11 +53,12 @@ impl QuickRow {
         QuickRow::About,
     ];
 
-    pub const SCREEN: [QuickRow; 6] = [
+    pub const SCREEN: [QuickRow; 7] = [
         QuickRow::GbaShader,
         QuickRow::GbShader,
         QuickRow::WsShader,
         QuickRow::LynxShader,
+        QuickRow::GgShader,
         QuickRow::ColourCorrection,
         QuickRow::GbPalettes,
     ];
@@ -79,6 +82,7 @@ impl QuickRow {
             | QuickRow::GbShader
             | QuickRow::WsShader
             | QuickRow::LynxShader
+            | QuickRow::GgShader
             | QuickRow::ColourCorrection
             | QuickRow::GbPalettes => &QuickRow::SCREEN,
             QuickRow::FastForward
@@ -123,6 +127,7 @@ impl QuickRow {
             QuickRow::GbShader => "GB / GBC Shader",
             QuickRow::WsShader => "WS / WSC Shader",
             QuickRow::LynxShader => "Lynx Shader",
+            QuickRow::GgShader => "GG Shader",
             QuickRow::ColourCorrection => "Color Correction",
             QuickRow::Game => "Gameplay",
             QuickRow::EjectSave => "Auto Save on Eject",

@@ -35,6 +35,7 @@ pub struct SlotState {
     pub shader_gb: Shader,
     pub shader_ws: Shader,
     pub shader_lynx: Shader,
+    pub shader_gg: Shader,
     pub eject_save: bool,
     pub turbo: bool,
     pub rewind: bool,
@@ -59,6 +60,9 @@ impl Shader {
     /// settings.
     pub const WS: [Shader; 3] = Shader::GB;
     pub const LYNX: [Shader; 4] = Shader::GBA;
+    /// The Game Gear's 160x144 screen sits at 3x like the Game Boy's, so it
+    /// picks from the Game Boy's filters.
+    pub const GG: [Shader; 3] = Shader::GB;
 
     pub fn name(self) -> &'static str {
         match self {
@@ -114,6 +118,7 @@ impl Default for SlotState {
             shader_gb: Shader::Simpletex,
             shader_ws: Shader::Simpletex,
             shader_lynx: Shader::Grid,
+            shader_gg: Shader::Simpletex,
             eject_save: true,
             turbo: true,
             rewind: true,
@@ -137,7 +142,7 @@ pub fn read_slot_state(root: &Path) -> SlotState {
 
 pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     let text = format!(
-        "cart={}\ncart_platform={}\nbrightness={}\nblue_light={}\nvolume={}\nvolume_hp={}\nmuted={}\nmuted_hp={}\nclock_set={}\nutc_offset_min={}\nrumble={}\nff_speed={}\nff_sound={}\ncolour_correction={}\nshader_gba={}\nshader_gb={}\nshader_ws={}\nshader_lynx={}\neject_save={}\nturbo={}\nrewind={}\ngb_palettes={}\ngb_palette={}\n",
+        "cart={}\ncart_platform={}\nbrightness={}\nblue_light={}\nvolume={}\nvolume_hp={}\nmuted={}\nmuted_hp={}\nclock_set={}\nutc_offset_min={}\nrumble={}\nff_speed={}\nff_sound={}\ncolour_correction={}\nshader_gba={}\nshader_gb={}\nshader_ws={}\nshader_lynx={}\nshader_gg={}\neject_save={}\nturbo={}\nrewind={}\ngb_palettes={}\ngb_palette={}\n",
         s.cart.as_deref().unwrap_or(""),
         s.cart_platform.map_or(String::new(), platform_key),
         s.brightness,
@@ -156,6 +161,7 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
         s.shader_gb.name(),
         s.shader_ws.name(),
         s.shader_lynx.name(),
+        s.shader_gg.name(),
         s.eject_save as u8,
         s.turbo as u8,
         s.rewind as u8,
@@ -184,6 +190,7 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut shader_gb = None;
     let mut shader_ws = None;
     let mut shader_lynx = None;
+    let mut shader_gg = None;
     let mut eject_save = None;
     let mut turbo = None;
     let mut rewind = None;
@@ -216,6 +223,7 @@ fn parse(text: &str) -> Option<SlotState> {
             "gb_palette" => gb_palette = GbPalette::parse(value),
             "shader_gb" => shader_gb = Shader::parse(value).filter(|s| Shader::GB.contains(s)),
             "shader_ws" => shader_ws = Shader::parse(value).filter(|s| Shader::WS.contains(s)),
+            "shader_gg" => shader_gg = Shader::parse(value).filter(|s| Shader::GG.contains(s)),
             "shader_lynx" => {
                 shader_lynx = Shader::parse(value).filter(|s| Shader::LYNX.contains(s))
             }
@@ -245,6 +253,8 @@ fn parse(text: &str) -> Option<SlotState> {
         // keeps what they used: the Game Boy's and the GBA's.
         shader_ws: shader_ws.or(shader_gb).unwrap_or(fallback.shader_ws),
         shader_lynx: shader_lynx.or(shader_gba).unwrap_or(fallback.shader_lynx),
+        // The Game Gear shared the Game Boy's shader before it had its own.
+        shader_gg: shader_gg.or(shader_gb).unwrap_or(fallback.shader_gg),
         eject_save: eject_save.unwrap_or(fallback.eject_save),
         turbo: turbo.unwrap_or(fallback.turbo),
         rewind: rewind.unwrap_or(fallback.rewind),

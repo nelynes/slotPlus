@@ -660,6 +660,7 @@ impl App {
             QuickRow::GbShader => Some(shader_value(self.state.shader_gb)),
             QuickRow::WsShader => Some(shader_value(self.state.shader_ws)),
             QuickRow::LynxShader => Some(shader_value(self.state.shader_lynx)),
+            QuickRow::GgShader => Some(shader_value(self.state.shader_gg)),
             QuickRow::Rumble => Some(QuickValue::flag(self.state.rumble)),
             QuickRow::EjectSave => Some(QuickValue::flag(self.state.eject_save)),
             QuickRow::Turbo => Some(QuickValue::flag(self.state.turbo)),
@@ -1090,7 +1091,8 @@ impl App {
     pub fn screen_shader(&self) -> Shader {
         match self.platform {
             Platform::Gba => self.state.shader_gba,
-            Platform::Gb | Platform::Gbc | Platform::Gg => self.state.shader_gb,
+            Platform::Gb | Platform::Gbc => self.state.shader_gb,
+            Platform::Gg => self.state.shader_gg,
             Platform::Ws => self.state.shader_ws,
             Platform::Lynx => self.state.shader_lynx,
         }
@@ -1402,6 +1404,7 @@ impl App {
             | QuickRow::GbShader
             | QuickRow::WsShader
             | QuickRow::LynxShader
+            | QuickRow::GgShader
             | QuickRow::GbPalettes
             | QuickRow::Rumble => {}
         }
@@ -1450,6 +1453,13 @@ impl App {
                 }
                 s.shader_lynx = to;
             }
+            QuickRow::GgShader => {
+                let to = s.shader_gg.step(&Shader::GG, right);
+                if to == s.shader_gg {
+                    return;
+                }
+                s.shader_gg = to;
+            }
             QuickRow::Rumble => s.rumble = !s.rumble,
             QuickRow::EjectSave => s.eject_save = !s.eject_save,
             QuickRow::Turbo => s.turbo = !s.turbo,
@@ -1471,9 +1481,8 @@ impl App {
         }
         let (shader, choices) = match self.platform {
             Platform::Gba => (&mut self.state.shader_gba, &Shader::GBA[..]),
-            Platform::Gb | Platform::Gbc | Platform::Gg => {
-                (&mut self.state.shader_gb, &Shader::GB[..])
-            }
+            Platform::Gb | Platform::Gbc => (&mut self.state.shader_gb, &Shader::GB[..]),
+            Platform::Gg => (&mut self.state.shader_gg, &Shader::GG[..]),
             Platform::Ws => (&mut self.state.shader_ws, &Shader::WS[..]),
             Platform::Lynx => (&mut self.state.shader_lynx, &Shader::LYNX[..]),
         };

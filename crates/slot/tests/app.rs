@@ -2326,6 +2326,22 @@ fn the_shader_shortcut_steps_only_the_lynx_shader_in_a_lynx_game() {
 }
 
 #[test]
+fn the_shader_shortcut_steps_only_the_game_gear_shader_in_a_game_gear_game() {
+    let d = root_with_one_cart("GG", "Columns.gg");
+    let mut s = session_playing(d.path());
+    assert_eq!(s.app().screen_shader(), Shader::Simpletex);
+    s.app_mut().apply(slot_input::Action::ShaderPrev);
+    let after = slot_store::read_slot_state(d.path());
+    assert_eq!(after.shader_gg, Shader::Grid);
+    assert_eq!(s.app().screen_shader(), Shader::Grid);
+    assert_eq!(
+        after.shader_gb,
+        Shader::Simpletex,
+        "a Game Gear game moved the Game Boy shader"
+    );
+}
+
+#[test]
 fn the_shader_shortcut_does_nothing_on_the_shelf() {
     let d = common::tmp_root_with_carts(&["Emerald", "Fusion"]);
     let (mut s, _motor) = common::session_with_platform(d.path());

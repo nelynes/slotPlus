@@ -4,7 +4,8 @@
 
 - Sega Game Gear games (`.gg`) get their own shelf. Put them in `Games/GG/`. They run on the Gearsystem core. No BIOS is needed.
 - Game Gear paks have their own nearly square shape with a raised hood over a squarish label (art goes in `Labels/GG/`), and a black default shell.
-- The Game Gear picture is shown like a Game Boy one: actual size at 3x, L1 / R1 to stretch it and give it back, and the Game Boy screen filters.
+- The Game Gear picture is shown like a Game Boy one: actual size at 3x, and L1 / R1 to stretch it and give it back.
+- Game Gear games get their own screen shader: a GG Shader row in the Screen menu (Off, Grid or Simpletex), and SELECT + B / A in a game. It starts on your Game Boy shader.
 - SELECT does nothing in a Game Gear game. Gearsystem would take it as a console reset, which the Game Gear does not have.
 - The `GG` folders under `Games`, `Labels`, `Saves` and `States` are created for you on first boot.
 - WonderSwan and Atari Lynx games get their own screen shaders. The Screen menu has a WS / WSC Shader row (Off, Grid or Simpletex) and a Lynx Shader row (Off, LCD3x, Grid or Dot), and SELECT + B / A in a game changes that system's shader alone. Before, the WonderSwan shared the Game Boy's shader and the Lynx shared the GBA's.

@@ -245,6 +245,7 @@ fn screen_opens_a_page_of_its_own_and_b_comes_back_to_it() {
         QuickRow::GbShader,
         QuickRow::WsShader,
         QuickRow::LynxShader,
+        QuickRow::GgShader,
         QuickRow::ColourCorrection,
         QuickRow::GbPalettes,
         QuickRow::GbaShader,
@@ -292,6 +293,24 @@ fn each_platform_keeps_its_own_shader_wraps_and_starts_on_grid_and_simpletex() {
     press(&mut a, Btn::Left);
     assert_eq!(read_slot_state(d.path()).shader_gb, Shader::Grid);
     assert_eq!(read_slot_state(d.path()).shader_gba, Shader::Off);
+}
+
+#[test]
+fn the_game_gear_keeps_its_own_shader() {
+    let (d, mut a, _) = on_carousel();
+    open_at(&mut a, QuickRow::GgShader);
+    assert_eq!(
+        a.quick_value(QuickRow::GgShader),
+        Some(QuickValue::Simpletex)
+    );
+    press(&mut a, Btn::Left);
+    assert_eq!(read_slot_state(d.path()).shader_gg, Shader::Grid);
+    assert_eq!(a.quick_value(QuickRow::GgShader), Some(QuickValue::Grid));
+    assert_eq!(
+        read_slot_state(d.path()).shader_gb,
+        Shader::Simpletex,
+        "the Game Boy shader moved with it"
+    );
 }
 
 #[test]

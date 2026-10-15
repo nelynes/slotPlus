@@ -88,6 +88,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
             "GB / GBC Shader",
             "WS / WSC Shader",
             "Lynx Shader",
+            "GG Shader",
             "Color Correction",
             "GB Palettes"
         ]
