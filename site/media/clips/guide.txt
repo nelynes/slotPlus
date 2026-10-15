@@ -1,4 +1,6 @@
 # cart:
+# state: show_recents=0
+# state: show_titles=0
 # The guide's steps as one continuous session, each `rec NAME` one step's clip, so each starts
 # where the last ended: browse, core picker, insert, eject, save states, switcher, fast forward
 # and rewind. Pokemon Recharged Yellow on mGBA.

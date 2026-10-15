@@ -1,9 +1,10 @@
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
 
 use slot_store::{write_slot_state, SlotState};
+
+use crate::card_log::CardWrites;
 
 #[derive(Default)]
 struct Queue {
@@ -17,13 +18,13 @@ type Shared = Arc<(Mutex<Queue>, Condvar)>;
 pub struct StateWriter {
     shared: Shared,
     threaded: bool,
-    failing: Arc<AtomicBool>,
+    failing: Arc<CardWrites>,
 }
 
 impl StateWriter {
     pub fn spawn() -> Self {
         let shared: Shared = Arc::default();
-        let failing: Arc<AtomicBool> = Arc::default();
+        let failing: Arc<CardWrites> = Arc::default();
         let worker = shared.clone();
         let flag = failing.clone();
         let threaded = thread::Builder::new()
@@ -47,7 +48,7 @@ impl StateWriter {
         wake.notify_all();
     }
 
-    pub fn card_failing(&self) -> Arc<AtomicBool> {
+    pub fn card_writes(&self) -> Arc<CardWrites> {
         self.failing.clone()
     }
 
@@ -69,7 +70,7 @@ impl Drop for StateWriter {
     }
 }
 
-fn work(shared: &Shared, failing: &AtomicBool) {
+fn work(shared: &Shared, failing: &CardWrites) {
     let (lock, wake) = &**shared;
     loop {
         let (root, state) = {
@@ -91,10 +92,10 @@ fn work(shared: &Shared, failing: &AtomicBool) {
     }
 }
 
-fn write(root: &Path, state: &SlotState, failing: &AtomicBool) {
+fn write(root: &Path, state: &SlotState, failing: &CardWrites) {
     let written = write_slot_state(root, state);
     if let Err(e) = &written {
         eprintln!("slot: slot.state: {e}");
     }
-    failing.store(written.is_err(), Ordering::Relaxed);
+    failing.wrote("slot.state", &written);
 }

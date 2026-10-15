@@ -1,4 +1,6 @@
 # cart:
+# state: show_recents=0
+# state: show_titles=0
 # state: gb_palettes=1
 # state: gb_palette=DMG Green
 # state: shader_gb=simpletex

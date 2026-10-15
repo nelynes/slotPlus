@@ -47,7 +47,7 @@ fn a_4_by_3_panel_fills_its_width_from_the_top() {
 }
 
 #[test]
-fn the_shelf_sits_at_the_bottom_and_a_game_rises_to_the_top() {
+fn the_overlay_drops_by_the_strip_when_it_slides_away() {
     assert_eq!(slot_gfx::lifted_rect((640, 480), 0.0), (0, 53, 640, 427));
     assert_eq!(slot_gfx::lifted_rect((640, 480), 1.0), (0, 0, 640, 427));
     let mid = slot_gfx::lifted_rect((640, 480), 0.5).1;

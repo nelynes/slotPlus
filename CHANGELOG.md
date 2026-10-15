@@ -2,7 +2,40 @@
 
 ## Unreleased
 
-- A new Transparent screen shader for Game Boy and Game Boy Color games. It is LCD3x with the screen left unlit: light pixels let a warm, grainy backing show through instead of glaring white, and dark pixels cast soft drop shadows onto it. Pick it from the GB / GBC Shader row in the Screen menu, or with SELECT + B / A in a game. The idea comes from Matt Akins' Pixel Transparency shader for RetroArch; slot's version is written from scratch.
+slotPlus: Slot 1.7.0 plus WonderSwan and Atari Lynx.
+
+- Brings in everything from Slot 1.7.0, below.
+- WonderSwan and Lynx carts are redrawn in 1.7.0's look: grey moulded plastic tinted by the shell colour, with light and dark themes. The WonderSwan has its oval nameplate and the bare board below its shoulder; the Lynx is the curved-lip card with its contacts behind a clear strip. Their label art sizes change a little: about 324x132 for WonderSwan and 284x190 for Lynx.
+- The Screen menu has a WonderSwan page and an Atari Lynx page, each with its own Shader and Bezel. A bezel for either is your own PNG in `Bezels/WS/` or `Bezels/Lynx/`, or the SP frame on 4:3 screens.
+- The Transparent shader is on both the Game Boy and Game Boy Color pages.
+- WonderSwan gets LCD3x, which 1.7.0 offers for GB and GBC.
+- A new Transparent screen shader for Game Boy and Game Boy Color games. It is LCD3x with the screen left unlit: light pixels let a warm, grainy backing show through instead of glaring white, and dark pixels cast soft drop shadows onto it. Pick it from the Shader row on the Game Boy or Game Boy Color page of the Screen menu, or with SELECT + B / A in a game. The idea comes from Matt Akins' Pixel Transparency shader for RetroArch; slot's version is written from scratch.
+
+## [1.7.0](https://github.com/BrandonKowalski/slot/releases/tag/v1.7.0)
+
+- The slot, carts and shelf now have a skeuomorphic effect, with light and dark themes and bundled wallpapers. Huge thanks to Markus for this amazing work! (#74, @MarkusMaribu)
+- An in-game menu: tap MENU to pause the game behind it. A double tap still goes straight to States.
+- Favorites: Y stars a cart onto its own shelf. (#89, @diluno)
+- A Recents shelf of the last 10 games, switched on from Settings -> General.
+- slot remembers the shelf and cart at power off and boots back onto them. (#53)
+- Per-platform bezels. Markus again! (#77, @MarkusMaribu)
+- On 4:3 panels the shelf fills the screen. (#81, @diluno)
+- Game Titles on the General page fades the shelf name into the selected game's name. (#84)
+- A 1 frame run-ahead setting for GBA games on mGBA. (#56, @454135431515)
+- Wallpaper Tint darkens your own wallpaper on the shelf.
+- GBA, GB and GBC each get their own Shader and Color Correction rows. (#83, @paulocoe-creator)
+- LCD3x is offered for GB and GBC games. (#88, @paulocoe-creator)
+- Game Boy stretch now properly only widens the picture.
+- The backlight steps follow a curve, so the low-end goes dimmer. (#54, @flo333)
+- Holding a direction repeats it in menus, the clock and the shelf letter jump, but never in play.
+- RG34XX uses its own chords for brightness and the menu display. (#85, @paulocoe-creator)
+- The RG28XX picture is turned the way BaseOS says.
+- Restart no longer hangs on a black screen: the WiFi driver is unloaded first.
+- Muted play keeps its frame rate. (#51, @flo333)
+- Fast-forward no longer stutters on frames that take longer than average. (#70)
+- gpSP no longer crashes when a crowded boot left its JIT cache unmapped.
+- Core options follow the platform that is playing. (#82)
+- Card logs moved into a `Logs` folder, and the session log rotates. Card alarms are logged too.
 
 ## [1.6.0-lyx2](https://github.com/nelynes/slotPlus/releases/tag/v1.6.0-lyx2)
 
@@ -42,7 +75,7 @@ slotPlus: Slot 1.6.0 plus WonderSwan.
 
 ## [1.6.0](https://github.com/BrandonKowalski/slot/releases/tag/v1.6.0)
 
-- Runs on the RG28XX: its panel is mounted portrait, so slot turns the picture onto it. (#35)
+- Runs on the RG28XX: its panel is mounted portrait, so slot turns the picture onto it. (#35, @GamerAnim)
 - Pokémon Pinball: Ruby & Sapphire rumble. mGBA now sees the game's Game Boy Player check. You still need to turn rumble on in game settings. (#25)
 - A red alarm shows when the SD card turns read-only or a save fails to write.
 - A new shortcut for mute: SELECT + VOL+ / VOL-. The 34XX has a fake volume wheel so VOL+ + VOL- isn't possible. (#39)

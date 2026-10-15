@@ -45,7 +45,7 @@ impl Session {
     }
 
     pub fn boot_with(root: PathBuf, sink: Box<dyn AudioSink>) -> Self {
-        Session {
+        let mut session = Session {
             app: App::boot(&root),
             root,
             emu: None,
@@ -62,7 +62,14 @@ impl Session {
             ws_vertical: false,
             lynx_select: false,
             lynx_upright: false,
+        };
+        // A game left running comes straight back. Its core loads on its own thread, so start it
+        // now and let the card read overlap the rest of the boot. Waiting for the first update
+        // left a cold boot (after a power off) idle on the slot for the whole load.
+        if session.inserting() {
+            session.sync_core();
         }
+        session
     }
 
     pub fn play_sfx(&mut self, sfx: Sfx) {
@@ -162,14 +169,22 @@ impl Session {
 
     pub fn feed(&mut self, events: impl IntoIterator<Item = RawEvent>, now: Millis) {
         let mut actions = Vec::new();
+        let latched = self.gestures.ff_latched();
         for ev in events {
             actions.extend(self.gestures.feed(ev, now));
         }
         actions.extend(self.gestures.tick(now));
+        if !latched && self.app.in_game_menu().is_some() {
+            actions.extend(self.gestures.drop_ff_latch());
+        }
         for action in actions {
             self.act(action);
         }
         self.sync_pad();
+    }
+
+    pub fn set_menu_dpad_display(&mut self, enabled: bool) {
+        self.gestures.set_menu_dpad_display(enabled);
     }
 
     fn sync_pad(&mut self) {
@@ -220,17 +235,19 @@ impl Session {
         if trace() {
             eprintln!("slot: {action:?} in {:?}", self.app.phase());
         }
+        let menu_open = self.app.in_game_menu().is_some();
         if matches!(action, Action::GbaDown(Btn::Select))
             && self.lynx_select
+            && !menu_open
             && self.playing()
             && !self.overlaid()
         {
             self.flip_lynx_layout();
         }
         match action {
-            Action::RewindStart => self.rewinding = true,
+            Action::RewindStart if !menu_open => self.rewinding = true,
             Action::RewindStop => self.rewinding = false,
-            Action::FfStart => self.fast = true,
+            Action::FfStart if !menu_open => self.fast = true,
             Action::FfStop => self.fast = false,
             _ => {}
         }
@@ -270,16 +287,26 @@ impl Session {
                 None => eprintln!("slot: link: a transport arrived with no core to run it"),
             }
         }
+        let mut recoloured = false;
         if let Some(p) = self.app.take_gb_palette() {
             if let Some(emu) = &self.emu {
                 emu.set_option("mgba_gb_colors", p.core_name());
+                recoloured = true;
             }
         }
         if let Some(on) = self.app.take_colour_correction() {
-            if let Some((key, value)) = crate::core::colour_option(self.app.core(), on) {
+            if let Some((key, value)) =
+                crate::core::colour_option(self.app.core(), self.app.playing_platform(), on)
+            {
                 if let Some(emu) = &self.emu {
                     emu.set_option(key, value);
+                    recoloured = true;
                 }
+            }
+        }
+        if recoloured && self.held() && !self.app.link_active() {
+            if let Some(emu) = &self.emu {
+                emu.refresh();
             }
         }
         if let Some((stem, serial)) = self.app.take_link_reload() {
@@ -394,7 +421,10 @@ impl Session {
     }
 
     fn held(&self) -> bool {
-        self.app.power_menu().is_some() || self.app.game_menu_open() || self.app.shutting_down()
+        self.app.power_menu().is_some()
+            || self.app.game_menu_open()
+            || self.app.in_game_menu().is_some()
+            || self.app.shutting_down()
     }
 
     fn dozing(&self) -> bool {
@@ -409,6 +439,7 @@ impl Session {
         if let Some(emu) = &self.emu {
             emu.set_fast_steps(u32::from(self.app.ff_speed()));
             emu.set_ff_sound(self.app.ff_sound());
+            emu.set_runahead(self.app.runahead_in_play());
             emu.set_speed(
                 if self.inserting()
                     || self.ejecting()
@@ -492,8 +523,9 @@ impl Session {
         let opened = open_core(
             &self.root,
             core,
+            platform,
             serial,
-            self.app.colour_correction(),
+            self.app.colour_correction_for(platform),
             palette,
             player,
         );

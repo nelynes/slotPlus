@@ -3,12 +3,11 @@ use std::path::Path;
 
 pub const CONFIG_DIR: &str = "Config";
 
-const MOVED: [&str; 5] = [
+const MOVED: [&str; 4] = [
     "slot.state",
     "selected_core.ini",
     "video_mode.ini",
     "cart_shell.ini",
-    "theme.txt",
 ];
 
 const RENAMED: [(&str, &str); 4] = [

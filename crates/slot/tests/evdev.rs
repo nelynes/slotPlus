@@ -173,7 +173,7 @@ fn a_trace_writes_the_survey_to_the_card() {
         true,
     );
     drop(input);
-    let log = std::fs::read_to_string(card.path().join("input-trace.log"))
+    let log = std::fs::read_to_string(card.path().join("Logs/input-trace.log"))
         .expect("no trace file reached the card");
     assert!(log.contains("event0 skipped"), "{log}");
     assert!(log.contains("event1 opened"), "{log}");
@@ -191,7 +191,7 @@ fn no_trace_file_is_written_unless_one_was_asked_for() {
         false,
     );
     drop(input);
-    assert!(!card.path().join("input-trace.log").exists());
+    assert!(!card.path().join("Logs/input-trace.log").exists());
 }
 
 #[test]

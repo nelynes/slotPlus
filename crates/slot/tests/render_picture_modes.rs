@@ -118,7 +118,7 @@ fn run_for(f: &mut Frontend, input: &mut Script, secs: f32) {
 }
 
 #[test]
-fn l_fills_the_panel_and_r_gives_back_the_centred_picture() {
+fn l_widens_the_picture_like_a_gba_and_r_gives_back_the_centred_picture() {
     let _core = core_lock();
     let core = Core::default_for(Platform::Gb);
     let file = format!(
@@ -198,9 +198,9 @@ fn l_fills_the_panel_and_r_gives_back_the_centred_picture() {
         left > BAR_W * OUT_H as usize / 4,
         "the left margin is still mostly empty in fullscreen: {left} lit"
     );
-    assert!(
-        top > OUT_W as usize * BAR_H / 4,
-        "the top margin is still mostly empty in fullscreen: {top} lit"
+    assert_eq!(
+        top, 0,
+        "the stretch grew the picture upward; a GBA keeps the 144 lines"
     );
 
     let (w, h, both) = side_by_side(&actual, &stretched, 8);

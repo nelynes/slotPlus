@@ -1,4 +1,4 @@
-use slot_gfx::{OUT_H, OUT_W};
+use slot_gfx::{Canvas, OUT_H};
 use slot_store::GbPalette;
 
 use crate::hud::{HUD_INK, PLATE_H};
@@ -133,11 +133,11 @@ fn setting(toast: Toast) -> Setting {
     }
 }
 
-pub fn toast_rect(toast: Toast) -> (f32, f32, f32, f32) {
+pub fn toast_rect(canvas: Canvas, toast: Toast) -> (f32, f32, f32, f32) {
     let (w, h) = toast_box(toast);
     let (w, h) = (w as f32, h as f32);
     let middle = setting(toast).middle;
-    ((OUT_W as f32 - w) / 2.0, middle - h / 2.0, w, h)
+    (canvas.centred(w), middle - h / 2.0, w, h)
 }
 
 pub fn toast_box(toast: Toast) -> (u32, u32) {

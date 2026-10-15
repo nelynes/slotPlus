@@ -38,6 +38,14 @@ code{
   font-size:.88em;
   color:var(--ink);
 }
+pre{
+  background:var(--opening);
+  border-radius:8px;
+  padding:.8em 1em;
+  line-height:1.5;
+  overflow-x:auto;
+}
+pre code{background:none;padding:0;border-radius:0}
 
 .wrap{max-width:900px;margin:0 auto;padding:0 24px}
 
@@ -90,6 +98,17 @@ a.tab{text-decoration:none}
 .tab:hover,.subtab:hover{color:var(--ink)}
 .tab[aria-selected=true]{color:var(--ink);background:var(--rule)}
 .tab:focus-visible,.subtab:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+.mast-gh{
+  justify-self:end;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  color:var(--muted);
+  transition:color .2s ease;
+}
+.mast-gh:hover{color:var(--ink)}
+.mast-gh:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 
 .menu-btn{
   display:none;
@@ -379,6 +398,8 @@ kbd{
 }
 .reference h3:first-of-type,.faq h3:first-of-type{margin-top:0}
 .reference kbd{font-size:15px;padding:3px 8px}
+.credits dd a{color:var(--ink)}
+.credits .credits-fine{margin:36px 0 0;font-size:16px;color:var(--muted)}
 .keys{margin:0;width:100%;border-top:1px solid var(--rule)}
 .key{
   display:grid;
@@ -566,7 +587,8 @@ kbd{
   .faq dd{font-size:18px}
   .endnote{font-size:18px}
 
-  .mast{padding:0 14px;gap:12px;grid-template-columns:1fr auto}
+  .mast{padding:0 14px;gap:8px;grid-template-columns:1fr auto auto}
+  .menu-btn{order:1}
   .mast-mark{font-size:19px}
   .menu-btn{display:grid}
   .tabs{
