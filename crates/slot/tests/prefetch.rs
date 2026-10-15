@@ -75,7 +75,7 @@ fn resting_on_the_shelf_reads_the_selected_cart_and_inserting_lets_it_go() {
     let d = tmp_root_with_real_carts(&["Advance Wars", "Emerald"]);
     let (mut s, _) = session_with_platform(d.path());
     let mut now: Millis = 0;
-    let mut step = |s: &mut slot::session::Session, now: &mut Millis, evs: Vec<RawEvent>| {
+    let step = |s: &mut slot::session::Session, now: &mut Millis, evs: Vec<RawEvent>| {
         *now += 16;
         s.feed(evs, *now);
         s.update(1.0 / 60.0);
@@ -84,7 +84,11 @@ fn resting_on_the_shelf_reads_the_selected_cart_and_inserting_lets_it_go() {
     while s.app().now() < start + PREFETCH_REST_MS + 32 {
         step(&mut s, &mut now, vec![]);
     }
-    let selected = s.app().browsed_rom().expect("no cart on the shelf").to_path_buf();
+    let selected = s
+        .app()
+        .browsed_rom()
+        .expect("no cart on the shelf")
+        .to_path_buf();
     assert_eq!(s.prefetching(), Some(selected.as_path()));
 
     step(&mut s, &mut now, vec![RawEvent::Down(Btn::A)]);

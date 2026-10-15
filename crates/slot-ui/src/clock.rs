@@ -1,4 +1,4 @@
-use slot_gfx::{Draw, TexId, OUT_H, OUT_W};
+use slot_gfx::{Canvas, Draw, TexId, OUT_H};
 use slot_store::{
     civil_from_days, days_from_civil, days_in_month, parse_stamp, UTC_OFFSET_MAX, UTC_OFFSET_MIN,
 };
@@ -232,6 +232,7 @@ impl ClockPicker {
 
     pub fn draw(
         &self,
+        canvas: Canvas,
         line: Option<TexId>,
         hint: Option<TexId>,
         back: Option<(TexId, u32)>,
@@ -240,12 +241,12 @@ impl ClockPicker {
         out.push(Draw::Rect {
             x: 0.0,
             y: 0.0,
-            w: OUT_W as f32,
+            w: canvas.w,
             h: OUT_H as f32,
             colour: BACKDROP,
         });
         let w = picker_w() as f32;
-        let x = (OUT_W as f32 - w) / 2.0;
+        let x = canvas.centred(w);
         let y = (OUT_H as f32 - PICKER_H as f32) / 2.0 - HINT_DROP / 2.0;
         if let Some(tex) = line {
             out.push(Draw::Tex {
@@ -275,7 +276,7 @@ impl ClockPicker {
         let (Some(back), Some(tex)) = (back, hint) else {
             if let Some(tex) = hint {
                 out.push(Draw::Tex {
-                    x: (OUT_W as f32 - hw as f32) / 2.0,
+                    x: canvas.centred(hw as f32),
                     y: hint_y,
                     w: hw as f32,
                     h: HINT_H as f32,
@@ -285,7 +286,7 @@ impl ClockPicker {
             }
             return;
         };
-        for (tex, w, x) in centred_hints(&[back, (tex, hw)], LEGEND_GAP) {
+        for (tex, w, x) in centred_hints(canvas, &[back, (tex, hw)], LEGEND_GAP) {
             out.push(Draw::Tex {
                 x,
                 y: hint_y,

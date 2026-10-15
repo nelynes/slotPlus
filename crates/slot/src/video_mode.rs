@@ -40,6 +40,13 @@ pub fn write_video_mode(root: &Path, stem: &str, mode: VideoMode) -> std::io::Re
     ini::write(root, VIDEO_MODE_FILE, stem, mode.as_str())
 }
 
+/// Platforms whose stretch widens the picture only, keeping every line and
+/// the band above and below it: the Game Boy, Game Boy Color and Game Gear,
+/// like the GBA. A WonderSwan or Lynx picture is stretched to fill both ways.
+fn widens_only(platform: Platform) -> bool {
+    matches!(platform, Platform::Gb | Platform::Gbc | Platform::Gg)
+}
+
 pub fn source_rect(platform: Platform, mode: VideoMode) -> [f32; 4] {
     source_rect_for(platform, mode, false)
 }
@@ -60,6 +67,11 @@ pub fn source_rect_for(platform: Platform, mode: VideoMode, portrait: bool) -> [
         return WHOLE_TEXTURE;
     }
     let x = bw.saturating_sub(w) / 2;
+    if mode == VideoMode::Stretch && widens_only(platform) {
+        // A Game Boy picture is stretched sideways only, as a GBA's is,
+        // keeping all 144 lines and the dark band above and below them.
+        return [x as f32 / bw as f32, 0.0, w as f32 / bw as f32, 1.0];
+    }
     let y = bh.saturating_sub(h) / 2;
     [
         x as f32 / bw as f32,

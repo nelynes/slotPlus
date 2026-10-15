@@ -3,6 +3,7 @@ use std::time::{Duration, Instant};
 
 use slot::frontend::Frontend;
 use slot::input::DeviceInput;
+use slot::panel_turn::{panel_turn, PanelTurn};
 use slot_gfx::{Compositor, FbdevSurface, Surface};
 use slot_power::{trace_first_frame, DevicePlatform};
 
@@ -91,17 +92,26 @@ pub fn run() {
     };
     slot::boot_time::mark("compositor");
     let panel = surface.window_size();
-    let turned = panel.0 < panel.1;
+    let env = |key| std::env::var(key).ok();
+    let turn = panel_turn(
+        panel,
+        env("BASEOS_PANEL_ROTATION_CCW").as_deref(),
+        env("SLOT_ROTATE").as_deref(),
+    );
+    let turned = turn != PanelTurn::None;
     let window = if turned { (panel.1, panel.0) } else { panel };
-    let ccw = std::env::var("SLOT_ROTATE")
-        .map(|v| v.trim().eq_ignore_ascii_case("ccw"))
-        .unwrap_or(false);
     eprintln!(
-        "slot: panel {}x{}, canvas {}x{}, turned {turned}, ccw {ccw}",
+        "slot: baseos target {}, model {}, rotation ccw {}",
+        env("BASEOS_TARGET").unwrap_or_default(),
+        env("BASEOS_MODEL").unwrap_or_default(),
+        env("BASEOS_PANEL_ROTATION_CCW").unwrap_or_default()
+    );
+    eprintln!(
+        "slot: panel {}x{}, canvas {}x{}, turn {turn:?}",
         panel.0, panel.1, window.0, window.1
     );
     if turned {
-        if let Err(e) = compositor.set_panel_turn(panel, ccw) {
+        if let Err(e) = compositor.set_panel_turn(panel, turn == PanelTurn::Ccw) {
             eprintln!("slot: {e}");
             return;
         }

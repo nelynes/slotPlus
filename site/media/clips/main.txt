@@ -1,4 +1,6 @@
 # cart:
+# state: show_recents=0
+# state: show_titles=0
 # Hero, a loop: from Mario Kart flip right to Recharged Yellow, insert, eject,
 # keep flipping right round the shelf back to Mario Kart.
 wait 60
@@ -31,7 +33,7 @@ wait 110
 tap up
 wait 30
 hold menu 66
-wait 60
+wait 90
 tap right
 wait 20
 tap right

@@ -1,6 +1,6 @@
 use slot_store::GbPalette;
 use slot_ui::{
-    toast_face, toast_rect, Draw, Hud, HudKind, Toast, ALARM_BAND_H, OUT_H, OUT_W, PLATE_H,
+    toast_face, toast_rect, Canvas, Draw, Hud, HudKind, Toast, ALARM_BAND_H, OUT_H, OUT_W, PLATE_H,
 };
 
 #[test]
@@ -27,7 +27,7 @@ fn a_cart_gpsp_cannot_link_says_there_is_no_link() {
 fn the_banner_says_what_happened_and_never_what_is_on_screen() {
     let all = Toast::all();
     assert_eq!(
-        all[..15],
+        all[..16],
         [
             Toast::StateSaved,
             Toast::StateLoaded,
@@ -43,12 +43,13 @@ fn the_banner_says_what_happened_and_never_what_is_on_screen() {
             Toast::ShaderGrid,
             Toast::ShaderDot,
             Toast::ShaderSimpletex,
+            Toast::ShaderTransparent,
             Toast::CardUnwritable,
         ],
         "a banner was added or dropped: every face is uploaded by its place in this list"
     );
     assert_eq!(
-        all[15..],
+        all[16..],
         GbPalette::all().map(Toast::Palette).collect::<Vec<_>>()[..],
         "the palette banners do not follow the fixed ones in palette order"
     );
@@ -110,7 +111,7 @@ fn a_second_banner_replaces_the_first() {
 
 #[test]
 fn a_toast_is_centred() {
-    let (x, _, w, _) = toast_rect(Toast::StateSaved);
+    let (x, _, w, _) = toast_rect(Canvas::FRAMED, Toast::StateSaved);
     assert_eq!(x + w / 2.0, OUT_W as f32 / 2.0);
 }
 
@@ -129,7 +130,7 @@ fn a_toast_sits_in_the_plate_band_and_is_backed_by_it() {
     let mut h = Hud::new();
     h.toast(Toast::StateSaved, 0);
     let mut out = Vec::new();
-    h.draw(0, &mut out);
+    h.draw(Canvas::FRAMED, 0, &mut out);
 
     let plate = out
         .iter()
@@ -141,7 +142,7 @@ fn a_toast_sits_in_the_plate_band_and_is_backed_by_it() {
     assert!(colour[3] > 0.6, "the plate is too faint to give contrast");
     assert!((*ph - PLATE_H).abs() < 0.01, "the plate is not the band");
 
-    let (_, y, _, th) = toast_rect(Toast::StateSaved);
+    let (_, y, _, th) = toast_rect(Canvas::FRAMED, Toast::StateSaved);
     assert!(
         y >= 0.0 && y + th <= PLATE_H,
         "the toast at {y} is outside the band"
@@ -153,12 +154,12 @@ fn a_toast_takes_the_band_from_the_bar() {
     let mut h = Hud::new();
     h.show(HudKind::Volume, 50, false, 0);
     let mut bar_only = Vec::new();
-    h.draw(0, &mut bar_only);
+    h.draw(Canvas::FRAMED, 0, &mut bar_only);
     let bars = bar_only.len();
 
     h.toast(Toast::StateSaved, 0);
     let mut both = Vec::new();
-    h.draw(0, &mut both);
+    h.draw(Canvas::FRAMED, 0, &mut both);
     assert!(
         both.len() < bars,
         "the bar is still drawn underneath the toast"
@@ -173,7 +174,7 @@ fn a_palette_banner_names_the_palette_without_its_boot_combo() {
 
 fn band(h: &Hud, now: u64) -> Option<(f32, f32, [f32; 4])> {
     let mut out = Vec::new();
-    h.draw(now, &mut out);
+    h.draw(Canvas::FRAMED, now, &mut out);
     out.iter().rev().find_map(|d| match d {
         Draw::Rect {
             y, w, h, colour, ..
@@ -192,7 +193,7 @@ fn the_card_alarm_stays_up_until_it_is_cleared() {
     );
     h.set_alarm(false, 3_600_001);
     let mut out = Vec::new();
-    h.draw(3_600_002, &mut out);
+    h.draw(Canvas::FRAMED, 3_600_002, &mut out);
     assert!(out.is_empty(), "the alarm outlived a write that landed");
 }
 
@@ -232,7 +233,7 @@ fn the_card_alarm_text_is_large_and_inside_its_band() {
     let alarm = toast_face(Toast::CardUnwritable);
     let toast = toast_face(Toast::StateSaved);
     assert!(alarm.h > toast.h && alarm.w > toast.w);
-    let (x, y, w, th) = toast_rect(Toast::CardUnwritable);
+    let (x, y, w, th) = toast_rect(Canvas::FRAMED, Toast::CardUnwritable);
     let top = (OUT_H as f32 - ALARM_BAND_H) / 2.0;
     assert!(
         y >= top && y + th <= top + ALARM_BAND_H,
@@ -247,7 +248,7 @@ fn the_card_alarm_is_drawn_over_the_volume_bar() {
     h.set_alarm(true, 0);
     h.show(HudKind::Volume, 50, false, 1_000);
     let mut out = Vec::new();
-    h.draw(1_100, &mut out);
+    h.draw(Canvas::FRAMED, 1_100, &mut out);
     let alarm = out
         .iter()
         .position(|d| matches!(d, Draw::Rect { h, .. } if *h == ALARM_BAND_H))

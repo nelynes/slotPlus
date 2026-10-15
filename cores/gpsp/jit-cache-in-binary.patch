@@ -1,0 +1,31 @@
+--- a/Makefile
++++ b/Makefile
+@@ -384,7 +384,6 @@
+ 	CFLAGS += -fomit-frame-pointer -ffast-math
+ 	LDFLAGS += -Wl,--no-undefined
+ 	HAVE_DYNAREC := 1
+-	MMAP_JIT_CACHE = 1
+ 	CPU_ARCH := arm64
+ 
+ # ARM
+--- a/arm/arm64_stub.S
++++ b/arm/arm64_stub.S
+@@ -763,6 +763,18 @@
+ defsymbl(palette_ram_converted)
+   .space 0x400
+ 
++#if !defined(MMAP_JIT_CACHE)
++.text
++.section .jit,"awx",%nobits
++.align 4
++defsymbl(rom_translation_cache)
++  .space ROM_TRANSLATION_CACHE_SIZE
++.size rom_translation_cache, .-rom_translation_cache
++defsymbl(ram_translation_cache)
++  .space RAM_TRANSLATION_CACHE_SIZE
++.size ram_translation_cache, .-ram_translation_cache
++#endif
++
+ #if defined(__linux__) && defined(__ELF__)
+   .section .note.GNU-stack,"",%progbits
+ #endif

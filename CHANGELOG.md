@@ -3,11 +3,52 @@
 ## Unreleased (slotPlusUltra)
 
 - Sega Game Gear games (`.gg`) get their own shelf. Put them in `Games/GG/`. They run on the Gearsystem core. No BIOS is needed.
-- Game Gear paks have their own nearly square shape with a raised hood over a squarish label (art goes in `Labels/GG/`), and a black default shell.
+- Game Gear carts are drawn in 1.7.0's look: grey moulded plastic tinted by the shell colour, with the raised hood and grip ridges over a squarish label (art goes in `Labels/GG/`, about 290x200), and a black default shell.
 - The Game Gear picture is shown like a Game Boy one: actual size at 3x, and L1 / R1 to stretch it and give it back.
-- Game Gear games get their own screen shader: a GG Shader row in the Screen menu (Off, Grid or Simpletex), and SELECT + B / A in a game. It starts on your Game Boy shader.
+- The Screen menu has a Game Gear page with its own Shader (Off, LCD3x, Grid or Simpletex) and Bezel. A bezel is your own PNG in `Bezels/GG/`, or the SP frame on 4:3 screens. SELECT + B / A in a game changes the Game Gear shader too.
 - SELECT does nothing in a Game Gear game. Gearsystem would take it as a console reset, which the Game Gear does not have.
-- The `GG` folders under `Games`, `Labels`, `Saves` and `States` are created for you on first boot.
+- The Bezel rows on the WonderSwan, Atari Lynx and Game Gear Screen pages now show which bezel is picked.
+- The `GG` folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
+
+## [1.7.0-plus1](https://github.com/nelynes/slotPlus/releases/tag/v1.7.0-plus1)
+
+slotPlus: Slot 1.7.0 plus WonderSwan and Atari Lynx.
+
+- Brings in everything from Slot 1.7.0, below.
+- WonderSwan and Lynx carts are redrawn in 1.7.0's look: grey moulded plastic tinted by the shell colour, with light and dark themes. The WonderSwan has its oval nameplate and the bare board below its shoulder; the Lynx is the curved-lip card with its contacts behind a clear strip. Their label art sizes change a little: about 324x132 for WonderSwan and 284x190 for Lynx.
+- The Screen menu has a WonderSwan page and an Atari Lynx page, each with its own Shader and Bezel. A bezel for either is your own PNG in `Bezels/WS/` or `Bezels/Lynx/`, or the SP frame on 4:3 screens.
+- The Transparent shader is on both the Game Boy and Game Boy Color pages.
+- WonderSwan gets LCD3x, which 1.7.0 offers for GB and GBC.
+- A new Transparent screen shader for Game Boy and Game Boy Color games. It is LCD3x with the screen left unlit: light pixels let a warm, grainy backing show through instead of glaring white, and dark pixels cast soft drop shadows onto it. Pick it from the Shader row on the Game Boy or Game Boy Color page of the Screen menu, or with SELECT + B / A in a game. The idea comes from Matt Akins' Pixel Transparency shader for RetroArch; slot's version is written from scratch.
+
+## [1.7.0](https://github.com/BrandonKowalski/slot/releases/tag/v1.7.0)
+
+- The slot, carts and shelf now have a skeuomorphic effect, with light and dark themes and bundled wallpapers. Huge thanks to Markus for this amazing work! (#74, @MarkusMaribu)
+- An in-game menu: tap MENU to pause the game behind it. A double tap still goes straight to States.
+- Favorites: Y stars a cart onto its own shelf. (#89, @diluno)
+- A Recents shelf of the last 10 games, switched on from Settings -> General.
+- slot remembers the shelf and cart at power off and boots back onto them. (#53)
+- Per-platform bezels. Markus again! (#77, @MarkusMaribu)
+- On 4:3 panels the shelf fills the screen. (#81, @diluno)
+- Game Titles on the General page fades the shelf name into the selected game's name. (#84)
+- A 1 frame run-ahead setting for GBA games on mGBA. (#56, @454135431515)
+- Wallpaper Tint darkens your own wallpaper on the shelf.
+- GBA, GB and GBC each get their own Shader and Color Correction rows. (#83, @paulocoe-creator)
+- LCD3x is offered for GB and GBC games. (#88, @paulocoe-creator)
+- Game Boy stretch now properly only widens the picture.
+- The backlight steps follow a curve, so the low-end goes dimmer. (#54, @flo333)
+- Holding a direction repeats it in menus, the clock and the shelf letter jump, but never in play.
+- RG34XX uses its own chords for brightness and the menu display. (#85, @paulocoe-creator)
+- The RG28XX picture is turned the way BaseOS says.
+- Restart no longer hangs on a black screen: the WiFi driver is unloaded first.
+- Muted play keeps its frame rate. (#51, @flo333)
+- Fast-forward no longer stutters on frames that take longer than average. (#70)
+- gpSP no longer crashes when a crowded boot left its JIT cache unmapped.
+- Core options follow the platform that is playing. (#82)
+- Card logs moved into a `Logs` folder, and the session log rotates. Card alarms are logged too.
+
+## [1.6.0-lyx2](https://github.com/nelynes/slotPlus/releases/tag/v1.6.0-lyx2)
+
 - WonderSwan and Atari Lynx games get their own screen shaders. The Screen menu has a WS / WSC Shader row (Off, Grid or Simpletex) and a Lynx Shader row (Off, LCD3x, Grid or Dot), and SELECT + B / A in a game changes that system's shader alone. Before, the WonderSwan shared the Game Boy's shader and the Lynx shared the GBA's.
 - Each starts on the shader it was sharing, so nothing changes until you pick a different one.
 
@@ -26,7 +67,7 @@ slotPlus: Slot 1.6.0 plus WonderSwan and Atari Lynx.
 
 ## [1.6.0-ws3](https://github.com/nelynes/slotPlus/releases/tag/v1.6.0-ws3)
 
-- WonderSwan games now run on automatic frameskip, like GBA and GB. Heavy scenes hold their speed better.
+- WonderSwan games now run on automatic frameskip, like GBA and GB. The setting was being sent to the Cygne core under the wrong name and ignored, so it ran with frameskip off. Heavy scenes hold their speed better.
 
 ## [1.6.0-ws2](https://github.com/nelynes/slotPlus/releases/tag/v1.6.0-ws2)
 
@@ -44,7 +85,7 @@ slotPlus: Slot 1.6.0 plus WonderSwan.
 
 ## [1.6.0](https://github.com/BrandonKowalski/slot/releases/tag/v1.6.0)
 
-- Runs on the RG28XX: its panel is mounted portrait, so slot turns the picture onto it. (#35)
+- Runs on the RG28XX: its panel is mounted portrait, so slot turns the picture onto it. (#35, @GamerAnim)
 - Pokémon Pinball: Ruby & Sapphire rumble. mGBA now sees the game's Game Boy Player check. You still need to turn rumble on in game settings. (#25)
 - A red alarm shows when the SD card turns read-only or a save fails to write.
 - A new shortcut for mute: SELECT + VOL+ / VOL-. The 34XX has a fake volume wheel so VOL+ + VOL- isn't possible. (#39)

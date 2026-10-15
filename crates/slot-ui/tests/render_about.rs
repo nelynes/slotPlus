@@ -1,4 +1,4 @@
-use slot_gfx::{Draw, TexId, OUT_H, OUT_W};
+use slot_gfx::{Canvas, Draw, TexId, OUT_H, OUT_W};
 use slot_ui::{draw_backdrop, draw_sticker, sticker_face, wallpaper_face, StickerFields};
 
 #[test]
@@ -16,8 +16,12 @@ fn render_about() {
     });
 
     let mut list = Vec::new();
-    draw_backdrop(paper.as_ref().map(|_| TexId::from_raw(0)), &mut list);
-    draw_sticker(Some(TexId::from_raw(1)), &mut list);
+    draw_backdrop(
+        Canvas::FRAMED,
+        paper.as_ref().map(|_| TexId::from_raw(0)),
+        &mut list,
+    );
+    draw_sticker(Canvas::FRAMED, Some(TexId::from_raw(1)), &mut list);
 
     let (w, h) = (OUT_W as usize, OUT_H as usize);
     let mut px = vec![0u8; w * h * 4];

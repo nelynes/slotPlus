@@ -133,6 +133,15 @@ fn menu_single_tap_opens_the_quick_menu() {
 }
 
 #[test]
+fn menu_single_tap_opens_the_quick_menu_with_menu_dpad_display_enabled() {
+    let mut g = Gestures::new();
+    g.set_menu_dpad_display(true);
+    assert!(g.feed(Down(Menu), 0).is_empty(), "acted on the press");
+    assert_eq!(g.feed(Up(Menu), 100), vec![QuickMenu]);
+    assert!(g.tick(451).is_empty(), "fired a second time on the timer");
+}
+
+#[test]
 fn a_menu_hold_is_not_also_a_tap() {
     let mut g = Gestures::new();
     g.feed(Down(Menu), 0);
@@ -143,6 +152,15 @@ fn a_menu_hold_is_not_also_a_tap() {
 #[test]
 fn menu_double_tap_opens_polaroids_immediately() {
     let mut g = Gestures::new();
+    g.feed(Down(Menu), 0);
+    g.feed(Up(Menu), 100);
+    assert_eq!(g.feed(Down(Menu), 300), vec![Polaroids]);
+}
+
+#[test]
+fn menu_double_tap_opens_polaroids_immediately_with_menu_dpad_display_enabled() {
+    let mut g = Gestures::new();
+    g.set_menu_dpad_display(true);
     g.feed(Down(Menu), 0);
     g.feed(Up(Menu), 100);
     assert_eq!(g.feed(Down(Menu), 300), vec![Polaroids]);
@@ -533,4 +551,75 @@ fn select_and_either_volume_key_mutes_for_a_volume_wheel_with_no_chord() {
             "the mute chord's SELECT reached the game"
         );
     }
+}
+
+#[test]
+fn select_and_either_volume_key_still_mutes_with_menu_dpad_display_enabled() {
+    for vol in [VolUp, VolDown] {
+        let mut g = Gestures::new();
+        g.set_menu_dpad_display(true);
+        assert!(g.feed(Down(Select), 0).is_empty());
+        assert_eq!(g.feed(Down(vol), 100), vec![MuteToggle], "{vol:?}");
+        assert!(
+            g.tick(100 + VOLUME_REPEAT_DELAY_MS * 3).is_empty(),
+            "{vol:?} ramped the volume under SELECT"
+        );
+        assert!(g.feed(Up(vol), 900).is_empty(), "{vol:?}");
+        assert!(
+            g.feed(Up(Select), 950).is_empty(),
+            "the mute chord's SELECT reached the game"
+        );
+    }
+}
+
+#[test]
+fn menu_dpad_display_is_disabled_by_default() {
+    let mut g = Gestures::new();
+    g.feed(Down(Menu), 0);
+    assert_eq!(g.feed(Down(Btn::Up), 100), vec![GbaDown(Btn::Up)]);
+}
+
+#[test]
+fn menu_and_dpad_change_the_display_when_configured() {
+    for (direction, want) in [
+        (Btn::Up, BrightnessUp),
+        (Btn::Down, BrightnessDown),
+        (Btn::Left, BlueLightDown),
+        (Btn::Right, BlueLightUp),
+    ] {
+        let mut g = Gestures::new();
+        g.set_menu_dpad_display(true);
+        assert!(g.feed(Down(Menu), 0).is_empty());
+        assert_eq!(g.feed(Down(direction), 100), vec![want], "{direction:?}");
+        assert!(g.feed(Up(direction), 150).is_empty(), "{direction:?}");
+        assert!(g.feed(Up(Menu), 200).is_empty());
+    }
+}
+
+#[test]
+fn menu_dpad_display_chord_consumes_repeated_directions_and_cancels_eject() {
+    let mut g = Gestures::new();
+    g.set_menu_dpad_display(true);
+    g.feed(Down(Menu), 0);
+    assert_eq!(g.feed(Down(Btn::Up), 100), vec![BrightnessUp]);
+    assert!(g.feed(Up(Btn::Up), 150).is_empty());
+    assert_eq!(g.feed(Down(Btn::Right), 200), vec![BlueLightUp]);
+    assert!(g.feed(Up(Btn::Right), 250).is_empty());
+    assert!(
+        g.tick(MENU_HOLD_MS + 500).is_empty(),
+        "the display chord ejected"
+    );
+    assert!(g.feed(Up(Menu), MENU_HOLD_MS + 600).is_empty());
+}
+
+#[test]
+fn menu_dpad_display_chord_resets_when_menu_is_released() {
+    let mut g = Gestures::new();
+    g.set_menu_dpad_display(true);
+    g.feed(Down(Menu), 0);
+    g.feed(Down(Btn::Up), 100);
+    g.feed(Up(Btn::Up), 150);
+    g.feed(Up(Menu), 200);
+    g.feed(Down(Menu), 300);
+    assert_eq!(g.tick(300 + MENU_HOLD_MS), vec![Eject]);
 }

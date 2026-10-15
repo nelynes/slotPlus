@@ -1,28 +1,18 @@
-use slot_gfx::{Draw, TexId, OUT_H, OUT_W};
+use slot_gfx::{Canvas, Draw, TexId, OUT_H};
 use slot_store::{Cart, Platform};
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::OnceLock;
 
-use crate::cart::{cart_box, gb_shell_of, label_colour, label_text, CART_H, CART_W};
+use crate::bitmaps::Mould;
+use crate::board::{board_in, Placed};
+use crate::cart::{
+    cart_box, is_clear, label_colour, label_text, mould_label_rect, mould_of, CART_H, CART_W,
+};
 use crate::hud::Millis;
 use crate::silhouette::GbShell;
 use crate::slot_chrome::{draw_empty_slot, MOUTH_H};
 
 const SIDE_SCALE: f32 = 0.78;
-const SIDE_ALPHA: f32 = 0.55;
-
-static SLACK: AtomicU32 = AtomicU32::new(0);
-
-pub fn set_shelf_slack(px: f32) {
-    SLACK.store(px.max(0.0).to_bits(), Ordering::Relaxed);
-}
-
-fn raise() -> f32 {
-    f32::from_bits(SLACK.load(Ordering::Relaxed)) / 2.0
-}
-
-pub fn panel_middle_y() -> f32 {
-    OUT_H as f32 / 2.0 + raise()
-}
+const SIDE_ALPHA: f32 = 1.0;
 
 pub fn rest_y(h: f32) -> f32 {
     let y = if h > CART_H as f32 {
@@ -30,7 +20,9 @@ pub fn rest_y(h: f32) -> f32 {
     } else {
         (OUT_H + CART_H) as f32 / 2.0 - h
     };
-    y - raise()
+    // A Game Boy pak is 337px in a 422px gap, which centres at 42.5. Snap to a
+    // whole pixel so the 312×337 bitmap hits the RG SP panel 1:1.
+    y.round()
 }
 
 pub fn foot_y(h: f32) -> f32 {
@@ -41,21 +33,31 @@ const PART: f32 = 130.0;
 
 const SLOTS: i32 = 3;
 
-const REPEAT_DELAY_MS: Millis = 400;
+pub const REPEAT_DELAY_MS: Millis = 400;
+
+pub const STAR_SCALE: u32 = 2;
+pub const STAR_INK: [u8; 3] = [0xf6, 0xc3, 0x2c];
+const STAR_INSET: f32 = 5.0;
 const REPEAT_MS: [Millis; 4] = [110, 85, 65, 50];
+
+pub fn repeat_gap(fired: usize) -> Millis {
+    REPEAT_MS[fired.min(REPEAT_MS.len() - 1)]
+}
 
 pub struct Shelf {
     pub carts: Vec<Cart>,
     pub index: usize,
     pub scroll: f32,
     faces: Vec<Option<TexId>>,
-    shadow: Option<TexId>,
-    gb_shadow: Option<TexId>,
-    gbc_shadow: Option<TexId>,
-    ws_shadow: Option<TexId>,
-    lynx_shadow: Option<TexId>,
-    gg_shadow: Option<TexId>,
-    shells: Vec<Option<GbShell>>,
+    interiors: Vec<Option<TexId>>,
+    /// Each mould's shadow and the board its clear carts are drawn over, by
+    /// `Mould::index`.
+    shadows: [Option<TexId>; Mould::ALL.len()],
+    backings: [Option<TexId>; Mould::ALL.len()],
+    moulds: Vec<OnceLock<Mould>>,
+    clears: Vec<OnceLock<bool>>,
+    starred: Vec<bool>,
+    star: Option<(TexId, f32, f32)>,
     ride: f32,
     vel: f32,
     held: Option<(i32, Millis, usize)>,
@@ -64,21 +66,53 @@ pub struct Shelf {
 impl Shelf {
     pub fn new(carts: Vec<Cart>) -> Self {
         Shelf {
-            shells: carts.iter().map(gb_shell_of).collect(),
+            moulds: carts.iter().map(|_| OnceLock::new()).collect(),
+            clears: carts.iter().map(|_| OnceLock::new()).collect(),
             faces: vec![None; carts.len()],
+            interiors: vec![None; carts.len()],
+            starred: vec![false; carts.len()],
+            star: None,
             carts,
             index: 0,
             scroll: 0.0,
-            shadow: None,
-            gb_shadow: None,
-            gbc_shadow: None,
-            ws_shadow: None,
-            lynx_shadow: None,
-            gg_shadow: None,
+            shadows: [None; Mould::ALL.len()],
+            backings: [None; Mould::ALL.len()],
             ride: 0.0,
             vel: 0.0,
             held: None,
         }
+    }
+
+    fn mould(&self, i: usize) -> Mould {
+        let (Some(cell), Some(cart)) = (self.moulds.get(i), self.carts.get(i)) else {
+            return Mould::Gba;
+        };
+        *cell.get_or_init(|| mould_of(cart))
+    }
+
+    fn clear(&self, i: usize) -> bool {
+        let (Some(cell), Some(cart)) = (self.clears.get(i), self.carts.get(i)) else {
+            return false;
+        };
+        *cell.get_or_init(|| is_clear(cart))
+    }
+
+    pub fn restock(&mut self, carts: Vec<Cart>) -> Vec<TexId> {
+        let old: Vec<TexId> = self
+            .faces
+            .drain(..)
+            .chain(self.interiors.drain(..))
+            .flatten()
+            .collect();
+        self.moulds = carts.iter().map(|_| OnceLock::new()).collect();
+        self.clears = carts.iter().map(|_| OnceLock::new()).collect();
+        self.faces = vec![None; carts.len()];
+        self.interiors = vec![None; carts.len()];
+        self.starred = vec![false; carts.len()];
+        self.carts = carts;
+        self.held = None;
+        self.select(0);
+        old
     }
 
     pub fn select(&mut self, i: usize) {
@@ -88,26 +122,41 @@ impl Shelf {
         self.vel = 0.0;
     }
 
+    pub fn set_star(&mut self, face: TexId, w: u32, h: u32) {
+        self.star = Some((face, w as f32, h as f32));
+    }
+
+    pub fn mark_starred(&mut self, starred: impl Fn(&Cart) -> bool) {
+        self.starred = self.carts.iter().map(starred).collect();
+    }
+
     pub fn set_shadow(&mut self, face: TexId) {
-        self.shadow = Some(face);
+        self.set_mould_shadow(Mould::Gba, face);
     }
 
-    pub fn set_ws_shadow(&mut self, face: TexId) {
-        self.ws_shadow = Some(face);
+    pub fn set_mould_shadow(&mut self, mould: Mould, face: TexId) {
+        self.shadows[mould.index()] = Some(face);
     }
 
-    pub fn set_lynx_shadow(&mut self, face: TexId) {
-        self.lynx_shadow = Some(face);
-    }
-
-    pub fn set_gg_shadow(&mut self, face: TexId) {
-        self.gg_shadow = Some(face);
+    pub fn set_mould_backing(&mut self, mould: Mould, face: TexId) {
+        self.backings[mould.index()] = Some(face);
     }
 
     pub fn set_gb_shadow(&mut self, shell: GbShell, face: TexId) {
         match shell {
-            GbShell::Notched => self.gb_shadow = Some(face),
-            GbShell::Rounded => self.gbc_shadow = Some(face),
+            GbShell::Notched => self.set_mould_shadow(Mould::Notched, face),
+            GbShell::Rounded => self.set_mould_shadow(Mould::Rounded, face),
+        }
+    }
+
+    pub fn set_backing(&mut self, face: TexId) {
+        self.set_mould_backing(Mould::Gba, face);
+    }
+
+    pub fn set_gb_backing(&mut self, shell: GbShell, face: TexId) {
+        match shell {
+            GbShell::Notched => self.set_mould_backing(Mould::Notched, face),
+            GbShell::Rounded => self.set_mould_backing(Mould::Rounded, face),
         }
     }
 
@@ -124,6 +173,14 @@ impl Shelf {
 
     pub fn set_face(&mut self, i: usize, tex: TexId) -> Option<TexId> {
         self.faces.get_mut(i).and_then(|f| f.replace(tex))
+    }
+
+    pub fn set_interior(&mut self, i: usize, tex: TexId) -> Option<TexId> {
+        self.interiors.get_mut(i).and_then(|f| f.replace(tex))
+    }
+
+    pub fn take_interior(&mut self, i: usize) -> Option<TexId> {
+        self.interiors.get_mut(i).and_then(Option::take)
     }
 
     pub fn take_face(&mut self, i: usize) -> Option<TexId> {
@@ -146,6 +203,20 @@ impl Shelf {
             }
         }
         out
+    }
+
+    /// What a see-through cart shows behind its front shell, back plastic first and then the board.
+    /// The shelf draws these under the face. The slot has to as well, or the board vanishes
+    /// as the cart goes in or comes out.
+    pub fn behind(&self, stem: &str) -> [Option<TexId>; 2] {
+        let Some(i) = self.carts.iter().position(|c| c.stem == stem) else {
+            return [None, None];
+        };
+        if !self.clear(i) || self.face(i).is_none() {
+            return [None, None];
+        }
+        let board = self.backings[self.mould(i).index()];
+        [self.interiors.get(i).copied().flatten(), board]
     }
 
     pub fn find(&self, stem: &str) -> Option<(&Cart, Option<TexId>)> {
@@ -264,8 +335,7 @@ impl Shelf {
             return;
         }
         self.step(by);
-        let rate = REPEAT_MS[fired.min(REPEAT_MS.len() - 1)];
-        self.held = Some((by, now + rate, fired + 1));
+        self.held = Some((by, now + repeat_gap(fired), fired + 1));
     }
 
     fn step(&mut self, by: i32) {
@@ -298,14 +368,40 @@ impl Shelf {
         Some((self.index as i32 + off).rem_euclid(n) as usize)
     }
 
-    pub fn selected_at(&self) -> (f32, f32) {
-        let w = self
-            .carts
-            .get(self.index)
-            .map_or(CART_W, |c| cart_box(c.platform).0) as f32;
-        let offset = self.scroll_target() - self.scroll;
-        let scale = shrink(offset);
-        (OUT_W as f32 / 2.0 + offset * w - w * scale / 2.0, scale)
+    pub fn selected_at(&self, canvas: Canvas) -> (f32, f32) {
+        let (w, _) = self.slot_width(0);
+        let scale = shrink(self.scroll_target() - self.scroll);
+        (self.centre(canvas, 0) - w * scale / 2.0, scale)
+    }
+
+    fn slot_width(&self, slot: i32) -> (f32, bool) {
+        match self.cart_at_offset(slot).map(|i| self.carts[i].platform) {
+            Some(Platform::Gba) | None => (CART_W as f32, true),
+            Some(p) => (cart_box(p).0 as f32, false),
+        }
+    }
+
+    fn pitch(&self, a: i32, u: f32) -> f32 {
+        let ((wa, gba_a), (wb, gba_b)) = (self.slot_width(a), self.slot_width(a + 1));
+        let (sa, sb) = (shrink(a as f32 - u), shrink((a + 1) as f32 - u));
+        let gap_of = if gba_a || gba_b { CART_W as f32 } else { wa };
+        wa * sa / 2.0 + gap_of * (1.0 - (sa + sb) / 2.0) + wb * sb / 2.0
+    }
+
+    fn centre(&self, canvas: Canvas, slot: i32) -> f32 {
+        let u = self.scroll - self.scroll_target();
+        let a = u.floor() as i32;
+        let mut c = canvas.w / 2.0 - (u - a as f32) * self.pitch(a, u);
+        if slot >= a {
+            for s in a..slot {
+                c += self.pitch(s, u);
+            }
+        } else {
+            for s in (slot..a).rev() {
+                c -= self.pitch(s, u);
+            }
+        }
+        c
     }
 
     pub fn update(&mut self, dt: f32) {
@@ -314,13 +410,20 @@ impl Shelf {
         self.scroll += self.vel * dt;
     }
 
-    pub fn draw(&self, shake: f32, out: &mut Vec<Draw>) {
-        self.draw_row(None, shake, 0.0, 1.0, out);
-        draw_empty_slot(out);
+    pub fn draw(
+        &self,
+        canvas: Canvas,
+        shake: f32,
+        slot: Option<(TexId, TexId)>,
+        out: &mut Vec<Draw>,
+    ) {
+        self.draw_row(canvas, None, shake, 0.0, 1.0, out);
+        draw_empty_slot(canvas, slot, out);
     }
 
     pub fn draw_row(
         &self,
+        canvas: Canvas,
         hidden: Option<&str>,
         shake: f32,
         recede: f32,
@@ -345,23 +448,14 @@ impl Shelf {
             let (cw, ch) = cart_box(cart.platform);
             let (w, h) = (cw as f32 * scale, ch as f32 * scale);
             let away = offset.signum() * (1.0 + offset.abs());
-            let x = OUT_W as f32 / 2.0 + offset * cw as f32 - w / 2.0 + away * PART * recede;
-            if x + w <= 0.0 || x >= OUT_W as f32 || alpha <= 0.0 {
+            let x = self.centre(canvas, slot) - w / 2.0 + away * PART * recede;
+            if x + w <= 0.0 || x >= canvas.w || alpha <= 0.0 {
                 continue;
             }
             let x = x + shake;
             let y = foot_y(ch as f32) - h;
             if alpha < 1.0 {
-                let backing = match cart.platform {
-                    Platform::Ws => self.ws_shadow,
-                    Platform::Lynx => self.lynx_shadow,
-                    Platform::Gg => self.gg_shadow,
-                    _ => match self.shells.get(i).copied().flatten() {
-                        None => self.shadow,
-                        Some(GbShell::Notched) => self.gb_shadow,
-                        Some(GbShell::Rounded) => self.gbc_shadow,
-                    },
-                };
+                let backing = self.shadows[self.mould(i).index()];
                 if let Some(tex) = backing {
                     out.push(Draw::Tex {
                         x,
@@ -370,6 +464,43 @@ impl Shelf {
                         h,
                         tex,
                         alpha: recede_alpha(alpha),
+                    });
+                }
+            }
+            if self.clear(i) && self.face(i).is_some() {
+                let board = self.backings[self.mould(i).index()];
+                let gba = self.mould(i) == Mould::Gba;
+                // A GBA cart's board and back shell fill the cart's box, exactly where the
+                // picker lifts them from; a Game Boy pak's backing fills its box.
+                let Placed {
+                    x: bx,
+                    y: by,
+                    w: bw,
+                    h: bh,
+                } = if gba {
+                    board_in(Placed { x, y, w, h })
+                } else {
+                    Placed { x, y, w, h }
+                };
+                // Back plastic, then the board, then the front shell.
+                if let Some(tex) = self.interiors.get(i).copied().flatten() {
+                    out.push(Draw::Tex {
+                        x: bx,
+                        y: by,
+                        w: bw,
+                        h: bh,
+                        tex,
+                        alpha: alpha * dim,
+                    });
+                }
+                if let Some(tex) = board {
+                    out.push(Draw::Tex {
+                        x: bx,
+                        y: by,
+                        w: bw,
+                        h: bh,
+                        tex,
+                        alpha: alpha * dim,
                     });
                 }
             }
@@ -398,6 +529,17 @@ impl Shelf {
                     }
                 }
             });
+            if let (Some(true), Some((tex, sw, sh))) = (self.starred.get(i), self.star) {
+                let (lx, ly, lw, _) = mould_label_rect(self.mould(i));
+                out.push(Draw::Tex {
+                    x: (x + (lx + lw) * w - sw - STAR_INSET).round(),
+                    y: (y + ly * h + STAR_INSET).round(),
+                    w: sw,
+                    h: sh,
+                    tex,
+                    alpha: alpha * dim,
+                });
+            }
         }
     }
 }

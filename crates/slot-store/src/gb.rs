@@ -1,6 +1,8 @@
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
 
 const TITLE_OFF: u64 = 0x134;
 const TITLE_LEN: usize = 11;
@@ -49,6 +51,25 @@ pub fn header(rom: &Path) -> Option<Header> {
     let mut buf = [0u8; HEADER_LEN];
     read_at(rom, 0, &mut buf)?;
     Header::parse(&buf)
+}
+
+pub fn cached_header(rom: &Path) -> Option<Header> {
+    static HEADERS: OnceLock<Mutex<HashMap<PathBuf, Option<Header>>>> = OnceLock::new();
+    let mut headers = HEADERS
+        .get_or_init(Mutex::default)
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    headers
+        .entry(rom.to_path_buf())
+        .or_insert_with(|| header(rom))
+        .clone()
+}
+
+pub fn cached_class(rom: &Path) -> Class {
+    match cached_header(rom) {
+        Some(h) => h.class(),
+        None => class(rom),
+    }
 }
 
 pub fn title(rom: &Path) -> Option<String> {

@@ -8,6 +8,9 @@
 <meta property="og:title" content="slot.">
 <meta property="og:description" content="A bespoke, Game Boy-centric frontend for the Anbernic RG SP.">
 <meta property="og:type" content="website">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap">
@@ -31,6 +34,9 @@
     <button class="tab" role="tab" id="t-disclosure" aria-controls="disclosure" aria-selected="false" tabindex="-1">AI</button>
     <a class="tab" href="https://studio.slot-cfw.fyi">Studio</a>
   </nav>
+  <a class="mast-gh" href="https://github.com/BrandonKowalski/slot" aria-label="slot on GitHub">
+    <svg viewBox="0 0 16 16" width="28" height="28" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+  </a>
 </header>
 
 <main>
@@ -100,7 +106,7 @@
           <h3>Flash BaseOS to an SD Card</h3>
           <p>Download the latest release of
              <a href="https://github.com/pvaibhav/BaseOS/releases/latest">BaseOS</a> and write the <code>.img</code> to an SD card with
-             something like <a href="https://www.raspberrypi.com/software/">Raspberry Pi Imager</a>.</p>
+             something like <a href="https://rufus.ie">RUFUS</a> or <a href="https://www.raspberrypi.com/software/">Raspberry Pi Imager</a>.</p>
           <p>Insert this card into the SD card slot labeled <code>SD1</code>.</p>
         </li>
         <li>
@@ -138,7 +144,7 @@
           <h3>Flash BaseOS to an SD Card</h3>
           <p>Download the latest release of
              <a href="https://github.com/pvaibhav/BaseOS/releases/latest">BaseOS</a> and write the <code>.img</code> to an SD card with
-             something like <a href="https://www.raspberrypi.com/software/">Raspberry Pi Imager</a>.</p>
+             something like <a href="https://rufus.ie">RUFUS</a> or <a href="https://www.raspberrypi.com/software/">Raspberry Pi Imager</a>.</p>
           <p>Insert this card into the SD card slot labeled <code>SD1</code>.</p>
         </li>
         <li>
@@ -169,10 +175,10 @@
     <div class="subpanel" id="install-update" role="tabpanel" aria-labelledby="t-install-update" hidden>
       <aside class="admonition" role="note">
         <p class="admonition-title">Updating from a version before 1.4.0?</p>
-        <p>Older versions kept settings in <code>System/</code>, so deleting it wipes them.</p>
-        <p>This time, copy the new <code>System/</code> over the old one instead of deleting it. slot will move your settings into a new <code>Config/</code> folder, so future updates can delete <code>System/</code> as normal.</p>
+        <p>Older versions kept settings in <code>System/</code>. They now live in <code>Config/</code></p>
+        <p>For this update only, copy the new <code>System/</code> over the old one instead of deleting it. slot will move your settings into a new <code>Config/</code> folder, so future updates can delete <code>System/</code> as normal.</p>
         <p>Your games, saves and save states aren't affected.</p>
-        <p>Sorry for the hassle! slot started as a throwaway project for my own SP, and I never expected it to need an update procedure.</p>
+        <p>Sorry for the hassle! slot started as a throwaway project and I never expected it to need an update procedure.</p>
       </aside>
 
       <ol class="install-steps">
@@ -229,6 +235,10 @@
         <h3>Browse the Carousel</h3>
         <p><kbd>Left</kbd> and <kbd>Right</kbd> to flip through games on the shelf.<br><kbd>L1</kbd> and <kbd>R1</kbd> to switch platforms.</p>
       </li>
+      <li class="step" id="favorites" data-still="carousel.webp">
+        <h3>Favorites</h3>
+        <p>Press <kbd>Y</kbd> to star the cart you're on.<br>Pressing <kbd>Y</kbd> again takes the star off.</p>
+      </li>
       <li class="step" id="core-picker" data-clip="core-picker.mp4">
         <h3>Pick an Emulator</h3>
         <p>Press <kbd>START</kbd> to open a cart.<br><kbd>Left</kbd> and <kbd>Right</kbd> swaps the core "chip".<br><kbd>A</kbd> saves your choice.</p>
@@ -271,7 +281,7 @@
       </li>
       <li class="step" id="settings" data-clip="settings.mp4">
         <h3>Settings</h3>
-        <p><kbd>MENU</kbd> on the carousel opens the settings.</p>
+        <p>Tap <kbd>MENU</kbd> to open settings.</p>
       </li>
       <li class="step" id="brightness" data-clip="brightness.mp4">
         <h3>Brightness and Blue Light</h3>
@@ -312,15 +322,22 @@
           <dd>Adjust blue light</dd>
         </div>
         <div class="key">
+          <dt><kbd>MENU</kbd> + <kbd>Up</kbd> / <kbd>Down</kbd></dt>
+          <dd>Adjust brightness, RG34XX only</dd>
+        </div>
+        <div class="key">
+          <dt><kbd>MENU</kbd> + <kbd>Left</kbd> / <kbd>Right</kbd></dt>
+          <dd>Adjust blue light, RG34XX only</dd>
+        </div>
+        <div class="key">
           <dt><kbd>VOL+</kbd> / <kbd>VOL&minus;</kbd></dt>
           <dd>Change the volume</dd>
         </div>
         <div class="key">
-          <dt><kbd>VOL+</kbd> + <kbd>VOL&minus;</kbd></dt>
-          <dd>Toggle mute</dd>
-        </div>
-        <div class="key">
-          <dt><kbd>SELECT</kbd> + <kbd>VOL+</kbd> / <kbd>VOL&minus;</kbd></dt>
+          <dt>
+            <p><kbd>VOL+</kbd> + <kbd>VOL&minus;</kbd></p>
+            <p><kbd>SELECT</kbd> + <kbd>VOL+</kbd> or <kbd>VOL&minus;</kbd></p>
+          </dt>
           <dd>Toggle mute</dd>
         </div>
       </dl>
@@ -349,6 +366,10 @@
           <dd>Start the game fresh</dd>
         </div>
         <div class="key">
+          <dt><kbd>Y</kbd></dt>
+          <dd>Favorite / Unfavorite selected game</dd>
+        </div>
+        <div class="key">
           <dt><kbd>MENU</kbd></dt>
           <dd>Open the settings menu</dd>
         </div>
@@ -364,6 +385,10 @@
         <div class="key">
           <dt>Hold <kbd>MENU</kbd></dt>
           <dd>Save state, eject the cart, back to the carousel.</dd>
+        </div>
+        <div class="key">
+          <dt>Tap <kbd>MENU</kbd></dt>
+          <dd>Open the in-game menu</dd>
         </div>
         <div class="key">
           <dt>Double tap <kbd>MENU</kbd></dt>
@@ -452,10 +477,10 @@
     <h2>Anticipated Questions Answered</h2>
     <nav class="subtabs" role="tablist" aria-label="Anticipated questions">
       <button class="subtab" role="tab" id="t-faq" aria-controls="faq" aria-selected="true">The basics</button>
-      <button class="subtab" role="tab" id="t-faq-carts" aria-controls="faq-carts" aria-selected="false" tabindex="-1">Your carts</button>
       <button class="subtab" role="tab" id="t-faq-games" aria-controls="faq-games" aria-selected="false" tabindex="-1">Your games</button>
+      <button class="subtab" role="tab" id="t-faq-shelf" aria-controls="faq-shelf" aria-selected="false" tabindex="-1">Your shelf</button>
       <button class="subtab" role="tab" id="t-faq-linking" aria-controls="faq-linking" aria-selected="false" tabindex="-1">Linking</button>
-      <button class="subtab" role="tab" id="t-faq-contributing" aria-controls="faq-contributing" aria-selected="false" tabindex="-1">Contributing</button>
+      <button class="subtab" role="tab" id="t-faq-requests" aria-controls="faq-requests" aria-selected="false" tabindex="-1">Common Requests</button>
     </nav>
 
     <div class="subpanel" id="faq" role="tabpanel" aria-labelledby="t-faq">
@@ -474,40 +499,12 @@
                 <tr><td>Anbernic RG28XX</td><td class="yes">Yes</td><td>1.6.0</td></tr>
               </tbody>
             </table>
-            <p>RG28XX support was contributed by <a href="https://github.com/GamerAnim">GamerAnim</a>. Its panel is mounted portrait, so slot turns the picture onto it. If it comes out upside down, add <code>export SLOT_ROTATE=ccw</code> to <code>System/launch_frontend.sh</code>.</p>
             <p>If you have one of the untested devices, or have tried slot on a device not listed, please <a href="https://github.com/BrandonKowalski/slot/issues">open an issue on GitHub</a> and let me know how it went.</p>
           </dd>
         </div>
         <div class="qa">
           <dt>Will slot run anything other than GBA?</dt>
           <dd>Yes. You can bring your GB and GBC carts to the party.</dd>
-        </div>
-        <div class="qa">
-          <dt>This is almost perfect but needs more systems. Will you add them?</dt>
-          <dd>No. I want to recreate the feeling I had playing my GBA SP as a child.</dd>
-        </div>
-        <div class="qa">
-          <dt>RetroAchievements and cheats would make this perfect. Will you add them?</dt>
-          <dd>No. These are two features I do not want to support. If they matter to you, a few of the forks have added them.</dd>
-        </div>
-        <div class="qa">
-          <dt>Does slot allow you to pair Bluetooth headphones?</dt>
-          <dd>No. Use the headphone jack.</dd>
-        </div>
-      </dl>
-    </div>
-
-    <div class="subpanel" id="faq-carts" role="tabpanel" aria-labelledby="t-faq-carts" hidden>
-      <dl>
-        <div class="qa">
-          <dt>How do I add cart labels?</dt>
-          <dd>Drop a <code>.png</code> into the <code>Labels/</code> folder for that platform, named
-              after the ROM. For example, <code>Labels/GBA/Metroid Fusion.png</code> matches
-              <code>Games/GBA/Metroid Fusion.gba</code>.</dd>
-        </div>
-        <div class="qa">
-          <dt>Do I have to craft them by hand?</dt>
-          <dd>Nah! You can use the <a href="https://studio.slot-cfw.fyi">slot Cart Studio</a>.</dd>
         </div>
       </dl>
     </div>
@@ -519,6 +516,10 @@
           <dd>Each platform has its own folder under <code>Games/</code>.</dd>
         </div>
         <div class="qa">
+          <dt>Where do the games come from?</dt>
+          <dd>Your own legally obtained backups.</dd>
+        </div>
+        <div class="qa">
           <dt>Is there a BIOS boot animation on game start?</dt>
           <dd>Yes! Drop the following files you legally obtained into <code>BIOS/</code>.
             <ul>
@@ -528,13 +529,30 @@
             </ul>
           </dd>
         </div>
+      </dl>
+    </div>
+
+    <div class="subpanel" id="faq-shelf" role="tabpanel" aria-labelledby="t-faq-shelf" hidden>
+      <dl>
         <div class="qa">
-          <dt>Where do the games come from?</dt>
-          <dd>Your own legally obtained backups.</dd>
+          <dt>How do I add cart labels?</dt>
+          <dd>Drop a <code>.png</code> into the <code>Labels/</code> folder for that platform, named
+              after the ROM. For example, <code>Labels/GBA/Metroid Fusion.png</code> matches
+              <code>Games/GBA/Metroid Fusion.gba</code>.</dd>
         </div>
         <div class="qa">
-          <dt>Why doesn't the GBA soft reset work?</dt>
-          <dd><kbd>SELECT</kbd> + <kbd>A</kbd> / <kbd>B</kbd> change the shader instead. Hold <kbd>A</kbd> on the carousel to start fresh.</dd>
+          <dt>Do I have to craft them by hand?</dt>
+          <dd>Nah! You can use the <a href="https://studio.slot-cfw.fyi">slot Cart Studio</a>.</dd>
+        </div>
+        <div class="qa">
+          <dt>Can I see the game's name on the shelf?</dt>
+          <dd>Turn on Game Titles in the General settings.</dd>
+        </div>
+        <div class="qa">
+          <dt>Can I use my own wallpaper?</dt>
+          <dd>
+            <p>Drop a <code>.png</code> into <code>Wallpapers/</code> and pick it under Wallpaper in the General settings.</p>
+          </dd>
         </div>
       </dl>
     </div>
@@ -544,7 +562,7 @@
         <div class="qa">
           <dt>Can I trade Pokémon with a friend?</dt>
           <dd>
-            <p>Yes, with a second RG SP running <code>slot</code>.</p>
+            <p>Yes, with a second device running <code>slot</code>.</p>
             <p>First, navigate to the game and press <kbd>START</kbd> to open the core selection menu. Pick <code>gpSP</code>.</p>
             <p>While in game, press <span class="chord"><kbd>SELECT</kbd> + <kbd>MENU</kbd></span> and choose <code>LINK</code>.</p>
             <p>One player needs to pick <code>HOST</code> while the other chooses <code>JOIN</code>.</p>
@@ -558,8 +576,20 @@
       </dl>
     </div>
 
-    <div class="subpanel" id="faq-contributing" role="tabpanel" aria-labelledby="t-faq-contributing" hidden>
+    <div class="subpanel" id="faq-requests" role="tabpanel" aria-labelledby="t-faq-requests" hidden>
       <dl>
+        <div class="qa">
+          <dt>This is almost perfect but needs more systems. Will you add them?</dt>
+          <dd>No. I want to recreate the feeling I had playing my GBA SP as a child.</dd>
+        </div>
+        <div class="qa">
+          <dt>RetroAchievements and cheats would make this perfect. Will you add them?</dt>
+          <dd>No. These are two features I do not want to support. If they matter to you, a few of the forks have added them.</dd>
+        </div>
+        <div class="qa">
+          <dt>Does slot allow you to pair Bluetooth headphones?</dt>
+          <dd>No. Use the headphone jack.</dd>
+        </div>
         <div class="qa">
           <dt>Do you accept contributions?</dt>
           <dd>
@@ -572,24 +602,81 @@
   </div>
 </section>
 
-<section class="panel endnote" id="credits" role="tabpanel" aria-labelledby="t-credits" hidden>
+<section class="panel reference credits" id="credits" role="tabpanel" aria-labelledby="t-credits" hidden>
   <div class="wrap">
     <h2>Credits</h2>
-    <p>Emulation is handled by <a href="https://mgba.io">mGBA</a> and <a href="https://github.com/libretro/gpsp">gpSP</a>.</p>
-    <p><a href="https://github.com/pvaibhav/BaseOS">BaseOS</a> by <a href="https://github.com/pvaibhav">Prashant Vaibhav</a> serves as the operating system image.</p>
-    <p>Type is <a href="https://github.com/googlefonts/opensans">Open Sans</a>, under the SIL Open Font License, and <a href="https://www.nerdfonts.com">Nerd Fonts</a> symbols by Ryan L. McIntyre, under MIT. The panel mask is derived from LCD3x, a public-domain shader by Gigaherz in the libretro shader collection. The Dot and Simpletex screen shaders are ports of Dot by Themaister and simpletex_lcd by jdgleaver from the same collection. The RG35XXSP bezel is "Perfect GBA SP" by <a href="https://github.com/mugwomp93/Knulli_Customization">mugwomp93</a>, from <a href="https://github.com/chrizzo-hb/knulli-bezels">knulli-bezels</a>, under CC BY-SA 4.0.</p>
-    <p>The sounds are a recording of me shoving a cartridge into my childhood GBA.</p>
-    <p>Game Boy is a trademark of Nintendo. slot is not affiliated with Nintendo.</p>
+
+    <h3>Design</h3>
+    <dl class="keys">
+      <div class="key">
+        <dt>Skeuomorphic UI</dt>
+        <dd><a href="https://github.com/MarkusMaribu">Markus</a></dd>
+      </div>
+    </dl>
+
+    <h3>Software</h3>
+    <dl class="keys">
+      <div class="key">
+        <dt>Emulation</dt>
+        <dd><a href="https://mgba.io">mGBA</a> and <a href="https://github.com/libretro/gpsp">gpSP</a></dd>
+      </div>
+      <div class="key">
+        <dt>Underlying OS</dt>
+        <dd><a href="https://github.com/pvaibhav/BaseOS">BaseOS</a> by <a href="https://github.com/pvaibhav">Prashant Vaibhav</a></dd>
+      </div>
+    </dl>
+
+    <h3>Screen</h3>
+    <dl class="keys">
+      <div class="key">
+        <dt>Panel mask</dt>
+        <dd>Derived from LCD3x, a public-domain shader by Gigaherz in the libretro shader collection</dd>
+      </div>
+      <div class="key">
+        <dt>Dot shader</dt>
+        <dd>A port of Dot by Themaister, from the libretro shader collection</dd>
+      </div>
+      <div class="key">
+        <dt>Simpletex shader</dt>
+        <dd>A port of simpletex_lcd by jdgleaver, from the libretro shader collection</dd>
+      </div>
+      <div class="key">
+        <dt>RG35XXSP bezel</dt>
+        <dd>"Perfect GBA SP" by <a href="https://github.com/mugwomp93/Knulli_Customization">mugwomp93</a>, from <a href="https://github.com/chrizzo-hb/knulli-bezels">knulli-bezels</a>, under CC BY-SA 4.0</dd>
+      </div>
+    </dl>
+
+    <h3>Type</h3>
+    <dl class="keys">
+      <div class="key">
+        <dt>Typeface</dt>
+        <dd><a href="https://github.com/googlefonts/opensans">Open Sans</a>, under the SIL Open Font License</dd>
+      </div>
+      <div class="key">
+        <dt>Symbols</dt>
+        <dd><a href="https://www.nerdfonts.com">Nerd Fonts</a> by Ryan L. McIntyre, under MIT</dd>
+      </div>
+    </dl>
+
+    <h3>Sound</h3>
+    <dl class="keys">
+      <div class="key">
+        <dt>Cartridge sounds</dt>
+        <dd>A recording of me shoving a cartridge into my childhood GBA</dd>
+      </div>
+    </dl>
+
+    <p class="credits-fine">Game Boy is a trademark of Nintendo. slot is not affiliated with Nintendo.</p>
   </div>
 </section>
 
 <section class="panel endnote" id="disclosure" role="tabpanel" aria-labelledby="t-disclosure" hidden>
   <div class="wrap">
     <h2>AI Disclosure</h2>
-    <p>The Rust frontend was put together by Claude Opus. I reviewed everything that was produced. The RG SP SVGs on this page were also generated by Claude. This documentation is 100% free-range, meatbag prose.</p>
-    <p>The project is extremely low stakes. I wanted a bespoke frontend for my RG SP and thought
-      that something that evokes the feeling of using my GBA SP as a kid would be pretty neat.</p>
-    <p>Use it, don't use it, I don't care.</p>
+    <p>The Rust frontend, and the SVGs on this page, were put together by Claude. I reviewed everything that was produced. All documentation is 100% free-range, meatbag prose.</p>
+    <p>My goal with this project was to recreate the feeling of playing my GBA SP in the back seat as a kid, but with a few modern creature comforts.</p>
+    <p>Nothing about this project is exciting or groundbreaking from a technological perspective, and as a result, I delegated the glue code. mGBA and gpSP have been around forever and are the true stars of this show. The incredible skeuomorphic art is the work of Markus, an artist who saw the bare-bones version and offered to dress it up.</p>
+    <p>I understand if my use of AI is a dealbreaker for you. Just know it's the least interesting part of what's here.</p>
     <p>Figured I should share the end result of all the wasted water. ✌🏻</p>
   </div>
 </section>

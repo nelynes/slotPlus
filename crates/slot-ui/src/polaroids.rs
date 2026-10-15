@@ -3,8 +3,7 @@ use slot_power::Battery;
 use slot_store::{parse_stamp, StateEntry};
 
 use crate::art;
-use crate::battery::{draw_gauge, GAUGE_H};
-use crate::footer::{draw_printed, Printed};
+use crate::footer::{draw_corners, Printed};
 use crate::hud::{PLATE, PLATE_H};
 use crate::plate::{hint_quad, hint_row, hint_width, Hint, HINT_GAP, HINT_H, TITLE_H, TITLE_W};
 
@@ -183,18 +182,14 @@ impl Polaroids {
             });
         }
 
-        draw_gauge(
-            MARGIN,
-            (PLATE_H - GAUGE_H) / 2.0,
+        draw_corners(
+            slot_gfx::Canvas::FRAMED,
             battery,
             battery_percent,
             bolt,
+            clock,
             out,
         );
-        if clock.w > 0 {
-            let x = OUT_W as f32 - MARGIN - clock.w as f32;
-            draw_printed(x, (PLATE_H - HINT_H as f32) / 2.0, clock, out);
-        }
     }
 
     fn draw_bottom(&self, out: &mut Vec<Draw>) {

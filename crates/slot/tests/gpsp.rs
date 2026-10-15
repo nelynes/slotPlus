@@ -45,7 +45,15 @@ fn gpsp_is_told_its_serial_mode_before_load() {
     }
     let _g = common::core_lock();
     let mut core = slot_retro::LibretroCore::open(&path).expect("open gpsp");
-    slot::core::apply_core_options(&mut core, Core::Gpsp, "auto", false, false, None);
+    slot::core::apply_core_options(
+        &mut core,
+        Core::Gpsp,
+        Platform::Gba,
+        "auto",
+        false,
+        false,
+        None,
+    );
     assert_eq!(
         core.option("gpsp_serial"),
         Some("auto".to_string()),
@@ -63,7 +71,15 @@ fn gpsp_is_told_the_serial_mode_it_is_handed() {
     let _g = common::core_lock();
     let mut core = slot_retro::LibretroCore::open(&path).expect("open gpsp");
     for serial in ["rfu", "mul_poke", "mul_aw1", "mul_aw2"] {
-        slot::core::apply_core_options(&mut core, Core::Gpsp, serial, false, false, None);
+        slot::core::apply_core_options(
+            &mut core,
+            Core::Gpsp,
+            Platform::Gba,
+            serial,
+            false,
+            false,
+            None,
+        );
         assert_eq!(
             core.option("gpsp_serial"),
             Some(serial.to_string()),
@@ -81,7 +97,15 @@ fn gpsp_boots_through_the_bios_when_the_card_carries_one() {
     }
     let _g = common::core_lock();
     let mut core = slot_retro::LibretroCore::open(&path).expect("open gpsp");
-    slot::core::apply_core_options(&mut core, Core::Gpsp, "auto", true, false, None);
+    slot::core::apply_core_options(
+        &mut core,
+        Core::Gpsp,
+        Platform::Gba,
+        "auto",
+        true,
+        false,
+        None,
+    );
     assert_eq!(
         core.option("gpsp_boot_mode"),
         Some("bios".to_string()),
@@ -109,7 +133,15 @@ fn gpsp_is_left_on_its_own_boot_default_when_the_card_has_no_bios() {
     }
     let _g = common::core_lock();
     let mut core = slot_retro::LibretroCore::open(&path).expect("open gpsp");
-    slot::core::apply_core_options(&mut core, Core::Gpsp, "auto", false, false, None);
+    slot::core::apply_core_options(
+        &mut core,
+        Core::Gpsp,
+        Platform::Gba,
+        "auto",
+        false,
+        false,
+        None,
+    );
     assert_eq!(
         core.option("gpsp_boot_mode"),
         None,
@@ -127,7 +159,15 @@ fn mgba_is_given_its_own_frameskip_and_none_of_gpsps() {
     }
     let _g = common::core_lock();
     let mut core = slot_retro::LibretroCore::open(&path).expect("open mgba");
-    slot::core::apply_core_options(&mut core, Core::Mgba, "rfu", true, false, None);
+    slot::core::apply_core_options(
+        &mut core,
+        Core::Mgba,
+        Platform::Gba,
+        "rfu",
+        true,
+        false,
+        None,
+    );
     assert_eq!(
         core.option("gpsp_serial"),
         None,
@@ -164,7 +204,15 @@ fn both_cores_are_told_about_colour_correction_in_their_own_words() {
         let _g = common::core_lock();
         let mut core = slot_retro::LibretroCore::open(&path).expect("open the core");
         for (colour, want) in [(true, on), (false, off)] {
-            slot::core::apply_core_options(&mut core, which, "auto", false, colour, None);
+            slot::core::apply_core_options(
+                &mut core,
+                which,
+                Platform::Gba,
+                "auto",
+                false,
+                colour,
+                None,
+            );
             assert_eq!(
                 core.option(key).as_deref(),
                 Some(want),
@@ -195,7 +243,15 @@ fn gpsp_is_put_on_auto_frameskip() {
     }
     let _g = common::core_lock();
     let mut core = slot_retro::LibretroCore::open(&path).expect("open gpsp");
-    slot::core::apply_core_options(&mut core, Core::Gpsp, "auto", false, false, None);
+    slot::core::apply_core_options(
+        &mut core,
+        Core::Gpsp,
+        Platform::Gba,
+        "auto",
+        false,
+        false,
+        None,
+    );
     assert_eq!(
         core.option("gpsp_frameskip").as_deref(),
         Some("auto"),
@@ -602,7 +658,16 @@ fn open_core_reaches_a_gpsp_named_dylib_under_the_content_roots_system_directory
         .join(slot::core::dylib_name(Core::Gpsp));
     std::fs::copy(&mgba, &planted).expect("plant a dylib under gpSP's name");
 
-    let mut core = slot::core::open_core(d.path(), Core::Gpsp, "auto", false, None, None).core;
+    let mut core = slot::core::open_core(
+        d.path(),
+        Core::Gpsp,
+        Platform::Gba,
+        "auto",
+        false,
+        None,
+        None,
+    )
+    .core;
     core.load(&d.path().join("Games/GBA/Probe.gba"))
         .expect("the planted core refused the test rom");
     core.run_frame(ButtonMask::default());
@@ -705,7 +770,7 @@ fn keeps_time_while_off(which: Core) {
     let _g = common::core_lock();
     let boot = |state: Option<&[u8]>| {
         let mut core = slot_retro::LibretroCore::open(&path).expect("open the core");
-        slot::core::apply_core_options(&mut core, which, "auto", false, false, None);
+        slot::core::apply_core_options(&mut core, which, Platform::Gba, "auto", false, false, None);
         core.load(&rom).expect("load the probe");
         if let Some(s) = state {
             core.unserialize(s).expect("resume");
@@ -735,4 +800,93 @@ fn the_gpsp_cartridge_clock_keeps_time_while_the_game_is_off() {
 #[test]
 fn the_mgba_cartridge_clock_keeps_time_while_the_game_is_off() {
     keeps_time_while_off(Core::Mgba);
+}
+
+fn saturation(xrgb: &[u8]) -> f64 {
+    let n = (xrgb.len() / 4) as f64;
+    xrgb.chunks_exact(4)
+        .map(|p| {
+            let (hi, lo) = (p[..3].iter().max(), p[..3].iter().min());
+            f64::from(hi.copied().unwrap_or(0) - lo.copied().unwrap_or(0))
+        })
+        .sum::<f64>()
+        / n
+}
+
+#[test]
+fn a_paused_refresh_shows_a_colour_change_on_the_first_toggle() {
+    use slot::audio::{AudioSink, StubSink};
+    use slot::emu::{CoreState, EmuHandle, Speed};
+    use std::time::{Duration, Instant};
+
+    let _g = common::core_lock();
+    let from = common::repo_root().join("sdcard/Games/GBA/Metroid Fusion.gba");
+    if !from.exists() || !dylib_for(Core::Gpsp).exists() {
+        eprintln!("no gpSP or no GBA cart on this machine, skipping");
+        return;
+    }
+    let d = common::tmp_root_with_carts(&[]);
+    let rom = d.path().join("Games/GBA/Metroid Fusion.gba");
+    std::fs::copy(&from, &rom).expect("copy the cart");
+
+    let mut sink = StubSink::new();
+    sink.open(32_768).expect("the stub refused to open");
+    let drain = sink.clone();
+    std::thread::spawn(move || loop {
+        drain.device_drain();
+        std::thread::sleep(Duration::from_millis(2));
+    });
+    let emu = EmuHandle::spawn(
+        slot::core::open_core_for(
+            d.path(),
+            Core::Gpsp,
+            "auto",
+            false,
+            &[dylib_for(Core::Gpsp)],
+        ),
+        rom,
+        sink.ring(),
+        None,
+        None,
+    );
+    emu.set_speed(Speed::Normal);
+    let deadline = Instant::now() + Duration::from_secs(20);
+    while emu.state() == CoreState::Loading || emu.published_count() < 300 {
+        assert!(Instant::now() < deadline, "the cart never got going");
+        std::thread::sleep(Duration::from_millis(4));
+    }
+    emu.set_speed(Speed::Paused);
+    while emu.observed_speed() != Speed::Paused {
+        assert!(Instant::now() < deadline, "the core never paused");
+        std::thread::sleep(Duration::from_millis(2));
+    }
+    let shown = |emu: &EmuHandle| saturation(&emu.latest_frame().expect("no frame"));
+    let refreshed = |emu: &EmuHandle, on: bool| {
+        let before = emu.published_count();
+        emu.set_option(
+            "gpsp_color_correction",
+            if on { "enabled" } else { "disabled" },
+        );
+        emu.refresh();
+        while emu.published_count() == before {
+            assert!(Instant::now() < deadline, "the refresh never published");
+            std::thread::sleep(Duration::from_millis(2));
+        }
+        shown(emu)
+    };
+    let raw = shown(&emu);
+    assert!(
+        raw > 10.0,
+        "the paused frame has no colour to correct: {raw:.1}"
+    );
+    let on = refreshed(&emu, true);
+    assert!(
+        on < raw * 0.9,
+        "the first toggle on drew the old colours: saturation {raw:.1} before, {on:.1} after"
+    );
+    let off = refreshed(&emu, false);
+    assert!(
+        (off - raw).abs() < raw * 0.02,
+        "toggling back off did not restore the raw colours: {raw:.1} then {off:.1}"
+    );
 }

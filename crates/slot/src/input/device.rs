@@ -22,6 +22,7 @@ pub struct DeviceInput {
     hall: Option<PathBuf>,
     lid_shut: Option<bool>,
     next_lid_poll: Millis,
+    menu_dpad_display: bool,
 }
 
 impl DeviceInput {
@@ -31,10 +32,16 @@ impl DeviceInput {
 
     pub fn open_in(dev: &Path, sys: &Path, root: &Path, trace: bool) -> Self {
         let trace = trace.then(|| Trace::start(root, dev, sys)).flatten();
-        DeviceInput::open_traced(dev, sys, trace)
+        let target = std::env::var("BASEOS_TARGET").ok();
+        DeviceInput::open_traced(dev, sys, menu_dpad_display(target.as_deref()), trace)
     }
 
-    fn open_traced(dev: &Path, sys: &Path, trace: Option<Arc<Trace>>) -> Self {
+    fn open_traced(
+        dev: &Path,
+        sys: &Path,
+        menu_dpad_display: bool,
+        trace: Option<Arc<Trace>>,
+    ) -> Self {
         let pending: Arc<Mutex<Vec<RawEvent>>> = Arc::new(Mutex::new(Vec::new()));
         for node in pick_devices(dev, sys) {
             eprintln!(
@@ -58,6 +65,7 @@ impl DeviceInput {
             hall: find_hall(Path::new(PSY)),
             lid_shut: None,
             next_lid_poll: 0,
+            menu_dpad_display,
         }
     }
 }
@@ -140,7 +148,9 @@ struct Trace {
 
 impl Trace {
     fn start(root: &Path, dev: &Path, sys: &Path) -> Option<Arc<Trace>> {
-        let path = root.join(trace::TRACE_FILE);
+        let dir = crate::root::logs_dir(root);
+        let _ = std::fs::create_dir_all(&dir);
+        let path = dir.join(trace::TRACE_FILE);
         let mut file = match File::create(&path) {
             Ok(f) => f,
             Err(e) => {
@@ -199,6 +209,10 @@ impl InputSource for DeviceInput {
         }
         out
     }
+
+    fn menu_dpad_display(&self) -> bool {
+        self.menu_dpad_display
+    }
 }
 
 fn find_hall(psy: &Path) -> Option<PathBuf> {
@@ -212,4 +226,27 @@ fn find_hall(psy: &Path) -> Option<PathBuf> {
         .into_iter()
         .map(|d| d.join("hallkey"))
         .find(|p| p.is_file())
+}
+
+fn menu_dpad_display(target: Option<&str>) -> bool {
+    target.map(str::trim) == Some("rg34xx")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_the_rg34xx_baseos_target_enables_the_menu_dpad_display_gesture() {
+        for (target, want) in [
+            (Some("rg34xx"), true),
+            (Some("rg34xxsp"), false),
+            (Some("rg35xxsp"), false),
+            (Some("rg35xxh"), false),
+            (Some(""), false),
+            (None, false),
+        ] {
+            assert_eq!(menu_dpad_display(target), want, "{target:?}");
+        }
+    }
 }

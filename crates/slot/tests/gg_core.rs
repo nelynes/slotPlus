@@ -29,7 +29,15 @@ fn spinning_rom(dir: &std::path::Path) -> std::path::PathBuf {
 fn opened(dir: &std::path::Path) -> Option<LibretroCore> {
     let path = gearsystem()?;
     let mut core = LibretroCore::open_with(&path, dir, dir).expect("open gearsystem");
-    slot::core::apply_core_options(&mut core, Core::Gearsystem, "", false, true, None);
+    slot::core::apply_core_options(
+        &mut core,
+        Core::Gearsystem,
+        Platform::Gg,
+        "",
+        false,
+        true,
+        None,
+    );
     Some(core)
 }
 

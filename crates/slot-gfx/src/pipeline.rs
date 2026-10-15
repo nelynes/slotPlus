@@ -20,6 +20,8 @@ pub struct GamePass {
     u_paper_size: gl::types::GLint,
     u_fbo: gl::types::GLint,
     fbo_scale: [f32; 2],
+    u_origin: gl::types::GLint,
+    origin: [f32; 2],
     u_pic: gl::types::GLint,
     pic: [f32; 4],
     paper: gl::types::GLuint,
@@ -28,6 +30,7 @@ pub struct GamePass {
     src_size: (u32, u32),
     effect: ScreenEffect,
     power: f32,
+    fills: bool,
     src: [f32; 4],
 }
 
@@ -43,7 +46,7 @@ impl GamePass {
             crate::gl::gray_format(),
             Some(&[255]),
         );
-        let (u_rect, u_bright, u_uv, u_mode, u_paper_size, u_pic, u_fbo, u_src);
+        let (u_rect, u_bright, u_uv, u_mode, u_paper_size, u_pic, u_fbo, u_origin, u_src);
         unsafe {
             gl::UseProgram(prog);
             gl::Uniform1i(crate::gl::uniform_location(prog, "u_game"), 0);
@@ -62,6 +65,7 @@ impl GamePass {
             u_paper_size = crate::gl::uniform_location(prog, "u_paper_size");
             u_fbo = crate::gl::uniform_location(prog, "u_fbo");
             u_pic = crate::gl::uniform_location(prog, "u_pic");
+            u_origin = crate::gl::uniform_location(prog, "u_origin");
         }
         Ok(GamePass {
             prog,
@@ -73,6 +77,8 @@ impl GamePass {
             u_paper_size,
             u_fbo,
             fbo_scale: [1.0, 1.0],
+            u_origin,
+            origin: [0.0, 0.0],
             u_pic,
             pic: WHOLE_TEXTURE,
             paper,
@@ -81,6 +87,7 @@ impl GamePass {
             src_size: (SRC_W, SRC_H),
             effect: ScreenEffect::Lcd3x,
             power: 1.0,
+            fills: false,
             src: WHOLE_TEXTURE,
         })
     }
@@ -89,12 +96,27 @@ impl GamePass {
         self.power = t.clamp(0.0, 1.0);
     }
 
+    pub fn frame(&self) -> (f32, f32, f32, f32) {
+        match self.fills {
+            true => (0.0, 0.0, OUT_W as f32, OUT_H as f32),
+            false => screen_rect(self.power),
+        }
+    }
+
+    pub fn set_fills_frame(&mut self, on: bool) {
+        self.fills = on;
+    }
+
     pub fn set_picture(&mut self, rect: [f32; 4]) {
         self.pic = rect;
     }
 
     pub fn set_fbo_scale(&mut self, x: f32, y: f32) {
         self.fbo_scale = [x, y];
+    }
+
+    pub fn set_origin(&mut self, x: f32, y: f32) {
+        self.origin = [x, y];
     }
 
     pub fn set_effect(&mut self, effect: ScreenEffect) {
@@ -171,15 +193,21 @@ impl GamePass {
     }
 
     fn draw_source(&self, tex: gl::types::GLuint, quad: &Quad, src: [f32; 4]) {
-        let (x, y, w, h) = screen_rect(self.power);
+        let (x, y, w, h, bright) = if self.fills {
+            (0.0, 0.0, OUT_W as f32, OUT_H as f32, 1.0)
+        } else {
+            let (x, y, w, h) = screen_rect(self.power);
+            (x, y, w, h, screen_brightness(self.power))
+        };
         unsafe {
             gl::UseProgram(self.prog);
             gl::Uniform4f(self.u_rect, x, y, w, h);
             gl::Uniform4f(self.u_uv, src[0], src[1], src[2], src[3]);
-            gl::Uniform1f(self.u_bright, screen_brightness(self.power));
+            gl::Uniform1f(self.u_bright, bright);
             gl::Uniform1f(self.u_mode, self.effect.mode());
             gl::Uniform1f(self.u_paper_size, self.paper_size);
             gl::Uniform2f(self.u_fbo, self.fbo_scale[0], self.fbo_scale[1]);
+            gl::Uniform2f(self.u_origin, self.origin[0], self.origin[1]);
             gl::Uniform4f(
                 self.u_pic,
                 self.pic[0],
