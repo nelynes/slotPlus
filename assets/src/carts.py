@@ -344,6 +344,9 @@ def lynx():
 # is no decal.
 
 
+GG_LABEL_R = 14  # the label's corner radius, as slot-ui rounds the art
+
+
 def gamegear():
     w, h = 352, 329
     c = Canvas(w, h)
@@ -355,14 +358,20 @@ def gamegear():
 
     lx0, ly0 = round(w * 0.088), round(h * 0.145)
     lx1, ly1 = round(w * 0.912), round(h * 0.755)
-    well = f(c.rrect(c.layer(), lx0, ly0, lx1, ly1, 8))
+    well = f(c.rrect(c.layer(), lx0, ly0, lx1, ly1, GG_LABEL_R))
 
     # The U the hood leaves open: the label well and the face around it,
     # from just under the grip band down to the foot.
     side = round(w * 0.058)
     band = round(h * 0.118)
-    face = c.rrect(c.layer(), side, band, w - side, h + 20, 22,
-                   corners=(True, True, False, False))
+    # Its top corners are big, slightly tall arches, as on the real pak.
+    rx, ry = 42, 50
+    face = c.layer()
+    d = ImageDraw.Draw(face)
+    d.rectangle([(side + rx) * S, band * S, (w - side - rx) * S, (h + 20) * S], fill=255)
+    d.rectangle([side * S, (band + ry) * S, (w - side) * S, (h + 20) * S], fill=255)
+    for cx in (side, w - side - 2 * rx):
+        d.ellipse([cx * S, band * S, (cx + 2 * rx) * S, (band + 2 * ry) * S], fill=255)
     # Below the flanges the sides drop to the face too.
     c.rrect(face, 0, flange + 3, w, h + 20, 0)
     face = f(face)

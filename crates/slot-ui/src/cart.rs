@@ -684,9 +684,12 @@ fn shell_face(s: &Spec, shell: &Shell) -> CartFace {
     // compositor drew underneath (the board) shows through and stays put while the shell moves.
     // The label box stays opaque.
     let (lx, ly, lw, lh) = s.label;
+    let r = label_corner(s.mould);
     for y in 0..s.h {
         for x in 0..s.w {
-            let on_label = (lx..lx + lw).contains(&x) && (ly..ly + lh).contains(&y);
+            let on_label = (lx..lx + lw).contains(&x)
+                && (ly..ly + lh).contains(&y)
+                && corner_cover(x - lx, y - ly, lw, lh, r) >= 128;
             let i = ((y * s.w + x) * 4) as usize;
             if !on_label {
                 for c in 0..3 {
@@ -785,12 +788,34 @@ fn ink(bg: [u8; 3]) -> [u8; 3] {
     }
 }
 
+/// How round a mould's label corners are. A Game Gear label has rounded
+/// corners that tuck inside the arches of the hood; the others are square.
+fn label_corner(mould: Mould) -> f32 {
+    match mould {
+        Mould::Gg => 14.0,
+        _ => 0.0,
+    }
+}
+
+/// How much of the label pixel at (x, y) a rounded corner of radius `r` keeps.
+fn corner_cover(x: u32, y: u32, w: u32, h: u32, r: f32) -> u32 {
+    if r <= 0.0 {
+        return 255;
+    }
+    let (px, py) = (x as f32 + 0.5, y as f32 + 0.5);
+    let cx = px.clamp(r, w as f32 - r);
+    let cy = py.clamp(r, h as f32 - r);
+    let out = ((px - cx).powi(2) + (py - cy).powi(2)).sqrt() - r;
+    ((0.5 - out).clamp(0.0, 1.0) * 255.0).round() as u32
+}
+
 fn paste_label(s: &Spec, face: &mut CartFace, label: &[u8]) {
     let (lx, ly, lw, lh) = s.label;
+    let r = label_corner(s.mould);
     for y in 0..lh {
         for x in 0..lw {
             let src = ((y * lw + x) * 4) as usize;
-            let a = label[src + 3] as u32;
+            let a = (label[src + 3] as u32 * corner_cover(x, y, lw, lh, r) + 127) / 255;
             if a == 0 {
                 continue;
             }
