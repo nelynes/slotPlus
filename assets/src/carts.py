@@ -339,8 +339,8 @@ def lynx():
 # --------------------------------------------------------------------------
 # Sega Game Gear: a nearly square pak. A raised hood with three grip ridges
 # runs across the top and down both sides as far as the flanges, the label
-# sits in the U it makes, and an oval plaque with SEGA standing proud of it
-# sits at the foot. The contacts are hidden under the bottom edge, so there
+# sits in the U it makes, and an oval plaque with SEGA pressed into it sits
+# at the foot. The contacts are hidden under the bottom edge, so there
 # is no decal.
 
 
@@ -387,8 +387,9 @@ def gamegear():
     height += soft(f(grips), 0.4) * 1.2
     height -= soft(well, 0.8) * 1.3
     height -= soft(f(plate), 0.7) * 2.6
-    height += soft(f(name), 0.3) * 3.0 * f(plate)
+    height -= soft(f(name), 0.3) * 2.2 * f(plate)  # the lettering is pressed in
     occl = soft(well, 2.0) * 5 + soft(f(plate), 1.5) * 7 + soft(face, 2.5) * 3 * (1 - well)
+    occl += soft(f(name), 0.5) * 6 * f(plate)
 
     neutral = shade(height, body, well, seed=31, occlusion=occl)
     rgba(neutral, body).save(os.path.join(ASSETS, "gg_neutral.png"))
