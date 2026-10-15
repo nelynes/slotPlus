@@ -109,7 +109,7 @@ Release notes can be found in the [changelog](CHANGELOG.md).
 
 <p align="center">
 <img src=".github/resources/screenshots/wonderswan-shelf.jpg" width="48%" alt="The WonderSwan shelf, with a wide cart in the slot and its neighbours on either side">
-<img src=".github/resources/screenshots/lynx-shelf.jpg" width="48%" alt="The Atari Lynx shelf, with a flat card cart and gold contacts in the slot and its neighbours on either side">
+<img src=".github/resources/screenshots/lynx-shelf.jpg" width="48%" alt="The Atari Lynx shelf, with a curved-lip card cart and gold contacts in the slot and its neighbours on either side">
 </p>
 
 ---
