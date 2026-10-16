@@ -958,7 +958,7 @@ fn sync_game_bezel(app: &mut App, compositor: &mut Compositor, state: &mut Bezel
     if state.image.as_ref() != Some(&shown) {
         let rgba = match &shown.1 {
             BezelPick::None | BezelPick::Ags102 => None,
-            BezelPick::Default => default_game_bezel_face(platform == Console::Gbc),
+            BezelPick::Default => default_game_bezel_face(platform),
             BezelPick::File(name) => app
                 .root()
                 .map(|root| {

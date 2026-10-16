@@ -2,12 +2,15 @@ use std::path::Path;
 use std::sync::OnceLock;
 
 use slot_gfx::{Canvas, Draw, TexId, OUT_H, OUT_W};
+use slot_store::Platform;
 
 use crate::art;
 
 const DEFAULT_PNG: &[u8] = include_bytes!("../../../assets/background_default.png");
 const BEZEL_GB_PNG: &[u8] = include_bytes!("../../../assets/bezel_gb.png");
 const BEZEL_GBC_PNG: &[u8] = include_bytes!("../../../assets/bezel_gbc.png");
+// slotPlus's own, drawn by `assets/src/bezels.py`.
+const BEZEL_GG_PNG: &[u8] = include_bytes!("../../../assets/bezel_gg.png");
 const BLUR_PNG: &[u8] = include_bytes!("../../../assets/background_default_blur.png");
 
 const SCRIM: f32 = 0.62;
@@ -24,9 +27,20 @@ pub fn game_bezel_face(path: &Path) -> Option<Vec<u8>> {
     art::cover(path, OUT_W, OUT_H)
 }
 
-pub fn default_game_bezel_face(colour: bool) -> Option<Vec<u8>> {
-    let png = if colour { BEZEL_GBC_PNG } else { BEZEL_GB_PNG };
+/// The bezel bundled for a platform, for the platforms that have one.
+pub fn default_game_bezel_face(platform: Platform) -> Option<Vec<u8>> {
+    let png = match platform {
+        Platform::Gb => BEZEL_GB_PNG,
+        Platform::Gbc => BEZEL_GBC_PNG,
+        Platform::Gg => BEZEL_GG_PNG,
+        _ => return None,
+    };
     art::cover_bytes(png, OUT_W, OUT_H)
+}
+
+/// Whether a platform has a bezel bundled for it, offered as Default.
+pub fn has_default_game_bezel(platform: Platform) -> bool {
+    matches!(platform, Platform::Gb | Platform::Gbc | Platform::Gg)
 }
 
 /// The carousel ground, scaled to cover the whole screen, including behind the footer.

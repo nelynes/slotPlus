@@ -1194,13 +1194,15 @@ fn the_game_gear_has_a_screen_page_with_its_own_shader_and_no_transparent() {
 }
 
 #[test]
-fn a_game_gear_bezel_cycles_through_the_cards_own_pngs_and_none() {
+fn a_game_gear_bezel_cycles_through_default_the_cards_own_pngs_and_none() {
     let (d, mut a, _) = on_carousel();
     let dir = d.path().join("Bezels").join("GG");
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::write(dir.join("Gear.png"), b"png").unwrap();
     open_at(&mut a, QuickRow::GgBezel);
     assert_eq!(a.resolved_bezel(slot_store::Platform::Gg), BezelPick::None);
+    press(&mut a, Btn::Right);
+    assert_eq!(read_slot_state(d.path()).bezel_gg, BezelPick::Default);
     press(&mut a, Btn::Right);
     assert_eq!(
         read_slot_state(d.path()).bezel_gg,
@@ -1240,4 +1242,19 @@ fn the_neogeo_pocket_has_a_screen_page_with_its_own_shader_and_bezel() {
         read_slot_state(d.path()).bezel_ngp,
         BezelPick::File("Pocket.png".into())
     );
+}
+
+#[test]
+fn the_game_gear_bezel_offers_its_bundled_default() {
+    let (d, mut a, _) = on_carousel();
+    open_at(&mut a, QuickRow::GgBezel);
+    assert_eq!(a.resolved_bezel(slot_store::Platform::Gg), BezelPick::None);
+    press(&mut a, Btn::Right);
+    assert_eq!(read_slot_state(d.path()).bezel_gg, BezelPick::Default);
+    assert_eq!(
+        a.resolved_bezel(slot_store::Platform::Gg),
+        BezelPick::Default
+    );
+    press(&mut a, Btn::Right);
+    assert_eq!(read_slot_state(d.path()).bezel_gg, BezelPick::None);
 }

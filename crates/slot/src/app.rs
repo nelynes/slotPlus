@@ -994,8 +994,8 @@ impl App {
 
     fn bezel_choices(&self, platform: Platform) -> Vec<BezelPick> {
         let mut choices = vec![BezelPick::None];
-        // Only the Game Boy and Game Boy Color have a bundled bezel.
-        if matches!(platform, Platform::Gb | Platform::Gbc) {
+        // Only the Game Boy, Game Boy Color and Game Gear have a bundled bezel.
+        if slot_ui::has_default_game_bezel(platform) {
             choices.push(BezelPick::Default);
         }
         if self.framed_panel() {

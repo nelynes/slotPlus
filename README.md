@@ -41,6 +41,7 @@ No BIOS is needed. Game Gear games boot straight in.
 - **Label art:** optional PNGs go in `Labels/GG/<game name>.png`.
 - **Core:** Game Gear games run on Gearsystem.
 - **Picture:** the 160x144 screen is shown actual size at 3x, or stretched with L1 to fill the screen.
+- **Bezel:** the Screen menu's Game Gear page has a bundled Default bezel, a black face with the green power light glowing above the screen. You can also use your own PNGs in `Bezels/GG/`. A bezel shows at actual size, not when stretched.
 - **Saves:** games with battery saves keep them in `Saves/GG/`.
 
 ### Controls
