@@ -1260,3 +1260,30 @@ fn the_game_gear_bezel_offers_its_bundled_default() {
     press(&mut a, Btn::Right);
     assert_eq!(read_slot_state(d.path()).bezel_gg, BezelPick::None);
 }
+
+#[test]
+fn the_menu_opens_after_playing_a_system_with_no_colour_correction() {
+    // The menu's in-game Color Correction row stands for the playing
+    // system's own row. A WonderSwan, Lynx, Game Gear or NeoGeo Pocket has
+    // none, and that row used to look itself up forever and overflow the
+    // stack, freezing the handheld as the menu opened.
+    for platform in [
+        slot_store::Platform::Ws,
+        slot_store::Platform::Lynx,
+        slot_store::Platform::Gg,
+        slot_store::Platform::Ngp,
+    ] {
+        let (_d, mut a, _) = on_carousel();
+        a.set_platform(platform);
+        assert_eq!(
+            a.quick_value(QuickRow::ColourCorrection),
+            None,
+            "{platform:?}"
+        );
+        assert!(a.quick_value(QuickRow::Shader).is_some(), "{platform:?}");
+        a.apply(Action::QuickMenu);
+        assert!(a.quick_menu().is_some());
+        let mut out = Vec::new();
+        a.draw(&mut out);
+    }
+}

@@ -2,6 +2,7 @@
 
 ## Unreleased (slotPlusUltra)
 
+- Fixed: opening the menu froze the handheld after playing a WonderSwan, Atari Lynx, Game Gear or NeoGeo Pocket game, until it was switched off.
 - On 4:3 handhelds such as the RG 35XXSP, a stretched game now fills the whole screen instead of its 3:2 window above the SP frame. This is every system but the Game Boy and Game Boy Color, which keep 1.7.0's stretch.
 - NeoGeo Pocket and NeoGeo Pocket Color games (`.ngp`, `.ngc`, `.ngpc`) get one shared shelf. Put them in `Games/NGP/`. They run on the Beetle NeoPop core, in English where a game has both languages. No BIOS is needed.
 - NeoGeo Pocket carts are drawn in 1.7.0's look: a ridged cap, a wide label in a recessed frame (art goes in `Labels/NGP/`, about 246x133) and a lower band with a down arrow and SNK and NGP plaques pressed into it, their letters raised, with a dark grey default shell.

@@ -884,9 +884,13 @@ impl App {
 
     pub fn quick_value(&self, row: QuickRow) -> Option<QuickValue> {
         match row {
-            QuickRow::Shader | QuickRow::ColourCorrection => {
-                self.quick_value(self.playing_row(row))
-            }
+            // The in-game rows show the playing system's own row. A system
+            // with no row of its own (no colour correction on a WonderSwan,
+            // Lynx, Game Gear or NeoGeo Pocket) has no value to show.
+            QuickRow::Shader | QuickRow::ColourCorrection => match self.playing_row(row) {
+                own if own == row => None,
+                own => self.quick_value(own),
+            },
             QuickRow::FastForward => QuickValue::speed(self.state.ff_speed),
             QuickRow::FastForwardSound => Some(QuickValue::flag(self.state.ff_sound)),
             QuickRow::GbaColourCorrection => {
