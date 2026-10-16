@@ -20,6 +20,28 @@ fn gba_and_game_boy_views_are_unchanged() {
 }
 
 #[test]
+fn the_game_gear_and_neogeo_pocket_stretch_to_fill_the_screen_both_ways() {
+    assert_eq!(
+        source_rect(Platform::Gg, VideoMode::Stretch),
+        [40.0 / 240.0, 8.0 / 160.0, 160.0 / 240.0, 144.0 / 160.0],
+        "a Game Gear picture fills the screen, not the Game Boy's band"
+    );
+    assert_eq!(
+        source_rect(Platform::Ngp, VideoMode::Stretch),
+        [40.0 / 240.0, 4.0 / 160.0, 160.0 / 240.0, 152.0 / 160.0],
+        "a NeoGeo Pocket picture fills the screen, not the Game Boy's band"
+    );
+    assert_eq!(
+        source_rect(Platform::Gbc, VideoMode::Stretch),
+        [40.0 / 240.0, 0.0, 160.0 / 240.0, 1.0],
+        "the Game Boy Color still stretches sideways only"
+    );
+    for p in [Platform::Gg, Platform::Ngp] {
+        assert_eq!(source_rect(p, VideoMode::Actual), WHOLE_TEXTURE, "{p:?}");
+    }
+}
+
+#[test]
 fn a_landscape_wonderswan_shows_the_centre_240_by_160_at_3x() {
     assert_eq!(
         source_rect(Platform::Ws, VideoMode::Actual),

@@ -1880,7 +1880,7 @@ fn tmp_root_with_gg_carts(stems: &[&str]) -> tempfile::TempDir {
 }
 
 #[test]
-fn l_and_r_change_the_mode_on_a_game_gear_cart_like_a_game_boy_one() {
+fn l_and_r_change_the_mode_on_a_game_gear_cart() {
     let d = tmp_root_with_gg_carts(&["Sonic Chaos", "Zzz"]);
     let mut s = session_playing(d.path());
     assert_eq!(s.app().core(), Core::Gearsystem);
@@ -1893,8 +1893,8 @@ fn l_and_r_change_the_mode_on_a_game_gear_cart_like_a_game_boy_one() {
     s.feed([RawEvent::Down(Btn::L1)], 100);
     assert_eq!(
         s.app().source_rect(),
-        GB_WINDOW,
-        "L did not stretch the 160x144 picture"
+        [40.0 / 240.0, 8.0 / 160.0, 160.0 / 240.0, 144.0 / 160.0],
+        "L did not stretch the 160x144 picture to fill the screen"
     );
     assert_eq!(pad(&s) & ButtonMask::L, 0, "L reached the game as well");
     s.feed([RawEvent::Up(Btn::L1)], 120);

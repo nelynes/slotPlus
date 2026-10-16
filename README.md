@@ -17,7 +17,7 @@ No BIOS is needed. The core stands in for it.
 - **Games:** put `.ngp`, `.ngc` and `.ngpc` files in `Games/NGP/`.
 - **Label art:** optional PNGs go in `Labels/NGP/<game name>.png`.
 - **Core:** NeoGeo Pocket games run on Beetle NeoPop, set to English for games that have both languages.
-- **Picture:** the 160x152 screen is shown at 3x, or stretched with L1, like the Game Boy. 
+- **Picture:** the 160x152 screen is shown at 3x, or stretched with L1 to fill the screen.
 - **Saves:** games save to `Saves/NGP/<game name>.flash`. The core writes this file itself when the game stops, so eject the cart, power off or restart from the menu as usual; slotPlus stops the core first so the save is written. Save states work as they do for every other system.
 
 ### Controls
@@ -29,7 +29,7 @@ The buttons follow the NeoGeo Pocket's layout, so its A is the left button and i
 | D-pad        | Joystick                              |
 | B / A        | A / B                                 |
 | Start        | Option                                |
-| L1 / R1      | Stretch the picture / actual size, as on the Game Boy |
+| L1 / R1      | Stretch the picture to fill the screen / actual size |
 | Hold Y / X   | Turbo A / turbo B                     |
 | Select       | Nothing                               |
 
@@ -40,7 +40,7 @@ No BIOS is needed. Game Gear games boot straight in.
 - **Games:** put `.gg` files in `Games/GG/`.
 - **Label art:** optional PNGs go in `Labels/GG/<game name>.png`.
 - **Core:** Game Gear games run on Gearsystem.
-- **Picture:** the Game Gear screen is the same 160x144 as the Game Boy's, so it is shown the same way: actual size at 3x, or stretched.
+- **Picture:** the 160x144 screen is shown actual size at 3x, or stretched with L1 to fill the screen.
 - **Saves:** games with battery saves keep them in `Saves/GG/`.
 
 ### Controls
@@ -50,7 +50,7 @@ No BIOS is needed. Game Gear games boot straight in.
 | D-pad        | D-pad                                 |
 | B / A        | Button 1 / Button 2                   |
 | Start        | Start                                 |
-| L1 / R1      | Stretch the picture / actual size, as on the Game Boy |
+| L1 / R1      | Stretch the picture to fill the screen / actual size |
 | Hold Y / X   | Turbo button 1 / turbo button 2       |
 | Select       | Nothing (the Game Gear has no Select) |
 

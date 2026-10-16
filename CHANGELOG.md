@@ -4,13 +4,13 @@
 
 - NeoGeo Pocket and NeoGeo Pocket Color games (`.ngp`, `.ngc`, `.ngpc`) get one shared shelf. Put them in `Games/NGP/`. They run on the Beetle NeoPop core, in English where a game has both languages. No BIOS is needed.
 - NeoGeo Pocket carts are drawn in 1.7.0's look: a ridged cap, a wide label in a recessed frame (art goes in `Labels/NGP/`, about 246x133) and a lower band with a down arrow and SNK and NGP plaques pressed into it, their letters raised, with a dark grey default shell.
-- The NeoGeo Pocket picture is shown like a Game Boy one: actual size at 3x, L1 / R1 to stretch it and give it back. The Screen menu has a NeoGeo Pocket page with its own Shader (Off, LCD3x, Grid or Simpletex) and Bezel (`Bezels/NGP/`).
+- The NeoGeo Pocket picture is shown actual size at 3x. L1 stretches it to fill the screen and R1 gives it back. The Screen menu has a NeoGeo Pocket page with its own Shader (Off, LCD3x, Grid or Simpletex) and Bezel (`Bezels/NGP/`).
 - NeoGeo Pocket saves go to `Saves/NGP/`. The core writes them when the game stops, so slot now stops it before powering off or restarting.
 - The buttons follow the NeoGeo Pocket's layout: the left face button is its A and the right one its B. Start is Option.
 - The `NGP` folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
 - Sega Game Gear games (`.gg`) get their own shelf. Put them in `Games/GG/`. They run on the Gearsystem core. No BIOS is needed.
 - Game Gear carts are drawn in 1.7.0's look: grey moulded plastic tinted by the shell colour, with the raised hood and grip ridges over a squarish label (art goes in `Labels/GG/`, about 290x200), and a black default shell.
-- The Game Gear picture is shown like a Game Boy one: actual size at 3x, and L1 / R1 to stretch it and give it back.
+- The Game Gear picture is shown actual size at 3x. L1 stretches it to fill the screen and R1 gives it back.
 - The Screen menu has a Game Gear page with its own Shader (Off, LCD3x, Grid or Simpletex) and Bezel. A bezel is your own PNG in `Bezels/GG/`, or the SP frame on 4:3 screens. SELECT + B / A in a game changes the Game Gear shader too.
 - SELECT does nothing in a Game Gear game. Gearsystem would take it as a console reset, which the Game Gear does not have.
 - The Bezel rows on the WonderSwan, Atari Lynx and Game Gear Screen pages now show which bezel is picked.
