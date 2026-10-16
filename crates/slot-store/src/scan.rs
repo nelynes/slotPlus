@@ -27,7 +27,7 @@ impl Cart {
             }
             // Lynx and Game Gear files have no Game Boy header to read a title
             // from, so the file name stays the title.
-            Platform::Lynx | Platform::Gg => {}
+            Platform::Lynx | Platform::Gg | Platform::Ngp => {}
             _ => {
                 if let Some(title) = crate::gb::title(&self.rom) {
                     self.title = title;

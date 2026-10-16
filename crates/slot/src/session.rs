@@ -205,6 +205,28 @@ impl Session {
         }
     }
 
+    /// Power the handheld off. A core that writes its own save file does so
+    /// when its game is unloaded, so once Slot's own saves have settled, that
+    /// core is stopped before the power goes.
+    pub fn poweroff(&mut self) {
+        self.stop_self_saving_core();
+        self.app.poweroff();
+    }
+
+    /// Restart the handheld, stopping a core that writes its own saves first,
+    /// as `poweroff` does.
+    pub fn restart(&mut self) {
+        self.stop_self_saving_core();
+        self.app.restart();
+    }
+
+    fn stop_self_saving_core(&mut self) {
+        self.app.settle_saves();
+        if crate::core::writes_own_saves(self.app.core()) {
+            self.emu = None;
+        }
+    }
+
     fn ws_layout(&self) -> WsLayout {
         match (self.ws_vertical, self.app.frame_is_tall()) {
             (false, _) => WsLayout::Horizontal,

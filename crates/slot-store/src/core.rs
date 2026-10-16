@@ -13,15 +13,17 @@ pub enum Core {
     Cygne,
     Lynx,
     Gearsystem,
+    Ngp,
 }
 
 impl Core {
-    pub const ALL: [Core; 5] = [
+    pub const ALL: [Core; 6] = [
         Core::Mgba,
         Core::Gpsp,
         Core::Cygne,
         Core::Lynx,
         Core::Gearsystem,
+        Core::Ngp,
     ];
 
     pub fn as_str(&self) -> &'static str {
@@ -31,6 +33,7 @@ impl Core {
             Core::Cygne => "cygne",
             Core::Lynx => "lynx",
             Core::Gearsystem => "gearsystem",
+            Core::Ngp => "ngp",
         }
     }
 
@@ -49,6 +52,7 @@ impl Core {
             Core::Cygne => "Beetle Cygne",
             Core::Lynx => "Beetle Lynx",
             Core::Gearsystem => "Gearsystem",
+            Core::Ngp => "Beetle NeoPop",
         }
     }
 
@@ -59,6 +63,7 @@ impl Core {
             "cygne" => Some(Core::Cygne),
             "lynx" => Some(Core::Lynx),
             "gearsystem" => Some(Core::Gearsystem),
+            "ngp" => Some(Core::Ngp),
             _ => None,
         }
     }
@@ -70,6 +75,7 @@ impl Core {
             Core::Cygne => platform == Platform::Ws,
             Core::Lynx => platform == Platform::Lynx,
             Core::Gearsystem => platform == Platform::Gg,
+            Core::Ngp => platform == Platform::Ngp,
         }
     }
 
@@ -79,6 +85,7 @@ impl Core {
             Platform::Ws => Core::Cygne,
             Platform::Lynx => Core::Lynx,
             Platform::Gg => Core::Gearsystem,
+            Platform::Ngp => Core::Ngp,
         }
     }
 }

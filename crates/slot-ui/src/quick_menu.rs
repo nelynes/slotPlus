@@ -55,10 +55,13 @@ pub enum QuickRow {
     ScreenGg,
     GgShader,
     GgBezel,
+    ScreenNgp,
+    NgpShader,
+    NgpBezel,
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 49] = [
+    pub const ALL: [QuickRow; 52] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -108,6 +111,9 @@ impl QuickRow {
         QuickRow::ScreenGg,
         QuickRow::GgShader,
         QuickRow::GgBezel,
+        QuickRow::ScreenNgp,
+        QuickRow::NgpShader,
+        QuickRow::NgpBezel,
     ];
 
     pub const MAIN: [QuickRow; 4] = [
@@ -126,22 +132,25 @@ impl QuickRow {
         QuickRow::DateTime,
     ];
 
-    pub const SCREEN: [QuickRow; 6] = [
+    pub const SCREEN: [QuickRow; 7] = [
         QuickRow::ScreenGba,
         QuickRow::ScreenGbc,
         QuickRow::ScreenGb,
         QuickRow::ScreenWs,
         QuickRow::ScreenLynx,
         QuickRow::ScreenGg,
+        QuickRow::ScreenNgp,
     ];
 
-    /// The WonderSwan, Lynx and Game Gear cores have no colour correction to
-    /// set, so their pages hold a shader and a bezel.
+    /// The WonderSwan, Lynx, Game Gear and NeoGeo Pocket cores have no colour
+    /// correction to set, so their pages hold a shader and a bezel.
     pub const SCREEN_WS: [QuickRow; 2] = [QuickRow::WsShader, QuickRow::WsBezel];
 
     pub const SCREEN_LYNX: [QuickRow; 2] = [QuickRow::LynxShader, QuickRow::LynxBezel];
 
     pub const SCREEN_GG: [QuickRow; 2] = [QuickRow::GgShader, QuickRow::GgBezel];
+
+    pub const SCREEN_NGP: [QuickRow; 2] = [QuickRow::NgpShader, QuickRow::NgpBezel];
 
     pub const SCREEN_GBA: [QuickRow; 3] = [
         QuickRow::GbaShader,
@@ -199,10 +208,12 @@ impl QuickRow {
             | QuickRow::ScreenGb
             | QuickRow::ScreenWs
             | QuickRow::ScreenLynx
-            | QuickRow::ScreenGg => &QuickRow::SCREEN,
+            | QuickRow::ScreenGg
+            | QuickRow::ScreenNgp => &QuickRow::SCREEN,
             QuickRow::WsShader | QuickRow::WsBezel => &QuickRow::SCREEN_WS,
             QuickRow::LynxShader | QuickRow::LynxBezel => &QuickRow::SCREEN_LYNX,
             QuickRow::GgShader | QuickRow::GgBezel => &QuickRow::SCREEN_GG,
+            QuickRow::NgpShader | QuickRow::NgpBezel => &QuickRow::SCREEN_NGP,
             QuickRow::GbaShader | QuickRow::GbaColourCorrection | QuickRow::GbaBezel => {
                 &QuickRow::SCREEN_GBA
             }
@@ -246,6 +257,7 @@ impl QuickRow {
             QuickRow::WsShader => Some(QuickRow::ScreenWs),
             QuickRow::LynxShader => Some(QuickRow::ScreenLynx),
             QuickRow::GgShader => Some(QuickRow::ScreenGg),
+            QuickRow::NgpShader => Some(QuickRow::ScreenNgp),
             QuickRow::FastForward => Some(QuickRow::Game),
             QuickRow::Wallpaper => Some(QuickRow::General),
             QuickRow::PlayScreen => Some(QuickRow::Settings),
@@ -285,6 +297,7 @@ impl QuickRow {
             QuickRow::ScreenWs => Some(QuickRow::SCREEN_WS[0]),
             QuickRow::ScreenLynx => Some(QuickRow::SCREEN_LYNX[0]),
             QuickRow::ScreenGg => Some(QuickRow::SCREEN_GG[0]),
+            QuickRow::ScreenNgp => Some(QuickRow::SCREEN_NGP[0]),
             _ => None,
         }
     }
@@ -355,6 +368,9 @@ impl QuickRow {
             QuickRow::ScreenGg => "Game Gear",
             QuickRow::GgShader => "Shader",
             QuickRow::GgBezel => "Bezel",
+            QuickRow::ScreenNgp => "NeoGeo Pocket",
+            QuickRow::NgpShader => "Shader",
+            QuickRow::NgpBezel => "Bezel",
         }
     }
 
@@ -378,6 +394,7 @@ impl QuickRow {
                 | QuickRow::ScreenWs
                 | QuickRow::ScreenLynx
                 | QuickRow::ScreenGg
+                | QuickRow::ScreenNgp
         )
     }
 
@@ -639,8 +656,9 @@ pub struct QuickMenu<'a> {
     pub gba_bezel: Option<[(TexId, u32, u32); 2]>,
     pub gb_bezel: Option<[(TexId, u32, u32); 2]>,
     pub gbc_bezel: Option<[(TexId, u32, u32); 2]>,
-    /// The WonderSwan, Lynx and Game Gear Bezel rows' values, in that order.
-    pub extra_bezels: [Option<[(TexId, u32, u32); 2]>; 3],
+    /// The WonderSwan, Lynx, Game Gear and NeoGeo Pocket Bezel rows' values,
+    /// in that order.
+    pub extra_bezels: [Option<[(TexId, u32, u32); 2]>; 4],
     pub bezel: Option<[(TexId, u32, u32); 2]>,
     pub over_game: bool,
     pub canvas: Canvas,
@@ -701,6 +719,7 @@ impl QuickMenu<'_> {
                 QuickRow::WsBezel => self.extra_bezels[0].map(|c| c[lit as usize]),
                 QuickRow::LynxBezel => self.extra_bezels[1].map(|c| c[lit as usize]),
                 QuickRow::GgBezel => self.extra_bezels[2].map(|c| c[lit as usize]),
+                QuickRow::NgpBezel => self.extra_bezels[3].map(|c| c[lit as usize]),
                 QuickRow::Bezel => self.bezel.map(|c| c[lit as usize]),
                 _ => self.values[row.index()]
                     .and_then(|v| faces.values.get(v.index()))
@@ -781,4 +800,17 @@ fn push(out: &mut Vec<Draw>, tex: TexId, x: f32, y: f32, w: u32, h: u32) {
         tex,
         alpha: 1.0,
     });
+}
+
+#[cfg(test)]
+mod layout_tests {
+    use super::*;
+
+    #[test]
+    fn the_seven_console_screen_page_fits_above_the_legend_like_gameplay() {
+        assert_eq!(QuickRow::SCREEN.len(), QuickRow::GAME.len());
+        let last = *QuickRow::SCREEN.last().unwrap();
+        assert!(quick_row_top(last, &[]) + QUICK_PITCH <= LEGEND_Y);
+        assert!(quick_row_top(QuickRow::SCREEN[0], &[]) >= 0.0);
+    }
 }

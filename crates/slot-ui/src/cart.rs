@@ -108,6 +108,24 @@ pub const GG_LABEL_Y: u32 = gg_label_panel(GG_CART_W, GG_CART_H).1;
 pub const GG_LABEL_W: u32 = gg_label_panel(GG_CART_W, GG_CART_H).2 - GG_LABEL_X;
 pub const GG_LABEL_H: u32 = gg_label_panel(GG_CART_W, GG_CART_H).3 - GG_LABEL_Y;
 
+// NeoGeo Pocket: a ridged cap across the top, the wide label in a recessed
+// frame, and below a seam two plaques with a down arrow between them.
+pub use crate::bitmaps::{NGP_CART_H, NGP_CART_W};
+
+pub const fn ngp_label_panel(w: u32, h: u32) -> (u32, u32, u32, u32) {
+    (
+        (w * 115 + 500) / 1000,
+        (h * 215 + 500) / 1000,
+        (w * 905 + 500) / 1000,
+        (h * 712 + 500) / 1000,
+    )
+}
+
+pub const NGP_LABEL_X: u32 = ngp_label_panel(NGP_CART_W, NGP_CART_H).0;
+pub const NGP_LABEL_Y: u32 = ngp_label_panel(NGP_CART_W, NGP_CART_H).1;
+pub const NGP_LABEL_W: u32 = ngp_label_panel(NGP_CART_W, NGP_CART_H).2 - NGP_LABEL_X;
+pub const NGP_LABEL_H: u32 = ngp_label_panel(NGP_CART_W, NGP_CART_H).3 - NGP_LABEL_Y;
+
 const PAD: u32 = 10;
 const MAX_LINES: usize = 3;
 const MIN_PX: f32 = 10.0;
@@ -151,6 +169,7 @@ pub fn mould_of(cart: &Cart) -> Mould {
         Platform::Ws => Mould::Ws,
         Platform::Lynx => Mould::Lynx,
         Platform::Gg => Mould::Gg,
+        Platform::Ngp => Mould::Ngp,
         _ => match gb_shell_of(cart) {
             None => Mould::Gba,
             Some(GbShell::Notched) => Mould::Notched,
@@ -168,12 +187,13 @@ pub fn mould_for(platform: Platform) -> Mould {
         Platform::Ws => Mould::Ws,
         Platform::Lynx => Mould::Lynx,
         Platform::Gg => Mould::Gg,
+        Platform::Ngp => Mould::Ngp,
     }
 }
 
 pub fn gb_shell_of(cart: &Cart) -> Option<GbShell> {
     match cart.platform {
-        Platform::Gba | Platform::Ws | Platform::Lynx | Platform::Gg => None,
+        Platform::Gba | Platform::Ws | Platform::Lynx | Platform::Gg | Platform::Ngp => None,
         Platform::Gb | Platform::Gbc => Some(match cart.shell.map(|c| c.outline) {
             Some(Outline::Notched) => GbShell::Notched,
             Some(Outline::Rounded) => GbShell::Rounded,
@@ -236,6 +256,7 @@ fn spec(shape: Shape) -> Spec {
                 label: match mould {
                     Mould::Ws => (WS_LABEL_X, WS_LABEL_Y, WS_LABEL_W, WS_LABEL_H),
                     Mould::Gg => (GG_LABEL_X, GG_LABEL_Y, GG_LABEL_W, GG_LABEL_H),
+                    Mould::Ngp => (NGP_LABEL_X, NGP_LABEL_Y, NGP_LABEL_W, NGP_LABEL_H),
                     _ => (LYNX_LABEL_X, LYNX_LABEL_Y, LYNX_LABEL_W, LYNX_LABEL_H),
                 },
                 mask: extra_mask(mould),
@@ -591,7 +612,7 @@ fn dress(s: &Spec, rgba: &mut [u8]) {
         Mould::Notched => "GAME BOY",
         Mould::Rounded => "GAME BOY COLOR",
         // The slotPlus moulds carry their markings in their art.
-        Mould::Ws | Mould::Lynx | Mould::Gg => return,
+        Mould::Ws | Mould::Lynx | Mould::Gg | Mould::Ngp => return,
     };
     stamp_console(rgba, s.w, s.h, title, y0);
 }
@@ -757,7 +778,7 @@ fn generated_label(s: &Spec, title: &str) -> Vec<u8> {
 
     if let Some(font) = text::label_font() {
         let (max_px, max_h) = match s.mould {
-            Mould::Gba | Mould::Ws | Mould::Lynx | Mould::Gg => {
+            Mould::Gba | Mould::Ws | Mould::Lynx | Mould::Gg | Mould::Ngp => {
                 (lh as f32 / (MAX_LINES as f32 * 1.36), f32::INFINITY)
             }
             Mould::Notched | Mould::Rounded => {
@@ -789,10 +810,12 @@ fn ink(bg: [u8; 3]) -> [u8; 3] {
 }
 
 /// How round a mould's label corners are. A Game Gear label has rounded
-/// corners that tuck inside the arches of the hood; the others are square.
+/// corners that tuck inside the arches of the hood, and a NeoGeo Pocket's
+/// are softly rounded too; the others are square.
 fn label_corner(mould: Mould) -> f32 {
     match mould {
         Mould::Gg => 14.0,
+        Mould::Ngp => 6.0,
         _ => 0.0,
     }
 }

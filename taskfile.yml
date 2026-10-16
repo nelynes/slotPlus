@@ -10,20 +10,21 @@ vars:
   # Gearsystem 3.9.22
   GEARSYSTEM_COMMIT: 517ddaaafbab1af7a312c2b6b6f6043275f58500
   SLOT_IN_PROCESS: >-
-    --test bios --test core --test core_options --test e2e --test emu --test gb_palette_recolour --test gg_core --test gpsp
+    --test bios --test core --test core_options --test e2e --test emu --test gb_palette_recolour --test gg_core --test gpsp --test ngp_core
     --test link_ui --test mgba_gb_link --test mgba_link --test render_colour_correction
     --test render_gb_palette --test render_picture_modes --test runahead --test render
     --test render_in_game_menu --test render_power_wake --test render_quick_menu
     --test render_shelf --test render_shelves
   IN_PROCESS: >-
     (package(slot) & (binary(bios) | binary(core) | binary(core_options) | binary(e2e) | binary(emu)
-    | binary(gb_palette_recolour) | binary(gg_core) | binary(gpsp) | binary(link_ui) | binary(mgba_gb_link)
+    | binary(gb_palette_recolour) | binary(gg_core) | binary(gpsp) | binary(ngp_core) | binary(link_ui) | binary(mgba_gb_link)
     | binary(mgba_link) | binary(render_colour_correction) | binary(render_gb_palette)
     | binary(render_picture_modes) | binary(runahead) | binary(render) | binary(render_in_game_menu)
     | binary(render_power_wake) | binary(render_quick_menu) | binary(render_shelf)
     | binary(render_shelves)))
     | (package(slot-gfx) & binary(pipeline)) | (package(slot-ui) & binary(render_row_edges))
     | (package(slot-retro) & (binary(options) | binary(netpacket) | binary(libretro)))
+  NGP_COMMIT: a50d5ac288a81f2104ddf43195a4efdd15c72227
 
 tasks:
   default:
@@ -167,7 +168,7 @@ tasks:
       ROOT: '{{.ROOT | default "./sdcard"}}'
     cmds:
       - ./target/debug/slot --init-root {{.ROOT}}
-      - 'echo "content root ready at {{.ROOT}}: roms in Games/GBA, Games/GB, Games/GBC, Games/WS, Games/Lynx or Games/GG, labels in the matching Labels/GBA, Labels/GB, Labels/GBC, Labels/WS, Labels/Lynx or Labels/GG, battery saves in the matching Saves/GBA, Saves/GB, Saves/GBC, Saves/WS, Saves/Lynx or Saves/GG, save states under the matching States/GBA, States/GB, States/GBC, States/WS, States/Lynx or States/GG, gba_bios.bin and lynxboot.img in BIOS, pngs in Wallpapers, palette in Config/theme.txt"'
+      - 'echo "content root ready at {{.ROOT}}: roms in Games/GBA, Games/GB, Games/GBC, Games/WS, Games/Lynx, Games/GG or Games/NGP, labels in the matching Labels/GBA, Labels/GB, Labels/GBC, Labels/WS, Labels/Lynx, Labels/GG or Labels/NGP, battery saves in the matching Saves/GBA, Saves/GB, Saves/GBC, Saves/WS, Saves/Lynx, Saves/GG or Saves/NGP, save states under the matching States/GBA, States/GB, States/GBC, States/WS, States/Lynx, States/GG or States/NGP, gba_bios.bin and lynxboot.img in BIOS, pngs in Wallpapers, palette in Config/theme.txt"'
       - 'echo "nothing is moved for you: a file loose at the top of Games/, Saves/, Labels/ or States/ is left where it is and never reaches the shelf"'
 
   run:
@@ -355,6 +356,35 @@ tasks:
       - cp vendor/gearsystem_libretro.so.meta vendor/gearsystem-src.meta
       - 'echo "built vendor/gearsystem_libretro.so from vendor/gearsystem-src.tar.gz @ {{.GEARSYSTEM_COMMIT}}"'
 
+  core:ngp:
+    desc: >-
+        Build the aarch64 linux Beetle NeoPop (NeoGeo Pocket) core from its pinned source archive,
+        which ships beside it as its GPL-2.0 corresponding source
+    status:
+      - test -f vendor/ngp_libretro.so
+      - test -f vendor/ngp-src.tar.gz
+      - test "$(cat vendor/ngp-src.sha 2>/dev/null)" = "{{.NGP_COMMIT}}"
+      - test "$(cat vendor/ngp_libretro.so.meta 2>/dev/null)" = "$(sh cores/ngp/build.sh stamp {{.NGP_COMMIT}})"
+      - test "$(cat vendor/ngp-src.meta 2>/dev/null)" = "$(sh cores/ngp/build.sh stamp {{.NGP_COMMIT}})"
+    cmds:
+      - |
+        set -euo pipefail
+        mkdir -p vendor
+        rm -f vendor/ngp_libretro.so vendor/ngp_libretro.so.meta \
+              vendor/ngp-src.tar.gz vendor/ngp-src.sha vendor/ngp-src.meta
+        curl -fsSL -o vendor/ngp-src.tar.gz \
+          "https://github.com/libretro/beetle-ngp-libretro/archive/{{.NGP_COMMIT}}.tar.gz"
+        tar -tzf vendor/ngp-src.tar.gz | grep "^beetle-ngp-libretro-{{.NGP_COMMIT}}/Makefile$" > /dev/null
+      - task: device:sh
+        vars:
+          CMD: >-
+            sh cores/ngp/build.sh build {{.NGP_COMMIT}} vendor/ngp-src.tar.gz
+            target-device/ngp vendor/ngp_libretro.so
+      - file vendor/ngp_libretro.so | grep -q aarch64
+      - echo "{{.NGP_COMMIT}}" > vendor/ngp-src.sha
+      - cp vendor/ngp_libretro.so.meta vendor/ngp-src.meta
+      - 'echo "built vendor/ngp_libretro.so from vendor/ngp-src.tar.gz @ {{.NGP_COMMIT}}"'
+
   core:gpsp:test:
     desc: Prove gpSP's Advance Wars session-flip patch still fixes what it was written for
     deps: [core:gpsp]
@@ -399,7 +429,7 @@ tasks:
 
   dist:device:
     desc: Build the SD2 tree for an H700 device, OUT defaults to ./dist-device
-    deps: [core:device, core:gpsp, core:cygne, core:lynx, core:gearsystem, build:device]
+    deps: [core:device, core:gpsp, core:cygne, core:lynx, core:gearsystem, core:ngp, build:device]
     vars:
       OUT: '{{.OUT | default "dist-device"}}'
     cmds:
@@ -414,11 +444,13 @@ tasks:
       - file vendor/cygne_libretro.so | grep -q aarch64
       - file vendor/lynx_libretro.so | grep -q aarch64
       - file vendor/gearsystem_libretro.so | grep -q aarch64
+      - file vendor/ngp_libretro.so | grep -q aarch64
       - cp vendor/mgba_libretro.so {{.OUT}}/System/
       - cp vendor/gpsp_libretro.so {{.OUT}}/System/
       - cp vendor/cygne_libretro.so {{.OUT}}/System/
       - cp vendor/lynx_libretro.so {{.OUT}}/System/
       - cp vendor/gearsystem_libretro.so {{.OUT}}/System/
+      - cp vendor/ngp_libretro.so {{.OUT}}/System/
       - cp -r licenses {{.OUT}}/System/licenses
       - |
         set -euo pipefail
@@ -451,11 +483,16 @@ tasks:
         sha="$(cat vendor/gearsystem-src.sha)"
         cp vendor/gearsystem-src.tar.gz "{{.OUT}}/System/licenses/gearsystem-${sha}.tar.gz"
         cp vendor/gearsystem-src.meta "{{.OUT}}/System/licenses/gearsystem-${sha}.meta"
+      - |
+        set -euo pipefail
+        sha="$(cat vendor/ngp-src.sha)"
+        cp vendor/ngp-src.tar.gz "{{.OUT}}/System/licenses/ngp-${sha}.tar.gz"
+        cp vendor/ngp-src.meta "{{.OUT}}/System/licenses/ngp-${sha}.meta"
       - 'echo "device tree ready at {{.OUT}}, copy its contents to SD2"'
 
   deploy:device:
     desc: Build and push onto a device over adb, then restart it. SD defaults to /mnt/sdcard
-    deps: [core:device, core:gpsp, core:cygne, core:lynx, core:gearsystem, build:device]
+    deps: [core:device, core:gpsp, core:cygne, core:lynx, core:gearsystem, core:ngp, build:device]
     vars:
       SD: '{{.SD | default "/mnt/sdcard"}}'
     cmds:
@@ -465,6 +502,7 @@ tasks:
       - file vendor/cygne_libretro.so | grep -q aarch64
       - file vendor/lynx_libretro.so | grep -q aarch64
       - file vendor/gearsystem_libretro.so | grep -q aarch64
+      - file vendor/ngp_libretro.so | grep -q aarch64
       - adb push target-device/device/slot '{{.SD}}/System/slot'
       - for f in card/System/*; do adb push "$f" '{{.SD}}/System/'; done
       - adb push vendor/mgba_libretro.so '{{.SD}}/System/mgba_libretro.so'
@@ -472,6 +510,7 @@ tasks:
       - adb push vendor/cygne_libretro.so '{{.SD}}/System/cygne_libretro.so'
       - adb push vendor/lynx_libretro.so '{{.SD}}/System/lynx_libretro.so'
       - adb push vendor/gearsystem_libretro.so '{{.SD}}/System/gearsystem_libretro.so'
+      - adb push vendor/ngp_libretro.so '{{.SD}}/System/ngp_libretro.so'
       - adb push licenses '{{.SD}}/System/'
       - |
         set -euo pipefail
@@ -503,6 +542,11 @@ tasks:
         sha="$(cat vendor/gearsystem-src.sha)"
         adb push vendor/gearsystem-src.tar.gz "{{.SD}}/System/licenses/gearsystem-${sha}.tar.gz"
         adb push vendor/gearsystem-src.meta "{{.SD}}/System/licenses/gearsystem-${sha}.meta"
+      - |
+        set -euo pipefail
+        sha="$(cat vendor/ngp-src.sha)"
+        adb push vendor/ngp-src.tar.gz "{{.SD}}/System/licenses/ngp-${sha}.tar.gz"
+        adb push vendor/ngp-src.meta "{{.SD}}/System/licenses/ngp-${sha}.meta"
       - adb shell 'chmod +x {{.SD}}/System/slot && sync'
       - adb reboot
       - adb wait-for-device

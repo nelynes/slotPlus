@@ -96,7 +96,7 @@ fn open_named(
     paths: &[PathBuf],
 ) -> Option<Box<dyn RetroCore>> {
     let bios = root::bios_dir(root);
-    let saves = root::saves_dir(root);
+    let saves = save_dir_for(root, core);
     for path in paths {
         if !path.exists() {
             continue;
@@ -175,7 +175,7 @@ pub fn colour_option(
                 "OFF"
             },
         )),
-        Core::Cygne | Core::Lynx | Core::Gearsystem => None,
+        Core::Cygne | Core::Lynx | Core::Gearsystem | Core::Ngp => None,
         Core::Gpsp => Some((
             "gpsp_color_correction",
             if on { "enabled" } else { "disabled" },
@@ -202,9 +202,28 @@ pub fn option_prefix(which: Core) -> &'static str {
 }
 
 /// Whether the core has a `<prefix>_frameskip` option to set. Beetle Lynx
-/// and Gearsystem do not: both are cheap to run and have no frameskip setting.
+/// Gearsystem and Beetle NeoPop do not: they are cheap to run and have no
+/// frameskip setting.
 fn has_frameskip(which: Core) -> bool {
-    !matches!(which, Core::Lynx | Core::Gearsystem)
+    !matches!(which, Core::Lynx | Core::Gearsystem | Core::Ngp)
+}
+
+/// Whether the core writes its own save file rather than handing Slot its
+/// save memory. Beetle NeoPop writes a game's flash save to `<name>.flash`
+/// in the save directory when the game is unloaded, so the core has to be
+/// stopped before the handheld powers off.
+pub fn writes_own_saves(which: Core) -> bool {
+    which == Core::Ngp
+}
+
+/// The directory a core is told to save in. A core that writes its own save
+/// files is given its platform's folder under `Saves/`, beside the saves Slot
+/// writes for every other platform; the rest are given `Saves/` itself.
+pub fn save_dir_for(root: &Path, which: Core) -> PathBuf {
+    match which {
+        Core::Ngp => root::saves_dir(root).join(Platform::Ngp.dir_name()),
+        _ => root::saves_dir(root),
+    }
 }
 
 pub const LYNX_ROTATION_FILE: &str = "Config/lynx_rotation.txt";
@@ -333,6 +352,10 @@ pub fn apply_core_options(
         // link mode.
         core.set_option("gearsystem_link_enable", "Disabled");
     }
+    if which == Core::Ngp {
+        // Games that speak both languages run in English.
+        core.set_option("ngp_language", "english");
+    }
     if which == Core::Gpsp {
         core.set_option("gpsp_serial", serial);
         core.set_option("gpsp_rtc_time_source", "system");
@@ -415,12 +438,24 @@ mod tests {
     }
 
     #[test]
+    fn only_beetle_neopop_writes_its_own_saves_and_it_writes_them_in_saves_ngp() {
+        for which in Core::ALL {
+            assert_eq!(writes_own_saves(which), which == Core::Ngp, "{which:?}");
+        }
+        let root = Path::new("/sd");
+        assert_eq!(save_dir_for(root, Core::Ngp), Path::new("/sd/Saves/NGP"));
+        assert_eq!(save_dir_for(root, Core::Mgba), Path::new("/sd/Saves"));
+        assert_eq!(save_dir_for(root, Core::Gearsystem), Path::new("/sd/Saves"));
+    }
+
+    #[test]
     fn beetle_lynx_and_gearsystem_have_no_frameskip_option() {
         assert!(has_frameskip(Core::Mgba));
         assert!(has_frameskip(Core::Gpsp));
         assert!(has_frameskip(Core::Cygne));
         assert!(!has_frameskip(Core::Lynx));
         assert!(!has_frameskip(Core::Gearsystem));
+        assert!(!has_frameskip(Core::Ngp));
     }
 
     #[test]
@@ -432,6 +467,8 @@ mod tests {
         assert_eq!(option_prefix(Core::Cygne), "wswan");
         assert_eq!(option_prefix(Core::Lynx), "lynx");
         assert_eq!(option_prefix(Core::Gearsystem), "gearsystem");
+        // beetle-ngp names its one option ngp_language.
+        assert_eq!(option_prefix(Core::Ngp), "ngp");
     }
 
     #[test]

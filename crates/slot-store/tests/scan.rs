@@ -215,3 +215,27 @@ fn game_gear_roms_scan_into_their_own_platform_with_no_header_title() {
     }
     std::fs::remove_dir_all(&root).ok();
 }
+
+#[test]
+fn neogeo_pocket_roms_scan_into_one_shelf_with_no_header_title() {
+    let root = std::env::temp_dir().join(format!("slot-ngp-scan-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    let dir = root.join("Games").join("NGP");
+    std::fs::create_dir_all(&dir).unwrap();
+    let mut rom = vec![0u8; 0x8000];
+    rom[0x134..0x13c].copy_from_slice(b"GARBAGE!");
+    std::fs::write(dir.join("Metal Slug.ngp"), &rom).unwrap();
+    std::fs::write(dir.join("SNK vs Capcom.ngc"), &rom).unwrap();
+    std::fs::write(dir.join("Notes.txt"), b"not a rom").unwrap();
+
+    let mut carts = slot_store::scan(&root).unwrap();
+    assert_eq!(carts.len(), 2);
+    assert!(carts
+        .iter()
+        .all(|c| c.platform == slot_store::Platform::Ngp));
+    for c in &mut carts {
+        c.read_header();
+        assert_eq!(c.title, "", "{c:?}");
+    }
+    std::fs::remove_dir_all(&root).ok();
+}

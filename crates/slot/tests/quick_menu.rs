@@ -387,6 +387,7 @@ fn screen_opens_a_page_of_its_own_and_b_comes_back_to_it() {
         QuickRow::ScreenWs,
         QuickRow::ScreenLynx,
         QuickRow::ScreenGg,
+        QuickRow::ScreenNgp,
         QuickRow::ScreenGba,
         QuickRow::ScreenGbc,
         QuickRow::ScreenGb,
@@ -1207,4 +1208,36 @@ fn a_game_gear_bezel_cycles_through_the_cards_own_pngs_and_none() {
     );
     press(&mut a, Btn::Right);
     assert_eq!(read_slot_state(d.path()).bezel_gg, BezelPick::None);
+}
+
+#[test]
+fn the_neogeo_pocket_has_a_screen_page_with_its_own_shader_and_bezel() {
+    let (d, mut a, _) = on_carousel();
+    open_at(&mut a, QuickRow::NgpShader);
+    assert_eq!(
+        a.quick_value(QuickRow::NgpShader),
+        Some(QuickValue::Simpletex)
+    );
+    press(&mut a, Btn::Right);
+    assert_eq!(
+        read_slot_state(d.path()).shader_ngp,
+        Shader::Off,
+        "it went on to Transparent instead of wrapping"
+    );
+    assert_eq!(read_slot_state(d.path()).shader_gg, Shader::Simpletex);
+    press(&mut a, Btn::B);
+    assert_eq!(a.quick_menu(), Some(QuickRow::ScreenNgp));
+
+    let dir = d.path().join("Bezels").join("NGP");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("Pocket.png"), b"png").unwrap();
+    while a.quick_menu().is_some() {
+        press(&mut a, Btn::B);
+    }
+    open_at(&mut a, QuickRow::NgpBezel);
+    press(&mut a, Btn::Right);
+    assert_eq!(
+        read_slot_state(d.path()).bezel_ngp,
+        BezelPick::File("Pocket.png".into())
+    );
 }

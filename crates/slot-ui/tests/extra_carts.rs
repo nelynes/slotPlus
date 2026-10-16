@@ -1,5 +1,5 @@
-//! The carts slotPlus adds to Slot's three: the WonderSwan, the Atari Lynx and
-//! the Game Gear, drawn from their own art in the same style as the GBA and
+//! The carts slotPlus adds to Slot's three: the WonderSwan, the Atari Lynx, the
+//! Game Gear and the NeoGeo Pocket, drawn from their own art in the same style as the GBA and
 //! Game Boy carts.
 
 use slot_store::{Cart, Platform};
@@ -7,7 +7,8 @@ use slot_ui::{
     cart_box, cart_face, cart_interior, is_clear, label_size, mould_backing, mould_for, mould_of,
     mould_shadow, seated_box, shell_for, shows_interior, Finish, Mould, Shell, GB_CART_H,
     GG_CART_H, GG_CART_W, GG_LABEL_H, GG_LABEL_W, GG_LABEL_X, GG_LABEL_Y, GG_SHELL, LYNX_CART_H,
-    LYNX_CART_W, LYNX_LABEL_H, LYNX_LABEL_W, LYNX_LABEL_X, LYNX_LABEL_Y, WS_CART_H, WS_CART_W,
+    LYNX_CART_W, LYNX_LABEL_H, LYNX_LABEL_W, LYNX_LABEL_X, LYNX_LABEL_Y, NGP_CART_H, NGP_CART_W,
+    NGP_LABEL_H, NGP_LABEL_W, NGP_LABEL_X, NGP_LABEL_Y, NGP_SHELL, WS_CART_H, WS_CART_W,
     WS_LABEL_H, WS_LABEL_W, WS_LABEL_X, WS_LABEL_Y,
 };
 
@@ -35,6 +36,10 @@ fn gg() -> Cart {
     cart(Platform::Gg, "Sonic Chaos")
 }
 
+fn ngp() -> Cart {
+    cart(Platform::Ngp, "Metal Slug 1st Mission")
+}
+
 fn at(face: &slot_ui::CartFace, x: u32, y: u32) -> [u8; 4] {
     let i = ((y * face.w + x) * 4) as usize;
     [
@@ -55,10 +60,15 @@ fn each_cart_has_its_own_mould() {
     assert_eq!(mould_of(&lynx()), Mould::Lynx);
     assert_eq!(mould_of(&gg()), Mould::Gg);
     assert_eq!(mould_for(Platform::Gg), Mould::Gg);
+    assert_eq!(mould_of(&ngp()), Mould::Ngp);
+    assert_eq!(mould_for(Platform::Ngp), Mould::Ngp);
     assert_eq!(mould_for(Platform::Ws), Mould::Ws);
     assert_eq!(mould_for(Platform::Lynx), Mould::Lynx);
     assert_eq!(mould_for(Platform::Gba), Mould::Gba);
-    assert_eq!(Mould::EXTRA, [Mould::Ws, Mould::Lynx, Mould::Gg]);
+    assert_eq!(
+        Mould::EXTRA,
+        [Mould::Ws, Mould::Lynx, Mould::Gg, Mould::Ngp]
+    );
     for (i, m) in Mould::ALL.iter().enumerate() {
         assert_eq!(m.index(), i);
     }
@@ -74,7 +84,7 @@ fn the_wonderswan_cart_is_wide_and_the_lynx_card_nearly_square() {
     );
     assert!(LYNX_CART_H * 100 <= LYNX_CART_W * 110 && LYNX_CART_H >= LYNX_CART_W);
     assert!(LYNX_CART_H <= GB_CART_H, "no taller than the Game Boy pak");
-    for c in [ws(), lynx(), gg()] {
+    for c in [ws(), lynx(), gg(), ngp()] {
         let f = cart_face(&c);
         assert_eq!((f.w, f.h), cart_box(c.platform), "{:?}", c.platform);
         let (sw, sh) = seated_box(c.platform);
@@ -93,6 +103,7 @@ fn the_label_sits_inside_the_shell_and_is_the_size_the_cart_asks_art_for() {
             (LYNX_LABEL_X, LYNX_LABEL_Y, LYNX_LABEL_W, LYNX_LABEL_H),
         ),
         (gg(), (GG_LABEL_X, GG_LABEL_Y, GG_LABEL_W, GG_LABEL_H)),
+        (ngp(), (NGP_LABEL_X, NGP_LABEL_Y, NGP_LABEL_W, NGP_LABEL_H)),
     ] {
         assert_eq!(label_size(&c), (lw, lh));
         let f = cart_face(&c);
@@ -237,4 +248,42 @@ fn a_game_gear_cart_is_black_solid_plastic_with_no_contacts_showing() {
         })
         .count();
     assert_eq!(n, 0, "{n} gold pixels on a Game Gear pak");
+}
+
+#[test]
+fn the_neogeo_pocket_pak_is_a_little_wider_than_tall_with_a_wide_label() {
+    assert_eq!(cart_box(Platform::Ngp), (NGP_CART_W, NGP_CART_H));
+    assert!(NGP_CART_W * 100 >= NGP_CART_H * 110 && NGP_CART_W * 100 <= NGP_CART_H * 125);
+    assert!(NGP_CART_H <= GB_CART_H, "no taller than the Game Boy pak");
+    assert!(NGP_LABEL_W * 100 >= NGP_LABEL_H * 170 && NGP_LABEL_W * 100 <= NGP_LABEL_H * 200);
+}
+
+#[test]
+fn the_neogeo_pocket_cap_stands_proud_of_the_body() {
+    let f = cart_face(&ngp());
+    let width = |y: u32| (0..f.w).filter(|&x| at(&f, x, y)[3] > 128).count();
+    let cap = width(f.h / 20);
+    let body = width(f.h / 2);
+    assert!(body < cap, "cap {cap}px, body {body}px");
+    assert!(
+        body + 10 > cap,
+        "cap {cap}px, body {body}px: only a small step"
+    );
+}
+
+#[test]
+fn a_neogeo_pocket_cart_is_dark_grey_solid_plastic_with_no_contacts_showing() {
+    assert_eq!(shell_for(&ngp()), NGP_SHELL);
+    assert_eq!(NGP_SHELL.finish, Finish::Solid);
+    assert!(!is_clear(&ngp()));
+    let f = cart_face(&ngp());
+    let n = (0..f.h)
+        .flat_map(|y| (0..f.w).map(move |x| (x, y)))
+        .filter(|&(x, y)| {
+            let on_label = (NGP_LABEL_X..NGP_LABEL_X + NGP_LABEL_W).contains(&x)
+                && (NGP_LABEL_Y..NGP_LABEL_Y + NGP_LABEL_H).contains(&y);
+            !on_label && gold(at(&f, x, y))
+        })
+        .count();
+    assert_eq!(n, 0, "{n} gold pixels on a NeoGeo Pocket pak");
 }

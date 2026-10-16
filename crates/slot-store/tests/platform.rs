@@ -3,7 +3,7 @@ use slot_store::Platform;
 #[test]
 fn every_platform_has_a_directory() {
     let names: Vec<&str> = Platform::ALL.iter().map(|p| p.dir_name()).collect();
-    assert_eq!(names, vec!["GBA", "GB", "GBC", "WS", "Lynx", "GG"]);
+    assert_eq!(names, vec!["GBA", "GB", "GBC", "WS", "Lynx", "GG", "NGP"]);
 }
 
 #[test]
@@ -16,7 +16,8 @@ fn every_platform_is_a_shelf_of_its_own() {
             Platform::Gbc,
             Platform::Ws,
             Platform::Lynx,
-            Platform::Gg
+            Platform::Gg,
+            Platform::Ngp
         ]
     );
     for (i, p) in Platform::ALL.iter().enumerate() {
@@ -65,6 +66,7 @@ fn only_wonderswan_gets_a_bigger_video_buffer() {
         Platform::Gbc,
         Platform::Lynx,
         Platform::Gg,
+        Platform::Ngp,
     ] {
         assert_eq!(p.source_size(), (240, 160), "{p:?} must keep its buffer");
     }
@@ -100,4 +102,29 @@ fn a_rom_that_is_too_small_or_missing_is_not_vertical() {
     let tiny = ws_rom(d.path(), "Tiny.ws", 1024, 0x01);
     assert!(!slot_store::ws_vertical(&tiny));
     assert!(!slot_store::ws_vertical(&d.path().join("Missing.ws")));
+}
+
+#[test]
+fn neogeo_pocket_and_pocket_color_games_share_one_shelf() {
+    for name in [
+        "Metal Slug.ngp",
+        "SNK vs Capcom.ngc",
+        "Sonic.NGPC",
+        "Pac-Man.NGP",
+    ] {
+        assert!(Platform::Ngp.accepts(std::path::Path::new(name)), "{name}");
+    }
+    assert!(!Platform::Ngp.accepts(std::path::Path::new("Sonic Chaos.gg")));
+    assert!(!Platform::Gg.accepts(std::path::Path::new("Metal Slug.ngp")));
+    assert_eq!(Platform::Ngp.name(), "NeoGeo Pocket");
+    assert_eq!(Platform::Ngp.dir_name(), "NGP");
+}
+
+#[test]
+fn a_neogeo_pocket_picture_fits_the_shared_buffer_at_3x() {
+    assert_eq!(Platform::Ngp.picture(), (160, 152));
+    assert_eq!(Platform::Ngp.source_size(), (240, 160));
+    let (w, h) = Platform::Ngp.picture();
+    assert!(w * 3 <= 720 && h * 3 <= 480, "160x152 at 3x is 480x456");
+    assert!(!Platform::Ngp.turns());
 }

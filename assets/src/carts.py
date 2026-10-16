@@ -16,7 +16,7 @@ For each mould it writes, into the repository's `assets/`:
     <mould>_board.png     the board a clear cart shows
     <mould>_decal.png     drawn over the shell untinted (contacts, PCB)
 
-usage: python3 assets/src/carts.py [ws|lynx|gg ...]
+usage: python3 assets/src/carts.py [ws|lynx|gg|ngp ...]
 """
 
 import os
@@ -132,13 +132,17 @@ def rim(body):
     return band * (60 * up - 25 * down - 20 * np.abs(nx))
 
 
-def shade(height, body, well, seed, gain=26.0, occlusion=None):
-    """Light the plastic, stipple it, and leave the label well flat."""
+def shade(height, body, well, seed, gain=26.0, occlusion=None, smooth=None):
+    """Light the plastic, stipple it, and leave the label well flat. Where
+    `smooth` is set the stipple fades out, as on a polished recess floor."""
     g = NEUTRAL + light(height, gain)
     if occlusion is not None:
         g -= occlusion
     g += rim(body)
-    g += grain(height.shape, seed)
+    stipple = grain(height.shape, seed)
+    if smooth is not None:
+        stipple *= 1.0 - 0.85 * smooth
+    g += stipple
     g = np.where(well > 0.5, WELL, g)
     return np.clip(g, 0, 255) * body
 
@@ -406,7 +410,90 @@ def gamegear():
     rgba_colour(board, balpha).save(os.path.join(ASSETS, "gg_board.png"))
 
 
-MOULDS = {"ws": wonderswan, "lynx": lynx, "gg": gamegear}
+# --------------------------------------------------------------------------
+# NeoGeo Pocket: a pak a little wider than it is tall. A ridged cap runs
+# across the top, its sides standing a touch proud of the body; the wide
+# label sits in a recessed frame; and below a seam the foot carries two
+# plaques, SNK and NGP, with a down arrow between them, all pressed in.
+# The contacts are hidden, so there is no decal.
+
+NGP_LABEL_R = 6  # the label's corner radius, as slot-ui rounds the art
+
+
+def neogeo_pocket():
+    w, h = 312, 268
+    c = Canvas(w, h)
+    cap_h = round(h * 0.12)
+    inset = 3
+    cap = c.rrect(c.layer(), 0, 0, w, cap_h + 4, 9, corners=(True, True, False, False))
+    lower = c.rrect(c.layer(), inset, cap_h - 4, w - inset, h, 6)
+    body = np.maximum(f(cap), f(lower))
+
+    lx0, ly0 = round(w * 0.115), round(h * 0.215)
+    lx1, ly1 = round(w * 0.905), round(h * 0.712)
+    well = f(c.rrect(c.layer(), lx0, ly0, lx1, ly1, NGP_LABEL_R))
+    frame = f(c.rrect(c.layer(), w * 0.092, h * 0.195, w * 0.928, h * 0.732, 9))
+
+    grooves = c.layer()
+    for k in range(8):
+        y = h * (0.03 + k * 0.019)
+        c.rrect(grooves, w * 0.09, y, w * 0.91, y + 1.6, 0.8)
+
+    seam_y = h * 0.79
+    seam = c.rrect(c.layer(), inset, seam_y - 1, w - inset, seam_y + 1, 0)
+    foot = f(c.rrect(c.layer(), inset, seam_y, w - inset, h, 0))
+    plaques = c.layer()
+    c.rrect(plaques, w * 0.08, h * 0.835, w * 0.355, h * 0.948, 3)
+    c.rrect(plaques, w * 0.645, h * 0.835, w * 0.92, h * 0.948, 3)
+    left_word = c.text(c.layer(), w * 0.2175, h * 0.8915, "SNK", 21, weight=1)
+    right_word = c.text(c.layer(), w * 0.7825, h * 0.8915, "NGP", 21, weight=1)
+    words = np.maximum(f(left_word), f(right_word)) * f(plaques)
+    arrow = f(c.poly(c.layer(), [(w * 0.425, h * 0.842), (w * 0.582, h * 0.842),
+                                 (w * 0.5035, h * 0.948)]))
+    # The cap stands proud of the body below it, with a ledge along its foot.
+    capband = f(c.rrect(c.layer(), 0, 0, w, cap_h, 9, corners=(True, True, False, False)))
+
+    height = bevel(body, 4.0) * 2.6
+    # Shaded the same way as the band below: a groove or a recess is dark
+    # along its top and left edges and light along its bottom and right, and
+    # the raised cap the other way round, so its foot casts a dark ledge.
+    height -= soft(capband, 0.5) * 2.4
+    height += soft(f(grooves), 0.35) * 1.1
+    height += soft(frame, 0.7) * 1.6
+    height += soft(well, 0.6) * 0.6
+    # The seam above the band is a groove, shaded like the plaques: dark along
+    # its top edge and light along its bottom.
+    height += soft(f(seam), 0.5) * 2.4
+    height += soft(foot, 0.6) * 0.5
+    # The plaques and the arrow are pressed into the band and the lettering
+    # stands up out of the plaques. They are shaded so that a pressed-in
+    # shape is dark along its top and left edges and light along its bottom
+    # and right, and the raised letters the other way round.
+    height += soft(f(plaques), 0.6) * 2.6
+    height += soft(arrow, 0.7) * 3.6
+    height -= soft(words, 0.3) * 2.0
+    ledge = np.clip(soft(capband, 2.4) - capband, 0, 1)
+    occl = soft(frame, 1.8) * 6 + soft(f(plaques), 1.2) * 4 + soft(f(seam), 1.0) * 6
+    occl += ledge * 110 + soft(arrow, 0.8) * 10 + f(plaques) * 5 - soft(words, 0.4) * 5
+
+    # The floors of the plaques and the arrow are smooth, not stippled.
+    floor = soft(np.clip(f(plaques) - words, 0, 1) + arrow, 0.4)
+    neutral = shade(height, body, well, seed=41, occlusion=occl, smooth=floor)
+    rgba(neutral, body).save(os.path.join(ASSETS, "ngp_neutral.png"))
+    rgba(clear_from(neutral, body, 42), body).save(os.path.join(ASSETS, "ngp_clear.png"))
+    rgba(np.full_like(body, 255.0) * body, body).save(os.path.join(ASSETS, "ngp_cart.png"))
+    interior(c, body, 43, [(w * 0.5, h * 0.16, 8), (w * 0.12, h * 0.6, 6),
+                           (w * 0.88, h * 0.6, 6)]).save(os.path.join(ASSETS, "ngp_interior.png"))
+
+    board_region = c.rrect(c.layer(), 10, h * 0.16, w - 10, h - 3, 5)
+    board = pcb(c, board_region, 44, [(w * 0.18, h * 0.3, w * 0.5, h * 0.58),
+                                       (w * 0.6, h * 0.34, w * 0.8, h * 0.5)])
+    board, balpha = fingers(c, w * 0.07, w * 0.93, h * 0.935, h - 5, 44, board,
+                            f(board_region))
+    rgba_colour(board, balpha).save(os.path.join(ASSETS, "ngp_board.png"))
+
+
+MOULDS = {"ws": wonderswan, "lynx": lynx, "gg": gamegear, "ngp": neogeo_pocket}
 
 if __name__ == "__main__":
     for name in sys.argv[1:] or MOULDS:

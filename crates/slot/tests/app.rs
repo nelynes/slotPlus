@@ -2411,6 +2411,79 @@ fn the_shader_shortcut_steps_only_the_game_gear_shader_in_a_game_gear_game() {
 }
 
 #[test]
+fn the_shader_shortcut_steps_only_the_neogeo_pocket_shader_in_a_pocket_game() {
+    let d = root_with_one_cart("NGP", "Metal Slug.ngp");
+    let mut s = session_playing(d.path());
+    assert_eq!(s.app().core(), Core::Ngp);
+    assert_eq!(s.app().screen_shader(), Shader::Simpletex);
+    s.app_mut().apply(slot_input::Action::ShaderPrev);
+    let after = slot_store::read_slot_state(d.path());
+    assert_eq!(after.shader_ngp, Shader::Grid);
+    assert_eq!(
+        (after.shader_gb, after.shader_gg),
+        (Shader::Simpletex, Shader::Simpletex),
+        "a Pocket game moved another system's shader"
+    );
+}
+
+#[test]
+fn l_and_r_change_the_mode_on_a_neogeo_pocket_cart_and_never_reach_the_core() {
+    let d = root_with_one_cart("NGP", "Metal Slug.ngp");
+    let mut s = session_playing(d.path());
+    assert_eq!(s.app().source_rect(), WHOLE_TEXTURE);
+    s.feed([RawEvent::Down(Btn::L1)], 100);
+    assert_ne!(s.app().source_rect(), WHOLE_TEXTURE, "L did not stretch it");
+    assert_eq!(pad(&s) & ButtonMask::L, 0, "L reached the game as well");
+    s.feed([RawEvent::Up(Btn::L1)], 120);
+    s.feed([RawEvent::Down(Btn::R1)], 200);
+    assert_eq!(
+        s.app().source_rect(),
+        WHOLE_TEXTURE,
+        "R did not give it back"
+    );
+    assert_eq!(pad(&s) & ButtonMask::R, 0, "R reached the game as well");
+    s.feed([RawEvent::Up(Btn::R1)], 220);
+    s.feed([RawEvent::Down(Btn::Start)], 300);
+    assert_ne!(
+        pad(&s) & ButtonMask::START,
+        0,
+        "START (Option) did not reach the core"
+    );
+}
+
+#[test]
+fn powering_off_stops_neopop_first_so_it_can_write_its_save() {
+    let d = root_with_one_cart("NGP", "Metal Slug.ngp");
+    let mut s = session_playing(d.path());
+    assert!(s.emu().is_some());
+    s.poweroff();
+    assert!(
+        s.emu().is_none(),
+        "the Pocket core was still running at power off"
+    );
+}
+
+#[test]
+fn restarting_stops_neopop_first_too() {
+    let d = root_with_one_cart("NGP", "Metal Slug.ngp");
+    let mut s = session_playing(d.path());
+    assert!(s.emu().is_some());
+    s.restart();
+    assert!(
+        s.emu().is_none(),
+        "the Pocket core was still running at restart"
+    );
+}
+
+#[test]
+fn powering_off_leaves_a_core_that_hands_over_its_saves_alone() {
+    let d = common::tmp_root_with_gb_carts(&["Tetris", "Zzz"]);
+    let mut s = session_playing(d.path());
+    s.poweroff();
+    assert!(s.emu().is_some());
+}
+
+#[test]
 fn the_shader_shortcut_does_nothing_on_the_shelf() {
     let d = common::tmp_root_with_carts(&["Emerald", "Fusion"]);
     let (mut s, _motor) = common::session_with_platform(d.path());

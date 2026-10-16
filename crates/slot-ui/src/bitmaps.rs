@@ -12,20 +12,22 @@ pub enum Mould {
     Ws,
     Lynx,
     Gg,
+    Ngp,
 }
 
 impl Mould {
-    pub const ALL: [Mould; 6] = [
+    pub const ALL: [Mould; 7] = [
         Mould::Gba,
         Mould::Notched,
         Mould::Rounded,
         Mould::Ws,
         Mould::Lynx,
         Mould::Gg,
+        Mould::Ngp,
     ];
 
     /// The shapes slotPlus adds to Slot's three, each its own set of art.
-    pub const EXTRA: [Mould; 3] = [Mould::Ws, Mould::Lynx, Mould::Gg];
+    pub const EXTRA: [Mould; 4] = [Mould::Ws, Mould::Lynx, Mould::Gg, Mould::Ngp];
 
     pub fn index(self) -> usize {
         self as usize
@@ -39,6 +41,7 @@ impl Mould {
             Mould::Ws => (WS_CART_W, WS_CART_H),
             Mould::Lynx => (LYNX_CART_W, LYNX_CART_H),
             Mould::Gg => (GG_CART_W, GG_CART_H),
+            Mould::Ngp => (NGP_CART_W, NGP_CART_H),
         }
     }
 }
@@ -56,6 +59,9 @@ pub const LYNX_CART_H: u32 = 328;
 /// A Game Gear pak, a little wider than it is tall, at the WonderSwan's width.
 pub const GG_CART_W: u32 = 352;
 pub const GG_CART_H: u32 = 329;
+/// A NeoGeo Pocket pak, a little wider than it is tall, at the Game Boy pak's width.
+pub const NGP_CART_W: u32 = 312;
+pub const NGP_CART_H: u32 = 268;
 pub const BOARD_W: u32 = GBA_CART_W;
 pub const BOARD_H: u32 = GBA_CART_H;
 pub const SOCKET_W: u32 = 64;
@@ -109,11 +115,16 @@ const GG_SHELL_PNG: &[u8] = include_bytes!("../../../assets/gg_neutral.png");
 const GG_CLEAR_PNG: &[u8] = include_bytes!("../../../assets/gg_clear.png");
 const GG_INTERIOR_PNG: &[u8] = include_bytes!("../../../assets/gg_interior.png");
 const GG_BOARD_PNG: &[u8] = include_bytes!("../../../assets/gg_board.png");
+const NGP_CART_PNG: &[u8] = include_bytes!("../../../assets/ngp_cart.png");
+const NGP_SHELL_PNG: &[u8] = include_bytes!("../../../assets/ngp_neutral.png");
+const NGP_CLEAR_PNG: &[u8] = include_bytes!("../../../assets/ngp_clear.png");
+const NGP_INTERIOR_PNG: &[u8] = include_bytes!("../../../assets/ngp_interior.png");
+const NGP_BOARD_PNG: &[u8] = include_bytes!("../../../assets/ngp_board.png");
 const WS_DECAL_PNG: &[u8] = include_bytes!("../../../assets/ws_decal.png");
 const LYNX_DECAL_PNG: &[u8] = include_bytes!("../../../assets/lynx_decal.png");
 
 /// What a slotPlus mould draws over its shell untinted: the gold contacts, and on a
-/// WonderSwan the bare board below the shoulder. A Game Gear shows nothing.
+/// WonderSwan the bare board below the shoulder. A Game Gear or NeoGeo Pocket shows nothing.
 pub fn extra_decal(mould: Mould) -> Option<&'static [u8]> {
     static WS: OnceLock<Vec<u8>> = OnceLock::new();
     static LYNX: OnceLock<Vec<u8>> = OnceLock::new();
@@ -131,10 +142,12 @@ pub fn extra_cart(mould: Mould) -> &'static [u8] {
     static WS: OnceLock<Vec<u8>> = OnceLock::new();
     static LYNX: OnceLock<Vec<u8>> = OnceLock::new();
     static GG: OnceLock<Vec<u8>> = OnceLock::new();
+    static NGP: OnceLock<Vec<u8>> = OnceLock::new();
     let (bytes, slot) = match mould {
         Mould::Ws => (WS_CART_PNG, &WS),
         Mould::Lynx => (LYNX_CART_PNG, &LYNX),
         Mould::Gg => (GG_CART_PNG, &GG),
+        Mould::Ngp => (NGP_CART_PNG, &NGP),
         other => panic!("{other:?} is not a slotPlus mould"),
     };
     let (w, h) = mould.size();
@@ -146,10 +159,12 @@ pub fn extra_interior(mould: Mould) -> &'static [u8] {
     static WS: OnceLock<Vec<u8>> = OnceLock::new();
     static LYNX: OnceLock<Vec<u8>> = OnceLock::new();
     static GG: OnceLock<Vec<u8>> = OnceLock::new();
+    static NGP: OnceLock<Vec<u8>> = OnceLock::new();
     let (bytes, slot) = match mould {
         Mould::Ws => (WS_INTERIOR_PNG, &WS),
         Mould::Lynx => (LYNX_INTERIOR_PNG, &LYNX),
         Mould::Gg => (GG_INTERIOR_PNG, &GG),
+        Mould::Ngp => (NGP_INTERIOR_PNG, &NGP),
         other => panic!("{other:?} is not a slotPlus mould"),
     };
     let (w, h) = mould.size();
@@ -161,10 +176,12 @@ pub fn extra_board(mould: Mould) -> &'static [u8] {
     static WS: OnceLock<Vec<u8>> = OnceLock::new();
     static LYNX: OnceLock<Vec<u8>> = OnceLock::new();
     static GG: OnceLock<Vec<u8>> = OnceLock::new();
+    static NGP: OnceLock<Vec<u8>> = OnceLock::new();
     let (bytes, slot) = match mould {
         Mould::Ws => (WS_BOARD_PNG, &WS),
         Mould::Lynx => (LYNX_BOARD_PNG, &LYNX),
         Mould::Gg => (GG_BOARD_PNG, &GG),
+        Mould::Ngp => (NGP_BOARD_PNG, &NGP),
         other => panic!("{other:?} is not a slotPlus mould"),
     };
     let (w, h) = mould.size();
@@ -365,6 +382,8 @@ pub fn shell_asset(mould: Mould, clear: bool) -> &'static [u8] {
     static LYNX_CLEAR: OnceLock<Vec<u8>> = OnceLock::new();
     static GG: OnceLock<Vec<u8>> = OnceLock::new();
     static GG_CLEAR: OnceLock<Vec<u8>> = OnceLock::new();
+    static NGP: OnceLock<Vec<u8>> = OnceLock::new();
+    static NGP_CLEAR: OnceLock<Vec<u8>> = OnceLock::new();
     let (bytes, w, h, slot) = match (mould, clear) {
         (Mould::Ws, false) => (WS_SHELL_PNG, WS_CART_W, WS_CART_H, &WS),
         (Mould::Ws, true) => (WS_CLEAR_PNG, WS_CART_W, WS_CART_H, &WS_CLEAR),
@@ -372,6 +391,8 @@ pub fn shell_asset(mould: Mould, clear: bool) -> &'static [u8] {
         (Mould::Lynx, true) => (LYNX_CLEAR_PNG, LYNX_CART_W, LYNX_CART_H, &LYNX_CLEAR),
         (Mould::Gg, false) => (GG_SHELL_PNG, GG_CART_W, GG_CART_H, &GG),
         (Mould::Gg, true) => (GG_CLEAR_PNG, GG_CART_W, GG_CART_H, &GG_CLEAR),
+        (Mould::Ngp, false) => (NGP_SHELL_PNG, NGP_CART_W, NGP_CART_H, &NGP),
+        (Mould::Ngp, true) => (NGP_CLEAR_PNG, NGP_CART_W, NGP_CART_H, &NGP_CLEAR),
         (Mould::Gba, false) => (GBA_SHELL_PNG, GBA_CART_W, GBA_CART_H, &GBA),
         (Mould::Notched, false) => (GB_SHELL_PNG, GB_CART_W, GB_CART_H, &GB),
         (Mould::Rounded, false) => (GBC_SHELL_PNG, GB_CART_W, GB_CART_H, &GBC),

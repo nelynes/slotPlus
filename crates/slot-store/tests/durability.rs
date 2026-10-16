@@ -210,6 +210,7 @@ fn a_card_from_before_the_settings_keeps_all_its_values() {
             shader_ws: Shader::Simpletex,
             shader_lynx: Shader::Grid,
             shader_gg: Shader::Simpletex,
+            shader_ngp: Shader::Simpletex,
             eject_save: true,
             turbo: true,
             rewind: true,
@@ -227,6 +228,7 @@ fn a_card_from_before_the_settings_keeps_all_its_values() {
             bezel_ws: BezelPick::None,
             bezel_lynx: BezelPick::None,
             bezel_gg: BezelPick::None,
+            bezel_ngp: BezelPick::None,
             recents: Vec::new(),
             favorites: Vec::new(),
             shelf: None,
@@ -262,6 +264,8 @@ fn the_quick_menu_settings_round_trip_as_their_own_lines() {
         bezel_ws: BezelPick::File("Swan.png".into()),
         bezel_lynx: BezelPick::None,
         bezel_gg: BezelPick::File("Gear.png".into()),
+        shader_ngp: Shader::Grid,
+        bezel_ngp: BezelPick::File("Pocket.png".into()),
         bezel_gba: BezelPick::None,
         bezel_gb: BezelPick::Default,
         bezel_gbc: BezelPick::File("Pocket.png".into()),
@@ -302,6 +306,8 @@ fn the_quick_menu_settings_round_trip_as_their_own_lines() {
         "bezel_lynx=none",
         "shader_gg=lcd3x",
         "bezel_gg=Gear.png",
+        "shader_ngp=grid",
+        "bezel_ngp=Pocket.png",
         "shelf=gba",
         "shelf_cart=gba/Drill Dozer",
     ] {
@@ -605,6 +611,7 @@ fn transparent_is_on_both_game_boy_lists_and_no_other() {
     assert!(Shader::GB.contains(&Shader::Transparent));
     assert!(!Shader::WS.contains(&Shader::Transparent));
     assert!(!Shader::GG.contains(&Shader::Transparent));
+    assert!(!Shader::NGP.contains(&Shader::Transparent));
     assert!(!Shader::GBA.contains(&Shader::Transparent));
     assert!(!Shader::LYNX.contains(&Shader::Transparent));
     assert_eq!(Shader::parse("transparent"), Some(Shader::Transparent));
@@ -622,4 +629,5 @@ fn transparent_is_on_both_game_boy_lists_and_no_other() {
     assert_eq!(s.shader_gbc, Shader::Transparent);
     assert_eq!(s.shader_ws, SlotState::default().shader_ws);
     assert_eq!(s.shader_gg, SlotState::default().shader_gg);
+    assert_eq!(s.shader_ngp, SlotState::default().shader_ngp);
 }

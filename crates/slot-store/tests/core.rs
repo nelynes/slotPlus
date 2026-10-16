@@ -254,3 +254,20 @@ fn gearsystem_is_named_and_parsed_the_way_its_library_is() {
     assert_eq!(Core::Gearsystem.text(), "Gearsystem");
     assert_eq!(Core::ALL[Core::Gearsystem.index()], Core::Gearsystem);
 }
+
+#[test]
+fn a_neogeo_pocket_cart_always_gets_beetle_neopop() {
+    let d = root_with(Some("Metal Slug = mgba\n"));
+    assert_eq!(
+        core_for_platform(d.path(), "Metal Slug", Platform::Ngp),
+        Core::Ngp
+    );
+    assert_eq!(Core::default_for(Platform::Ngp), Core::Ngp);
+    assert_eq!(Core::choices(Platform::Ngp), vec![Core::Ngp]);
+    assert!(!Core::Ngp.runs(Platform::Gg));
+    assert!(!Core::Gearsystem.runs(Platform::Ngp));
+    assert_eq!(Core::Ngp.as_str(), "ngp");
+    assert_eq!(Core::parse("NGP"), Some(Core::Ngp));
+    assert_eq!(Core::Ngp.text(), "Beetle NeoPop");
+    assert_eq!(Core::ALL[Core::Ngp.index()], Core::Ngp);
+}

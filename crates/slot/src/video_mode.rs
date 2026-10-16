@@ -41,10 +41,13 @@ pub fn write_video_mode(root: &Path, stem: &str, mode: VideoMode) -> std::io::Re
 }
 
 /// Platforms whose stretch widens the picture only, keeping every line and
-/// the band above and below it: the Game Boy, Game Boy Color and Game Gear,
-/// like the GBA. A WonderSwan or Lynx picture is stretched to fill both ways.
+/// the band above and below it: the Game Boy, Game Boy Color, Game Gear and
+/// NeoGeo Pocket, like the GBA. A WonderSwan or Lynx picture is stretched to fill both ways.
 fn widens_only(platform: Platform) -> bool {
-    matches!(platform, Platform::Gb | Platform::Gbc | Platform::Gg)
+    matches!(
+        platform,
+        Platform::Gb | Platform::Gbc | Platform::Gg | Platform::Ngp
+    )
 }
 
 pub fn source_rect(platform: Platform, mode: VideoMode) -> [f32; 4] {
