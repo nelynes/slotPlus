@@ -18,6 +18,7 @@ No BIOS is needed. The core stands in for it.
 - **Label art:** optional PNGs go in `Labels/NGP/<game name>.png`.
 - **Core:** NeoGeo Pocket games run on Beetle NeoPop, set to English for games that have both languages.
 - **Picture:** the 160x152 screen is shown at 3x, or stretched with L1 to fill the screen.
+- **Bezel:** the Screen menu's NeoGeo Pocket page has a bundled Default bezel with the NeoGeo Pocket name and logo down the left side. You can also use your own PNGs in `Bezels/NGP/`. A bezel shows at actual size, not when stretched.
 - **Saves:** games save to `Saves/NGP/<game name>.flash`. The core writes this file itself when the game stops, so eject the cart, power off or restart from the menu as usual; slotPlus stops the core first so the save is written. Save states work as they do for every other system.
 
 ### Controls

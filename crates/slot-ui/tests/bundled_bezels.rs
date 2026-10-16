@@ -38,9 +38,28 @@ fn the_game_gear_has_a_black_bezel_with_a_green_power_light_over_its_screen() {
 }
 
 #[test]
-fn only_the_game_boys_and_the_game_gear_have_a_bundled_bezel() {
+fn the_neogeo_pocket_bezel_leaves_its_whole_3x_screen_clear() {
+    let face = default_game_bezel_face(Platform::Ngp).expect("a NeoGeo Pocket bezel");
+    // The 160x152 picture at 3x: 480x456 from (120, 12).
+    for (x, y) in [(120, 12), (599, 12), (120, 467), (599, 467), (360, 240)] {
+        assert_eq!(at(&face, x, y)[3], 0, "the window is covered at {x},{y}");
+    }
+    for (x, y) in [(119, 240), (600, 240), (360, 11), (360, 468), (680, 240)] {
+        assert_eq!(
+            at(&face, x, y)[3],
+            255,
+            "the face is see-through at {x},{y}"
+        );
+    }
+}
+
+#[test]
+fn only_the_game_boys_the_game_gear_and_the_neogeo_pocket_have_a_bundled_bezel() {
     for platform in Platform::ALL {
-        let bundled = matches!(platform, Platform::Gb | Platform::Gbc | Platform::Gg);
+        let bundled = matches!(
+            platform,
+            Platform::Gb | Platform::Gbc | Platform::Gg | Platform::Ngp
+        );
         assert_eq!(has_default_game_bezel(platform), bundled, "{platform:?}");
         assert_eq!(
             default_game_bezel_face(platform).is_some(),

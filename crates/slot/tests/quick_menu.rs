@@ -1238,6 +1238,8 @@ fn the_neogeo_pocket_has_a_screen_page_with_its_own_shader_and_bezel() {
     }
     open_at(&mut a, QuickRow::NgpBezel);
     press(&mut a, Btn::Right);
+    assert_eq!(read_slot_state(d.path()).bezel_ngp, BezelPick::Default);
+    press(&mut a, Btn::Right);
     assert_eq!(
         read_slot_state(d.path()).bezel_ngp,
         BezelPick::File("Pocket.png".into())

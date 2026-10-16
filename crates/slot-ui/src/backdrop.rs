@@ -9,8 +9,10 @@ use crate::art;
 const DEFAULT_PNG: &[u8] = include_bytes!("../../../assets/background_default.png");
 const BEZEL_GB_PNG: &[u8] = include_bytes!("../../../assets/bezel_gb.png");
 const BEZEL_GBC_PNG: &[u8] = include_bytes!("../../../assets/bezel_gbc.png");
-// slotPlus's own, drawn by `assets/src/bezels.py`.
+// slotPlus's own: the Game Gear's drawn by `assets/src/bezels.py`, the
+// NeoGeo Pocket's made by hand.
 const BEZEL_GG_PNG: &[u8] = include_bytes!("../../../assets/bezel_gg.png");
+const BEZEL_NGP_PNG: &[u8] = include_bytes!("../../../assets/bezel_ngp.png");
 const BLUR_PNG: &[u8] = include_bytes!("../../../assets/background_default_blur.png");
 
 const SCRIM: f32 = 0.62;
@@ -33,6 +35,7 @@ pub fn default_game_bezel_face(platform: Platform) -> Option<Vec<u8>> {
         Platform::Gb => BEZEL_GB_PNG,
         Platform::Gbc => BEZEL_GBC_PNG,
         Platform::Gg => BEZEL_GG_PNG,
+        Platform::Ngp => BEZEL_NGP_PNG,
         _ => return None,
     };
     art::cover_bytes(png, OUT_W, OUT_H)
@@ -40,7 +43,10 @@ pub fn default_game_bezel_face(platform: Platform) -> Option<Vec<u8>> {
 
 /// Whether a platform has a bezel bundled for it, offered as Default.
 pub fn has_default_game_bezel(platform: Platform) -> bool {
-    matches!(platform, Platform::Gb | Platform::Gbc | Platform::Gg)
+    matches!(
+        platform,
+        Platform::Gb | Platform::Gbc | Platform::Gg | Platform::Ngp
+    )
 }
 
 /// The carousel ground, scaled to cover the whole screen, including behind the footer.
