@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed: opening the menu froze the handheld after playing a WonderSwan or Atari Lynx game, until it was switched off.
+
 ## [1.7.0-plus1](https://github.com/nelynes/slotPlus/releases/tag/v1.7.0-plus1)
 
 slotPlus: Slot 1.7.0 plus WonderSwan and Atari Lynx.

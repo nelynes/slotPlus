@@ -1163,3 +1163,25 @@ fn a_wonderswan_bezel_cycles_through_the_cards_own_pngs_and_none() {
         "the Lynx read the WonderSwan's bezels"
     );
 }
+
+#[test]
+fn the_menu_opens_after_playing_a_system_with_no_colour_correction() {
+    // The menu's in-game Color Correction row stands for the playing
+    // system's own row. A WonderSwan or Lynx has none, and that row used to
+    // look itself up forever and overflow the stack, freezing the handheld
+    // as the menu opened.
+    for platform in [slot_store::Platform::Ws, slot_store::Platform::Lynx] {
+        let (_d, mut a, _) = on_carousel();
+        a.set_platform(platform);
+        assert_eq!(
+            a.quick_value(QuickRow::ColourCorrection),
+            None,
+            "{platform:?}"
+        );
+        assert!(a.quick_value(QuickRow::Shader).is_some(), "{platform:?}");
+        a.apply(Action::QuickMenu);
+        assert!(a.quick_menu().is_some());
+        let mut out = Vec::new();
+        a.draw(&mut out);
+    }
+}
