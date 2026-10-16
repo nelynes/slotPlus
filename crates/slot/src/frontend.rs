@@ -539,6 +539,7 @@ impl Frontend {
         sync_game_bezel(self.session.app_mut(), compositor, &mut self.game_bezel);
         compositor.set_game_bezel(self.session.app().shown_game_bezel());
         compositor.set_sp_frame(self.session.app().sp_frame());
+        compositor.set_game_fills_panel(self.session.app().game_fills_panel());
         sync_core_picker(
             self.session.app_mut(),
             compositor,

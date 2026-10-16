@@ -1,4 +1,5 @@
 use slot::app::{App, Phase, IN_GAME_MENU};
+use slot::video_mode::VideoMode;
 use slot_gfx::{Canvas, Draw, Layout};
 use slot_input::Action;
 use slot_store::{Cart, Platform};
@@ -7,13 +8,17 @@ const PANEL_4_3: (u32, u32) = (640, 480);
 const NATIVE: Canvas = Canvas { w: 640.0, h: 480.0 };
 
 fn app_with_carts(stems: &[&str], panel: (u32, u32)) -> App {
+    app_on(Platform::Gba, stems, panel)
+}
+
+fn app_on(platform: Platform, stems: &[&str], panel: (u32, u32)) -> App {
     let mut a = App::new(
         stems
             .iter()
             .map(|stem| Cart {
-                platform: Platform::Gba,
+                platform,
                 stem: (*stem).to_string(),
-                rom: format!("Games/GBA/{stem}.gba").into(),
+                rom: format!("Games/{}/{stem}.rom", platform.dir_name()).into(),
                 label: None,
                 code: String::new(),
                 shell: None,
@@ -307,4 +312,49 @@ fn ejecting_while_the_overlay_rises_never_raises_it_further() {
         );
         high = now;
     });
+}
+
+fn playing_on(platform: Platform, panel: (u32, u32)) -> App {
+    let mut a = app_on(platform, &["Game", "Zzz"], panel);
+    a.set_platform(platform);
+    a.apply(Action::Insert);
+    a.on_core_ready();
+    for _ in 0..120 {
+        tick(&mut a);
+    }
+    a
+}
+
+#[test]
+fn a_stretched_game_fills_a_4_by_3_panel_but_the_game_boy_keeps_its_window() {
+    for platform in [
+        Platform::Gba,
+        Platform::Ws,
+        Platform::Lynx,
+        Platform::Gg,
+        Platform::Ngp,
+    ] {
+        let mut a = playing_on(platform, PANEL_4_3);
+        assert!(matches!(a.phase(), Phase::Playing { .. }), "{platform:?}");
+        assert!(!a.game_fills_panel(), "{platform:?} filled at actual size");
+        assert_eq!(a.layout(), Layout::Framed, "{platform:?}");
+        a.set_video_mode(VideoMode::Stretch);
+        assert!(a.game_fills_panel(), "{platform:?} did not fill the panel");
+        assert_eq!(a.layout(), Layout::Native, "{platform:?}");
+        assert_eq!(a.canvas(), NATIVE, "{platform:?}");
+    }
+    for platform in [Platform::Gb, Platform::Gbc] {
+        let mut a = playing_on(platform, PANEL_4_3);
+        a.set_video_mode(VideoMode::Stretch);
+        assert!(!a.game_fills_panel(), "{platform:?} left its 3:2 window");
+        assert_eq!(a.layout(), Layout::Framed, "{platform:?}");
+    }
+}
+
+#[test]
+fn a_stretched_game_on_a_720_panel_needs_nothing_more() {
+    let mut a = playing_on(Platform::Gg, (720, 480));
+    a.set_video_mode(VideoMode::Stretch);
+    assert!(!a.game_fills_panel());
+    assert_eq!(a.canvas(), Canvas::FRAMED);
 }

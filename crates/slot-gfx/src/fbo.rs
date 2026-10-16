@@ -38,6 +38,7 @@ pub struct Compositor {
     bezel: Option<gl::types::GLuint>,
     game_bezel: Option<TexId>,
     sp_frame: bool,
+    fills_panel: bool,
     turn: Option<Turn>,
 }
 
@@ -106,6 +107,7 @@ impl Compositor {
                 bezel: None,
                 game_bezel: None,
                 sp_frame: true,
+                fills_panel: false,
                 turn: None,
             })
         }
@@ -198,6 +200,12 @@ impl Compositor {
 
     pub fn set_sp_frame(&mut self, on: bool) {
         self.sp_frame = on;
+    }
+
+    /// Draw the game over the whole of a 4:3 panel, when the frame is drawn
+    /// at the panel's own size, instead of in its 3:2 window.
+    pub fn set_game_fills_panel(&mut self, on: bool) {
+        self.fills_panel = on;
     }
 
     fn draw_game_bezel(&mut self) {
@@ -488,12 +496,16 @@ impl Compositor {
         if !self.native() {
             return draw(self);
         }
-        let (w, h) = canvas_size(self.window);
+        let (w, h) = match self.fills_panel {
+            true => self.size,
+            false => canvas_size(self.window),
+        };
         self.game
             .set_fbo_scale(w as f32 / OUT_W as f32, h as f32 / OUT_H as f32);
-        let y = match self.sp_frame {
-            true => self.size.1 - h,
-            false => (self.size.1 - h) / 2,
+        let y = match (self.fills_panel, self.sp_frame) {
+            (true, _) => 0,
+            (false, true) => self.size.1 - h,
+            (false, false) => (self.size.1 - h) / 2,
         };
         self.game.set_origin(0.0, y as f32);
         unsafe { gl::Viewport(0, y as i32, w as i32, h as i32) };

@@ -2660,6 +2660,11 @@ impl App {
         if matches!(self.phase, Phase::Playing { .. }) && self.in_game_menu_shown().is_some() {
             return IN_GAME_MENU;
         }
+        // A game stretched over a 4:3 panel is drawn at the panel's own size,
+        // as the in-game menu is, so the picture can fill it edge to edge.
+        if self.game_fills_panel() {
+            return Layout::Native;
+        }
         match &self.phase {
             Phase::Playing { .. } | Phase::Polaroids { .. } => Layout::Framed,
             Phase::Ejecting { .. } if self.overlay_slide() > 0.0 => Layout::Framed,
@@ -2686,6 +2691,20 @@ impl App {
 
     fn framed_panel(&self) -> bool {
         slot_gfx::framed(self.panel)
+    }
+
+    /// Whether the running game fills a 4:3 panel edge to edge rather than
+    /// sitting in its 3:2 window above the SP frame. A stretched game does,
+    /// once its screen is fully on, except on the Game Boy and Game Boy
+    /// Color, which keep 1.7.0's stretch, and a game turned on its side,
+    /// which always shows its whole buffer.
+    pub fn game_fills_panel(&self) -> bool {
+        self.framed_panel()
+            && self.video_mode == VideoMode::Stretch
+            && !matches!(self.platform, Platform::Gb | Platform::Gbc)
+            && !self.portrait()
+            && matches!(self.phase, Phase::Playing { .. })
+            && self.screen >= 1.0
     }
 
     fn draw_powering(&self, out: &mut Vec<Draw>) {
