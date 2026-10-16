@@ -14,12 +14,11 @@ A slightly modified Slot. Has support for GBA, GBC, and GB titles as well as Won
 
 No BIOS is needed. The core stands in for it.
 
-- **Games:** put `.ngp`, `.ngc` and `.ngpc` files in `Games/NGP/`. Black-and-white and color games share one shelf. The `NGP` folders (`Games`, `Labels`, `Saves`, `States`, `Bezels`) are created for you on first boot.
-- **Label art:** optional PNGs go in `Labels/NGP/<game name>.png`, roughly 246x133 px (about 1.85:1).
+- **Games:** put `.ngp`, `.ngc` and `.ngpc` files in `Games/NGP/`.
+- **Label art:** optional PNGs go in `Labels/NGP/<game name>.png`.
 - **Core:** NeoGeo Pocket games run on Beetle NeoPop, set to English for games that have both languages.
-- **Carts:** NeoGeo Pocket paks are drawn in 1.7's moulded-plastic look: a ridged cap standing proud of the body, a wide label in a recessed frame, and a lower band with a down arrow and SNK and NGP plaques pressed into it, their letters raised. They default to a dark grey shell. Set `Config/cart_shell.txt` to give a single game a different shell.
-- **Picture:** the 160x152 screen is shown at 3x, or stretched with L1, like the Game Boy. The Screen menu has a NeoGeo Pocket page with its own Shader (Off, LCD3x, Grid or Simpletex) and Bezel, and SELECT + B / A changes the shader in a game. For a bezel, put your own PNGs in `Bezels/NGP/`.
-- **Saves:** games save to `Saves/NGP/<game name>.flash`. The core writes this file itself when the game stops, so eject the cart, power off or restart from the menu as usual; slot stops the core first so the save is written. Save states work as they do for every other system.
+- **Picture:** the 160x152 screen is shown at 3x, or stretched with L1, like the Game Boy. 
+- **Saves:** games save to `Saves/NGP/<game name>.flash`. The core writes this file itself when the game stops, so eject the cart, power off or restart from the menu as usual; slotPlus stops the core first so the save is written. Save states work as they do for every other system.
 
 ### Controls
 
@@ -38,12 +37,11 @@ The buttons follow the NeoGeo Pocket's layout, so its A is the left button and i
 
 No BIOS is needed. Game Gear games boot straight in.
 
-- **Games:** put `.gg` files in `Games/GG/`. They get their own shelf. The `GG` folders (`Games`, `Labels`, `Saves`, `States`, `Bezels`) are created for you on first boot.
-- **Label art:** optional PNGs go in `Labels/GG/<game name>.png`, roughly 290x200 px (about 1.45:1).
+- **Games:** put `.gg` files in `Games/GG/`.
+- **Label art:** optional PNGs go in `Labels/GG/<game name>.png`.
 - **Core:** Game Gear games run on Gearsystem.
-- **Carts:** Game Gear paks are drawn in 1.7's moulded-plastic look: a nearly square shape with a raised hood and grip ridges over the label and the SEGA plaque at the foot. They default to a black shell. Set `Config/cart_shell.txt` to give a single game a different shell.
-- **Picture:** the Game Gear screen is the same 160x144 as the Game Boy's, so it is shown the same way: actual size at 3x, or stretched. The Screen menu has a Game Gear page with its own Shader (Off, LCD3x, Grid or Simpletex) and Bezel, and SELECT + B / A changes the shader in a game. For a bezel, put your own PNGs in `Bezels/GG/`. On 4:3 handhelds such as the RG 35XXSP it is fitted to the screen the same way the Game Boy is.
-- **Saves:** games with battery saves keep them in `Saves/GG/`. Save states work as they do for every other system.
+- **Picture:** the Game Gear screen is the same 160x144 as the Game Boy's, so it is shown the same way: actual size at 3x, or stretched.
+- **Saves:** games with battery saves keep them in `Saves/GG/`.
 
 ### Controls
 
@@ -61,11 +59,10 @@ No BIOS is needed. Game Gear games boot straight in.
 > [!IMPORTANT]
 > Atari Lynx games need `lynxboot.img`, the Lynx boot ROM. It is **not included**. Put your own copy in `BIOS/`.
 
-- **Games:** put `.lnx` and `.lyx` files in `Games/Lynx/`. They get their own shelf. The `Lynx` folders (`Games`, `Labels`, `Saves`, `States`) are created for you on first boot.
-- **Label art:** optional PNGs go in `Labels/Lynx/<game name>.png`, roughly 284x190 px (about 1.5:1).
+- **Games:** put `.lnx` and `.lyx` files in `Games/Lynx/`.
+- **Label art:** optional PNGs go in `Labels/Lynx/<game name>.png`.
 - **Core:** Lynx games run on Beetle Lynx.
 - **Screen:** the Screen menu has an Atari Lynx page with its own Shader (Off, LCD3x, Grid or Dot) and Bezel. For a bezel, put your own PNGs in `Bezels/Lynx/`.
-- **Carts:** Lynx carts are drawn as the curved-lip card, with its gold contacts behind a clear strip at the foot. Set `Config/cart_shell.txt` to give a single game a different shell.
 - **Saves:** Beetle Lynx has no battery saves. Use save states and the resume state.
 
 ### Controls
