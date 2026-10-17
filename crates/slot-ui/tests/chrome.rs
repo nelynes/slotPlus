@@ -3,7 +3,7 @@ use slot_ui::{
     cart_box, draw_empty_slot, edge, foot_y, housing, icon_box, opening, recess, seated_box,
     Canvas, Draw, Shelf, SlotChrome, TexId, ALERT_PX, CART_H, CART_W, GB_LABEL_H, GB_LABEL_Y,
     GG_LABEL_H, GG_LABEL_Y, LABEL_H, LABEL_Y, LYNX_LABEL_H, LYNX_LABEL_Y, MOUTH_H, NGP_LABEL_H,
-    NGP_LABEL_Y, OUT_H, OUT_W, WS_LABEL_H, WS_LABEL_Y,
+    NGP_LABEL_Y, OUT_H, OUT_W, TG16_LABEL_H, TG16_LABEL_Y, WS_LABEL_H, WS_LABEL_Y,
 };
 
 const CENTRED: f32 = (OUT_W - CART_W) as f32 / 2.0;
@@ -48,6 +48,7 @@ fn label_band(c: &Cart) -> (f32, f32) {
         Platform::Lynx => (LYNX_LABEL_Y as f32, LYNX_LABEL_H as f32),
         Platform::Gg => (GG_LABEL_Y as f32, GG_LABEL_H as f32),
         Platform::Ngp => (NGP_LABEL_Y as f32, NGP_LABEL_H as f32),
+        Platform::Tg16 => (TG16_LABEL_Y as f32, TG16_LABEL_H as f32),
     };
     let k = seated_box(c.platform).1 as f32 / cart_box(c.platform).1 as f32;
     (y * k, h * k)

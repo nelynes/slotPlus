@@ -56,6 +56,10 @@ jobs:
           ngp_src_sha="$(cat vendor/ngp-src.sha)"
           test -f "$out/System/licenses/ngp-${ngp_src_sha}.tar.gz"
           test -f "$out/System/licenses/ngp-${ngp_src_sha}.meta"
+          file "$out/System/pce_libretro.so" | grep -q aarch64
+          pce_src_sha="$(cat vendor/pce-src.sha)"
+          test -f "$out/System/licenses/pce-${pce_src_sha}.tar.gz"
+          test -f "$out/System/licenses/pce-${pce_src_sha}.meta"
           for p in cores/gpsp/*.patch; do
             test -f "$out/System/licenses/gpsp-$(basename "$p")"
           done
@@ -101,7 +105,7 @@ jobs:
           cat > notes.md <<NOTES
           Unzip and copy the contents of \`slot-${GITHUB_REF_NAME}/\` onto SD2.
 
-          Emulation by mGBA (MPL-2.0), gpSP (GPL-2.0), Beetle WonderSwan / Cygne (GPL-2.0), Beetle Lynx (GPL-2.0), Gearsystem (GPL-3.0) and Beetle NeoPop (GPL-2.0). Their licences, patches and the gpSP, Cygne, Lynx, Gearsystem and NeoPop source are in \`System/licenses/\`.
+          Emulation by mGBA (MPL-2.0), gpSP (GPL-2.0), Beetle WonderSwan / Cygne (GPL-2.0), Beetle Lynx (GPL-2.0), Gearsystem (GPL-3.0), Beetle NeoPop (GPL-2.0) and Beetle PCE Fast (GPL-2.0). Their licences, patches and the gpSP, Cygne, Lynx, Gearsystem, NeoPop and PCE Fast source are in \`System/licenses/\`.
 
           Atari Lynx games need \`lynxboot.img\`, which is not included. Put your own copy in \`BIOS/\`.
           NOTES

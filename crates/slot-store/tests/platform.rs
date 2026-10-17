@@ -3,7 +3,10 @@ use slot_store::Platform;
 #[test]
 fn every_platform_has_a_directory() {
     let names: Vec<&str> = Platform::ALL.iter().map(|p| p.dir_name()).collect();
-    assert_eq!(names, vec!["GBA", "GB", "GBC", "WS", "Lynx", "GG", "NGP"]);
+    assert_eq!(
+        names,
+        vec!["GBA", "GB", "GBC", "WS", "Lynx", "GG", "NGP", "TG16"]
+    );
 }
 
 #[test]
@@ -17,7 +20,8 @@ fn every_platform_is_a_shelf_of_its_own() {
             Platform::Ws,
             Platform::Lynx,
             Platform::Gg,
-            Platform::Ngp
+            Platform::Ngp,
+            Platform::Tg16
         ]
     );
     for (i, p) in Platform::ALL.iter().enumerate() {
@@ -59,7 +63,7 @@ fn a_game_gear_picture_is_the_size_of_a_game_boy_one() {
 }
 
 #[test]
-fn only_wonderswan_gets_a_bigger_video_buffer() {
+fn only_wonderswan_and_turbografx_get_a_bigger_video_buffer() {
     for p in [
         Platform::Gba,
         Platform::Gb,
@@ -118,6 +122,31 @@ fn neogeo_pocket_and_pocket_color_games_share_one_shelf() {
     assert!(!Platform::Gg.accepts(std::path::Path::new("Metal Slug.ngp")));
     assert_eq!(Platform::Ngp.name(), "NeoGeo Pocket");
     assert_eq!(Platform::Ngp.dir_name(), "NGP");
+}
+
+#[test]
+fn turbografx_hucards_take_pce_files_only() {
+    assert!(Platform::Tg16.accepts(std::path::Path::new("Bonk's Adventure.pce")));
+    assert!(Platform::Tg16.accepts(std::path::Path::new("R-Type.PCE")));
+    // CD games are not HuCards, and there is no SuperGrafx support.
+    for name in ["Ys.cue", "Ys.chd", "Ghouls.sgx"] {
+        assert!(
+            !Platform::Tg16.accepts(std::path::Path::new(name)),
+            "{name}"
+        );
+    }
+    assert_eq!(Platform::Tg16.name(), "TurboGrafx-16");
+    assert_eq!(Platform::Tg16.dir_name(), "TG16");
+    assert!(!Platform::Tg16.turns());
+}
+
+#[test]
+fn a_turbografx_buffer_holds_a_512_wide_picture_and_lands_on_the_canvas_at_2x_down() {
+    let (w, h) = Platform::Tg16.source_size();
+    assert!(w >= 512, "room for the high resolution mode");
+    assert_eq!((w, h * 2), (720, 480), "1x across, 2x down on the canvas");
+    assert_eq!(Platform::Tg16.picture(), (256, 240));
+    assert_eq!(Platform::Tg16.actual_window(), (360, 240), "2x both ways");
 }
 
 #[test]

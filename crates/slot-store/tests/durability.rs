@@ -211,6 +211,7 @@ fn a_card_from_before_the_settings_keeps_all_its_values() {
             shader_lynx: Shader::Grid,
             shader_gg: Shader::Simpletex,
             shader_ngp: Shader::Simpletex,
+            shader_tg16: Shader::Grid,
             eject_save: true,
             turbo: true,
             rewind: true,
@@ -229,6 +230,7 @@ fn a_card_from_before_the_settings_keeps_all_its_values() {
             bezel_lynx: BezelPick::None,
             bezel_gg: BezelPick::None,
             bezel_ngp: BezelPick::None,
+            bezel_tg16: BezelPick::None,
             recents: Vec::new(),
             favorites: Vec::new(),
             shelf: None,
@@ -266,6 +268,8 @@ fn the_quick_menu_settings_round_trip_as_their_own_lines() {
         bezel_gg: BezelPick::File("Gear.png".into()),
         shader_ngp: Shader::Grid,
         bezel_ngp: BezelPick::File("Pocket.png".into()),
+        shader_tg16: Shader::Dot,
+        bezel_tg16: BezelPick::File("Express.png".into()),
         bezel_gba: BezelPick::None,
         bezel_gb: BezelPick::Default,
         bezel_gbc: BezelPick::File("Pocket.png".into()),
@@ -308,6 +312,8 @@ fn the_quick_menu_settings_round_trip_as_their_own_lines() {
         "bezel_gg=Gear.png",
         "shader_ngp=grid",
         "bezel_ngp=Pocket.png",
+        "shader_tg16=dot",
+        "bezel_tg16=Express.png",
         "shelf=gba",
         "shelf_cart=gba/Drill Dozer",
     ] {
@@ -630,4 +636,5 @@ fn transparent_is_on_both_game_boy_lists_and_no_other() {
     assert_eq!(s.shader_ws, SlotState::default().shader_ws);
     assert_eq!(s.shader_gg, SlotState::default().shader_gg);
     assert_eq!(s.shader_ngp, SlotState::default().shader_ngp);
+    assert_eq!(s.shader_tg16, SlotState::default().shader_tg16);
 }

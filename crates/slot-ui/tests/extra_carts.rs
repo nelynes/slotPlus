@@ -1,5 +1,5 @@
 //! The carts slotPlus adds to Slot's three: the WonderSwan, the Atari Lynx, the
-//! Game Gear and the NeoGeo Pocket, drawn from their own art in the same style as the GBA and
+//! Game Gear, the NeoGeo Pocket and the TurboGrafx-16, drawn from their own art in the same style as the GBA and
 //! Game Boy carts.
 
 use slot_store::{Cart, Platform};
@@ -8,7 +8,8 @@ use slot_ui::{
     mould_shadow, seated_box, shell_for, shows_interior, Finish, Mould, Shell, GB_CART_H,
     GG_CART_H, GG_CART_W, GG_LABEL_H, GG_LABEL_W, GG_LABEL_X, GG_LABEL_Y, GG_SHELL, LYNX_CART_H,
     LYNX_CART_W, LYNX_LABEL_H, LYNX_LABEL_W, LYNX_LABEL_X, LYNX_LABEL_Y, NGP_CART_H, NGP_CART_W,
-    NGP_LABEL_H, NGP_LABEL_W, NGP_LABEL_X, NGP_LABEL_Y, NGP_SHELL, WS_CART_H, WS_CART_W,
+    NGP_LABEL_H, NGP_LABEL_W, NGP_LABEL_X, NGP_LABEL_Y, NGP_SHELL, TG16_CART_H, TG16_CART_W,
+    TG16_LABEL_H, TG16_LABEL_W, TG16_LABEL_X, TG16_LABEL_Y, TG16_SHELL, WS_CART_H, WS_CART_W,
     WS_LABEL_H, WS_LABEL_W, WS_LABEL_X, WS_LABEL_Y,
 };
 
@@ -52,6 +53,10 @@ fn ngp() -> Cart {
     cart(Platform::Ngp, "Metal Slug 1st Mission")
 }
 
+fn tg16() -> Cart {
+    cart(Platform::Tg16, "Bonk's Adventure")
+}
+
 fn at(face: &slot_ui::CartFace, x: u32, y: u32) -> [u8; 4] {
     let i = ((y * face.w + x) * 4) as usize;
     [
@@ -74,12 +79,14 @@ fn each_cart_has_its_own_mould() {
     assert_eq!(mould_for(Platform::Gg), Mould::Gg);
     assert_eq!(mould_of(&ngp()), Mould::Ngp);
     assert_eq!(mould_for(Platform::Ngp), Mould::Ngp);
+    assert_eq!(mould_of(&tg16()), Mould::Tg16);
+    assert_eq!(mould_for(Platform::Tg16), Mould::Tg16);
     assert_eq!(mould_for(Platform::Ws), Mould::Ws);
     assert_eq!(mould_for(Platform::Lynx), Mould::Lynx);
     assert_eq!(mould_for(Platform::Gba), Mould::Gba);
     assert_eq!(
         Mould::EXTRA,
-        [Mould::Ws, Mould::Lynx, Mould::Gg, Mould::Ngp]
+        [Mould::Ws, Mould::Lynx, Mould::Gg, Mould::Ngp, Mould::Tg16]
     );
     for (i, m) in Mould::ALL.iter().enumerate() {
         assert_eq!(m.index(), i);
@@ -96,7 +103,7 @@ fn the_wonderswan_cart_is_wide_and_the_lynx_card_nearly_square() {
     );
     assert!(LYNX_CART_H * 100 <= LYNX_CART_W * 110 && LYNX_CART_H >= LYNX_CART_W);
     assert!(LYNX_CART_H <= GB_CART_H, "no taller than the Game Boy pak");
-    for c in [ws(), lynx(), gg(), ngp()] {
+    for c in [ws(), lynx(), gg(), ngp(), tg16()] {
         let f = cart_face(&c);
         assert_eq!((f.w, f.h), cart_box(c.platform), "{:?}", c.platform);
         let (sw, sh) = seated_box(c.platform);
@@ -116,6 +123,10 @@ fn the_label_sits_inside_the_shell_and_is_the_size_the_cart_asks_art_for() {
         ),
         (gg(), (GG_LABEL_X, GG_LABEL_Y, GG_LABEL_W, GG_LABEL_H)),
         (ngp(), (NGP_LABEL_X, NGP_LABEL_Y, NGP_LABEL_W, NGP_LABEL_H)),
+        (
+            tg16(),
+            (TG16_LABEL_X, TG16_LABEL_Y, TG16_LABEL_W, TG16_LABEL_H),
+        ),
     ] {
         assert_eq!(label_size(&c), (lw, lh));
         let f = cart_face(&c);
@@ -334,4 +345,47 @@ fn a_wonderswan_game_gets_a_black_cart_and_a_wonderswan_color_game_a_clear_one()
     // The black cart still draws as a whole WonderSwan cart.
     let f = cart_face(&ws_mono());
     assert_eq!((f.w, f.h), (WS_CART_W, WS_CART_H));
+}
+
+#[test]
+fn the_hucard_is_a_portrait_card_with_a_wide_label_in_its_lower_half() {
+    assert_eq!(cart_box(Platform::Tg16), (TG16_CART_W, TG16_CART_H));
+    const {
+        // A credit card stood on end: about 0.63 wide to 1 tall.
+        assert!(TG16_CART_W * 100 >= TG16_CART_H * 60 && TG16_CART_W * 100 <= TG16_CART_H * 67);
+        assert!(TG16_CART_H <= GB_CART_H, "no taller than the Game Boy pak");
+        assert!(
+            TG16_LABEL_Y > TG16_CART_H * 2 / 5,
+            "the label is in the lower half"
+        );
+        assert!(TG16_LABEL_W > TG16_LABEL_H, "the label is wider than tall");
+    }
+}
+
+#[test]
+fn a_hucard_is_white_with_gold_contacts_along_its_top_whatever_the_colour() {
+    assert_eq!(shell_for(&tg16()), TG16_SHELL);
+    assert_eq!(TG16_SHELL.finish, Finish::Solid);
+    assert!(TG16_SHELL.colour.iter().all(|c| *c > 0xc0), "not white");
+    assert!(!is_clear(&tg16()));
+    let mut red = tg16();
+    red.shell = Some(slot_store::ShellChoice {
+        colour: [0xc0, 0x20, 0x20],
+        finish: slot_store::ShellFinish::Solid,
+        outline: slot_store::Outline::Auto,
+    });
+    for c in [tg16(), red] {
+        let f = cart_face(&c);
+        let top = TG16_CART_H * 45 / 1000;
+        let n = (0..f.w).filter(|&x| gold(at(&f, x, top))).count();
+        assert!(n > 60, "only {n} gold pixels across the HuCard contacts");
+        let below = (TG16_CART_H / 5..TG16_CART_H)
+            .flat_map(|y| (0..f.w).map(move |x| (x, y)))
+            .filter(|&(x, y)| gold(at(&f, x, y)))
+            .count();
+        assert_eq!(below, 0, "gold below the contacts");
+        // The panel under the contacts is dark, whatever the shell colour.
+        let p = at(&f, TG16_CART_W / 2, TG16_CART_H / 5);
+        assert!(p[..3].iter().all(|c| *c < 80), "panel {p:?}");
+    }
 }

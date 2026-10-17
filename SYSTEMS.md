@@ -4,6 +4,7 @@ Everything slotPlus adds on top of Slot's Game Boy Advance, Game Boy and Game Bo
 
 For the Game Boy systems, and everything else Slot does, see the [Slot user guide](https://slot-cfw.fyi).
 
+- [TurboGrafx-16 / TurboExpress](#turbografx-16--turboexpress)
 - [NeoGeo Pocket / NeoGeo Pocket Color](#neogeo-pocket--neogeo-pocket-color)
 - [Sega Game Gear](#sega-game-gear)
 - [Atari Lynx](#atari-lynx)
@@ -15,9 +16,40 @@ For the Game Boy systems, and everything else Slot does, see the [Slot user guid
 - **Label art:** optional PNGs go in `Labels/<folder>/<game name>.png`, named after the game's file without its extension. Each system's cart has its own label size, given below. Art of a different size is scaled to cover the label and cropped.
 - **Screen menu:** each system has its own page under Screen, with its own Shader and Bezel. SELECT + B / A in a game steps through that system's shaders.
 - **Bezels:** your own PNGs go in `Bezels/<folder>/`, 720x480 with the screen area transparent. On 4:3 handhelds such as the RG 35XXSP the SP frame is offered too. A bezel shows at actual size, not when the picture is stretched.
-- **Stretch:** on the Game Gear and NeoGeo Pocket, L1 stretches the picture to fill the screen and R1 gives back actual size. On the Lynx and WonderSwan, L1 and R1 are the game's own buttons, so a game is set to stretch with a line in `Config/video_mode.txt` (`Game Name (USA) = stretch`). Each game remembers its choice. On a 4:3 handheld the stretched picture fills the whole panel.
+- **Stretch:** on the TurboGrafx-16, Game Gear and NeoGeo Pocket, L1 stretches the picture to fill the screen and R1 gives back actual size. On the Lynx and WonderSwan, L1 and R1 are the game's own buttons, so a game is set to stretch with a line in `Config/video_mode.txt` (`Game Name (USA) = stretch`). Each game remembers its choice. On a 4:3 handheld the stretched picture fills the whole panel.
 - **Cart shells:** each system's carts have a default shell colour. Set `Config/cart_shell.txt` to give a single game a different one.
 - **Save states and resume** work as they do for every other system.
+
+---
+
+## TurboGrafx-16 / TurboExpress
+
+The TurboExpress was NEC's handheld TurboGrafx-16: it played the same HuCards as the console.
+
+| | |
+|---|---|
+| **Games** | HuCard games as `.pce` in `Games/TG16/`. CD games and SuperGrafx games are not supported. |
+| **BIOS** | Not needed. HuCards boot straight in. |
+| **Core** | Beetle PCE Fast, with the two-button pad. |
+| **Label art** | `Labels/TG16/`, about 191x163 px (1.17:1). |
+| **Picture** | Most games draw 256x240, shown at 2x. Games that switch to a wider mode follow it: up to 352 wide stays at 2x, and the 512-wide mode is drawn across the whole screen. Stretched, the picture fills the screen whatever its width. |
+| **Shaders** | Off, LCD3x, Grid, Dot. |
+| **Bezel** | None bundled. Your own go in `Bezels/TG16/`. |
+| **Cart** | The HuCard: a thin white card with gold contacts along the top over a dark textured panel, the label printed square in the lower half, and a ridged grip tab at the foot. |
+| **Saves** | Games that save to the console's backup memory keep it in `Saves/TG16/`. |
+
+### Controls
+
+The buttons follow the TurboExpress's layout: II on the left, I on the right.
+
+| Press      | Does                                              |
+|------------|---------------------------------------------------|
+| D-pad      | D-pad                                             |
+| B / A      | II / I                                            |
+| Start      | Run                                               |
+| Select     | Select (Select + Run resets the game, as on the real console) |
+| L1 / R1    | Stretch the picture to fill the screen / actual size |
+| Hold Y / X | Turbo II / turbo I                                |
 
 ---
 

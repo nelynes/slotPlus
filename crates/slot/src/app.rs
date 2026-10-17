@@ -353,6 +353,8 @@ pub struct App {
     named_core: bool,
     video_mode: VideoMode,
     portrait: bool,
+    /// The size of the frame the core last drew.
+    shown: (u32, u32),
     link: Option<LinkSession>,
     sfx: Option<Sfx>,
     polaroids: Option<Polaroids>,
@@ -364,7 +366,7 @@ pub struct App {
     quick_clock_faces: Option<[(TexId, u32, u32); 2]>,
     quick_wallpaper_faces: Option<[(TexId, u32, u32); 2]>,
     quick_palette_faces: Option<[(TexId, u32, u32); 2]>,
-    quick_bezel_faces: [Option<[(TexId, u32, u32); 2]>; 7],
+    quick_bezel_faces: [Option<[(TexId, u32, u32); 2]>; 8],
     game_bezel: Option<TexId>,
     in_game_menu: Option<QuickRow>,
     states_from_menu: bool,
@@ -501,6 +503,7 @@ impl App {
             named_core: false,
             video_mode: VideoMode::default(),
             portrait: false,
+            shown: (0, 0),
             link: None,
             sfx: None,
             polaroids: None,
@@ -512,7 +515,7 @@ impl App {
             quick_clock_faces: None,
             quick_wallpaper_faces: None,
             quick_palette_faces: None,
-            quick_bezel_faces: [None; 7],
+            quick_bezel_faces: [None; 8],
             game_bezel: None,
             in_game_menu: None,
             states_from_menu: false,
@@ -825,7 +828,7 @@ impl App {
     pub fn in_game_hidden(&self) -> &'static [QuickRow] {
         if matches!(
             self.playing_platform(),
-            Platform::Ws | Platform::Lynx | Platform::Gg | Platform::Ngp
+            Platform::Ws | Platform::Lynx | Platform::Gg | Platform::Ngp | Platform::Tg16
         ) {
             // None of these cores has colour correction or a palette to pick. Their bezel
             // is None, the SP frame on a 4:3 panel, or a png of the card's own.
@@ -878,6 +881,8 @@ impl App {
             (QuickRow::Bezel, Platform::Gg) => QuickRow::GgBezel,
             (QuickRow::Shader, Platform::Ngp) => QuickRow::NgpShader,
             (QuickRow::Bezel, Platform::Ngp) => QuickRow::NgpBezel,
+            (QuickRow::Shader, Platform::Tg16) => QuickRow::Tg16Shader,
+            (QuickRow::Bezel, Platform::Tg16) => QuickRow::Tg16Bezel,
             (row, _) => row,
         }
     }
@@ -908,6 +913,7 @@ impl App {
             QuickRow::LynxShader => Some(shader_value(self.state.shader_lynx)),
             QuickRow::GgShader => Some(shader_value(self.state.shader_gg)),
             QuickRow::NgpShader => Some(shader_value(self.state.shader_ngp)),
+            QuickRow::Tg16Shader => Some(shader_value(self.state.shader_tg16)),
             QuickRow::Rumble => Some(QuickValue::flag(self.state.rumble)),
             QuickRow::EjectSave => Some(QuickValue::flag(self.state.eject_save)),
             QuickRow::Turbo => Some(QuickValue::flag(self.state.turbo)),
@@ -957,10 +963,12 @@ impl App {
             | QuickRow::LynxBezel
             | QuickRow::GgBezel
             | QuickRow::NgpBezel
+            | QuickRow::Tg16Bezel
             | QuickRow::ScreenWs
             | QuickRow::ScreenLynx
             | QuickRow::ScreenGg
             | QuickRow::ScreenNgp
+            | QuickRow::ScreenTg16
             | QuickRow::Bezel => None,
         }
     }
@@ -1018,6 +1026,7 @@ impl App {
             Platform::Lynx => &mut self.state.bezel_lynx,
             Platform::Gg => &mut self.state.bezel_gg,
             Platform::Ngp => &mut self.state.bezel_ngp,
+            Platform::Tg16 => &mut self.state.bezel_tg16,
         }
     }
 
@@ -1030,6 +1039,7 @@ impl App {
             Platform::Lynx => &self.state.bezel_lynx,
             Platform::Gg => &self.state.bezel_gg,
             Platform::Ngp => &self.state.bezel_ngp,
+            Platform::Tg16 => &self.state.bezel_tg16,
         };
         match self.bezel_choices(platform).contains(pick) {
             true => pick.clone(),
@@ -1435,13 +1445,15 @@ impl App {
     }
 
     pub fn source_rect(&self) -> [f32; 4] {
-        video_mode::source_rect_for(self.platform, self.video_mode, self.portrait())
+        video_mode::source_rect_shown(self.platform, self.video_mode, self.portrait(), self.shown)
     }
 
     /// Tell the app the size of the picture the core last drew. Only a
-    /// WonderSwan or Lynx game turned on its side makes it taller than wide.
+    /// WonderSwan or Lynx game turned on its side makes it taller than wide,
+    /// and a TurboGrafx-16 game changes its width as it goes.
     pub fn set_frame_shape(&mut self, shown: (u32, u32)) {
         self.portrait = shown.1 > shown.0;
+        self.shown = shown;
     }
 
     /// Whether the core is drawing a frame taller than wide.
@@ -1462,7 +1474,7 @@ impl App {
         matches!(self.phase, Phase::Playing { .. })
             && matches!(
                 self.platform,
-                Platform::Gb | Platform::Gbc | Platform::Gg | Platform::Ngp
+                Platform::Gb | Platform::Gbc | Platform::Gg | Platform::Ngp | Platform::Tg16
             )
     }
 
@@ -1537,9 +1549,10 @@ impl App {
     }
 
     pub fn picture_rect(&self) -> [f32; 4] {
+        let picture = video_mode::picture_of(self.platform, self.shown);
         let (w, h) = match self.portrait() {
-            true => (self.platform.picture().1, self.platform.picture().0),
-            false => self.platform.picture(),
+            true => (picture.1, picture.0),
+            false => picture,
         };
         let (sw, sh) = self.platform.source_size();
         let (sw, sh) = (sw as f32, sh as f32);
@@ -1708,6 +1721,7 @@ impl App {
             Platform::Lynx => self.state.shader_lynx,
             Platform::Gg => self.state.shader_gg,
             Platform::Ngp => self.state.shader_ngp,
+            Platform::Tg16 => self.state.shader_tg16,
         }
     }
 
@@ -1725,7 +1739,7 @@ impl App {
             Platform::Gb => self.state.colour_correction_gb,
             Platform::Gbc => self.state.colour_correction_gbc,
             // None of these cores has colour correction.
-            Platform::Ws | Platform::Lynx | Platform::Gg | Platform::Ngp => false,
+            Platform::Ws | Platform::Lynx | Platform::Gg | Platform::Ngp | Platform::Tg16 => false,
         }
     }
 
@@ -2105,7 +2119,8 @@ impl App {
             | QuickRow::ScreenWs
             | QuickRow::ScreenLynx
             | QuickRow::ScreenGg
-            | QuickRow::ScreenNgp => {
+            | QuickRow::ScreenNgp
+            | QuickRow::ScreenTg16 => {
                 if let Some(row) = row.child() {
                     let row = row.shown(self.hidden_rows())[0];
                     self.phase = Phase::QuickMenu { row };
@@ -2126,6 +2141,7 @@ impl App {
             | QuickRow::LynxShader
             | QuickRow::GgShader
             | QuickRow::NgpShader
+            | QuickRow::Tg16Shader
             | QuickRow::GbPalettes
             | QuickRow::RunAhead
             | QuickRow::Rumble
@@ -2150,6 +2166,7 @@ impl App {
             | QuickRow::LynxBezel
             | QuickRow::GgBezel
             | QuickRow::NgpBezel
+            | QuickRow::Tg16Bezel
             | QuickRow::Bezel => {}
         }
     }
@@ -2172,7 +2189,8 @@ impl App {
         | QuickRow::WsBezel
         | QuickRow::LynxBezel
         | QuickRow::GgBezel
-        | QuickRow::NgpBezel = row
+        | QuickRow::NgpBezel
+        | QuickRow::Tg16Bezel = row
         {
             let platform = match row {
                 QuickRow::GbaBezel => Platform::Gba,
@@ -2181,6 +2199,7 @@ impl App {
                 QuickRow::LynxBezel => Platform::Lynx,
                 QuickRow::GgBezel => Platform::Gg,
                 QuickRow::NgpBezel => Platform::Ngp,
+                QuickRow::Tg16Bezel => Platform::Tg16,
                 _ => Platform::Gbc,
             };
             self.cycle_bezel(platform, right);
@@ -2274,6 +2293,13 @@ impl App {
                 }
                 s.shader_ngp = to;
             }
+            QuickRow::Tg16Shader => {
+                let to = s.shader_tg16.step(&Shader::TG16, right);
+                if to == s.shader_tg16 {
+                    return;
+                }
+                s.shader_tg16 = to;
+            }
             QuickRow::Rumble => s.rumble = !s.rumble,
             QuickRow::EjectSave => s.eject_save = !s.eject_save,
             QuickRow::Turbo => s.turbo = !s.turbo,
@@ -2312,10 +2338,12 @@ impl App {
             | QuickRow::LynxBezel
             | QuickRow::GgBezel
             | QuickRow::NgpBezel
+            | QuickRow::Tg16Bezel
             | QuickRow::ScreenWs
             | QuickRow::ScreenLynx
             | QuickRow::ScreenGg
             | QuickRow::ScreenNgp
+            | QuickRow::ScreenTg16
             | QuickRow::Bezel => return,
         }
         self.persist();
@@ -2338,6 +2366,7 @@ impl App {
             Platform::Lynx => (&mut self.state.shader_lynx, &Shader::LYNX[..]),
             Platform::Gg => (&mut self.state.shader_gg, &Shader::GG[..]),
             Platform::Ngp => (&mut self.state.shader_ngp, &Shader::NGP[..]),
+            Platform::Tg16 => (&mut self.state.shader_tg16, &Shader::TG16[..]),
         };
         *shader = shader.step(choices, right);
         let said = match *shader {
@@ -2391,7 +2420,9 @@ impl App {
                 Platform::Gba => QuickRow::GbaColourCorrection,
                 Platform::Gb => QuickRow::GbColourCorrection,
                 Platform::Gbc => QuickRow::GbcColourCorrection,
-                Platform::Ws | Platform::Lynx | Platform::Gg | Platform::Ngp => return true,
+                Platform::Ws | Platform::Lynx | Platform::Gg | Platform::Ngp | Platform::Tg16 => {
+                    return true
+                }
             };
             self.change_setting(row, true);
             let said = match self.colour_correction() {
@@ -3094,8 +3125,14 @@ impl App {
                 gba_bezel: self.quick_bezel_faces[bezel_slot(Platform::Gba)],
                 gb_bezel: self.quick_bezel_faces[bezel_slot(Platform::Gb)],
                 gbc_bezel: self.quick_bezel_faces[bezel_slot(Platform::Gbc)],
-                extra_bezels: [Platform::Ws, Platform::Lynx, Platform::Gg, Platform::Ngp]
-                    .map(|p| self.quick_bezel_faces[bezel_slot(p)]),
+                extra_bezels: [
+                    Platform::Ws,
+                    Platform::Lynx,
+                    Platform::Gg,
+                    Platform::Ngp,
+                    Platform::Tg16,
+                ]
+                .map(|p| self.quick_bezel_faces[bezel_slot(p)]),
                 bezel: None,
                 over_game: false,
                 canvas: self.canvas(),
@@ -3215,7 +3252,7 @@ impl App {
                 gba_bezel: None,
                 gb_bezel: None,
                 gbc_bezel: None,
-                extra_bezels: [None; 4],
+                extra_bezels: [None; 5],
                 bezel: self.quick_bezel_faces[bezel_slot(self.playing_platform())],
                 over_game: true,
                 canvas: self.canvas(),
@@ -3924,7 +3961,7 @@ impl App {
         }
         if matches!(
             self.core,
-            Core::Cygne | Core::Lynx | Core::Gearsystem | Core::Ngp
+            Core::Cygne | Core::Lynx | Core::Gearsystem | Core::Ngp | Core::Pce
         ) {
             return self.refuse();
         }
@@ -4749,5 +4786,6 @@ fn bezel_slot(platform: Platform) -> usize {
         Platform::Lynx => 4,
         Platform::Gg => 5,
         Platform::Ngp => 6,
+        Platform::Tg16 => 7,
     }
 }

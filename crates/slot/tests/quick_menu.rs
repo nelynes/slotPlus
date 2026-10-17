@@ -388,6 +388,7 @@ fn screen_opens_a_page_of_its_own_and_b_comes_back_to_it() {
         QuickRow::ScreenLynx,
         QuickRow::ScreenGg,
         QuickRow::ScreenNgp,
+        QuickRow::ScreenTg16,
         QuickRow::ScreenGba,
         QuickRow::ScreenGbc,
         QuickRow::ScreenGb,
@@ -1243,6 +1244,42 @@ fn the_neogeo_pocket_has_a_screen_page_with_its_own_shader_and_bezel() {
     assert_eq!(
         read_slot_state(d.path()).bezel_ngp,
         BezelPick::File("Pocket.png".into())
+    );
+}
+
+#[test]
+fn the_turbografx_16_has_a_screen_page_with_its_own_shader_and_bezel() {
+    let (d, mut a, _) = on_carousel();
+    open_at(&mut a, QuickRow::Tg16Shader);
+    assert_eq!(a.quick_value(QuickRow::Tg16Shader), Some(QuickValue::Grid));
+    press(&mut a, Btn::Right);
+    assert_eq!(read_slot_state(d.path()).shader_tg16, Shader::Dot);
+    press(&mut a, Btn::Right);
+    assert_eq!(
+        read_slot_state(d.path()).shader_tg16,
+        Shader::Off,
+        "it went past Dot instead of wrapping"
+    );
+    assert_eq!(read_slot_state(d.path()).shader_ngp, Shader::Simpletex);
+    press(&mut a, Btn::B);
+    assert_eq!(a.quick_menu(), Some(QuickRow::ScreenTg16));
+
+    let dir = d.path().join("Bezels").join("TG16");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("Express.png"), b"png").unwrap();
+    while a.quick_menu().is_some() {
+        press(&mut a, Btn::B);
+    }
+    open_at(&mut a, QuickRow::Tg16Bezel);
+    assert_eq!(
+        a.resolved_bezel(slot_store::Platform::Tg16),
+        BezelPick::None
+    );
+    press(&mut a, Btn::Right);
+    assert_eq!(
+        read_slot_state(d.path()).bezel_tg16,
+        BezelPick::File("Express.png".into()),
+        "there is no bundled TurboExpress bezel to offer first"
     );
 }
 

@@ -2452,6 +2452,47 @@ fn l_and_r_change_the_mode_on_a_neogeo_pocket_cart_and_never_reach_the_core() {
 }
 
 #[test]
+fn the_shader_shortcut_steps_only_the_turbografx_shader_in_a_hucard_game() {
+    let d = root_with_one_cart("TG16", "Bonk's Adventure.pce");
+    let mut s = session_playing(d.path());
+    assert_eq!(s.app().core(), Core::Pce);
+    assert_eq!(s.app().screen_shader(), Shader::Grid);
+    s.app_mut().apply(slot_input::Action::ShaderPrev);
+    let after = slot_store::read_slot_state(d.path());
+    assert_eq!(after.shader_tg16, Shader::Lcd3x);
+    assert_eq!(
+        (after.shader_gba, after.shader_ngp),
+        (Shader::Grid, Shader::Simpletex),
+        "a HuCard game moved another system's shader"
+    );
+}
+
+#[test]
+fn l_and_r_change_the_mode_on_a_hucard_and_select_and_run_reach_the_core() {
+    let d = root_with_one_cart("TG16", "Bonk's Adventure.pce");
+    let mut s = session_playing(d.path());
+    let actual = s.app().source_rect();
+    s.feed([RawEvent::Down(Btn::L1)], 100);
+    assert_ne!(s.app().source_rect(), actual, "L did not stretch it");
+    assert_eq!(pad(&s) & ButtonMask::L, 0, "L reached the game as well");
+    s.feed([RawEvent::Up(Btn::L1)], 120);
+    s.feed([RawEvent::Down(Btn::R1)], 200);
+    assert_eq!(s.app().source_rect(), actual, "R did not give it back");
+    assert_eq!(pad(&s) & ButtonMask::R, 0, "R reached the game as well");
+    s.feed([RawEvent::Up(Btn::R1)], 220);
+    // A tap of SELECT, which is held back only as long as it may be a chord.
+    s.feed([RawEvent::Down(Btn::Select)], 300);
+    s.feed([RawEvent::Up(Btn::Select)], 340);
+    assert_ne!(
+        pad(&s) & ButtonMask::SELECT,
+        0,
+        "SELECT did not reach the core"
+    );
+    s.feed([RawEvent::Down(Btn::Start)], 600);
+    assert_ne!(pad(&s) & ButtonMask::START, 0, "RUN did not reach the core");
+}
+
+#[test]
 fn powering_off_stops_neopop_first_so_it_can_write_its_save() {
     let d = root_with_one_cart("NGP", "Metal Slug.ngp");
     let mut s = session_playing(d.path());

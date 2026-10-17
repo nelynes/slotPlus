@@ -8,10 +8,11 @@
 
 # What is slotPlus?
 
-A slightly modified Slot. Alongside Slot's Game Boy Advance, Game Boy and Game Boy Color, it plays four more handhelds, each on its own shelf with its own cart:
+A slightly modified Slot. Alongside Slot's Game Boy Advance, Game Boy and Game Boy Color, it plays five more handhelds, each on its own shelf with its own cart:
 
 | System | Put games in | Files | Core | BIOS |
 |---|---|---|---|---|
+| TurboGrafx-16 / TurboExpress | `Games/TG16/` | `.pce` (HuCards) | Beetle PCE Fast | Not needed |
 | NeoGeo Pocket / Color | `Games/NGP/` | `.ngp` `.ngc` `.ngpc` | Beetle NeoPop | Not needed |
 | Sega Game Gear | `Games/GG/` | `.gg` | Gearsystem | Not needed |
 | Atari Lynx | `Games/Lynx/` | `.lnx` `.lyx` | Beetle Lynx | `lynxboot.img` in `BIOS/` |

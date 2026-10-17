@@ -116,7 +116,8 @@ fn the_rows_run_in_the_order_the_user_chose() {
             "WonderSwan",
             "Atari Lynx",
             "Game Gear",
-            "NeoGeo Pocket"
+            "NeoGeo Pocket",
+            "TurboGrafx-16"
         ]
     );
     assert_eq!(
@@ -135,6 +136,11 @@ fn the_rows_run_in_the_order_the_user_chose() {
         QuickRow::SCREEN_NGP.map(QuickRow::label),
         ["Shader", "Bezel"]
     );
+    assert_eq!(
+        QuickRow::SCREEN_TG16.map(QuickRow::label),
+        ["Shader", "Bezel"]
+    );
+    assert_eq!(QuickRow::ScreenTg16.label(), "TurboGrafx-16");
     assert_eq!(
         QuickRow::SCREEN_GBA.map(QuickRow::label),
         ["Shader", "Color Correction", "Bezel"]
@@ -180,7 +186,8 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::ScreenWs,
             QuickRow::ScreenLynx,
             QuickRow::ScreenGg,
-            QuickRow::ScreenNgp
+            QuickRow::ScreenNgp,
+            QuickRow::ScreenTg16
         ]
     );
     for page in [
@@ -198,6 +205,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
         &QuickRow::SCREEN_LYNX[..],
         &QuickRow::SCREEN_GG[..],
         &QuickRow::SCREEN_NGP[..],
+        &QuickRow::SCREEN_TG16[..],
     ] {
         for &row in page {
             assert_eq!(row.page(), page, "{row:?}");
@@ -433,6 +441,7 @@ fn screen_opens_a_page_per_console_and_each_backs_out_to_its_console() {
         (QuickRow::ScreenLynx, &QuickRow::SCREEN_LYNX[..]),
         (QuickRow::ScreenGg, &QuickRow::SCREEN_GG[..]),
         (QuickRow::ScreenNgp, &QuickRow::SCREEN_NGP[..]),
+        (QuickRow::ScreenTg16, &QuickRow::SCREEN_TG16[..]),
     ] {
         assert_eq!(console.parent(), Some(QuickRow::Screen));
         assert_eq!(console.child(), Some(page[0]));

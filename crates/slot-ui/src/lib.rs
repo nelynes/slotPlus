@@ -61,6 +61,10 @@ pub use cart::{
 pub use cart::{
     ngp_label_panel, NGP_CART_H, NGP_CART_W, NGP_LABEL_H, NGP_LABEL_W, NGP_LABEL_X, NGP_LABEL_Y,
 };
+pub use cart::{
+    tg16_label_panel, TG16_CART_H, TG16_CART_W, TG16_LABEL_H, TG16_LABEL_W, TG16_LABEL_X,
+    TG16_LABEL_Y,
+};
 pub use clock::{clock_label, date_time_text, hhmm, set_clock_hint_face, ClockPicker, Field};
 pub use draw::{Canvas, Draw, Layout, TexId, OUT_H, OUT_W};
 pub use footer::{draw_corners, draw_footer, Printed, FOOTER_Y};
@@ -94,7 +98,7 @@ pub use shell::{
     gb_plastics, gb_table_shells, gba_plastics, gba_shell_for,
     lookup_order_is_exact_then_family_then_default, shell_for, shell_presets, table_keys, Finish,
     Shell, DEFAULT_SHELL, DMG_SHELL, DUAL_MODE_SHELL, GB_CLEAR_SHELL, GG_SHELL, LYNX_SHELL,
-    NGP_SHELL, WS_SHELL,
+    NGP_SHELL, TG16_SHELL, WS_SHELL,
 };
 pub use silhouette::{gb_silhouette, silhouette, GbShell};
 pub use slot_chrome::{

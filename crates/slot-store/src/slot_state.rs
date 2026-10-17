@@ -217,6 +217,7 @@ pub struct SlotState {
     pub shader_lynx: Shader,
     pub shader_gg: Shader,
     pub shader_ngp: Shader,
+    pub shader_tg16: Shader,
     pub eject_save: bool,
     pub turbo: bool,
     pub rewind: bool,
@@ -235,6 +236,7 @@ pub struct SlotState {
     pub bezel_lynx: BezelPick,
     pub bezel_gg: BezelPick,
     pub bezel_ngp: BezelPick,
+    pub bezel_tg16: BezelPick,
     pub recents: Vec<Recent>,
     pub favorites: Vec<Recent>,
     pub shelf: Option<String>,
@@ -305,6 +307,8 @@ impl Shader {
     /// The NeoGeo Pocket's 160x152 screen sits at 3x like the Game Boy's, so
     /// it picks from the same list as the Game Gear.
     pub const NGP: [Shader; 4] = Shader::WS;
+    /// The TurboExpress's colour LCD picks from the same list as the Lynx's.
+    pub const TG16: [Shader; 4] = Shader::GBA;
 
     pub fn name(self) -> &'static str {
         match self {
@@ -367,6 +371,7 @@ impl Default for SlotState {
             shader_lynx: Shader::Grid,
             shader_gg: Shader::Simpletex,
             shader_ngp: Shader::Simpletex,
+            shader_tg16: Shader::Grid,
             eject_save: true,
             turbo: true,
             rewind: true,
@@ -385,6 +390,7 @@ impl Default for SlotState {
             bezel_lynx: BezelPick::None,
             bezel_gg: BezelPick::None,
             bezel_ngp: BezelPick::None,
+            bezel_tg16: BezelPick::None,
             recents: Vec::new(),
             favorites: Vec::new(),
             shelf: None,
@@ -477,6 +483,7 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     text.push_str(&format!("shader_lynx={}\n", s.shader_lynx.name()));
     text.push_str(&format!("shader_gg={}\n", s.shader_gg.name()));
     text.push_str(&format!("shader_ngp={}\n", s.shader_ngp.name()));
+    text.push_str(&format!("shader_tg16={}\n", s.shader_tg16.name()));
     text.push_str(&format!("wallpaper_tint={}\n", s.wallpaper_tint.key()));
     text.push_str(&format!("show_recents={}\n", s.show_recents as u8));
     text.push_str(&format!("show_titles={}\n", s.show_titles as u8));
@@ -487,6 +494,7 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     text.push_str(&format!("bezel_lynx={}\n", s.bezel_lynx.key()));
     text.push_str(&format!("bezel_gg={}\n", s.bezel_gg.key()));
     text.push_str(&format!("bezel_ngp={}\n", s.bezel_ngp.key()));
+    text.push_str(&format!("bezel_tg16={}\n", s.bezel_tg16.key()));
     text.push_str(&format!("shelf={}\n", s.shelf.as_deref().unwrap_or("")));
     text.push_str(&format!(
         "shelf_cart={}\n",
@@ -526,6 +534,7 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut shader_lynx = None;
     let mut shader_gg = None;
     let mut shader_ngp = None;
+    let mut shader_tg16 = None;
     let mut eject_save = None;
     let mut turbo = None;
     let mut rewind = None;
@@ -544,6 +553,7 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut bezel_lynx = None;
     let mut bezel_gg = None;
     let mut bezel_ngp = None;
+    let mut bezel_tg16 = None;
     let mut shelf = None;
     let mut shelf_cart = None;
     for line in text.lines().filter(|l| !l.is_empty()) {
@@ -587,6 +597,7 @@ fn parse(text: &str) -> Option<SlotState> {
             "bezel_lynx" => bezel_lynx = Some(BezelPick::parse(value)),
             "bezel_gg" => bezel_gg = Some(BezelPick::parse(value)),
             "bezel_ngp" => bezel_ngp = Some(BezelPick::parse(value)),
+            "bezel_tg16" => bezel_tg16 = Some(BezelPick::parse(value)),
             "shelf" => shelf = Some(value.to_string()).filter(|v| !v.is_empty()),
             "shelf_cart" => shelf_cart = recent_value(value),
             "shader_gb" => shader_gb = Shader::parse(value).filter(|s| Shader::GB.contains(s)),
@@ -594,6 +605,9 @@ fn parse(text: &str) -> Option<SlotState> {
             "shader_ws" => shader_ws = Shader::parse(value).filter(|s| Shader::WS.contains(s)),
             "shader_gg" => shader_gg = Shader::parse(value).filter(|s| Shader::GG.contains(s)),
             "shader_ngp" => shader_ngp = Shader::parse(value).filter(|s| Shader::NGP.contains(s)),
+            "shader_tg16" => {
+                shader_tg16 = Shader::parse(value).filter(|s| Shader::TG16.contains(s))
+            }
             "shader_lynx" => {
                 shader_lynx = Shader::parse(value).filter(|s| Shader::LYNX.contains(s))
             }
@@ -644,6 +658,7 @@ fn parse(text: &str) -> Option<SlotState> {
         shader_ngp: shader_ngp
             .or(shader_gb.filter(|s| Shader::NGP.contains(s)))
             .unwrap_or(fallback.shader_ngp),
+        shader_tg16: shader_tg16.unwrap_or(fallback.shader_tg16),
         eject_save: eject_save.unwrap_or(fallback.eject_save),
         turbo: turbo.unwrap_or(fallback.turbo),
         rewind: rewind.unwrap_or(fallback.rewind),
@@ -662,6 +677,7 @@ fn parse(text: &str) -> Option<SlotState> {
         bezel_lynx: bezel_lynx.unwrap_or(fallback.bezel_lynx),
         bezel_gg: bezel_gg.unwrap_or(fallback.bezel_gg),
         bezel_ngp: bezel_ngp.unwrap_or(fallback.bezel_ngp),
+        bezel_tg16: bezel_tg16.unwrap_or(fallback.bezel_tg16),
         recents: Vec::new(),
         favorites: Vec::new(),
         shelf,

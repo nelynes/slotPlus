@@ -115,8 +115,15 @@ fn open_named(
                 if let Some(player) = link {
                     apply_link_options(&mut opened, core, player);
                 }
-                if core == Core::Cygne {
-                    let (w, h) = Platform::Ws.source_size();
+                // Bigger than the 240x160 default: a WonderSwan picture has
+                // room to turn at 2x, a TurboGrafx-16 one to be 512 wide.
+                let big = match core {
+                    Core::Cygne => Some(Platform::Ws),
+                    Core::Pce => Some(Platform::Tg16),
+                    _ => None,
+                };
+                if let Some(big) = big {
+                    let (w, h) = big.source_size();
                     opened.set_video_size(w, h);
                 }
                 eprintln!("slot: core {}", path.display());
@@ -175,7 +182,7 @@ pub fn colour_option(
                 "OFF"
             },
         )),
-        Core::Cygne | Core::Lynx | Core::Gearsystem | Core::Ngp => None,
+        Core::Cygne | Core::Lynx | Core::Gearsystem | Core::Ngp | Core::Pce => None,
         Core::Gpsp => Some((
             "gpsp_color_correction",
             if on { "enabled" } else { "disabled" },
@@ -193,10 +200,12 @@ pub fn apply_link_options(core: &mut LibretroCore, which: Core, player: u8) {
 }
 
 /// The prefix a core puts on its option keys. It is not always the core's own
-/// name: Cygne is built from beetle-wswan, whose keys all start `wswan_`.
+/// name: Cygne is built from beetle-wswan, whose keys all start `wswan_`, and
+/// Beetle PCE Fast's all start `pce_fast_`.
 pub fn option_prefix(which: Core) -> &'static str {
     match which {
         Core::Cygne => "wswan",
+        Core::Pce => "pce_fast",
         other => other.as_str(),
     }
 }
@@ -356,6 +365,11 @@ pub fn apply_core_options(
         // Games that speak both languages run in English.
         core.set_option("ngp_language", "english");
     }
+    if which == Core::Pce {
+        // The TurboExpress pad: two buttons, I and II, with Select and Run.
+        // A six-button pad confuses games made for two.
+        core.set_option("pce_fast_default_joypad_type_p1", "2 Buttons");
+    }
     if which == Core::Gpsp {
         core.set_option("gpsp_serial", serial);
         core.set_option("gpsp_rtc_time_source", "system");
@@ -469,6 +483,9 @@ mod tests {
         assert_eq!(option_prefix(Core::Gearsystem), "gearsystem");
         // beetle-ngp names its one option ngp_language.
         assert_eq!(option_prefix(Core::Ngp), "ngp");
+        // beetle-pce-fast's keys start pce_fast_, not the core's own name.
+        assert_eq!(option_prefix(Core::Pce), "pce_fast");
+        assert!(has_frameskip(Core::Pce));
     }
 
     #[test]

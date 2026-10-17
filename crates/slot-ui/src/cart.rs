@@ -126,6 +126,24 @@ pub const NGP_LABEL_Y: u32 = ngp_label_panel(NGP_CART_W, NGP_CART_H).1;
 pub const NGP_LABEL_W: u32 = ngp_label_panel(NGP_CART_W, NGP_CART_H).2 - NGP_LABEL_X;
 pub const NGP_LABEL_H: u32 = ngp_label_panel(NGP_CART_W, NGP_CART_H).3 - NGP_LABEL_Y;
 
+// TurboGrafx-16 HuCard: a portrait card with its contacts and a dark panel
+// across the top; the game art fills the lower half, square-cornered.
+pub use crate::bitmaps::{TG16_CART_H, TG16_CART_W};
+
+pub const fn tg16_label_panel(w: u32, h: u32) -> (u32, u32, u32, u32) {
+    (
+        (w * 60 + 500) / 1000,
+        (h * 420 + 500) / 1000,
+        (w * 955 + 500) / 1000,
+        (h * 905 + 500) / 1000,
+    )
+}
+
+pub const TG16_LABEL_X: u32 = tg16_label_panel(TG16_CART_W, TG16_CART_H).0;
+pub const TG16_LABEL_Y: u32 = tg16_label_panel(TG16_CART_W, TG16_CART_H).1;
+pub const TG16_LABEL_W: u32 = tg16_label_panel(TG16_CART_W, TG16_CART_H).2 - TG16_LABEL_X;
+pub const TG16_LABEL_H: u32 = tg16_label_panel(TG16_CART_W, TG16_CART_H).3 - TG16_LABEL_Y;
+
 const PAD: u32 = 10;
 const MAX_LINES: usize = 3;
 const MIN_PX: f32 = 10.0;
@@ -170,6 +188,7 @@ pub fn mould_of(cart: &Cart) -> Mould {
         Platform::Lynx => Mould::Lynx,
         Platform::Gg => Mould::Gg,
         Platform::Ngp => Mould::Ngp,
+        Platform::Tg16 => Mould::Tg16,
         _ => match gb_shell_of(cart) {
             None => Mould::Gba,
             Some(GbShell::Notched) => Mould::Notched,
@@ -188,12 +207,18 @@ pub fn mould_for(platform: Platform) -> Mould {
         Platform::Lynx => Mould::Lynx,
         Platform::Gg => Mould::Gg,
         Platform::Ngp => Mould::Ngp,
+        Platform::Tg16 => Mould::Tg16,
     }
 }
 
 pub fn gb_shell_of(cart: &Cart) -> Option<GbShell> {
     match cart.platform {
-        Platform::Gba | Platform::Ws | Platform::Lynx | Platform::Gg | Platform::Ngp => None,
+        Platform::Gba
+        | Platform::Ws
+        | Platform::Lynx
+        | Platform::Gg
+        | Platform::Ngp
+        | Platform::Tg16 => None,
         Platform::Gb | Platform::Gbc => Some(match cart.shell.map(|c| c.outline) {
             Some(Outline::Notched) => GbShell::Notched,
             Some(Outline::Rounded) => GbShell::Rounded,
@@ -257,6 +282,7 @@ fn spec(shape: Shape) -> Spec {
                     Mould::Ws => (WS_LABEL_X, WS_LABEL_Y, WS_LABEL_W, WS_LABEL_H),
                     Mould::Gg => (GG_LABEL_X, GG_LABEL_Y, GG_LABEL_W, GG_LABEL_H),
                     Mould::Ngp => (NGP_LABEL_X, NGP_LABEL_Y, NGP_LABEL_W, NGP_LABEL_H),
+                    Mould::Tg16 => (TG16_LABEL_X, TG16_LABEL_Y, TG16_LABEL_W, TG16_LABEL_H),
                     _ => (LYNX_LABEL_X, LYNX_LABEL_Y, LYNX_LABEL_W, LYNX_LABEL_H),
                 },
                 mask: extra_mask(mould),
@@ -612,7 +638,7 @@ fn dress(s: &Spec, rgba: &mut [u8]) {
         Mould::Notched => "GAME BOY",
         Mould::Rounded => "GAME BOY COLOR",
         // The slotPlus moulds carry their markings in their art.
-        Mould::Ws | Mould::Lynx | Mould::Gg | Mould::Ngp => return,
+        Mould::Ws | Mould::Lynx | Mould::Gg | Mould::Ngp | Mould::Tg16 => return,
     };
     stamp_console(rgba, s.w, s.h, title, y0);
 }
@@ -778,7 +804,7 @@ fn generated_label(s: &Spec, title: &str) -> Vec<u8> {
 
     if let Some(font) = text::label_font() {
         let (max_px, max_h) = match s.mould {
-            Mould::Gba | Mould::Ws | Mould::Lynx | Mould::Gg | Mould::Ngp => {
+            Mould::Gba | Mould::Ws | Mould::Lynx | Mould::Gg | Mould::Ngp | Mould::Tg16 => {
                 (lh as f32 / (MAX_LINES as f32 * 1.36), f32::INFINITY)
             }
             Mould::Notched | Mould::Rounded => {
@@ -816,6 +842,7 @@ fn label_corner(mould: Mould) -> f32 {
     match mould {
         Mould::Gg => 14.0,
         Mould::Ngp => 6.0,
+        Mould::Tg16 => 1.0,
         _ => 0.0,
     }
 }

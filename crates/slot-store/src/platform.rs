@@ -10,10 +10,11 @@ pub enum Platform {
     Lynx,
     Gg,
     Ngp,
+    Tg16,
 }
 
 impl Platform {
-    pub const ALL: [Platform; 7] = [
+    pub const ALL: [Platform; 8] = [
         Platform::Gba,
         Platform::Gb,
         Platform::Gbc,
@@ -21,6 +22,7 @@ impl Platform {
         Platform::Lynx,
         Platform::Gg,
         Platform::Ngp,
+        Platform::Tg16,
     ];
 
     pub fn name(self) -> &'static str {
@@ -32,6 +34,7 @@ impl Platform {
             Platform::Lynx => "Atari Lynx",
             Platform::Gg => "Game Gear",
             Platform::Ngp => "NeoGeo Pocket",
+            Platform::Tg16 => "TurboGrafx-16",
         }
     }
 
@@ -44,6 +47,7 @@ impl Platform {
             Platform::Lynx => "Lynx",
             Platform::Gg => "GG",
             Platform::Ngp => "NGP",
+            Platform::Tg16 => "TG16",
         }
     }
 
@@ -56,6 +60,8 @@ impl Platform {
             Platform::Gg => &["gg"],
             // NeoGeo Pocket and NeoGeo Pocket Color games share one shelf.
             Platform::Ngp => &["ngp", "ngc", "ngpc"],
+            // TurboGrafx-16 and PC Engine HuCards, as the TurboExpress played.
+            Platform::Tg16 => &["pce"],
         }
     }
 
@@ -64,6 +70,9 @@ impl Platform {
             Platform::Gba => (240, 160),
             Platform::Gb | Platform::Gbc | Platform::Gg => (160, 144),
             Platform::Ngp => (160, 152),
+            // Most HuCard games draw 256x240; some switch to 320, 336 or 512
+            // wide, and the frame's own size is used when it does.
+            Platform::Tg16 => (256, 240),
             Platform::Ws => (224, 144),
             Platform::Lynx => (160, 102),
         }
@@ -76,6 +85,8 @@ impl Platform {
     pub fn actual_window(self) -> (u32, u32) {
         match self {
             Platform::Lynx => (180, 120),
+            // The canvas at 2x: a 256 to 352 wide picture lands at 2x.
+            Platform::Tg16 => (360, 240),
             _ => (240, 160),
         }
     }
@@ -101,6 +112,8 @@ impl Platform {
             | Platform::Gg
             | Platform::Ngp => (240, 160),
             Platform::Ws => (360, 240),
+            // Room for a 512-wide high resolution picture, and 240 lines.
+            Platform::Tg16 => (720, 240),
         }
     }
 

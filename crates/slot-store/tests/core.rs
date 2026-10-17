@@ -256,6 +256,22 @@ fn gearsystem_is_named_and_parsed_the_way_its_library_is() {
 }
 
 #[test]
+fn a_hucard_always_gets_beetle_pce_fast() {
+    let d = root_with(Some("Bonk = mgba\n"));
+    assert_eq!(
+        core_for_platform(d.path(), "Bonk", Platform::Tg16),
+        Core::Pce
+    );
+    assert_eq!(Core::default_for(Platform::Tg16), Core::Pce);
+    assert_eq!(Core::choices(Platform::Tg16), vec![Core::Pce]);
+    assert!(!Core::Pce.runs(Platform::Gba));
+    assert_eq!(Core::Pce.as_str(), "pce");
+    assert_eq!(Core::parse("PCE"), Some(Core::Pce));
+    assert_eq!(Core::Pce.text(), "Beetle PCE Fast");
+    assert_eq!(Core::ALL[Core::Pce.index()], Core::Pce);
+}
+
+#[test]
 fn a_neogeo_pocket_cart_always_gets_beetle_neopop() {
     let d = root_with(Some("Metal Slug = mgba\n"));
     assert_eq!(

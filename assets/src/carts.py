@@ -16,7 +16,7 @@ For each mould it writes, into the repository's `assets/`:
     <mould>_board.png     the board a clear cart shows
     <mould>_decal.png     drawn over the shell untinted (contacts, PCB)
 
-usage: python3 assets/src/carts.py [ws|lynx|gg|ngp ...]
+usage: python3 assets/src/carts.py [ws|lynx|gg|ngp|tg16 ...]
 """
 
 import os
@@ -493,7 +493,89 @@ def neogeo_pocket():
     rgba_colour(board, balpha).save(os.path.join(ASSETS, "ngp_board.png"))
 
 
-MOULDS = {"ws": wonderswan, "lynx": lynx, "gg": gamegear, "ngp": neogeo_pocket}
+# --------------------------------------------------------------------------
+# TurboGrafx-16 TurboChip (HuCard): a thin card the size of a credit card,
+# 86 x 54 mm, its game art covering most of the face and its 38 gold
+# contacts showing in a strip along the foot.
+
+TG16_LABEL_R = 1  # HuCard labels are printed square, edge to edge
+
+
+def turbochip():
+    """The HuCard: a thin white card the size of a credit card. Gold contacts
+    run along its top edge over a dark textured panel; the printed label fills
+    the lower half, and a small ridged tab at the foot is the grip."""
+    w, h = 214, 337
+    c = Canvas(w, h)
+    body = f(c.rrect(c.layer(), 0, 0, w, h, 9))
+
+    # The label, printed flat on the card.
+    lx0, ly0 = round(w * 0.06), round(h * 0.42)
+    lx1, ly1 = round(w * 0.955), round(h * 0.905)
+    well = f(c.rrect(c.layer(), lx0, ly0, lx1, ly1, TG16_LABEL_R))
+
+    # The dark panel across the top, square along the card's edge and rounded
+    # where it ends above the label; the contacts sit in a band at its top.
+    px0, py0 = w * 0.035, h * 0.018
+    px1, py1 = w * 0.965, h * 0.39
+    panel = f(c.rrect(c.layer(), px0, py0, px1, py1, 13,
+                      corners=(False, False, True, True)))
+    cy0, cy1 = h * 0.024, h * 0.068
+
+    # The grip: a low tab at the foot, peaked in the middle, with fine ridges
+    # across it.
+    gx0, gx1 = w * 0.365, w * 0.635
+    gy0, gy1 = h * 0.925, h * 0.985
+    tab = f(c.poly(c.layer(), [
+        (gx0, gy1), (gx0 + w * 0.03, gy0 + h * 0.012), (w * 0.5, gy0),
+        (gx1 - w * 0.03, gy0 + h * 0.012), (gx1, gy1)]))
+    ridges = c.layer()
+    for k in range(5):
+        y = gy0 + h * 0.016 + k * (gy1 - gy0 - h * 0.02) / 5
+        c.rrect(ridges, gx0, y, gx1, y + 1.1, 0.5)
+    ridges = f(ridges) * tab
+
+    height = bevel(body, 2.0) * 1.2
+    height -= soft(tab, 0.5) * 1.8  # raised a little off the card
+    height += soft(ridges, 0.25) * 1.2  # grooves pressed into it
+    height += soft(panel, 0.4) * 0.15  # the panel is a thin film, barely in
+
+    neutral = shade(height, body, well, seed=61, gain=20.0)
+    rgba(neutral, body).save(os.path.join(ASSETS, "tg16_neutral.png"))
+    rgba(clear_from(neutral, body, 62), body).save(os.path.join(ASSETS, "tg16_clear.png"))
+    rgba(np.full_like(body, 255.0) * body, body).save(os.path.join(ASSETS, "tg16_cart.png"))
+    interior(c, body, 63, [(w * 0.5, h * 0.66, 6)]).save(os.path.join(ASSETS, "tg16_interior.png"))
+
+    board_region = c.rrect(c.layer(), 4, 4, w - 4, h - 4, 7)
+    board = pcb(c, board_region, 64, [(w * 0.25, h * 0.2, w * 0.75, h * 0.5)])
+    board, balpha = fingers(c, px0 + 3, px1 - 3, cy0, cy1, 38, board,
+                            f(board_region))
+    rgba_colour(board, balpha).save(os.path.join(ASSETS, "tg16_board.png"))
+
+    # The panel and its contacts are printed and plated, not moulded, so they
+    # go in the decal and keep their colour over any shell: a deep plum-brown
+    # with a pebbled texture, and a black band behind the contacts.
+    rng = np.random.default_rng(65)
+    pebble = rng.normal(0.0, 1.0, (c.H // S, c.W // S)).astype(np.float32)
+    pebble = ndimage.gaussian_filter(pebble, 0.7)
+    pebble = np.kron(pebble / pebble.std(), np.ones((S, S), np.float32))
+    ys = np.arange(c.H, dtype=np.float32)[:, None] / S
+    base = np.array([44, 36, 42], np.float32)
+    under = base + pebble[..., None] * 4.5
+    band = (ys >= cy0 - 1) & (ys <= cy1 + 1)
+    under = np.where(band[..., None], np.array([16, 14, 15], np.float32), under)
+    under = np.broadcast_to(under, (c.H, c.W, 3)).copy()
+    decal, dalpha = fingers(c, px0 + 3, px1 - 3, cy0, cy1, 38, under, panel)
+    rgba_colour(decal, dalpha).save(os.path.join(ASSETS, "tg16_decal.png"))
+
+
+MOULDS = {
+    "ws": wonderswan,
+    "lynx": lynx,
+    "gg": gamegear,
+    "ngp": neogeo_pocket,
+    "tg16": turbochip,
+}
 
 if __name__ == "__main__":
     for name in sys.argv[1:] or MOULDS:

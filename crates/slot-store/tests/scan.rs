@@ -217,6 +217,25 @@ fn game_gear_roms_scan_into_their_own_platform_with_no_header_title() {
 }
 
 #[test]
+fn hucards_scan_into_their_own_shelf_with_no_header_title() {
+    let root = std::env::temp_dir().join(format!("slot-tg16-scan-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    let dir = root.join("Games").join("TG16");
+    std::fs::create_dir_all(&dir).unwrap();
+    let mut rom = vec![0u8; 0x8000];
+    rom[0x134..0x13c].copy_from_slice(b"GARBAGE!");
+    std::fs::write(dir.join("Bonk's Adventure.pce"), &rom).unwrap();
+    std::fs::write(dir.join("Ys Book I & II.cue"), b"FILE").unwrap();
+
+    let mut carts = slot_store::scan(&root).unwrap();
+    assert_eq!(carts.len(), 1);
+    assert_eq!(carts[0].platform, slot_store::Platform::Tg16);
+    carts[0].read_header();
+    assert_eq!(carts[0].title, "");
+    std::fs::remove_dir_all(&root).ok();
+}
+
+#[test]
 fn neogeo_pocket_roms_scan_into_one_shelf_with_no_header_title() {
     let root = std::env::temp_dir().join(format!("slot-ngp-scan-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
