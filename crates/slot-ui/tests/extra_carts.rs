@@ -24,8 +24,20 @@ fn cart(platform: Platform, stem: &str) -> Cart {
     }
 }
 
+/// A WonderSwan Color game: its cart is the frosted clear one.
 fn ws() -> Cart {
-    cart(Platform::Ws, "Gunpey")
+    Cart {
+        rom: "Games/WS/Gunpey EX.wsc".into(),
+        ..cart(Platform::Ws, "Gunpey EX")
+    }
+}
+
+/// A game for the original WonderSwan: its cart is black.
+fn ws_mono() -> Cart {
+    Cart {
+        rom: "Games/WS/Gunpey.ws".into(),
+        ..cart(Platform::Ws, "Gunpey")
+    }
 }
 
 fn lynx() -> Cart {
@@ -286,4 +298,40 @@ fn a_neogeo_pocket_cart_is_dark_grey_solid_plastic_with_no_contacts_showing() {
         })
         .count();
     assert_eq!(n, 0, "{n} gold pixels on a NeoGeo Pocket pak");
+}
+
+#[test]
+fn a_wonderswan_game_gets_a_black_cart_and_a_wonderswan_color_game_a_clear_one() {
+    let mono = shell_for(&ws_mono());
+    assert_eq!(mono.finish, Finish::Solid);
+    assert!(
+        mono.colour.iter().all(|c| *c < 0x30),
+        "not black: {:?}",
+        mono.colour
+    );
+    assert!(!is_clear(&ws_mono()));
+    assert!(!shows_interior(&ws_mono()));
+
+    assert_ne!(shell_for(&ws()).finish, Finish::Solid);
+    assert!(is_clear(&ws()));
+
+    // The extension decides, whatever its case.
+    let shouty = Cart {
+        rom: "Games/WS/GUNPEY EX.WSC".into(),
+        ..ws()
+    };
+    assert!(is_clear(&shouty));
+
+    // A shell picked for the game in cart_shell.txt still wins.
+    let mut picked = ws_mono();
+    picked.shell = Some(slot_store::ShellChoice {
+        colour: [0x20, 0x60, 0xd0],
+        finish: slot_store::ShellFinish::Clear,
+        outline: slot_store::Outline::Auto,
+    });
+    assert!(is_clear(&picked));
+
+    // The black cart still draws as a whole WonderSwan cart.
+    let f = cart_face(&ws_mono());
+    assert_eq!((f.w, f.h), (WS_CART_W, WS_CART_H));
 }

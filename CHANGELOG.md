@@ -2,7 +2,8 @@
 
 ## Unreleased (slotPlusUltra)
 
-- Fixed: opening the menu froze the handheld after playing a WonderSwan, Atari Lynx, Game Gear or NeoGeo Pocket game, until it was switched off.
+- WonderSwan carts default to the shell the game came in: black for a WonderSwan game (`.ws`), frosted clear with the board showing for a WonderSwan Color game (`.wsc`). Before, every WonderSwan cart was clear. A shell set in `Config/cart_shell.txt` still wins.
+- The 1.7.0-plus1.1 menu freeze fix covers the Game Gear and NeoGeo Pocket too.
 - On 4:3 handhelds such as the RG 35XXSP, a stretched game now fills the whole screen instead of its 3:2 window above the SP frame. This is every system but the Game Boy and Game Boy Color, which keep 1.7.0's stretch.
 - NeoGeo Pocket and NeoGeo Pocket Color games (`.ngp`, `.ngc`, `.ngpc`) get one shared shelf. Put them in `Games/NGP/`. They run on the Beetle NeoPop core, in English where a game has both languages. No BIOS is needed.
 - NeoGeo Pocket carts are drawn in 1.7.0's look: a ridged cap, a wide label in a recessed frame (art goes in `Labels/NGP/`, about 246x133) and a lower band with a down arrow and SNK and NGP plaques pressed into it, their letters raised, with a dark grey default shell.
@@ -17,6 +18,10 @@
 - SELECT does nothing in a Game Gear game. Gearsystem would take it as a console reset, which the Game Gear does not have.
 - The Bezel rows on the WonderSwan, Atari Lynx and Game Gear Screen pages now show which bezel is picked.
 - The `GG` folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
+
+## [1.7.0-plus1.1](https://github.com/nelynes/slotPlus/releases/tag/v1.7.0-plus1.1)
+
+- Fixed: opening the menu froze the handheld after playing a WonderSwan or Atari Lynx game, until it was switched off.
 
 ## [1.7.0-plus1](https://github.com/nelynes/slotPlus/releases/tag/v1.7.0-plus1)
 
