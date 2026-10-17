@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- WonderSwan carts default to the shell the game came in: black for a WonderSwan game (`.ws`), frosted clear with the board showing for a WonderSwan Color game (`.wsc`). Before, every WonderSwan cart was clear. A shell set in `Config/cart_shell.txt` still wins.
+
 ## [1.7.0-plus1.1](https://github.com/nelynes/slotPlus/releases/tag/v1.7.0-plus1.1)
 
 - Fixed: opening the menu froze the handheld after playing a WonderSwan or Atari Lynx game, until it was switched off.

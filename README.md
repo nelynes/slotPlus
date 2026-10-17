@@ -54,7 +54,7 @@ The values are `auto` (let the core decide), `0` (never turn), `90` and `270` (t
 - **Label art:** optional PNGs go in `Labels/WS/<game name>.png`, roughly 324x132 px (about 2.45:1).
 - **Core:** WonderSwan games run on Beetle WonderSwan (Cygne).
 - **Screen:** the Screen menu has a WonderSwan page with its own Shader (Off, LCD3x, Grid or Simpletex) and Bezel. For a bezel, put your own PNGs in `Bezels/WS/`.
-- **Carts:** WonderSwan carts have their own wide shape, with the oval nameplate on top and the bare board showing below the shoulder, and default to a smoke-translucent shell. Set `Config/cart_shell.txt` to give a single game a different shell.
+- **Carts:** WonderSwan carts have their own wide shape, with the oval nameplate on top and the bare board showing below the shoulder, and default to the shell the game came in: black for a WonderSwan game (`.ws`), frosted smoke-clear with the board showing through for a WonderSwan Color game (`.wsc`). Set `Config/cart_shell.txt` to give a single game a different shell.
 
 ### Controls (horizontal games)
 

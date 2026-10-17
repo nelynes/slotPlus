@@ -50,7 +50,11 @@ const FAMILY: &[(u8, Shell)] = &[(b'M', shell([0xc6, 0xc6, 0xc9], Finish::Solid)
 
 pub const DMG_SHELL: Shell = shell([0x9a, 0x97, 0x8f], Finish::Solid);
 
+/// A WonderSwan Color cart: frosted smoke-clear plastic with the board showing through.
 pub const WS_SHELL: Shell = shell([0x3a, 0x3a, 0x40], Finish::Translucent);
+
+/// A WonderSwan cart for the original black-and-white handheld: solid black plastic.
+pub const WS_MONO_SHELL: Shell = shell([0x1e, 0x1e, 0x21], Finish::Solid);
 
 pub const LYNX_SHELL: Shell = shell([0x32, 0x3f, 0x41], Finish::Solid);
 
@@ -93,9 +97,18 @@ pub fn shell_for(cart: &Cart) -> Shell {
     }
     match cart.platform {
         Platform::Gba => gba_shell_for(&gba_code(cart)),
-        Platform::Ws => WS_SHELL,
+        Platform::Ws => ws_shell_for(&cart.rom),
         Platform::Lynx => LYNX_SHELL,
         Platform::Gb | Platform::Gbc => gb_shell_for(&cart.rom),
+    }
+}
+
+/// A `.wsc` game came on a WonderSwan Color cart, frosted clear; a `.ws` game
+/// on the original black one.
+fn ws_shell_for(rom: &Path) -> Shell {
+    match rom.extension().and_then(|e| e.to_str()) {
+        Some(ext) if ext.eq_ignore_ascii_case("wsc") => WS_SHELL,
+        _ => WS_MONO_SHELL,
     }
 }
 
