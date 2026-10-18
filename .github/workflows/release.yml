@@ -25,9 +25,11 @@ jobs:
           - edition: plus
             ref: ''
             suffix: ''
+            zip: slot-plus.zip
           - edition: ultra
             ref: slotPlusUltra
             suffix: '-ultra'
+            zip: slot-plusultra.zip
     steps:
       - uses: actions/checkout@v7
         with:
@@ -74,7 +76,7 @@ jobs:
         run: |
           set -eu
           out="slot-${GITHUB_REF_NAME}${{ matrix.suffix }}"
-          zip -qry "$out-h700.zip" "$out"
+          zip -qry "${{ matrix.zip }}" "$out"
           git config --global --add safe.directory "$PWD"
           git rev-parse --short HEAD > "${{ matrix.edition }}-commit.txt"
 
@@ -82,7 +84,7 @@ jobs:
         with:
           name: card-${{ matrix.edition }}
           path: |
-            slot-*-h700.zip
+            ${{ matrix.zip }}
             ${{ matrix.edition }}-commit.txt
           if-no-files-found: error
 
@@ -109,12 +111,12 @@ jobs:
           cat > notes.md <<NOTES
           Two downloads. Pick one, unzip it and copy the contents of its folder onto SD2.
 
-          - **\`slot-${tag}-h700.zip\`, slotPlus:** Game Boy Advance, Game Boy and Game Boy Color, plus WonderSwan and Atari Lynx.
-          - **\`slot-${tag}-ultra-h700.zip\`, slotPlusUltra:** everything in slotPlus, plus Game Gear, NeoGeo Pocket and TurboGrafx-16. Built from the slotPlusUltra branch at ${ultra_commit}.
+          - **\`slot-plus.zip\`, slotPlus:** Game Boy Advance, Game Boy and Game Boy Color, plus WonderSwan and Atari Lynx.
+          - **\`slot-plusultra.zip\`, slotPlusUltra:** everything in slotPlus, plus Game Gear, NeoGeo Pocket and TurboGrafx-16. Built from the slotPlusUltra branch at ${ultra_commit}.
 
           Emulation by mGBA (MPL-2.0), gpSP (GPL-2.0), Beetle WonderSwan / Cygne (GPL-2.0) and Beetle Lynx (GPL-2.0), and in slotPlusUltra also Gearsystem (GPL-3.0), Beetle NeoPop (GPL-2.0) and Beetle PCE Fast (GPL-2.0). Their licences, patches and source are in \`System/licenses/\` in each download.
 
           Atari Lynx games need \`lynxboot.img\`, which is not included. Put your own copy in \`BIOS/\`.
           NOTES
-          gh release create "$tag" slot-*-h700.zip --repo "$GITHUB_REPOSITORY" \
+          gh release create "$tag" slot-plus.zip slot-plusultra.zip --repo "$GITHUB_REPOSITORY" \
             --title "$tag" --notes-file notes.md
