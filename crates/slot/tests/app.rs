@@ -2452,6 +2452,69 @@ fn l_and_r_change_the_mode_on_a_neogeo_pocket_cart_and_never_reach_the_core() {
 }
 
 #[test]
+fn a_hucard_turns_over_before_it_goes_in_and_back_after_it_comes_out() {
+    let d = root_with_one_cart("TG16", "Bonk's Adventure.pce");
+    std::fs::write(d.path().join("Games/TG16/R-Type.pce"), vec![0u8; 0x10000]).unwrap();
+    common::clocked(d.path());
+    let mut s = Session::boot(d.path().to_path_buf());
+    assert_eq!(s.app().turn(), 0.0, "turned on the shelf");
+    s.feed([RawEvent::Down(Btn::A)], 16);
+    s.feed([RawEvent::Up(Btn::A)], 32);
+    let mut last = 0.0;
+    let mut turned_by = None;
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while !matches!(s.app().phase(), Phase::Playing { .. }) {
+        assert!(Instant::now() < deadline, "the card never seated");
+        let (turn, seat) = (s.app().turn(), s.app().seat());
+        assert!(turn >= last, "the turn went backwards going in");
+        if seat > 0.0 {
+            assert_eq!(turn, 1.0, "it started going in before it had turned over");
+        }
+        if turn >= 1.0 && turned_by.is_none() {
+            turned_by = Some(seat);
+        }
+        last = turn;
+        s.update(1.0 / 60.0);
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    assert!(
+        turned_by.is_some_and(|seat| seat < 0.01),
+        "the turn was not done before it went in: {turned_by:?}"
+    );
+    assert_eq!(s.app().turn(), 1.0, "a seated HuCard is upside down");
+
+    s.app_mut().apply(slot_input::Action::Eject);
+    let mut was_out = false;
+    let mut last = 1.0;
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while !matches!(s.app().phase(), Phase::Shelf) {
+        assert!(Instant::now() < deadline, "the card never came back");
+        let (turn, seat) = (s.app().turn(), s.app().seat());
+        assert!(turn <= last, "the turn went backwards coming out");
+        if turn < 1.0 {
+            assert_eq!(seat, 0.0, "it turned back before it was out of the slot");
+            was_out = true;
+        }
+        last = turn;
+        s.update(1.0 / 60.0);
+    }
+    assert!(was_out, "it never turned back");
+    assert_eq!(s.app().turn(), 0.0);
+}
+
+#[test]
+fn other_carts_never_turn() {
+    let d = common::tmp_root_with_carts(&["Emerald", "Zzz"]);
+    let mut s = session_playing(d.path());
+    assert_eq!(s.app().turn(), 0.0);
+    s.app_mut().apply(slot_input::Action::Eject);
+    for _ in 0..120 {
+        assert_eq!(s.app().turn(), 0.0);
+        s.update(1.0 / 60.0);
+    }
+}
+
+#[test]
 fn the_shader_shortcut_steps_only_the_turbografx_shader_in_a_hucard_game() {
     let d = root_with_one_cart("TG16", "Bonk's Adventure.pce");
     let mut s = session_playing(d.path());

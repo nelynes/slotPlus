@@ -38,6 +38,9 @@ pub const SEATED_AT: f32 = INSERT_S - INSERT_HOLD_S;
 pub const EJECT_S: f32 = SEATED_AT;
 
 const EJECT_HOLD_S: f32 = 0.35;
+/// How long a cart that goes in upside down takes to turn over, before it
+/// goes in and after it comes out.
+pub const TURN_S: f32 = 0.3;
 
 pub const IN_GAME_MENU: Layout = Layout::Native;
 
@@ -2606,6 +2609,15 @@ impl App {
         }
         let mut touched = false;
         let at = self.shelf_at;
+        // A cart that came out upside down turns back over before it is
+        // back on the shelf.
+        let turn_back = match self
+            .seated_cart()
+            .is_some_and(|c| slot_ui::inserts_turned(c.platform))
+        {
+            true => TURN_S,
+            false => 0.0,
+        };
         let next = match &mut self.phase {
             Phase::Shelf => {
                 let shelf = &mut self.shelves[at].1;
@@ -2634,7 +2646,7 @@ impl App {
                     *t += dt;
                     touched = was < 0.0 && *t >= 0.0;
                 }
-                (*t >= EJECT_S).then_some(Phase::Shelf)
+                (*t >= EJECT_S + turn_back).then_some(Phase::Shelf)
             }
             _ => None,
         };
@@ -3052,6 +3064,24 @@ impl App {
         self.refusal.is_some_and(|r| r.active(now))
     }
 
+    /// How far a cart that goes in upside down has turned over: 0 on the
+    /// shelf, 1 from just before it goes in until just after it comes out.
+    pub fn turn(&self) -> f32 {
+        if !self
+            .seated_cart()
+            .is_some_and(|c| slot_ui::inserts_turned(c.platform))
+        {
+            return 0.0;
+        }
+        match &self.phase {
+            Phase::Shelf => 0.0,
+            Phase::Inserting { resumed: true, .. } => 1.0,
+            Phase::Inserting { t, .. } => ((t + TURN_S) / TURN_S).clamp(0.0, 1.0),
+            Phase::Ejecting { t, .. } => 1.0 - ((t - EJECT_S) / TURN_S).clamp(0.0, 1.0),
+            _ => 1.0,
+        }
+    }
+
     pub fn seat(&self) -> f32 {
         match &self.phase {
             Phase::Shelf => 0.0,
@@ -3315,6 +3345,7 @@ impl App {
             rest,
             scale,
             seat: self.seat(),
+            turn: self.turn(),
             alert: self.alert_face.filter(|_| alpha > 0.0).map(|t| (t, alpha)),
             dim,
             screen: self.screen,
@@ -3714,9 +3745,9 @@ impl App {
             return;
         }
         let at = self.shelf().index;
-        let Some(cart) = self.shelf_mut().carts.get_mut(at).map(|c| {
+        let Some((cart, platform)) = self.shelf_mut().carts.get_mut(at).map(|c| {
             c.read_header();
-            c.stem.clone()
+            (c.stem.clone(), c.platform)
         }) else {
             return;
         };
@@ -3727,9 +3758,14 @@ impl App {
         self.play_held = None;
         self.refusal = None;
         self.refused_from = None;
+        // A cart that goes in upside down turns over first.
+        let t = match slot_ui::inserts_turned(platform) {
+            true => -TURN_S,
+            false => 0.0,
+        };
         self.phase = Phase::Inserting {
             cart,
-            t: 0.0,
+            t,
             core_ready: false,
             resumed: false,
             clean,

@@ -197,6 +197,13 @@ pub fn mould_of(cart: &Cart) -> Mould {
     }
 }
 
+/// Whether a platform's carts go into the slot upside down. A HuCard is drawn
+/// as it is printed, contacts at the top, so it turns end over end before it
+/// goes in contacts first, and turns back when it comes out.
+pub fn inserts_turned(platform: Platform) -> bool {
+    platform == Platform::Tg16
+}
+
 /// The mould a platform's carts are drawn from when the cart is not known. A
 /// Game Boy platform's carts take the notched pak's size either way.
 pub fn mould_for(platform: Platform) -> Mould {

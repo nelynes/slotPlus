@@ -35,7 +35,7 @@ The TurboExpress was NEC's handheld TurboGrafx-16: it played the same HuCards as
 | **Picture** | Most games draw 256x240, shown at 2x. Games that switch to a wider mode follow it: up to 352 wide stays at 2x, and the 512-wide mode is drawn across the whole screen. Stretched, the picture fills the screen whatever its width. |
 | **Shaders** | Off, LCD3x, Grid, Dot. |
 | **Bezel** | None bundled. Your own go in `Bezels/TG16/`. |
-| **Cart** | The HuCard: a thin white card with gold contacts along the top over a dark textured panel, the label printed square in the lower half, and a ridged grip tab at the foot. |
+| **Cart** | The HuCard: a thin white card with gold contacts along the top over a dark textured panel, the label printed square in the lower half, and a ridged grip tab at the foot. It turns end over end before it goes into the slot, contacts first, and turns back when it comes out. |
 | **Saves** | Games that save to the console's backup memory keep it in `Saves/TG16/`. |
 
 ### Controls

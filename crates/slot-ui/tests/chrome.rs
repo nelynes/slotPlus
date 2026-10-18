@@ -150,6 +150,7 @@ fn chrome_into(c: &Cart, seat: f32, out: &mut Vec<Draw>) {
         rest: centred(c),
         scale: 1.0,
         seat,
+        turn: 0.0,
         alert: None,
         dim: 0.5,
         screen: 0.0,
@@ -183,6 +184,7 @@ fn a_cart_the_row_had_not_finished_moving_slides_across_as_it_goes_in() {
             rest,
             scale,
             seat,
+            turn: 0.0,
             alert: None,
             dim: 0.0,
             screen: 0.0,
@@ -243,6 +245,7 @@ fn draw_powering_on(t: f32, out: &mut Vec<Draw>) {
         rest: CENTRED,
         scale: 1.0,
         seat: 1.0,
+        turn: 0.0,
         alert: None,
         dim: 0.0,
         screen: t,
@@ -657,6 +660,7 @@ fn the_empty_slot_is_the_same_slot_the_chrome_draws() {
         rest: CENTRED,
         scale: 1.0,
         seat: 1.0,
+        turn: 0.0,
         alert: None,
         dim: 0.0,
         screen: 0.0,
@@ -895,6 +899,7 @@ fn a_clear_carts_board_goes_into_the_slot_and_comes_out_with_it() {
                 rest: centred(&c),
                 scale: 1.0,
                 seat,
+                turn: 0.0,
                 alert: None,
                 dim: 0.0,
                 screen: 0.0,
@@ -930,5 +935,67 @@ fn a_clear_carts_board_goes_into_the_slot_and_comes_out_with_it() {
                 "{name} at {seat}: the face is not under the slot front"
             );
         }
+    }
+}
+
+#[test]
+fn a_turning_cart_is_drawn_turned_about_its_middle_and_a_still_one_plainly() {
+    let c = cart();
+    let face = TexId::from_raw(3);
+    let draw = |turn: f32| {
+        let mut out = Vec::new();
+        SlotChrome {
+            cart: &c,
+            face: Some(face),
+            rest: centred(&c),
+            scale: 1.0,
+            seat: 0.0,
+            turn,
+            alert: None,
+            dim: 0.0,
+            screen: 0.0,
+            game: false,
+            over: true,
+            behind: [None, None],
+            slot: None,
+            canvas: Canvas::FRAMED,
+        }
+        .draw(&mut out);
+        out.into_iter()
+            .find(|d| matches!(d, Draw::Tex { tex, .. } | Draw::Turned { tex, .. } if *tex == face))
+            .expect("no cart drawn")
+    };
+    assert!(
+        matches!(draw(0.0), Draw::Tex { .. }),
+        "a cart that does not turn is turned"
+    );
+    let Draw::Turned { turn: half, .. } = draw(0.5) else {
+        panic!("half way round is not turned");
+    };
+    assert!((half - std::f32::consts::FRAC_PI_2).abs() < 1e-4, "{half}");
+    let Draw::Turned { turn: over, .. } = draw(1.0) else {
+        panic!("all the way round is not turned");
+    };
+    assert!((over - std::f32::consts::PI).abs() < 1e-4, "{over}");
+    let (
+        Draw::Tex { x, y, w, h, .. },
+        Draw::Turned {
+            x: tx,
+            y: ty,
+            w: tw,
+            h: th,
+            ..
+        },
+    ) = (draw(0.0), draw(1.0))
+    else {
+        unreachable!()
+    };
+    assert_eq!((x, y, w, h), (tx, ty, tw, th), "turning moved the cart");
+}
+
+#[test]
+fn only_the_hucard_goes_in_upside_down() {
+    for p in Platform::ALL {
+        assert_eq!(slot_ui::inserts_turned(p), p == Platform::Tg16, "{p:?}");
     }
 }

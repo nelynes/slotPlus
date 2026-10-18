@@ -84,6 +84,9 @@ pub struct SlotChrome<'a> {
     pub rest: f32,
     pub scale: f32,
     pub seat: f32,
+    /// How far a cart that goes in upside down has turned, 0 as it stands on
+    /// the shelf to 1 turned end over end. See `inserts_turned`.
+    pub turn: f32,
     pub alert: Option<(TexId, f32)>,
     pub dim: f32,
     pub screen: f32,
@@ -138,18 +141,9 @@ impl SlotChrome<'_> {
         let x = centre + (canvas.w / 2.0 - centre) * k - cw / 2.0;
         let y = foot0 + (seated_foot - foot0) * travel - ch;
         let cart_alpha = if seat >= 1.0 && !held { chrome } else { 1.0 };
-        for tex in self.behind.into_iter().flatten() {
-            out.push(Draw::Tex {
-                x,
-                y,
-                w: cw,
-                h: ch,
-                tex,
-                alpha: cart_alpha,
-            });
-        }
-        out.push(match self.face {
-            Some(tex) => Draw::Tex {
+        let turn = std::f32::consts::PI * ease(self.turn.clamp(0.0, 1.0));
+        let sprite = |tex: TexId| match turn {
+            0.0 => Draw::Tex {
                 x,
                 y,
                 w: cw,
@@ -157,6 +151,21 @@ impl SlotChrome<'_> {
                 tex,
                 alpha: cart_alpha,
             },
+            turn => Draw::Turned {
+                x,
+                y,
+                w: cw,
+                h: ch,
+                tex,
+                alpha: cart_alpha,
+                turn,
+            },
+        };
+        for tex in self.behind.into_iter().flatten() {
+            out.push(sprite(tex));
+        }
+        out.push(match self.face {
+            Some(tex) => sprite(tex),
             None => {
                 let c = label_colour(&label_text(self.cart));
                 Draw::Rect {

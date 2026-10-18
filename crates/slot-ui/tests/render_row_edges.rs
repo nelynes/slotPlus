@@ -178,6 +178,7 @@ fn the_slot_takes_over_the_cart_where_the_row_had_it() {
         rest,
         scale,
         seat: 0.0,
+        turn: 0.0,
         alert: None,
         dim: 0.0,
         screen: 0.0,
