@@ -1275,11 +1275,23 @@ fn the_turbografx_16_has_a_screen_page_with_its_own_shader_and_bezel() {
         a.resolved_bezel(slot_store::Platform::Tg16),
         BezelPick::None
     );
+    // The two bundled under their own names come first, then the card's own.
+    for want in [
+        BezelPick::Bundled("TG16".into()),
+        BezelPick::Bundled("TG16 Wide".into()),
+        BezelPick::Bundled("PCE".into()),
+        BezelPick::Bundled("PCE Wide".into()),
+        BezelPick::File("Express.png".into()),
+        BezelPick::None,
+    ] {
+        press(&mut a, Btn::Right);
+        assert_eq!(read_slot_state(d.path()).bezel_tg16, want);
+    }
     press(&mut a, Btn::Right);
     assert_eq!(
         read_slot_state(d.path()).bezel_tg16,
-        BezelPick::File("Express.png".into()),
-        "there is no bundled TurboExpress bezel to offer first"
+        BezelPick::Bundled("TG16".into()),
+        "the list did not wrap round"
     );
 }
 

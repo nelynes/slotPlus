@@ -959,6 +959,7 @@ fn sync_game_bezel(app: &mut App, compositor: &mut Compositor, state: &mut Bezel
         let rgba = match &shown.1 {
             BezelPick::None | BezelPick::Ags102 => None,
             BezelPick::Default => default_game_bezel_face(platform),
+            BezelPick::Bundled(name) => slot_ui::bundled_game_bezel_face(platform, name),
             BezelPick::File(name) => app
                 .root()
                 .map(|root| {

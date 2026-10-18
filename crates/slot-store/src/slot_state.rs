@@ -156,8 +156,15 @@ pub enum BezelPick {
     Default,
     #[default]
     Ags102,
+    /// One of the bezels slotPlus bundles for a platform under a name of its
+    /// own, such as the TurboGrafx-16's TG16 and PCE.
+    Bundled(String),
     File(String),
 }
+
+/// How a bundled bezel is written in slot.state, ahead of its name. A colon
+/// cannot start a file name a card would hold, so it never reads as a file.
+const BUNDLED: &str = "bundled:";
 
 impl BezelPick {
     pub fn key(&self) -> String {
@@ -165,6 +172,7 @@ impl BezelPick {
             BezelPick::None => "none".to_string(),
             BezelPick::Default => "default".to_string(),
             BezelPick::Ags102 => "ags-102".to_string(),
+            BezelPick::Bundled(name) => format!("{BUNDLED}{name}"),
             BezelPick::File(name) => name.clone(),
         }
     }
@@ -174,6 +182,7 @@ impl BezelPick {
             BezelPick::None => "None".to_string(),
             BezelPick::Default => "Default".to_string(),
             BezelPick::Ags102 => "AGS-102".to_string(),
+            BezelPick::Bundled(name) => name.clone(),
             BezelPick::File(name) => name
                 .rsplit_once('.')
                 .map(|(stem, _)| stem)
@@ -187,7 +196,10 @@ impl BezelPick {
             "none" => BezelPick::None,
             "default" => BezelPick::Default,
             "" | "ags-102" => BezelPick::Ags102,
-            other => BezelPick::File(other.to_string()),
+            other => match other.strip_prefix(BUNDLED) {
+                Some(name) => BezelPick::Bundled(name.to_string()),
+                None => BezelPick::File(other.to_string()),
+            },
         }
     }
 }

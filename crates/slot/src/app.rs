@@ -1013,6 +1013,12 @@ impl App {
         if slot_ui::has_default_game_bezel(platform) {
             choices.push(BezelPick::Default);
         }
+        // The TurboGrafx-16 has two bundled, each under its own name.
+        choices.extend(
+            slot_ui::bundled_game_bezels(platform)
+                .into_iter()
+                .map(|name| BezelPick::Bundled(name.to_string())),
+        );
         if self.framed_panel() {
             choices.push(BezelPick::Ags102);
         }

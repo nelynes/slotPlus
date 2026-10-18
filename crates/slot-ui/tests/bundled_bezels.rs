@@ -2,7 +2,9 @@
 
 use slot_gfx::{OUT_H, OUT_W};
 use slot_store::Platform;
-use slot_ui::{default_game_bezel_face, has_default_game_bezel};
+use slot_ui::{
+    bundled_game_bezel_face, bundled_game_bezels, default_game_bezel_face, has_default_game_bezel,
+};
 
 fn at(rgba: &[u8], x: u32, y: u32) -> [u8; 4] {
     let i = ((y * OUT_W + x) * 4) as usize;
@@ -66,5 +68,60 @@ fn only_the_game_boys_the_game_gear_and_the_neogeo_pocket_have_a_bundled_bezel()
             bundled,
             "{platform:?}"
         );
+    }
+}
+
+#[test]
+fn the_turbografx_16_bundles_tg16_and_pce_bezels_round_its_2x_picture() {
+    assert_eq!(
+        bundled_game_bezels(Platform::Tg16),
+        ["TG16", "TG16 Wide", "PCE", "PCE Wide"]
+    );
+    assert!(!has_default_game_bezel(Platform::Tg16), "no plain Default");
+    for name in ["TG16", "PCE"] {
+        let face = bundled_game_bezel_face(Platform::Tg16, name).expect(name);
+        assert_eq!(face.len(), (OUT_W * OUT_H * 4) as usize);
+        // A 256-wide picture at 2x: 512x480 from (104, 0), all of it clear.
+        for (x, y) in [(104, 0), (615, 0), (104, 479), (615, 479), (360, 240)] {
+            assert_eq!(
+                at(&face, x, y)[3],
+                0,
+                "{name}: the window is covered at {x},{y}"
+            );
+        }
+        for (x, y) in [(103, 240), (616, 240), (20, 20), (700, 460)] {
+            assert_eq!(at(&face, x, y)[3], 255, "{name}: see-through at {x},{y}");
+        }
+    }
+    assert!(bundled_game_bezel_face(Platform::Tg16, "Express").is_none());
+}
+
+#[test]
+fn only_the_turbografx_16_has_bezels_bundled_under_their_own_names() {
+    for platform in Platform::ALL {
+        assert_eq!(
+            bundled_game_bezels(platform).is_empty(),
+            platform != Platform::Tg16,
+            "{platform:?}"
+        );
+    }
+}
+
+#[test]
+fn the_wide_turbografx_16_bezels_leave_a_320_wide_picture_clear() {
+    for name in ["TG16 Wide", "PCE Wide"] {
+        let face = bundled_game_bezel_face(Platform::Tg16, name).expect(name);
+        // A 320-wide picture at 2x: 640x480 from (40, 0). The art may lap a
+        // pixel or two over its edges, but no more.
+        for (x, y) in [(43, 0), (676, 0), (43, 479), (676, 479), (360, 240)] {
+            assert_eq!(
+                at(&face, x, y)[3],
+                0,
+                "{name}: the window is covered at {x},{y}"
+            );
+        }
+        for (x, y) in [(38, 240), (681, 240), (10, 10), (710, 470)] {
+            assert_eq!(at(&face, x, y)[3], 255, "{name}: see-through at {x},{y}");
+        }
     }
 }

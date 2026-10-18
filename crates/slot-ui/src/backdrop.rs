@@ -13,6 +13,13 @@ const BEZEL_GBC_PNG: &[u8] = include_bytes!("../../../assets/bezel_gbc.png");
 // NeoGeo Pocket's made by hand.
 const BEZEL_GG_PNG: &[u8] = include_bytes!("../../../assets/bezel_gg.png");
 const BEZEL_NGP_PNG: &[u8] = include_bytes!("../../../assets/bezel_ngp.png");
+// The TurboGrafx-16's, made by hand: the TurboGrafx-16 logo, and the PC
+// Engine's own white case, each with a Wide one for games that draw 320
+// wide, whose picture spans 640 of the screen.
+const BEZEL_TG16_PNG: &[u8] = include_bytes!("../../../assets/bezel_tg16.png");
+const BEZEL_TG16_WIDE_PNG: &[u8] = include_bytes!("../../../assets/bezel_tg16_wide.png");
+const BEZEL_PCE_PNG: &[u8] = include_bytes!("../../../assets/bezel_pce.png");
+const BEZEL_PCE_WIDE_PNG: &[u8] = include_bytes!("../../../assets/bezel_pce_wide.png");
 const BLUR_PNG: &[u8] = include_bytes!("../../../assets/background_default_blur.png");
 
 const SCRIM: f32 = 0.62;
@@ -38,6 +45,36 @@ pub fn default_game_bezel_face(platform: Platform) -> Option<Vec<u8>> {
         Platform::Ngp => BEZEL_NGP_PNG,
         _ => return None,
     };
+    art::cover_bytes(png, OUT_W, OUT_H)
+}
+
+/// The bezels bundled for a platform under names of their own, in the order
+/// the Bezel row offers them, with their art.
+fn named_game_bezels(platform: Platform) -> &'static [(&'static str, &'static [u8])] {
+    match platform {
+        Platform::Tg16 => &[
+            ("TG16", BEZEL_TG16_PNG),
+            ("TG16 Wide", BEZEL_TG16_WIDE_PNG),
+            ("PCE", BEZEL_PCE_PNG),
+            ("PCE Wide", BEZEL_PCE_WIDE_PNG),
+        ],
+        _ => &[],
+    }
+}
+
+/// The names of the bezels bundled for a platform under names of their own.
+pub fn bundled_game_bezels(platform: Platform) -> Vec<&'static str> {
+    named_game_bezels(platform)
+        .iter()
+        .map(|(name, _)| *name)
+        .collect()
+}
+
+/// A bezel bundled for a platform under a name of its own.
+pub fn bundled_game_bezel_face(platform: Platform, name: &str) -> Option<Vec<u8>> {
+    let (_, png) = named_game_bezels(platform)
+        .iter()
+        .find(|(n, _)| *n == name)?;
     art::cover_bytes(png, OUT_W, OUT_H)
 }
 

@@ -269,7 +269,7 @@ fn the_quick_menu_settings_round_trip_as_their_own_lines() {
         shader_ngp: Shader::Grid,
         bezel_ngp: BezelPick::File("Pocket.png".into()),
         shader_tg16: Shader::Dot,
-        bezel_tg16: BezelPick::File("Express.png".into()),
+        bezel_tg16: BezelPick::Bundled("PCE".into()),
         bezel_gba: BezelPick::None,
         bezel_gb: BezelPick::Default,
         bezel_gbc: BezelPick::File("Pocket.png".into()),
@@ -313,7 +313,7 @@ fn the_quick_menu_settings_round_trip_as_their_own_lines() {
         "shader_ngp=grid",
         "bezel_ngp=Pocket.png",
         "shader_tg16=dot",
-        "bezel_tg16=Express.png",
+        "bezel_tg16=bundled:PCE",
         "shelf=gba",
         "shelf_cart=gba/Drill Dozer",
     ] {
@@ -637,4 +637,18 @@ fn transparent_is_on_both_game_boy_lists_and_no_other() {
     assert_eq!(s.shader_gg, SlotState::default().shader_gg);
     assert_eq!(s.shader_ngp, SlotState::default().shader_ngp);
     assert_eq!(s.shader_tg16, SlotState::default().shader_tg16);
+}
+
+#[test]
+fn a_bundled_bezel_keeps_its_name_apart_from_a_file_of_the_same_name() {
+    for pick in [
+        BezelPick::Bundled("TG16".into()),
+        BezelPick::Bundled("PCE Wide".into()),
+        BezelPick::File("TG16.png".into()),
+        BezelPick::File("TG16".into()),
+    ] {
+        assert_eq!(BezelPick::parse(&pick.key()), pick, "{pick:?}");
+    }
+    assert_eq!(BezelPick::Bundled("PCE".into()).label(), "PCE");
+    assert_eq!(BezelPick::File("PCE.png".into()).label(), "PCE");
 }
