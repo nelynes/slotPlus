@@ -13,7 +13,7 @@ For the Game Boy systems, and everything else Slot does, see the [Slot user guid
 ## Things every added system shares
 
 - **Shelf:** each system gets its own shelf. Its folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
-- **Label art:** optional PNGs go in `Labels/<folder>/<game name>.png`, named after the game's file without its extension. Each system's cart has its own label size, given below. Art of a different size is scaled to cover the label and cropped.
+- **Label art:** optional PNGs go in `Labels/<folder>/<game name>.png`, named after the game's file without its extension. Each system's cart has its own label size, given below. Art of a different size is scaled to cover the label and cropped, except on HuCards, where it keeps its own shape (see the TurboGrafx-16).
 - **Screen menu:** each system has its own page under Screen, with its own Shader and Bezel. SELECT + B / A in a game steps through that system's shaders.
 - **Bezels:** your own PNGs go in `Bezels/<folder>/`, 720x480 with the screen area transparent. On 4:3 handhelds such as the RG 35XXSP the SP frame is offered too. A bezel shows at actual size, not when the picture is stretched.
 - **Stretch:** on the TurboGrafx-16, Game Gear and NeoGeo Pocket, L1 stretches the picture to fill the screen and R1 gives back actual size. On the Lynx and WonderSwan, L1 and R1 are the game's own buttons, so a game is set to stretch with a line in `Config/video_mode.txt` (`Game Name (USA) = stretch`). Each game remembers its choice. On a 4:3 handheld the stretched picture fills the whole panel.
@@ -32,7 +32,7 @@ The TurboExpress was NEC's handheld TurboGrafx-16: it played the same HuCards as
 | **BIOS** | Not needed. HuCards boot straight in. |
 | **Core** | Beetle PCE Fast, with the two-button pad. |
 | **Label art** | `Labels/TG16/`, 191 px wide and up to 163 px tall. As on real HuCards, labels come in different heights: the art is scaled to the full width at its own shape and sits at the bottom of the card, with plain card above a shorter label. Art taller than the space is shrunk to fit whole. |
-| **Picture** | Most games draw 256x240, shown at 2x. Games that switch to a wider mode follow it: up to 352 wide stays at 2x, and the 512-wide mode is drawn across the whole screen. Stretched, the picture fills the screen whatever its width. |
+| **Picture** | Most games draw 256x240, shown at 2x. Games that switch to a wider mode follow it: up to 352 wide stays at 2x, and the 512-wide mode, whose pixels are half as wide, is drawn 1x across and 2x down, centred. Stretched, the picture fills the screen whatever its width. |
 | **Shaders** | Off, LCD3x, Grid, Dot. |
 | **Bezel** | Four bundled: TG16, a dark face with the TurboGrafx-16 logo down the left side, and PCE, the PC Engine's white case either side of the screen, each with a Wide version for games that draw 320 wide. Or your own in `Bezels/TG16/`, 720x480 with the 512x480 window from x 104 clear (640x480 from x 40 for a wide one). |
 | **Cart** | The HuCard: a thin white card with gold contacts along the top over a dark textured panel, the label printed square at the bottom of the space below the panel, and a ridged grip tab at the foot. It turns end over end before it goes into the slot, contacts first, and turns back when it comes out. |

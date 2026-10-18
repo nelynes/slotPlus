@@ -20,8 +20,9 @@
 - The Game Gear picture is shown actual size at 3x. L1 stretches it to fill the screen and R1 gives it back.
 - The Screen menu has a Game Gear page with its own Shader (Off, LCD3x, Grid or Simpletex) and Bezel. For the bezel there is a bundled Default, a black face with the Game Gear's green power light glowing above the screen, as well as your own PNGs in `Bezels/GG/` and the SP frame on 4:3 screens. SELECT + B / A in a game changes the Game Gear shader too.
 - SELECT does nothing in a Game Gear game. Gearsystem would take it as a console reset, which the Game Gear does not have.
-- The Bezel rows on the WonderSwan, Atari Lynx and Game Gear Screen pages now show which bezel is picked.
+- The Bezel rows on every added system's Screen page now show which bezel is picked.
 - The `GG` folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
+- The README's slotPlus section is now a short table of the added systems, with their details (controls, label art sizes, bezels, saves, and games that turn sideways) in a new systems guide, [SYSTEMS.md](SYSTEMS.md). It also shows the Plus and Ultra shelves in motion.
 
 ## [1.7.0-plus1.2](https://github.com/nelynes/slotPlus/releases/tag/v1.7.0-plus1.2)
 
