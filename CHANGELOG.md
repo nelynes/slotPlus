@@ -3,7 +3,7 @@
 ## Unreleased (slotPlusUltra)
 
 - TurboGrafx-16 HuCard games (`.pce`) get their own shelf, for the TurboExpress. Put them in `Games/TG16/`. They run on the Beetle PCE Fast core with the two-button pad. No BIOS is needed. CD and SuperGrafx games are not supported.
-- HuCards are drawn as the real card: white, with gold contacts across the top over a dark textured panel, a square label in the lower half (art goes in `Labels/TG16/`, about 191x163) and a ridged grip tab at the foot. A HuCard turns end over end before it goes into the slot, so it goes in contacts first, and turns back upright when it comes out.
+- HuCards are drawn as the real card: white, with gold contacts across the top over a dark textured panel, a square label in the lower half (art goes in `Labels/TG16/`, 191 px wide and up to 163 tall; it keeps its own shape, spans the card's width and sits at the bottom, so a shorter label leaves plain card above it, as on real HuCards) and a ridged grip tab at the foot. A HuCard turns end over end before it goes into the slot, so it goes in contacts first, and turns back upright when it comes out.
 - The TurboGrafx-16 picture is shown at 2x and follows the width each game draws, from 256 up to the 512-wide mode. L1 stretches it to fill the screen and R1 gives it back. The Screen menu has a TurboGrafx-16 page with its own Shader (Off, LCD3x, Grid or Dot, Grid by default) and Bezel (your own PNGs in `Bezels/TG16/`).
 - The buttons follow the TurboExpress: the left face button is II, the right one I, Start is Run and Select is Select.
 - The `TG16` folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.

@@ -7,7 +7,7 @@ use std::thread;
 use std::time::UNIX_EPOCH;
 
 use slot_store::Cart;
-use slot_ui::{cover, label_size};
+use slot_ui::label_size;
 
 const DIR: &str = "System/Cache/Labels";
 const HEAD: usize = 24;
@@ -20,7 +20,7 @@ pub fn label_art(root: &Path, cart: &Cart) -> Option<Vec<u8>> {
     if let Some(art) = read(&cached, stamp, w, h) {
         return art;
     }
-    let art = cover(src, w, h);
+    let art = slot_ui::label_art(cart, src);
     if let Some(dir) = cached.parent() {
         let _ = std::fs::create_dir_all(dir);
     }
@@ -63,16 +63,26 @@ pub fn stale<'a>(root: &Path, carts: impl Iterator<Item = &'a Cart>) -> Vec<Cart
         .filter(|c| {
             !cached
                 .entry(c.platform)
-                .or_insert_with(|| slot_store::listing(&root.join(DIR).join(c.platform.dir_name())))
+                .or_insert_with(|| slot_store::listing(&root.join(DIR).join(cache_dir(c.platform))))
                 .contains_key(&format!("{}.rgba", c.stem).to_lowercase())
         })
         .cloned()
         .collect()
 }
 
+/// The folder a platform's cached labels are kept in. HuCard labels changed how
+/// they are fitted after they were first cached, so theirs moved to a folder of
+/// their own and are made again rather than read back the old way.
+fn cache_dir(platform: slot_store::Platform) -> String {
+    match platform {
+        slot_store::Platform::Tg16 => "TG16-fit".into(),
+        other => other.dir_name().into(),
+    }
+}
+
 pub fn cache_path(root: &Path, cart: &Cart) -> PathBuf {
     root.join(DIR)
-        .join(cart.platform.dir_name())
+        .join(cache_dir(cart.platform))
         .join(format!("{}.rgba", cart.stem))
 }
 

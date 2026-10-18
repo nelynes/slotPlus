@@ -389,3 +389,135 @@ fn a_hucard_is_white_with_gold_contacts_along_its_top_whatever_the_colour() {
         assert!(p[..3].iter().all(|c| *c < 80), "panel {p:?}");
     }
 }
+
+/// A HuCard with a solid red label `w` x `h` pixels across.
+fn hucard_with_label(dir: &std::path::Path, w: u32, h: u32) -> Cart {
+    let path = dir.join(format!("{w}x{h}.png"));
+    let f = std::fs::File::create(&path).expect("create label");
+    let mut enc = png::Encoder::new(std::io::BufWriter::new(f), w, h);
+    enc.set_color(png::ColorType::Rgb);
+    enc.set_depth(png::BitDepth::Eight);
+    enc.write_header()
+        .expect("png header")
+        .write_image_data(&[0xd0, 0x10, 0x10].repeat((w * h) as usize))
+        .expect("png data");
+    Cart {
+        label: Some(path),
+        ..tg16()
+    }
+}
+
+fn red(px: [u8; 4]) -> bool {
+    px[0] > 0xb0 && px[1] < 0x40 && px[2] < 0x40
+}
+
+/// The rows of the label space the art covers, top to bottom.
+fn red_rows(f: &slot_ui::CartFace) -> (u32, u32) {
+    let x = TG16_LABEL_X + TG16_LABEL_W / 2;
+    let rows: Vec<u32> = (TG16_LABEL_Y..TG16_LABEL_Y + TG16_LABEL_H)
+        .filter(|&y| red(at(f, x, y)))
+        .collect();
+    (*rows.first().expect("no label"), *rows.last().unwrap())
+}
+
+/// The columns of the label space the art covers, left to right.
+fn red_cols(f: &slot_ui::CartFace) -> (u32, u32) {
+    let y = TG16_LABEL_Y + TG16_LABEL_H - 2;
+    let cols: Vec<u32> = (TG16_LABEL_X..TG16_LABEL_X + TG16_LABEL_W)
+        .filter(|&x| red(at(f, x, y)))
+        .collect();
+    (*cols.first().expect("no label"), *cols.last().unwrap())
+}
+
+#[test]
+fn a_short_hucard_label_spans_the_width_on_the_foot_with_card_above() {
+    let d = tempfile::tempdir().unwrap();
+    // Twice as wide as tall: about 95 of the space's 163 rows.
+    let c = hucard_with_label(d.path(), 400, 200);
+    let f = cart_face(&c);
+    let (top, bottom) = red_rows(&f);
+    assert_eq!(bottom, TG16_LABEL_Y + TG16_LABEL_H - 1, "not on the foot");
+    let tall = bottom + 1 - top;
+    assert!(
+        (tall as i32 - (TG16_LABEL_W / 2) as i32).abs() <= 1,
+        "{tall} rows: lost its shape"
+    );
+    assert_eq!(
+        red_cols(&f),
+        (TG16_LABEL_X, TG16_LABEL_X + TG16_LABEL_W - 1),
+        "not full width"
+    );
+    // Above it is the card itself: white, opaque and as pale as the card
+    // beside the label space.
+    let above = at(&f, TG16_LABEL_X + TG16_LABEL_W / 2, TG16_LABEL_Y + 4);
+    let beside = at(&f, TG16_LABEL_X / 2, TG16_LABEL_Y + 4);
+    assert_eq!(above[3], 255);
+    assert!(
+        above[..3].iter().all(|c| *c > 0xc0),
+        "above the label {above:?}"
+    );
+    for c in 0..3 {
+        assert!(
+            above[c].abs_diff(beside[c]) < 40,
+            "{above:?} vs the card {beside:?}"
+        );
+    }
+}
+
+#[test]
+fn a_hucard_label_too_tall_for_the_space_is_shrunk_whole_on_the_foot() {
+    let d = tempfile::tempdir().unwrap();
+    let c = hucard_with_label(d.path(), 300, 400);
+    let f = cart_face(&c);
+    assert_eq!(
+        red_rows(&f),
+        (TG16_LABEL_Y, TG16_LABEL_Y + TG16_LABEL_H - 1),
+        "not the full height"
+    );
+    let (left, right) = red_cols(&f);
+    let wide = right + 1 - left;
+    let want = TG16_LABEL_H * 3 / 4;
+    assert!(
+        wide.abs_diff(want) <= 1,
+        "{wide} columns, not {want}: lost its shape"
+    );
+    let (gap_l, gap_r) = (left - TG16_LABEL_X, TG16_LABEL_X + TG16_LABEL_W - 1 - right);
+    assert!(
+        gap_l.abs_diff(gap_r) <= 1,
+        "not centred: {gap_l} and {gap_r}"
+    );
+}
+
+#[test]
+fn a_hucard_label_takes_the_shell_colour_where_it_leaves_the_card_showing() {
+    let d = tempfile::tempdir().unwrap();
+    let mut c = hucard_with_label(d.path(), 400, 200);
+    c.shell = Some(slot_store::ShellChoice {
+        colour: [0x20, 0x60, 0xd0],
+        finish: slot_store::ShellFinish::Solid,
+        outline: slot_store::Outline::Auto,
+    });
+    let f = cart_face(&c);
+    let above = at(&f, TG16_LABEL_X + TG16_LABEL_W / 2, TG16_LABEL_Y + 4);
+    assert!(
+        above[2] > above[0] + 30,
+        "the card above the label is not blue: {above:?}"
+    );
+}
+
+#[test]
+fn other_labels_still_fill_their_space() {
+    let d = tempfile::tempdir().unwrap();
+    let mut c = hucard_with_label(d.path(), 400, 200);
+    c.platform = Platform::Ngp;
+    let f = cart_face(&c);
+    for (x, y) in [
+        (NGP_LABEL_X + 2, NGP_LABEL_Y + 2),
+        (NGP_LABEL_X + NGP_LABEL_W / 2, NGP_LABEL_Y + NGP_LABEL_H / 2),
+    ] {
+        assert!(
+            red(at(&f, x, y)),
+            "the NeoGeo Pocket label left a gap at {x},{y}"
+        );
+    }
+}

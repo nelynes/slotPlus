@@ -31,11 +31,11 @@ The TurboExpress was NEC's handheld TurboGrafx-16: it played the same HuCards as
 | **Games** | HuCard games as `.pce` in `Games/TG16/`. CD games and SuperGrafx games are not supported. |
 | **BIOS** | Not needed. HuCards boot straight in. |
 | **Core** | Beetle PCE Fast, with the two-button pad. |
-| **Label art** | `Labels/TG16/`, about 191x163 px (1.17:1). |
+| **Label art** | `Labels/TG16/`, 191 px wide and up to 163 px tall. As on real HuCards, labels come in different heights: the art is scaled to the full width at its own shape and sits at the bottom of the card, with plain card above a shorter label. Art taller than the space is shrunk to fit whole. |
 | **Picture** | Most games draw 256x240, shown at 2x. Games that switch to a wider mode follow it: up to 352 wide stays at 2x, and the 512-wide mode is drawn across the whole screen. Stretched, the picture fills the screen whatever its width. |
 | **Shaders** | Off, LCD3x, Grid, Dot. |
 | **Bezel** | None bundled. Your own go in `Bezels/TG16/`. |
-| **Cart** | The HuCard: a thin white card with gold contacts along the top over a dark textured panel, the label printed square in the lower half, and a ridged grip tab at the foot. It turns end over end before it goes into the slot, contacts first, and turns back when it comes out. |
+| **Cart** | The HuCard: a thin white card with gold contacts along the top over a dark textured panel, the label printed square at the bottom of the space below the panel, and a ridged grip tab at the foot. It turns end over end before it goes into the slot, contacts first, and turns back when it comes out. |
 | **Saves** | Games that save to the console's backup memory keep it in `Saves/TG16/`. |
 
 ### Controls

@@ -365,9 +365,26 @@ fn shadow(w: u32, h: u32, mask: &[u8]) -> CartFace {
 }
 
 pub fn cart_face(cart: &Cart) -> CartFace {
-    let (lw, lh) = label_size(cart);
-    let art = cart.label.as_deref().and_then(|p| art::cover(p, lw, lh));
+    let art = cart.label.as_deref().and_then(|p| label_art(cart, p));
     cart_face_with(cart, art)
+}
+
+/// A cart's label art at its label size. Most labels fill their box, cropped to
+/// it. A HuCard label is printed on the card under its dark panel, and real
+/// ones come in different heights: it spans the box's width at its own shape,
+/// sits on the box's foot, and leaves the card showing above it.
+pub fn label_art(cart: &Cart, path: &std::path::Path) -> Option<Vec<u8>> {
+    let (lw, lh) = label_size(cart);
+    match label_on_card(mould_of(cart)) {
+        true => art::fit_bottom(path, lw, lh),
+        false => art::cover(path, lw, lh),
+    }
+}
+
+/// Whether a mould's label is printed straight on the card, with the card's own
+/// plastic, in the shell's colour, wherever the art leaves it showing.
+pub fn label_on_card(mould: Mould) -> bool {
+    mould == Mould::Tg16
 }
 
 pub fn is_clear(cart: &Cart) -> bool {
@@ -739,9 +756,11 @@ fn shell_face(s: &Spec, shell: &Shell) -> CartFace {
     // The label box stays opaque.
     let (lx, ly, lw, lh) = s.label;
     let r = label_corner(s.mould);
+    let boxed = !label_on_card(s.mould);
     for y in 0..s.h {
         for x in 0..s.w {
-            let on_label = (lx..lx + lw).contains(&x)
+            let on_label = boxed
+                && (lx..lx + lw).contains(&x)
                 && (ly..ly + lh).contains(&y)
                 && corner_cover(x - lx, y - ly, lw, lh, r) >= 128;
             let i = ((y * s.w + x) * 4) as usize;
@@ -849,7 +868,6 @@ fn label_corner(mould: Mould) -> f32 {
     match mould {
         Mould::Gg => 14.0,
         Mould::Ngp => 6.0,
-        Mould::Tg16 => 1.0,
         _ => 0.0,
     }
 }

@@ -498,7 +498,7 @@ def neogeo_pocket():
 # 86 x 54 mm, its game art covering most of the face and its 38 gold
 # contacts showing in a strip along the foot.
 
-TG16_LABEL_R = 1  # HuCard labels are printed square, edge to edge
+TG16_LABEL_R = 0  # HuCard labels are printed square, edge to edge
 
 
 def turbochip():
@@ -540,7 +540,9 @@ def turbochip():
     height += soft(ridges, 0.25) * 1.2  # grooves pressed into it
     height += soft(panel, 0.4) * 0.15  # the panel is a thin film, barely in
 
-    neutral = shade(height, body, well, seed=61, gain=20.0)
+    # The label is printed on the card, so the card's own texture runs under
+    # it: a label shorter than the space leaves plain card above it.
+    neutral = shade(height, body, np.zeros_like(well), seed=61, gain=20.0)
     rgba(neutral, body).save(os.path.join(ASSETS, "tg16_neutral.png"))
     rgba(clear_from(neutral, body, 62), body).save(os.path.join(ASSETS, "tg16_clear.png"))
     rgba(np.full_like(body, 255.0) * body, body).save(os.path.join(ASSETS, "tg16_cart.png"))

@@ -33,6 +33,33 @@ fn cover_rgba(src: &[u8], sw: u32, sh: u32, w: u32, h: u32) -> Option<Vec<u8>> {
     Some(out)
 }
 
+/// The art scaled to the full width of a `w` x `h` box, keeping its shape, and
+/// set on the box's bottom edge. Above art shorter than the box is left
+/// clear. Art too tall for the box is shrunk to fit it whole instead, still on
+/// the bottom edge and centred across, with clear on either side.
+pub fn fit_bottom(path: &Path, w: u32, h: u32) -> Option<Vec<u8>> {
+    let (src, sw, sh) = decode(path)?;
+    fit_bottom_rgba(&src, sw, sh, w, h)
+}
+
+fn fit_bottom_rgba(src: &[u8], sw: u32, sh: u32, w: u32, h: u32) -> Option<Vec<u8>> {
+    if sw == 0 || sh == 0 {
+        return None;
+    }
+    let scale = (w as f32 / sw as f32).min(h as f32 / sh as f32);
+    let aw = ((sw as f32 * scale).round() as u32).clamp(1, w);
+    let ah = ((sh as f32 * scale).round() as u32).clamp(1, h);
+    let art = cover_rgba(src, sw, sh, aw, ah)?;
+    let (ox, oy) = ((w - aw) / 2, h - ah);
+    let mut out = vec![0u8; (w * h * 4) as usize];
+    for y in 0..ah {
+        let from = (y * aw * 4) as usize;
+        let to = (((y + oy) * w + ox) * 4) as usize;
+        out[to..to + (aw * 4) as usize].copy_from_slice(&art[from..from + (aw * 4) as usize]);
+    }
+    Some(out)
+}
+
 fn box_average(src: &[u8], sw: u32, sh: u32, x0: f32, y0: f32, x1: f32, y1: f32) -> [u8; 4] {
     let xa = (x0.floor().max(0.0) as u32).min(sw - 1);
     let ya = (y0.floor().max(0.0) as u32).min(sh - 1);
