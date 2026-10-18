@@ -53,8 +53,8 @@ Release notes can be found in the [changelog](CHANGELOG.md).
 </p>
 
 <p align="center">
-<img src=".github/resources/screenshots/wonderswan-shelf.jpg" width="48%" alt="The WonderSwan shelf, with a wide cart in the slot and its neighbours on either side">
-<img src=".github/resources/screenshots/lynx-shelf.jpg" width="48%" alt="The Atari Lynx shelf, with a curved-lip card cart and gold contacts in the slot and its neighbours on either side">
+<img src=".github/resources/screenshots/plus-shelves.gif" width="48%" alt="slotPlus: scrolling the Game Boy Color, Game Boy Advance, Atari Lynx and WonderSwan shelves, then putting Mr. Driller in the slot and resuming at its title screen">
+<img src=".github/resources/screenshots/ultra-shelves.gif" width="48%" alt="slotPlusUltra: scrolling the Game Gear and NeoGeo Pocket shelves, then the TurboGrafx-16 shelf, where a HuCard turns over, goes in the slot and Devil's Crush starts">
 </p>
 
 ---
