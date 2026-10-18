@@ -1,5 +1,10 @@
 name: release
 
+# A tag on main releases two card trees: slotPlus, built from the tagged
+# commit, and slotPlusUltra, built from the head of the slotPlusUltra branch
+# as it is when the tag is pushed. Bring main's changes into slotPlusUltra
+# before tagging, so the Ultra download has them too.
+
 on:
   push:
     tags: ['v*']
@@ -10,13 +15,23 @@ permissions:
 
 jobs:
   build:
-    name: card tree
+    name: card tree (${{ matrix.edition }})
     runs-on: ubuntu-24.04-arm
     container: rust:1-bullseye
-    outputs:
-      zip: ${{ steps.package.outputs.zip }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - edition: plus
+            ref: ''
+            suffix: ''
+          - edition: ultra
+            ref: slotPlusUltra
+            suffix: '-ultra'
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ matrix.ref }}
 
       - name: Install zip, cmake and Task
         run: |
@@ -27,27 +42,25 @@ jobs:
           curl -fsSL https://taskfile.dev/install.sh | sh -s -- -b /usr/local/bin
 
       - name: Build the tree
-        run: task dist:device OUT="slot-${GITHUB_REF_NAME}"
+        run: task dist:device OUT="slot-${GITHUB_REF_NAME}${{ matrix.suffix }}"
 
       - name: Check what is about to ship
         run: |
           set -eu
-          out="slot-${GITHUB_REF_NAME}"
-          file "$out/System/slot" | grep -q aarch64
-          file "$out/System/mgba_libretro.so" | grep -q aarch64
-          file "$out/System/gpsp_libretro.so" | grep -q aarch64
+          out="slot-${GITHUB_REF_NAME}${{ matrix.suffix }}"
           test -x "$out/System/slot"
-          gpsp_src_sha="$(cat vendor/gpsp-src.sha)"
-          test -f "$out/System/licenses/gpsp-${gpsp_src_sha}.tar.gz"
-          test -f "$out/System/licenses/gpsp-${gpsp_src_sha}.meta"
-          file "$out/System/cygne_libretro.so" | grep -q aarch64
-          cygne_src_sha="$(cat vendor/cygne-src.sha)"
-          test -f "$out/System/licenses/cygne-${cygne_src_sha}.tar.gz"
-          test -f "$out/System/licenses/cygne-${cygne_src_sha}.meta"
-          file "$out/System/lynx_libretro.so" | grep -q aarch64
-          lynx_src_sha="$(cat vendor/lynx-src.sha)"
-          test -f "$out/System/licenses/lynx-${lynx_src_sha}.tar.gz"
-          test -f "$out/System/licenses/lynx-${lynx_src_sha}.meta"
+          file "$out/System/slot" | grep -q aarch64
+          # Every core in the tree is built for the device...
+          for so in "$out"/System/*_libretro.so; do
+            file "$so" | grep -q aarch64
+          done
+          # ...and every core built from a pinned source ships that source.
+          for sha_file in vendor/*-src.sha; do
+            name="$(basename "$sha_file" -src.sha)"
+            sha="$(cat "$sha_file")"
+            test -f "$out/System/licenses/${name}-${sha}.tar.gz"
+            test -f "$out/System/licenses/${name}-${sha}.meta"
+          done
           for p in cores/gpsp/*.patch; do
             test -f "$out/System/licenses/gpsp-$(basename "$p")"
           done
@@ -58,18 +71,19 @@ jobs:
           done
 
       - name: Package
-        id: package
         run: |
           set -eu
-          out="slot-${GITHUB_REF_NAME}"
-          zip="$out-h700.zip"
-          zip -qry "$zip" "$out"
-          echo "zip=$zip" >> "$GITHUB_OUTPUT"
+          out="slot-${GITHUB_REF_NAME}${{ matrix.suffix }}"
+          zip -qry "$out-h700.zip" "$out"
+          git config --global --add safe.directory "$PWD"
+          git rev-parse --short HEAD > "${{ matrix.edition }}-commit.txt"
 
       - uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.package.outputs.zip }}
-          path: ${{ steps.package.outputs.zip }}
+          name: card-${{ matrix.edition }}
+          path: |
+            slot-*-h700.zip
+            ${{ matrix.edition }}-commit.txt
           if-no-files-found: error
 
   publish:
@@ -82,20 +96,25 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8
         with:
-          name: ${{ needs.build.outputs.zip }}
+          pattern: card-*
+          merge-multiple: true
 
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
-          ZIP: ${{ needs.build.outputs.zip }}
         run: |
           set -eu
+          tag="$GITHUB_REF_NAME"
+          ultra_commit="$(cat ultra-commit.txt)"
           cat > notes.md <<NOTES
-          Unzip and copy the contents of \`slot-${GITHUB_REF_NAME}/\` onto SD2.
+          Two downloads. Pick one, unzip it and copy the contents of its folder onto SD2.
 
-          Emulation by mGBA (MPL-2.0), gpSP (GPL-2.0), Beetle WonderSwan / Cygne (GPL-2.0) and Beetle Lynx (GPL-2.0). Their licences, patches and the gpSP, Cygne and Lynx source are in \`System/licenses/\`.
+          - **\`slot-${tag}-h700.zip\`, slotPlus:** Game Boy Advance, Game Boy and Game Boy Color, plus WonderSwan and Atari Lynx.
+          - **\`slot-${tag}-ultra-h700.zip\`, slotPlusUltra:** everything in slotPlus, plus Game Gear, NeoGeo Pocket and TurboGrafx-16. Built from the slotPlusUltra branch at ${ultra_commit}.
+
+          Emulation by mGBA (MPL-2.0), gpSP (GPL-2.0), Beetle WonderSwan / Cygne (GPL-2.0) and Beetle Lynx (GPL-2.0), and in slotPlusUltra also Gearsystem (GPL-3.0), Beetle NeoPop (GPL-2.0) and Beetle PCE Fast (GPL-2.0). Their licences, patches and source are in \`System/licenses/\` in each download.
 
           Atari Lynx games need \`lynxboot.img\`, which is not included. Put your own copy in \`BIOS/\`.
           NOTES
-          gh release create "$GITHUB_REF_NAME" "$ZIP" --repo "$GITHUB_REPOSITORY" \
-            --title "$GITHUB_REF_NAME" --notes-file notes.md
+          gh release create "$tag" slot-*-h700.zip --repo "$GITHUB_REPOSITORY" \
+            --title "$tag" --notes-file notes.md
