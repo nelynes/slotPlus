@@ -111,16 +111,21 @@ fn only_the_turbografx_16_has_bezels_bundled_under_their_own_names() {
 fn the_wide_turbografx_16_bezels_leave_a_320_wide_picture_clear() {
     for name in ["TG16 Wide", "PCE Wide"] {
         let face = bundled_game_bezel_face(Platform::Tg16, name).expect(name);
-        // A 320-wide picture at 2x: 640x480 from (40, 0). The art may lap a
-        // pixel or two over its edges, but no more.
-        for (x, y) in [(43, 0), (676, 0), (43, 479), (676, 479), (360, 240)] {
-            assert_eq!(
-                at(&face, x, y)[3],
-                0,
-                "{name}: the window is covered at {x},{y}"
-            );
+        // A 320-wide picture at 2x: 640x480 from (40, 0), every pixel clear.
+        for y in 0..OUT_H {
+            for x in 40..680 {
+                assert_eq!(at(&face, x, y)[3], 0, "{name}: covered at {x},{y}");
+            }
         }
-        for (x, y) in [(38, 240), (681, 240), (10, 10), (710, 470)] {
+        // And the face is solid right up to it on both sides.
+        for (x, y) in [
+            (39, 0),
+            (39, 479),
+            (680, 0),
+            (680, 479),
+            (10, 10),
+            (710, 470),
+        ] {
             assert_eq!(at(&face, x, y)[3], 255, "{name}: see-through at {x},{y}");
         }
     }
