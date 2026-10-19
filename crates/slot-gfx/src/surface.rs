@@ -34,6 +34,14 @@ pub fn fit_scale(win_w: u32, win_h: u32) -> u32 {
     (win_w / OUT_W).min(win_h / OUT_H).max(1)
 }
 
+/// Whether a whole-number scale fills the window nearly as well as any scale
+/// would. On a 1280x720 TV it does not: 1x leaves the picture a small box in
+/// the middle, so it is drawn at 1.5x instead.
+fn fits_whole(window: (u32, u32)) -> bool {
+    let best = (window.0 as f32 / OUT_W as f32).min(window.1 as f32 / OUT_H as f32);
+    fit_scale(window.0, window.1) as f32 >= best * 0.9
+}
+
 pub fn fit_rect(win_w: u32, win_h: u32) -> (i32, i32, i32, i32) {
     let s = fit_scale(win_w, win_h) as i32;
     let (w, h) = (OUT_W as i32 * s, OUT_H as i32 * s);
@@ -59,7 +67,7 @@ pub fn blit_rect(window: (u32, u32), shake: f32) -> (i32, i32, i32, i32) {
         let dx = shake * w as f32 / OUT_W as f32;
         return (x + dx.round() as i32, window.1 as i32 - y - h, w, h);
     }
-    if window.0 < OUT_W || window.1 < OUT_H {
+    if window.0 < OUT_W || window.1 < OUT_H || !fits_whole(window) {
         return blit_rect_fit(window, shake);
     }
     let (x, y, w, h) = fit_rect(window.0, window.1);

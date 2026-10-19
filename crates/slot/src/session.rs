@@ -213,6 +213,14 @@ impl Session {
         self.app.poweroff();
     }
 
+    /// Get ready for Slot to exit and be started again: write the resume
+    /// state for the game in the slot and every pending save, and stop a core
+    /// that writes its own saves, so the game comes back where it was.
+    pub fn relaunch(&mut self) {
+        self.app.flush_resume();
+        self.stop_self_saving_core();
+    }
+
     /// Restart the handheld, stopping a core that writes its own saves first,
     /// as `poweroff` does.
     pub fn restart(&mut self) {

@@ -24,6 +24,7 @@ A slightly modified Slot. Alongside Slot's Game Boy Advance, Game Boy and Game B
 - **Folders:** each system's folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
 - **Label art:** optional PNGs go in `Labels/<folder>/<game name>.png`.
 - **Screen menu:** each system has its own page, with its own shader and bezel. The Game Gear and NeoGeo Pocket come with a bundled bezel, and the TurboGrafx-16 with four.
+- **HDMI:** on handhelds with a mini-HDMI port, such as the RG SP, plug in a TV to play on it. Plug in or pull the cable at any time and Slot moves to the other screen and carries on where you were.
 - **Carts:** each system has its own cart, drawn in Slot 1.7's look. WonderSwan games get a black cart, WonderSwan Color games a frosted clear one, and a HuCard turns over to go into the slot contacts first.
 
 **Controls, label art sizes, bezels, saves, and how Lynx and WonderSwan games that turn sideways work are all in the [systems guide](SYSTEMS.md).**

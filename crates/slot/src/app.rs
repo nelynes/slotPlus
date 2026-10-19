@@ -399,6 +399,8 @@ pub struct App {
     power: Option<Power>,
     dozed_at: Millis,
     woke_on_press: bool,
+    /// The picture is on a TV over HDMI: the lid does nothing.
+    external_display: bool,
     autosave_at: Millis,
     pending_save: Option<std::thread::JoinHandle<()>>,
     card_writes: Arc<crate::card_log::CardWrites>,
@@ -548,6 +550,7 @@ impl App {
             power: None,
             dozed_at: 0,
             woke_on_press: false,
+            external_display: false,
             autosave_at: AUTOSAVE_MS,
             pending_save: None,
             card_writes,
@@ -1901,7 +1904,20 @@ impl App {
         }
     }
 
+    /// The picture is on a TV over HDMI. Closing the lid then leaves the game
+    /// running, as the handheld is being used as a controller.
+    pub fn set_external_display(&mut self, on: bool) {
+        self.external_display = on;
+    }
+
+    pub fn external_display(&self) -> bool {
+        self.external_display
+    }
+
     pub fn apply(&mut self, action: Action) {
+        if self.external_display && matches!(action, Action::LidClose | Action::LidOpen) {
+            return;
+        }
         self.track_held_dir(action);
         if self.power_menu.is_some() {
             match action {

@@ -731,6 +731,17 @@ impl Frontend {
     pub fn poweroff(&mut self) {
         self.session.poweroff();
     }
+
+    /// Save for Slot to exit and be started again, as when an HDMI cable is
+    /// plugged in or pulled out: the resume state for the game in the slot
+    /// and every pending save, so the game comes back where it was.
+    pub fn relaunch(&mut self) {
+        self.session.relaunch();
+    }
+
+    pub fn set_external_display(&mut self, on: bool) {
+        self.session.app_mut().set_external_display(on);
+    }
 }
 
 fn link_legend_faces(ink: [u8; 3]) -> Vec<UndoFace> {

@@ -1890,6 +1890,7 @@ dependencies = [
  "glutin-winit",
  "libloading",
  "raw-window-handle",
+ "tempfile",
  "winit",
 ]
 
