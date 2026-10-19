@@ -6,12 +6,12 @@ use crate::plate::HINT_H;
 
 pub const BOLT_PX: f32 = 18.0;
 
-pub const GAUGE_W: f32 = 22.0;
-pub const GAUGE_H: f32 = 11.0;
+pub const GAUGE_W: f32 = 26.4;
+pub const GAUGE_H: f32 = 13.2;
 const _: () = assert!(GAUGE_H < GAUGE_W);
-const NUB_W: f32 = 2.5;
-const NUB_H: f32 = 4.0;
-pub const WALL: f32 = 1.5;
+const NUB_W: f32 = 3.0;
+const NUB_H: f32 = 4.8;
+pub const WALL: f32 = 1.8;
 const GAP: f32 = 7.0;
 
 const BOLT_W: f32 = 14.0;

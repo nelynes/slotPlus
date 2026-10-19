@@ -1,4 +1,4 @@
-use slot_gfx::{screen_brightness, screen_scale, screen_width};
+use slot_gfx::{screen_brightness, screen_rect_above, screen_scale, screen_width, OUT_H, OUT_W};
 
 #[test]
 fn power_on_expands_from_a_line_to_the_full_frame() {
@@ -19,6 +19,37 @@ fn the_brightness_overshoots_before_it_settles() {
     assert!(
         (screen_brightness(1.0) - 1.0).abs() < 0.01,
         "it settles bright or dim"
+    );
+}
+
+#[test]
+fn the_picture_scales_above_a_footer_and_leaves_the_strip_alone() {
+    let footer = 58.0;
+    let (x, y, w, h) = screen_rect_above(1.0, footer);
+    assert!(
+        (x - 0.0).abs() < 0.01 && (y - 0.0).abs() < 0.01,
+        "a full picture above the footer starts at the origin, at {x},{y}"
+    );
+    assert!((w - OUT_W as f32).abs() < 0.01, "width {w}");
+    assert!(
+        (h - (OUT_H as f32 - footer)).abs() < 0.01,
+        "the open picture is {h}px, the footer was included"
+    );
+    let (_, mid_y, _, mid_h) = screen_rect_above(0.5, footer);
+    let view = OUT_H as f32 - footer;
+    assert!(
+        (mid_y + mid_h / 2.0 - view / 2.0).abs() < 0.5,
+        "the collapsing line is not centred above the footer"
+    );
+    assert!(
+        mid_y + mid_h <= view + 0.01,
+        "the picture enters the footer at {}",
+        mid_y + mid_h
+    );
+    let (_, full_y, _, full_h) = screen_rect_above(0.5, 0.0);
+    assert!(
+        (full_y + full_h / 2.0 - OUT_H as f32 / 2.0).abs() < 0.5,
+        "without a footer the picture still centres on the whole frame"
     );
 }
 

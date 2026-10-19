@@ -4,7 +4,7 @@ use common::{app_playing_in, tmp_root_with_carts};
 use slot::app::{App, Phase};
 use slot_input::{Action, Btn};
 use slot_store::{Platform, Shader, StateRing};
-use slot_ui::QuickRow;
+use slot_ui::{Draw, QuickMenuFaces, QuickRow, TexId, HINT_EDGE, MOUTH_H, OUT_H, OUT_W};
 use tempfile::TempDir;
 
 fn playing() -> (TempDir, App) {
@@ -90,9 +90,12 @@ fn b_climbs_the_in_game_pages_and_never_the_shelf_ones() {
 #[test]
 fn screen_shows_the_palette_only_when_palettes_are_live() {
     let (_d, mut a) = playing();
-    assert_eq!(a.in_game_hidden(), &[QuickRow::Palette, QuickRow::Bezel]);
+    assert_eq!(
+        a.in_game_hidden(),
+        &[QuickRow::Palette, QuickRow::Bezel, QuickRow::LeftStick]
+    );
     a.set_palette_live(true);
-    assert_eq!(a.in_game_hidden(), &[QuickRow::Bezel]);
+    assert_eq!(a.in_game_hidden(), &[QuickRow::Bezel, QuickRow::LeftStick]);
 }
 
 #[test]
@@ -332,4 +335,230 @@ fn exit_game_is_not_offered_with_only_one_cart() {
 fn exit_game_is_offered_with_two_carts() {
     let (_d, a) = playing();
     assert!(!a.in_game_hidden().contains(&QuickRow::ExitGame));
+}
+
+const CART: TexId = TexId::from_raw(77);
+const OUT_H_F: f32 = slot_ui::OUT_H as f32;
+
+fn paint_carts(a: &mut App) {
+    for shelf in 0..6 {
+        for index in 0..8 {
+            a.set_cart_face(shelf, index, CART);
+        }
+    }
+}
+
+fn frames(a: &mut App, n: u32) {
+    for _ in 0..n {
+        a.update(1.0 / 60.0);
+    }
+}
+
+fn cart_y(a: &App) -> f32 {
+    let mut out = Vec::new();
+    a.draw(&mut out);
+    out.iter()
+        .filter_map(|d| match *d {
+            Draw::Tex { y, tex, .. } if tex == CART => Some(y),
+            _ => None,
+        })
+        .fold(None, |best, y| Some(best.map_or(y, |b: f32| b.max(y))))
+        .expect("the seated cart is not drawn")
+}
+
+fn legend_at(a: &App, id: usize) -> (f32, f32, f32) {
+    let mut out = Vec::new();
+    a.draw(&mut out);
+    out.iter()
+        .find_map(|d| match *d {
+            Draw::Tex { x, y, w, tex, .. } if tex == TexId::from_raw(id) => Some((x, y, w)),
+            _ => None,
+        })
+        .unwrap_or_else(|| panic!("legend {id} is not drawn"))
+}
+
+fn menu_faces(a: &mut App) {
+    let id = TexId::from_raw;
+    a.set_quick_menu_faces(QuickMenuFaces {
+        labels: (0..QuickRow::ALL.len())
+            .map(|i| [(id(100 + i), 80, 40), (id(130 + i), 80, 40)])
+            .collect(),
+        pointer: (id(700), 16, 40),
+        values: Vec::new(),
+        carets: [(id(300), 10, 40), (id(301), 10, 40)],
+        legend: [
+            (id(400), 70),
+            (id(401), 110),
+            (id(402), 80),
+            (id(403), 90),
+            (id(404), 85),
+            (id(405), 75),
+            (id(406), 95),
+            (id(407), 90),
+        ],
+        legend_light: [
+            (id(400), 70),
+            (id(401), 110),
+            (id(402), 80),
+            (id(403), 90),
+            (id(404), 85),
+            (id(405), 75),
+            (id(406), 95),
+            (id(407), 90),
+        ],
+        descriptions: [(id(410), 300, 44), (id(411), 340, 44)],
+    });
+}
+
+#[test]
+fn the_pause_menu_slides_the_carousel_footer_up_and_back_down() {
+    let (_d, mut a) = playing();
+    paint_carts(&mut a);
+    a.apply(Action::QuickMenu);
+    frames(&mut a, 14);
+    let rising = cart_y(&a);
+    frames(&mut a, 20);
+    let open = cart_y(&a);
+    assert!(
+        open < rising - 20.0,
+        "the footer did not rise: {rising} -> {open}"
+    );
+    assert!(
+        open >= OUT_H_F - MOUTH_H - 1.0,
+        "the cart stands above the footer at {open}"
+    );
+    a.apply(Action::QuickMenu);
+    frames(&mut a, 6);
+    let falling = cart_y(&a);
+    assert!(
+        falling > open + 8.0,
+        "closing the menu left the footer at {falling}, open was {open}"
+    );
+    frames(&mut a, 20);
+    let mut out = Vec::new();
+    a.draw(&mut out);
+    assert!(
+        !out.iter()
+            .any(|d| matches!(*d, Draw::Tex { tex, .. } if tex == CART)),
+        "the footer stayed up after the menu closed"
+    );
+}
+
+#[test]
+fn pause_legends_sit_on_the_link_line_at_either_end() {
+    let (_d, mut a) = playing();
+    menu_faces(&mut a);
+    a.apply(Action::QuickMenu);
+    frames(&mut a, 30);
+    let (lx, ly, _) = legend_at(&a, 403);
+    let (rx, ry, rw) = legend_at(&a, 402);
+    let footer = OUT_H as f32 - MOUTH_H;
+    assert_eq!(ly, footer, "Resume does not fill the footer");
+    assert_eq!(ry, footer, "Open does not fill the footer");
+    assert!(lx.abs() < 1.0, "Resume is not on the left: {lx}");
+    let right = rx + rw - HINT_EDGE as f32;
+    assert!(
+        (right - OUT_W as f32).abs() < 1.0,
+        "Open is not on the right: {right}"
+    );
+    assert!(legend_missing(&a, 400), "Back is drawn beside Resume");
+}
+
+fn legend_missing(a: &App, id: usize) -> bool {
+    let mut out = Vec::new();
+    a.draw(&mut out);
+    !out.iter()
+        .any(|d| matches!(*d, Draw::Tex { tex, .. } if tex == TexId::from_raw(id)))
+}
+
+#[test]
+fn a_value_row_puts_change_on_the_right_of_the_footer() {
+    let (_d, mut a) = playing();
+    menu_faces(&mut a);
+    go_to(&mut a, QuickRow::Shader);
+    frames(&mut a, 30);
+    let (lx, ly, _) = legend_at(&a, 400);
+    let (rx, ry, rw) = legend_at(&a, 401);
+    assert_eq!((ly, ry), (OUT_H as f32 - MOUTH_H, OUT_H as f32 - MOUTH_H));
+    assert!(lx.abs() < 1.0, "Back is not on the left: {lx}");
+    let right = rx + rw - HINT_EDGE as f32;
+    assert!(
+        (right - OUT_W as f32).abs() < 1.0,
+        "Change is not on the right: {right}"
+    );
+    assert!(
+        legend_missing(&a, 403),
+        "Resume stayed up off the play page"
+    );
+}
+
+#[test]
+fn closing_the_game_from_the_menu_keeps_the_footer_still_above_the_scaling_picture() {
+    let (_d, mut a) = playing();
+    paint_carts(&mut a);
+    assert_eq!(a.screen_footer(), 0.0);
+    a.apply(Action::QuickMenu);
+    frames(&mut a, 34);
+    a.apply(Action::Eject);
+    let mut seen = 0.0;
+    let mut y: Option<f32> = None;
+    for _ in 0..40 {
+        if a.screen_power() == 0.0 {
+            break;
+        }
+        assert_eq!(a.screen_footer(), MOUTH_H);
+        let at = cart_y(&a);
+        if let Some(prev) = y {
+            assert!(
+                (at - prev).abs() < 0.5,
+                "the footer moved from {prev} to {at} while the picture scaled"
+            );
+        }
+        y = Some(at);
+        seen = a.screen_power();
+        a.update(1.0 / 60.0);
+    }
+    assert!(
+        seen < 1.0 && seen > 0.0,
+        "the picture never scaled, last {seen}"
+    );
+    let parked = y.expect("no footer during the close");
+    assert!(
+        parked >= OUT_H_F - MOUTH_H - 1.0,
+        "the cart left the carousel footer at {parked}"
+    );
+}
+
+#[test]
+fn a_hotkey_eject_slides_the_footer_up_while_the_picture_closes() {
+    let (_d, mut a) = playing();
+    paint_carts(&mut a);
+    a.apply(Action::Eject);
+    let mut seen = Vec::new();
+    for _ in 0..40 {
+        a.update(1.0 / 60.0);
+        if a.screen_power() == 0.0 {
+            break;
+        }
+        seen.push(a.screen_footer());
+    }
+    assert!(
+        seen.len() > 2,
+        "the picture closed in {} frames",
+        seen.len()
+    );
+    assert!(
+        seen[0] < MOUTH_H / 2.0,
+        "the footer jumped up to {} on the first frame",
+        seen[0]
+    );
+    assert!(
+        seen.windows(2).all(|w| w[1] >= w[0]),
+        "the footer did not rise steadily: {seen:?}"
+    );
+    let last = *seen.last().unwrap();
+    assert!(
+        last > MOUTH_H * 0.8,
+        "the footer was only at {last} when the picture went"
+    );
 }

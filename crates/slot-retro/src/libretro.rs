@@ -530,6 +530,7 @@ pub struct LibretroCore {
     rom_path: Option<CString>,
     av: AvInfo,
     loaded: bool,
+    state_size: Option<usize>,
     _lib: Library,
 }
 
@@ -665,6 +666,7 @@ impl LibretroCore {
                 sample_rate: 0.0,
             },
             loaded: false,
+            state_size: None,
             _lib: lib,
         })
     }
@@ -676,6 +678,15 @@ impl LibretroCore {
         let _a = Active::bind(&mut self.host);
         unsafe { (self.api.unload_game)() };
         self.loaded = false;
+    }
+
+    fn serialize_at(&mut self, size: usize) -> Option<Vec<u8>> {
+        let mut buf = vec![0u8; size];
+        let ok = {
+            let _a = Active::bind(&mut self.host);
+            unsafe { (self.api.serialize)(buf.as_mut_ptr() as *mut c_void, size) }
+        };
+        ok.then_some(buf)
     }
 
     fn memory(&self, id: c_uint) -> Option<&[u8]> {
@@ -715,6 +726,7 @@ impl RetroCore for LibretroCore {
 
     fn load(&mut self, rom: &Path) -> Result<(), CoreError> {
         self.unload();
+        self.state_size = None;
         self.rom = std::fs::read(rom)?;
         self.rom_path = Some(
             CString::new(rom.as_os_str().as_encoded_bytes())
@@ -781,20 +793,16 @@ impl RetroCore for LibretroCore {
     }
 
     fn serialize(&mut self) -> Result<Vec<u8>, CoreError> {
+        if let Some(buf) = self.state_size.and_then(|size| self.serialize_at(size)) {
+            return Ok(buf);
+        }
         let size = unsafe { (self.api.serialize_size)() };
+        self.state_size = (size > 0).then_some(size);
         if size == 0 {
             return Err(CoreError::State("core reports no state".into()));
         }
-        let mut buf = vec![0u8; size];
-        let ok = {
-            let _a = Active::bind(&mut self.host);
-            unsafe { (self.api.serialize)(buf.as_mut_ptr() as *mut c_void, size) }
-        };
-        if ok {
-            Ok(buf)
-        } else {
-            Err(CoreError::State("serialize refused".into()))
-        }
+        self.serialize_at(size)
+            .ok_or_else(|| CoreError::State("serialize refused".into()))
     }
 
     fn unserialize(&mut self, data: &[u8]) -> Result<(), CoreError> {

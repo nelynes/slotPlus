@@ -294,20 +294,14 @@ fn a_live_session_refuses_to_open_the_switcher() {
 }
 
 #[test]
-fn a_live_session_refuses_to_open_the_power_menu() {
+fn a_hold_in_a_live_session_ends_the_link_and_powers_off() {
     let d = tmp_root_with_carts(&["Emerald"]);
     let mut a = app_playing_in(d.path(), "Emerald");
     a.begin_link(0);
 
     a.apply(Action::PowerHold);
-    assert!(
-        a.power_menu().is_none(),
-        "the power menu pauses the core, which a session forbids"
-    );
-    assert!(
-        a.refusal_active(a.now()),
-        "a refused power-menu open must shake"
-    );
+    assert!(!a.link_active(), "the link outlived the shutdown");
+    assert!(a.powering_off(), "the hold did not power off");
 }
 
 #[test]

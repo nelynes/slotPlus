@@ -119,7 +119,7 @@ fn play(s: &mut Session, now: &mut Millis) {
 }
 
 #[test]
-fn the_power_menu_takes_the_motor_down() {
+fn a_held_power_takes_the_motor_down() {
     let d = tmp_root_with_real_carts(&["Advance Wars", "Emerald"]);
     let (mut s, motor) = session_with_platform(d.path());
     let mut now = 0;
@@ -139,11 +139,11 @@ fn the_power_menu_takes_the_motor_down() {
     while now < pressed + POWER_HOLD_MS + FRAME_MS {
         step(&mut s, &mut now);
     }
-    assert_eq!(s.app().power_menu(), Some(0), "the menu never opened");
+    assert!(s.app().powering_off(), "the hold did not power off");
     assert_eq!(
         motor.last(),
         0,
-        "the cart kept buzzing under the power menu"
+        "the cart kept buzzing through the shutdown"
     );
 }
 
