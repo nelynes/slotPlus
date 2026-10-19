@@ -89,7 +89,7 @@ fn reads_on(path: &Path) -> bool {
 pub fn panel_for(target: Option<&str>) -> (u32, u32) {
     match target.unwrap_or("") {
         "rgcubexx" => (720, 720),
-        "rg34xx" | "rg34xxsp" | "rgsp" => (720, 480),
+        "rg34xx" | "rg34xxsp" => (720, 480),
         // A portrait panel, turned by Slot.
         "rg28xx" => (480, 640),
         _ => (640, 480),
@@ -554,7 +554,7 @@ mod tests {
 
     #[test]
     fn each_panel_has_its_own_size_to_come_back_to() {
-        assert_eq!(panel_for(Some("rgsp")), (720, 480));
+        assert_eq!(panel_for(Some("rgsp")), (640, 480));
         assert_eq!(panel_for(Some("rg34xxsp")), (720, 480));
         assert_eq!(panel_for(Some("rgcubexx")), (720, 720));
         assert_eq!(panel_for(Some("rg28xx")), (480, 640));

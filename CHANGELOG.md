@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- HDMI output on handhelds with a mini-HDMI port, such as the RG SP. Plug in a TV before switching on and the shelf and games show on the TV at 1080p, with the sound there too and the handheld's screen off. Plug in or pull the cable at any time: Slot saves the game, starts again on the other screen within a few seconds and picks up where you were. Closing the lid doesn't sleep the handheld while it's on the TV.
+
 ## [1.7.0-plus1.2](https://github.com/nelynes/slotPlus/releases/tag/v1.7.0-plus1.2)
 
 - WonderSwan carts default to the shell the game came in: black for a WonderSwan game (`.ws`), frosted clear with the board showing for a WonderSwan Color game (`.wsc`). Before, every WonderSwan cart was clear. A shell set in `Config/cart_shell.txt` still wins.

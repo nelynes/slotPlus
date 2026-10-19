@@ -19,6 +19,7 @@ A slightly modified Slot. Has support for GBA, GBC, and GB titles as well as Won
 - **Label art:** optional PNGs go in `Labels/Lynx/<game name>.png`, roughly 284x190 px (about 1.5:1).
 - **Core:** Lynx games run on Beetle Lynx.
 - **Screen:** the Screen menu has an Atari Lynx page with its own Shader (Off, LCD3x, Grid or Dot) and Bezel. For a bezel, put your own PNGs in `Bezels/Lynx/`.
+- **HDMI:** on handhelds with a mini-HDMI port, such as the RG SP, plug in a TV to play on it. Plug in or pull the cable at any time and Slot moves to the other screen and carries on where you were.
 - **Carts:** Lynx carts are drawn as the curved-lip card, with its gold contacts behind a clear strip at the foot. Set `Config/cart_shell.txt` to give a single game a different shell.
 - **Saves:** Beetle Lynx has no battery saves. Use save states and the resume state.
 
