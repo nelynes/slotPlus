@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src=".github/resources/banner.png" width="100%" alt="slot. A bespoke, Game Boy-centric frontend for the Anbernic RG SP.">
+<img src=".github/resources/banner.png" width="100%" alt="slot. A bespoke, Game Boy-centric frontend for the Anbernic RG SP. slot plays Game Boy Advance, Game Boy Color and Game Boy. slotPlus, for the 3:2 fan, adds WonderSwan, WonderSwan Color and Atari Lynx. slotPlusUltra, for the ultimate handheld, adds Game Gear, NeoGeo Pocket and TurboGrafx-16 on top of that. Every version adds HDMI out to your TV and pixel transparency for GB and GBC.">
 
 </div>
 
