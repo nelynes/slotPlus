@@ -90,3 +90,49 @@ fn the_output_rate_follows_the_device_not_the_core() {
         "produced {frames} frames, expected about {want}"
     );
 }
+
+fn tone(hz: f64, rate: f64, frames: usize, amp: f64) -> Vec<i16> {
+    (0..frames)
+        .flat_map(|i| {
+            let s =
+                (amp * (2.0 * std::f64::consts::PI * hz * i as f64 / rate).sin()).round() as i16;
+            [s, s]
+        })
+        .collect()
+}
+
+fn rms(samples: &[i16]) -> f64 {
+    let left: Vec<f64> = samples.iter().step_by(2).map(|&s| f64::from(s)).collect();
+    (left.iter().map(|s| s * s).sum::<f64>() / left.len() as f64).sqrt()
+}
+
+fn resampled(hz: f64) -> (f64, f64) {
+    let src = tone(hz, 65536.0, 65536, 16000.0);
+    let mut r = Resampler::new(65536.0, 48000.0);
+    let mut out = Vec::new();
+    let mut all = Vec::new();
+    for chunk in src.chunks(2 * 1097) {
+        r.process(chunk, &mut out);
+        all.extend_from_slice(&out);
+    }
+    let settled = &all[2 * 1024..all.len() - 2 * 1024];
+    (rms(&src), rms(settled))
+}
+
+#[test]
+fn a_tone_above_the_device_nyquist_does_not_fold_back_into_hearing() {
+    for hz in [26_000.0, 30_000.0, 32_000.0] {
+        let (input, output) = resampled(hz);
+        let db = 20.0 * (output / input).log10();
+        assert!(db < -50.0, "a {hz} Hz tone came through at {db:.1} dB");
+    }
+}
+
+#[test]
+fn a_tone_in_hearing_keeps_its_level() {
+    for hz in [440.0, 4_000.0, 12_000.0, 18_000.0] {
+        let (input, output) = resampled(hz);
+        let db = 20.0 * (output / input).log10();
+        assert!(db.abs() < 0.5, "a {hz} Hz tone changed level by {db:.2} dB");
+    }
+}

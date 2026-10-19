@@ -1,9 +1,10 @@
 use std::path::PathBuf;
+use std::thread::JoinHandle;
 use std::time::Duration;
 
-use slot_input::{Action, Btn, Gestures, Millis, RawEvent};
+use slot_input::{Action, Btn, Chord, Gestures, Millis, Mod, RawEvent};
 use slot_retro::{Rumble, WsLayout, HANDHELD_TURN_OPTION};
-use slot_store::{Core, Platform};
+use slot_store::{Core, Platform, ShortcutKeys};
 use slot_ui::FfState;
 
 pub const RUMBLE_MIN_MS: Millis = 100;
@@ -11,10 +12,10 @@ pub const RUMBLE_MAX_MS: Millis = 150;
 
 use crate::app::{App, Phase};
 use crate::audio::{opened_sink, AudioSink, Ring, Sfx};
-use crate::core::open_core;
+use crate::core::{open_core, Opened};
 use crate::emu::{CoreState, EmuHandle, Speed};
 use crate::frames::FrameRef;
-use crate::input::Pad;
+use crate::input::{shortcut_table, Pad};
 use crate::persist;
 use crate::prefetch::Prefetch;
 
@@ -22,8 +23,11 @@ pub struct Session {
     root: PathBuf,
     app: App,
     emu: Option<EmuHandle>,
+    opening: Option<Opening>,
     sink: Box<dyn AudioSink>,
     gestures: Gestures,
+    table_for: Option<(ShortcutKeys, bool)>,
+    captured: Vec<Btn>,
     pad: Pad,
     rewinding: bool,
     fast: bool,
@@ -49,8 +53,11 @@ impl Session {
             app: App::boot(&root),
             root,
             emu: None,
+            opening: None,
             sink,
             gestures: Gestures::new(),
+            table_for: None,
+            captured: Vec::new(),
             pad: Pad::default(),
             rewinding: false,
             fast: false,
@@ -138,13 +145,15 @@ impl Session {
     }
 
     pub fn core_settling(&self) -> bool {
-        self.emu
-            .as_ref()
-            .is_some_and(|e| e.state() == CoreState::Loading)
+        self.opening.is_some()
+            || self
+                .emu
+                .as_ref()
+                .is_some_and(|e| e.state() == CoreState::Loading)
     }
 
     pub fn has_core(&self) -> bool {
-        self.emu.is_some()
+        self.emu.is_some() || self.opening.is_some()
     }
 
     pub fn frame_ready(&self) -> bool {
@@ -170,7 +179,36 @@ impl Session {
     pub fn feed(&mut self, events: impl IntoIterator<Item = RawEvent>, now: Millis) {
         let mut actions = Vec::new();
         let latched = self.gestures.ff_latched();
+        self.gestures.set_playing(self.playing());
+        let shortcuts = self.app.shortcuts();
+        let repair = self.app.repair_offered();
+        if self.table_for != Some((shortcuts, repair)) {
+            let mut table = shortcut_table(&shortcuts);
+            if repair {
+                let chord = Chord {
+                    modifier: Some(Mod::Select),
+                    button: Btn::Start,
+                };
+                table.insert(0, (chord, Action::RepairCard));
+            }
+            self.gestures.set_shortcuts(table);
+            self.table_for = Some((shortcuts, repair));
+        }
         for ev in events {
+            if self.app.capturing() {
+                match ev {
+                    RawEvent::Down(b) => self.captured.push(b),
+                    RawEvent::Up(b) => self.captured.retain(|x| *x != b),
+                }
+                self.app.capture_input(ev);
+                continue;
+            }
+            if let RawEvent::Up(b) = ev {
+                if let Some(at) = self.captured.iter().position(|x| *x == b) {
+                    self.captured.remove(at);
+                    continue;
+                }
+            }
             actions.extend(self.gestures.feed(ev, now));
         }
         actions.extend(self.gestures.tick(now));
@@ -183,16 +221,12 @@ impl Session {
         self.sync_pad();
     }
 
-    pub fn set_menu_dpad_display(&mut self, enabled: bool) {
-        self.gestures.set_menu_dpad_display(enabled);
-    }
-
     fn sync_pad(&mut self) {
         for btn in self.app.taken_buttons() {
-            self.pad.apply(Action::GbaUp(*btn));
+            self.pad.apply(Action::GbaUp(btn));
         }
         if let Some(emu) = &self.emu {
-            let mask = self.pad.mask();
+            let mask = self.pad.mask(&self.app.controls());
             let mask = match self.app.core() {
                 Core::Cygne => mask.wonderswan_for(self.ws_layout()),
                 Core::Lynx if self.lynx_select => mask.without_select(),
@@ -226,6 +260,13 @@ impl Session {
     pub fn restart(&mut self) {
         self.stop_self_saving_core();
         self.app.restart();
+    }
+
+    /// Step aside for the SD card repair, stopping a core that writes its own
+    /// saves first, as `restart` does, in case the card still takes them.
+    pub fn repair(&mut self) {
+        self.stop_self_saving_core();
+        self.app.repair();
     }
 
     fn stop_self_saving_core(&mut self) {
@@ -454,9 +495,9 @@ impl Session {
     }
 
     fn held(&self) -> bool {
-        self.app.power_menu().is_some()
-            || self.app.game_menu_open()
+        self.app.game_menu_open()
             || self.app.in_game_menu().is_some()
+            || self.app.repair_prompt()
             || self.app.shutting_down()
     }
 
@@ -472,7 +513,6 @@ impl Session {
         if let Some(emu) = &self.emu {
             emu.set_fast_steps(u32::from(self.app.ff_speed()));
             emu.set_ff_sound(self.app.ff_sound());
-            emu.set_runahead(self.app.runahead_in_play());
             emu.set_speed(
                 if self.inserting()
                     || self.ejecting()
@@ -503,15 +543,19 @@ impl Session {
         }
         let stem = match self.app.phase() {
             Phase::Shelf => {
+                self.opening = None;
                 self.emu = None;
                 return;
             }
             Phase::Inserting { cart, .. } => cart.clone(),
             _ => return,
         };
-        if self.emu.is_none() {
+        if self.emu.is_none() && self.opening.is_none() {
             let (_, serial) = self.app.link_mode(&stem);
             self.spawn_core(&stem, serial);
+        }
+        if !self.finish_opening() {
+            return;
         }
         match self.emu.as_ref().map(EmuHandle::state) {
             Some(CoreState::Loading) => {}
@@ -546,36 +590,69 @@ impl Session {
         self.app
             .set_video_mode(crate::video_mode::video_mode_for(&self.root, stem));
         self.app.set_link_loaded(serial);
-        let resume = (!self.app.starting_clean())
-            .then(|| persist::read_resume(&self.root, platform, core, stem))
-            .flatten();
-        launch("resume state read");
+        let root = self.root.clone();
+        let stem = stem.to_owned();
+        let clean = self.app.starting_clean();
         let player = self.app.link_player();
-        let palette = crate::core::palette_for(self.app.gb_palette(), platform, &rom, player);
-        self.app.set_palette_live(palette.is_some());
-        let opened = open_core(
-            &self.root,
-            core,
-            platform,
-            serial,
-            self.app.colour_correction_for(platform),
-            palette,
-            player,
-        );
-        self.app.set_named_core(opened.named);
-        launch("core opened");
-        self.ws_vertical = platform == Platform::Ws && slot_store::ws_vertical(&rom);
-        let sav = persist::read_sav(&self.root, platform, stem);
-        launch("save read");
-        let ring = self.sink.ring();
-        let emu = match player.filter(|_| platform == Platform::Gba) {
-            Some(p) => EmuHandle::spawn_linked(opened.core, rom, ring, sav, resume, p),
-            None => EmuHandle::spawn(opened.core, rom, ring, sav, resume),
+        let chosen = self.app.gb_palette();
+        let colour = self.app.colour_correction_for(platform);
+        let join = std::thread::Builder::new()
+            .name("slot-open".into())
+            .spawn(move || {
+                let resume = (!clean)
+                    .then(|| persist::read_resume(&root, platform, core, &stem))
+                    .flatten();
+                launch("resume state read");
+                let palette = crate::core::palette_for(chosen, platform, &rom, player);
+                let opened = open_core(&root, core, platform, serial, colour, palette, player);
+                launch("core opened");
+                let sav = persist::read_sav(&root, platform, &stem);
+                launch("save read");
+                // A Lynx game's turn and a WonderSwan game's orientation come
+                // from files too, so they are read here with the rest.
+                let ws_vertical = platform == Platform::Ws && slot_store::ws_vertical(&rom);
+                let lynx_turn = (platform == Platform::Lynx)
+                    .then(|| crate::core::lynx_rotation(&root, &stem));
+                Loaded {
+                    opened,
+                    rom,
+                    platform,
+                    player,
+                    palette_live: palette.is_some(),
+                    sav,
+                    resume,
+                    ws_vertical,
+                    lynx_turn,
+                }
+            })
+            .ok();
+        self.opening = join.map(|join| Opening { join: Some(join) });
+    }
+
+    fn finish_opening(&mut self) -> bool {
+        let Some(opening) = &mut self.opening else {
+            return true;
         };
+        if !opening.join.as_ref().is_some_and(JoinHandle::is_finished) {
+            return false;
+        }
+        let loaded = opening.join.take().and_then(|j| j.join().ok());
+        self.opening = None;
+        let Some(loaded) = loaded else {
+            return true;
+        };
+        self.app.set_palette_live(loaded.palette_live);
+        self.app.set_named_core(loaded.opened.named);
+        let ring = self.sink.ring();
+        let (core, rom, sav, resume) = (loaded.opened.core, loaded.rom, loaded.sav, loaded.resume);
+        let emu = match loaded.player.filter(|_| loaded.platform == Platform::Gba) {
+            Some(p) => EmuHandle::spawn_linked(core, rom, ring, sav, resume, p),
+            None => EmuHandle::spawn(core, rom, ring, sav, resume),
+        };
+        self.ws_vertical = loaded.ws_vertical;
         self.lynx_select = false;
         self.lynx_upright = false;
-        if platform == Platform::Lynx {
-            let turn = crate::core::lynx_rotation(&self.root, stem);
+        if let Some(turn) = loaded.lynx_turn {
             eprintln!("slot: lynx: lynx_rot_screen={turn}");
             emu.set_option("lynx_rot_screen", turn);
             emu.set_option(
@@ -588,6 +665,7 @@ impl Session {
         emu.set_driven(self.driven);
         self.app.set_snapshot(Box::new(emu.snapshot()));
         self.emu = Some(emu);
+        true
     }
 
     fn reload_for_link(&mut self, stem: &str, serial: &'static str) {
@@ -595,13 +673,14 @@ impl Session {
         if self.emu.is_some() {
             self.app.flush_resume();
         }
+        self.opening = None;
         self.emu = None;
         self.spawn_core(stem, serial);
         self.reloading = true;
     }
 
     fn sync_reload(&mut self) {
-        if !self.reloading {
+        if !self.reloading || !self.finish_opening() {
             return;
         }
         match self.emu.as_ref().map(EmuHandle::state) {
@@ -618,6 +697,30 @@ impl Session {
                     self.reload_for_link(&stem, serial);
                 }
             }
+        }
+    }
+}
+
+struct Loaded {
+    opened: Opened,
+    rom: PathBuf,
+    platform: Platform,
+    player: Option<u8>,
+    palette_live: bool,
+    sav: Option<Vec<u8>>,
+    resume: Option<Vec<u8>>,
+    ws_vertical: bool,
+    lynx_turn: Option<&'static str>,
+}
+
+struct Opening {
+    join: Option<JoinHandle<Loaded>>,
+}
+
+impl Drop for Opening {
+    fn drop(&mut self) {
+        if let Some(join) = self.join.take() {
+            let _ = join.join();
         }
     }
 }

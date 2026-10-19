@@ -3,6 +3,7 @@ use slot::video_mode::VideoMode;
 use slot_gfx::{Canvas, Draw, Layout};
 use slot_input::Action;
 use slot_store::{Cart, Platform};
+use slot_ui::MOUTH_H;
 
 const PANEL_4_3: (u32, u32) = (640, 480);
 const NATIVE: Canvas = Canvas { w: 640.0, h: 480.0 };
@@ -78,11 +79,7 @@ fn the_in_game_menu_takes_its_own_layout_once_it_shows() {
 }
 
 #[test]
-fn the_photos_and_the_power_menu_over_a_game_stay_framed() {
-    let mut a = playing(PANEL_4_3);
-    a.apply(Action::PowerHold);
-    assert!(a.power_menu().is_some(), "the power menu did not open");
-    assert_eq!(a.layout(), Layout::Framed, "the power menu over a game");
+fn the_photos_over_a_game_stay_framed() {
     let mut a = playing(PANEL_4_3);
     a.apply(Action::Polaroids);
     if matches!(a.phase(), Phase::Polaroids { .. }) {
@@ -91,14 +88,10 @@ fn the_photos_and_the_power_menu_over_a_game_stay_framed() {
 }
 
 #[test]
-fn the_shelf_menu_and_the_power_menu_over_the_shelf_stay_native() {
+fn the_shelf_menu_stays_native() {
     let mut a = app_with_carts(&["Emerald", "Zzz"], PANEL_4_3);
     a.apply(Action::QuickMenu);
     assert!(matches!(a.phase(), Phase::QuickMenu { .. }));
-    assert_eq!(a.layout(), Layout::Native);
-    let mut a = app_with_carts(&["Emerald", "Zzz"], PANEL_4_3);
-    a.apply(Action::PowerHold);
-    assert!(a.power_menu().is_some());
     assert_eq!(a.layout(), Layout::Native);
 }
 
@@ -156,6 +149,11 @@ fn the_exit_powers_off_then_drops_the_overlay_then_goes_native() {
             "the overlay moved before the screen was off"
         );
         assert_eq!(a.layout(), Layout::Framed);
+        assert_eq!(
+            a.screen_footer(),
+            0.0,
+            "the framed close scaled around a footer that is not on this canvas"
+        );
         tick(&mut a);
     }
     let mut frames = 0;
@@ -270,6 +268,11 @@ fn exit_from_the_in_game_menu_never_brings_the_overlay_back() {
         assert_eq!(a.layout(), Layout::Native);
         if matches!(a.phase(), Phase::Ejecting { .. }) && a.screen_power() > 0.0 {
             powering += 1;
+            assert_eq!(
+                a.screen_footer(),
+                MOUTH_H,
+                "the picture scaled through the carousel footer"
+            );
             let mut out = Vec::new();
             a.draw(&mut out);
             assert!(

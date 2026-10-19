@@ -99,6 +99,8 @@ const SLOT_BACK_DARK_PNG: &[u8] = include_bytes!("../../../assets/slot_back_dark
 const SLOT_BACK_LIGHT_PNG: &[u8] = include_bytes!("../../../assets/slot_back_light.png");
 const SLOT_FRONT_DARK_PNG: &[u8] = include_bytes!("../../../assets/slot_front_dark.png");
 const SLOT_FRONT_LIGHT_PNG: &[u8] = include_bytes!("../../../assets/slot_front_light.png");
+const SLOT_PLUGGED_DARK_PNG: &[u8] = include_bytes!("../../../assets/slot_plugged_dark.png");
+const SLOT_PLUGGED_LIGHT_PNG: &[u8] = include_bytes!("../../../assets/slot_plugged_light.png");
 const PORT_DARK_PNG: &[u8] = include_bytes!("../../../assets/link_port_dark.png");
 const PORT_LIGHT_PNG: &[u8] = include_bytes!("../../../assets/link_port_light.png");
 const PLUG_HOST_PNG: &[u8] = include_bytes!("../../../assets/link_plug_host.png");
@@ -349,6 +351,16 @@ pub fn slot_front_light() -> &'static [u8] {
     load(SLOT_FRONT_LIGHT_PNG, SLOT_W, SLOT_H, &P)
 }
 
+pub fn slot_plugged() -> &'static [u8] {
+    static P: OnceLock<Vec<u8>> = OnceLock::new();
+    load(SLOT_PLUGGED_DARK_PNG, SLOT_W, SLOT_H, &P)
+}
+
+pub fn slot_plugged_light() -> &'static [u8] {
+    static P: OnceLock<Vec<u8>> = OnceLock::new();
+    load(SLOT_PLUGGED_LIGHT_PNG, SLOT_W, SLOT_H, &P)
+}
+
 pub fn link_port() -> &'static [u8] {
     static P: OnceLock<Vec<u8>> = OnceLock::new();
     load(PORT_DARK_PNG, PORT_W, PORT_H, &P)
@@ -426,4 +438,42 @@ pub fn shell_asset(mould: Mould, clear: bool) -> &'static [u8] {
         (Mould::Rounded, true) => (GBC_CLEAR_PNG, GB_CART_W, GB_CART_H, &GBC_CLEAR),
     };
     load(bytes, w, h, slot)
+}
+
+/// Footer buttons. Each file is already the footer height.
+#[derive(Copy, Clone)]
+pub(crate) enum ButtonLegend {
+    A,
+    B,
+    Left,
+    Right,
+    Select,
+    X,
+    Y,
+}
+
+const BUTTON_LEGEND_PNG: [&[u8]; 7] = [
+    include_bytes!("../../../assets/buttonlegend_round_a.png"),
+    include_bytes!("../../../assets/buttonlegend_round_b.png"),
+    include_bytes!("../../../assets/buttonlegend_dpad_left.png"),
+    include_bytes!("../../../assets/buttonlegend_dpad_right.png"),
+    include_bytes!("../../../assets/buttonlegend_long_select.png"),
+    include_bytes!("../../../assets/buttonlegend_round_x.png"),
+    include_bytes!("../../../assets/buttonlegend_round_y.png"),
+];
+
+pub(crate) fn button_legend(which: ButtonLegend) -> (&'static [u8], u32, u32) {
+    static ALL: OnceLock<Vec<(Vec<u8>, u32, u32)>> = OnceLock::new();
+    let all = ALL.get_or_init(|| {
+        BUTTON_LEGEND_PNG
+            .iter()
+            .map(|bytes| {
+                let (mut rgba, w, h) = decode_png_bytes(bytes).expect("a button legend decodes");
+                bleed(&mut rgba, w, h);
+                (rgba, w, h)
+            })
+            .collect()
+    });
+    let (rgba, w, h) = &all[which as usize];
+    (rgba, *w, *h)
 }

@@ -279,6 +279,10 @@ impl Compositor {
         self.game.set_power(t);
     }
 
+    pub fn set_screen_footer(&mut self, px: f32) {
+        self.game.set_bottom(px);
+    }
+
     pub fn set_game_fills_frame(&mut self, on: bool) {
         self.game.set_fills_frame(on);
     }

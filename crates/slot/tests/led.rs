@@ -5,9 +5,8 @@ use std::sync::atomic::Ordering;
 use common::{
     app_playing_in, app_playing_with_charge, app_playing_with_led, led_code, tmp_root_with_carts,
 };
-use slot_input::{Action, Btn};
+use slot_input::Action;
 use slot_power::LedState;
-use slot_ui::PowerChoice;
 
 #[test]
 fn the_fast_tick_actually_reaches_the_platforms_set_led() {
@@ -108,16 +107,6 @@ fn power_off_leaves_the_led_off_rather_than_lit_through_shutdown() {
         "the rig should start lit, or this test proves nothing"
     );
     a.apply(Action::PowerHold);
-    assert_ne!(
-        led.load(Ordering::Relaxed),
-        led_code(LedState::Off),
-        "the menu is a question, not a shutdown"
-    );
-
-    for _ in 0..PowerChoice::PowerOff.index() {
-        a.apply(Action::GbaDown(Btn::Down));
-    }
-    a.apply(Action::GbaDown(Btn::A));
     assert_eq!(
         led.load(Ordering::Relaxed),
         led_code(LedState::Off),
@@ -168,12 +157,10 @@ fn the_fast_tick_does_not_relight_the_case_through_a_shutdown() {
     a.tick_ms(2_000);
 
     a.apply(Action::PowerHold);
-    a.apply(Action::GbaDown(Btn::Down));
-    a.apply(Action::GbaDown(Btn::A));
     assert_eq!(
         led.load(Ordering::Relaxed),
         led_code(LedState::Off),
-        "the choice darkens the case, or this test proves nothing"
+        "the hold darkens the case, or this test proves nothing"
     );
 
     a.tick_ms(3_000);

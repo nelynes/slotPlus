@@ -3,22 +3,21 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use slot_gfx::{Canvas, Layout, OUT_H, OUT_W};
-use slot_input::{Action, Btn, MENU_DOUBLE_TAP_MS, MUTE_CHORD_MS};
-use slot_power::{Battery, Charge, LedState, LidPolicy, Power};
+use slot_input::{Action, Btn, RawEvent, MENU_DOUBLE_TAP_MS, MUTE_CHORD_MS};
+use slot_power::{Battery, Charge, LedState, LidPolicy, Power, RepairResult};
 use slot_retro::LinkChannel;
 use slot_store::{
-    format_stamp, read_slot_state, scan, write_slot_state, BezelPick, Cart, Core, GbPalette,
-    Platform, Recent, Shader, SlotState, StateEntry, StateRing, WallpaperPick, WallpaperTint,
-    BLUE_LIGHT_MAX, BRIGHTNESS_MAX, FF_SPEEDS, RING_MAX, RUN_AHEAD_MAX, VOLUME_MAX,
+    format_stamp, parse_stamp, read_slot_state, scan, write_slot_state, BezelPick, Cart, Core,
+    GbPalette, Platform, Recent, Shader, SlotState, StateEntry, StateRing, WallpaperPick,
+    WallpaperTint, BLUE_LIGHT_MAX, BRIGHTNESS_MAX, FF_SPEEDS, RING_MAX, VOLUME_MAX,
 };
 use slot_ui::{
-    board_from, board_x, board_zoom, draw_empty_slot, draw_footer, draw_ground, draw_slot_name,
+    board_from, board_zoom, draw_empty_slot, draw_footer, draw_ground, draw_slot_name,
     draw_sticker, ease, footer_ink, grown, lid_at, lid_from, lift_of, on_board, repeat_gap,
     shelf_cart_at, ClockPicker, Draw, FfState, GbShell, Hud, HudKind, Icon, LinkBadge, Millis,
     Placed, Polaroids, PowerChoice, QuickMenu, QuickMenuFaces, QuickRow, QuickValue, Refusal,
-    Shelf, SlotChrome, TexId, Toast, BOARD_W, CART_W, CHIP_H, CHIP_U, CHIP_V, CHIP_W, FOOTER_Y,
-    HINT_EDGE, HINT_H, HOP_LIFT, REPEAT_DELAY_MS, SHADOW_H, SHADOW_W, SOCKET_H, SOCKET_U, SOCKET_V,
-    SOCKET_W, TURN_PAD,
+    Shelf, SlotChrome, TexId, Toast, CART_W, CHIP_H, CHIP_U, CHIP_V, CHIP_W, HINT_EDGE, HOP_LIFT,
+    MOUTH_H, REPEAT_DELAY_MS, SHADOW_H, SHADOW_W, SOCKET_H, SOCKET_U, SOCKET_V, SOCKET_W, TURN_PAD,
 };
 
 use crate::audio::Sfx;
@@ -29,6 +28,20 @@ use crate::link_screen::LinkSprites;
 use crate::link_start::{link_port, LinkFail, LinkProgress, LinkStarter, LinkStep};
 use crate::persist::{self, Snapshot};
 use crate::video_mode::{self, VideoMode};
+use slot_store::{
+    read_carousel, read_controls, read_shortcuts, write_carousel, write_controls, write_shortcuts,
+    Binding, CarouselAction, CarouselKeys, Controls, Device, GameButton, Modifier, ShortcutKeys,
+    LID_OFF_MIN,
+};
+
+pub const PRESS_A_BUTTON: &str = "Press a button";
+
+#[derive(Copy, Clone, Debug)]
+struct BindCapture {
+    row: QuickRow,
+    menu: bool,
+    select: bool,
+}
 
 pub const INSERT_S: f32 = 0.73;
 const INSERT_HOLD_S: f32 = 0.28;
@@ -47,6 +60,11 @@ pub const IN_GAME_MENU: Layout = Layout::Native;
 const POWER_ON_S: f32 = 0.22;
 
 const POWER_OFF_S: f32 = 0.16;
+
+const FOOTER_SLIDE_S: f32 = POWER_ON_S;
+
+const BLANK_WARM_S: f32 = 1.5;
+const BLANK_DIM: f32 = 0.1;
 
 const VOLUME_STEP: u8 = 5;
 
@@ -71,8 +89,8 @@ const PLAY_HOLD_MS: Millis = 500;
 
 const SHUTDOWN_SHOW_MS: Millis = 250;
 
-const POWER_MENU_PITCH: f32 = 44.0;
-const POWER_MENU_BAR_INSET: f32 = 4.0;
+const REPAIR_GAP: u32 = 12;
+
 const CORE_PICKER_RECEDE: f32 = 0.26;
 
 const SLOT_NAME_IN_MS: Millis = 200;
@@ -80,12 +98,13 @@ const SLOT_NAME_HOLD_MS: Millis = 1200;
 const SLOT_NAME_OUT_MS: Millis = 800;
 const SLOT_NAME_ALPHA: f32 = 1.0;
 const CORE_PICKER_DIM: f32 = 0.25 / (1.0 - CORE_PICKER_RECEDE);
-const CORE_LEGEND_Y: f32 = 386.0;
+const CORE_LEGEND_Y: f32 = OUT_H as f32 - MOUTH_H * 2.0;
+const CORE_LEGEND_GAP: f32 = 24.0;
 const LINK_TEXT_Y: f32 = 44.0;
-const LINK_LEGEND_Y: f32 = FOOTER_Y;
+const LINK_LEGEND_Y: f32 = OUT_H as f32 - MOUTH_H;
 pub const LINK_SCRIM: [f32; 4] = [0.0, 0.0, 0.0, 0.5];
 const LINK_LEGEND_GAP: f32 = 40.0;
-const LINK_LEGEND_EDGE: f32 = 24.0;
+const LINK_LEGEND_EDGE: f32 = 0.0;
 const LID_SHADOW_W: f32 = 168.0;
 const LID_SHADOW_H: f32 = 18.0;
 const LID_SHADOW_DROP: f32 = 27.1;
@@ -313,8 +332,7 @@ pub struct App {
     refused_from: Option<f32>,
     alert_face: Option<TexId>,
     shutdown_faces: Vec<(TexId, u32, u32)>,
-    power_menu: Option<usize>,
-    power_menu_faces: Vec<(TexId, u32, u32)>,
+    repair_faces: Vec<(TexId, u32, u32)>,
     core_picker: Option<CorePicker>,
     core_board_face: Option<TexId>,
     core_interior_face: Option<TexId>,
@@ -342,9 +360,20 @@ pub struct App {
     starting: Option<LinkStarting>,
     link_transport: Option<(u16, Box<dyn LinkChannel>)>,
     restarting: bool,
+    repairing: bool,
+    repair_prompt: bool,
+    reset_prompt: Option<QuickRow>,
+    reset_faces: Vec<(TexId, u32, u32)>,
     act_at: Millis,
     root: Option<PathBuf>,
     state: SlotState,
+    left_stick: bool,
+    controls: Controls,
+    capture: Option<BindCapture>,
+    plugged_face: Option<TexId>,
+    binding_faces: HashMap<String, [(TexId, u32, u32); 2]>,
+    carousel: CarouselKeys,
+    shortcuts: ShortcutKeys,
     vol_before: Vec<(u8, bool, Millis)>,
     snapshot: Option<Box<dyn Snapshot>>,
     core: Core,
@@ -365,6 +394,7 @@ pub struct App {
     legend_faces: Vec<TexId>,
     undo_face: Option<TexId>,
     clock_faces: Option<(TexId, TexId)>,
+    clock_back: Option<(TexId, u32)>,
     quick_menu_faces: Option<QuickMenuFaces>,
     quick_clock_faces: Option<[(TexId, u32, u32); 2]>,
     quick_wallpaper_faces: Option<[(TexId, u32, u32); 2]>,
@@ -372,6 +402,9 @@ pub struct App {
     quick_bezel_faces: [Option<[(TexId, u32, u32); 2]>; 8],
     game_bezel: Option<TexId>,
     in_game_menu: Option<QuickRow>,
+    /// 0 while the pause footer is off the bottom, 1 when it sits in the carousel's place.
+    footer: f32,
+    footer_row: Option<QuickRow>,
     states_from_menu: bool,
     menu_tap: Option<(Millis, Option<QuickRow>)>,
     sticker_face: Option<TexId>,
@@ -391,6 +424,7 @@ pub struct App {
     shelf_clock: slot_ui::Printed,
     hud: Hud,
     screen: f32,
+    blank_s: f32,
     lift: f32,
     eject_overlay: f32,
     panel: (u32, u32),
@@ -443,6 +477,21 @@ fn shelves_of(carts: Vec<Cart>) -> Vec<(Rack, Shelf)> {
         .collect()
 }
 
+fn shift_down(draws: &mut [Draw], dy: f32) {
+    if dy == 0.0 {
+        return;
+    }
+    for draw in draws {
+        match draw {
+            Draw::Rect { y, .. }
+            | Draw::Tex { y, .. }
+            | Draw::Part { y, .. }
+            | Draw::Turned { y, .. } => *y += dy,
+            Draw::Game | Draw::Shot { .. } => {}
+        }
+    }
+}
+
 impl App {
     pub fn new(carts: Vec<Cart>) -> Self {
         let shelves = shelves_of(carts);
@@ -465,8 +514,7 @@ impl App {
             refused_from: None,
             alert_face: None,
             shutdown_faces: Vec::new(),
-            power_menu: None,
-            power_menu_faces: Vec::new(),
+            repair_faces: Vec::new(),
             core_picker: None,
             core_board_face: None,
             core_interior_face: None,
@@ -494,9 +542,20 @@ impl App {
             starting: None,
             link_transport: None,
             restarting: false,
+            repairing: false,
+            repair_prompt: false,
+            reset_prompt: None,
+            reset_faces: Vec::new(),
             act_at: 0,
             root: None,
             state: SlotState::default(),
+            left_stick: false,
+            controls: Controls::default(),
+            capture: None,
+            plugged_face: None,
+            binding_faces: HashMap::new(),
+            carousel: CarouselKeys::default(),
+            shortcuts: ShortcutKeys::default(),
             vol_before: Vec::new(),
             snapshot: None,
             core: Core::default(),
@@ -516,6 +575,7 @@ impl App {
             legend_faces: Vec::new(),
             undo_face: None,
             clock_faces: None,
+            clock_back: None,
             quick_menu_faces: None,
             quick_clock_faces: None,
             quick_wallpaper_faces: None,
@@ -523,6 +583,8 @@ impl App {
             quick_bezel_faces: [None; 8],
             game_bezel: None,
             in_game_menu: None,
+            footer: 0.0,
+            footer_row: None,
             states_from_menu: false,
             menu_tap: None,
             sticker_face: None,
@@ -542,6 +604,7 @@ impl App {
             shelf_clock: slot_ui::Printed::default(),
             hud: Hud::new(),
             screen: 0.0,
+            blank_s: 0.0,
             lift: 1.0,
             eject_overlay: 0.0,
             panel: (0, 0),
@@ -574,6 +637,9 @@ impl App {
         let mut app = App::new(carts);
         app.root = Some(root.to_path_buf());
         app.state = read_slot_state(root);
+        app.carousel = read_carousel(root);
+        app.shortcuts = read_shortcuts(root);
+        app.controls = read_controls(root);
         app.restock_recents();
         app.restock_favorites();
         if let Some((at, i)) = app.remembered_seat() {
@@ -676,9 +742,6 @@ impl App {
 
     fn repeats(&self, btn: Btn) -> bool {
         let vertical = matches!(btn, Btn::Up | Btn::Down);
-        if self.power_menu.is_some() {
-            return vertical;
-        }
         if self.game_menu.is_some() {
             return false;
         }
@@ -831,33 +894,41 @@ impl App {
         self.in_game_menu
     }
 
-    pub fn in_game_hidden(&self) -> &'static [QuickRow] {
+    pub fn in_game_hidden(&self) -> Vec<QuickRow> {
+        let platform = self.playing_platform();
+        let no_bezel = platform == Platform::Gba && !self.framed_panel();
+        let mut hidden = Vec::new();
+        // None of the added systems' cores has colour correction to set. Their
+        // bezel is None, the SP frame on a 4:3 panel, or a png of the card's own.
         if matches!(
-            self.playing_platform(),
+            platform,
             Platform::Ws | Platform::Lynx | Platform::Gg | Platform::Ngp | Platform::Tg16
         ) {
-            // None of these cores has colour correction or a palette to pick. Their bezel
-            // is None, the SP frame on a 4:3 panel, or a png of the card's own.
-            return match self.single_cart() {
-                false => &[QuickRow::Palette, QuickRow::ColourCorrection],
-                true => &[
-                    QuickRow::Palette,
-                    QuickRow::ColourCorrection,
-                    QuickRow::ExitGame,
-                ],
-            };
+            hidden.push(QuickRow::ColourCorrection);
         }
-        let no_bezel = self.playing_platform() == Platform::Gba && !self.framed_panel();
-        match (self.palette_live, no_bezel, self.single_cart()) {
-            (true, false, false) => &[],
-            (true, false, true) => &[QuickRow::ExitGame],
-            (true, true, false) => &[QuickRow::Bezel],
-            (true, true, true) => &[QuickRow::Bezel, QuickRow::ExitGame],
-            (false, false, false) => &[QuickRow::Palette],
-            (false, false, true) => &[QuickRow::Palette, QuickRow::ExitGame],
-            (false, true, false) => &[QuickRow::Palette, QuickRow::Bezel],
-            (false, true, true) => &[QuickRow::Palette, QuickRow::Bezel, QuickRow::ExitGame],
+        if !self.palette_live {
+            hidden.push(QuickRow::Palette);
         }
+        if no_bezel {
+            hidden.push(QuickRow::Bezel);
+        }
+        if self.single_cart() {
+            hidden.push(QuickRow::ExitGame);
+        }
+        // L1 and R1 are the Lynx's Option 1 and 2 and the WonderSwan's Y-pad
+        // and vertical A and B, so those two keep them.
+        // The Game Gear, NeoGeo Pocket and TurboGrafx-16 have no L or R either:
+        // slot keeps L1 and R1 there to stretch the picture.
+        if matches!(
+            platform,
+            Platform::Gb | Platform::Gbc | Platform::Gg | Platform::Ngp | Platform::Tg16
+        ) {
+            hidden.extend([QuickRow::GameL, QuickRow::GameR]);
+        }
+        if !self.left_stick {
+            hidden.push(QuickRow::LeftStick);
+        }
+        hidden
     }
 
     pub fn gb_palette_label(&self) -> &'static str {
@@ -921,10 +992,10 @@ impl App {
             QuickRow::NgpShader => Some(shader_value(self.state.shader_ngp)),
             QuickRow::Tg16Shader => Some(shader_value(self.state.shader_tg16)),
             QuickRow::Rumble => Some(QuickValue::flag(self.state.rumble)),
+            QuickRow::LeftStick => Some(QuickValue::flag(self.state.left_stick_dpad)),
             QuickRow::EjectSave => Some(QuickValue::flag(self.state.eject_save)),
             QuickRow::Turbo => Some(QuickValue::flag(self.state.turbo)),
             QuickRow::Rewind => Some(QuickValue::flag(self.state.rewind)),
-            QuickRow::RunAhead => QuickValue::frames(self.state.runahead),
             QuickRow::Recents => Some(if self.state.show_recents {
                 QuickValue::Show
             } else {
@@ -941,6 +1012,9 @@ impl App {
                 WallpaperTint::Medium => QuickValue::Medium,
                 WallpaperTint::High => QuickValue::High,
             }),
+            QuickRow::LidOff => QuickValue::LID_OFF
+                .into_iter()
+                .find(|v| v.minutes() == Some(self.lid_off_min())),
             QuickRow::Theme => Some(if self.light() {
                 QuickValue::Light
             } else {
@@ -950,7 +1024,6 @@ impl App {
             | QuickRow::About
             | QuickRow::Screen
             | QuickRow::Game
-            | QuickRow::General
             | QuickRow::Wallpaper
             | QuickRow::Resume
             | QuickRow::States
@@ -975,7 +1048,41 @@ impl App {
             | QuickRow::ScreenGg
             | QuickRow::ScreenNgp
             | QuickRow::ScreenTg16
-            | QuickRow::Bezel => None,
+            | QuickRow::Bezel
+            | QuickRow::General
+            | QuickRow::ShelfPrev
+            | QuickRow::ShelfNext
+            | QuickRow::ShelfFavorite
+            | QuickRow::PlayControls
+            | QuickRow::Shortcuts
+            | QuickRow::GameUp
+            | QuickRow::GameDown
+            | QuickRow::GameLeft
+            | QuickRow::GameRight
+            | QuickRow::GameA
+            | QuickRow::GameB
+            | QuickRow::GameSelect
+            | QuickRow::GameStart
+            | QuickRow::GameL
+            | QuickRow::GameR
+            | QuickRow::GameTurboA
+            | QuickRow::GameTurboB
+            | QuickRow::ScSave
+            | QuickRow::ScLoad
+            | QuickRow::ScBrightUp
+            | QuickRow::ScBrightDown
+            | QuickRow::ScBlueDown
+            | QuickRow::ScBlueUp
+            | QuickRow::ScColour
+            | QuickRow::ScPaletteBack
+            | QuickRow::ScPaletteNext
+            | QuickRow::ScShaderNext
+            | QuickRow::ScShaderBack
+            | QuickRow::ScFastForward
+            | QuickRow::ScRewind
+            | QuickRow::Controls
+            | QuickRow::ControlsShelf
+            | QuickRow::ControlsInGame => None,
         }
     }
 
@@ -1181,16 +1288,29 @@ impl App {
         }
     }
 
-    pub fn hidden_rows(&self) -> &'static [QuickRow] {
+    pub fn hidden_rows(&self) -> Vec<QuickRow> {
         let own = matches!(
             self.state.wallpaper,
             WallpaperPick::File(_) | WallpaperPick::Random
         );
-        match (own, self.framed_panel()) {
-            (true, true) => &[],
-            (true, false) => &[QuickRow::GbaBezel],
-            (false, true) => &[QuickRow::WallpaperTint],
-            (false, false) => &[QuickRow::WallpaperTint, QuickRow::GbaBezel],
+        let mut hidden = Vec::new();
+        if !own {
+            hidden.push(QuickRow::WallpaperTint);
+        }
+        if !self.framed_panel() {
+            hidden.push(QuickRow::GbaBezel);
+        }
+        if !self.left_stick {
+            hidden.push(QuickRow::LeftStick);
+        }
+        hidden
+    }
+
+    pub fn lid_off_min(&self) -> u8 {
+        match (self.state.lid_off_min, &self.power) {
+            (Some(min), _) => min,
+            (None, Some(power)) => (power.timeout().as_secs() / 60) as u8,
+            (None, None) => 3,
         }
     }
 
@@ -1204,6 +1324,10 @@ impl App {
 
     pub fn set_clock_faces(&mut self, line: TexId, hint: TexId) {
         self.clock_faces = Some((line, hint));
+    }
+
+    pub fn set_clock_back_face(&mut self, back: (TexId, u32)) {
+        self.clock_back = Some(back);
     }
 
     pub fn set_star_face(&mut self, face: TexId, w: u32, h: u32) {
@@ -1490,12 +1614,244 @@ impl App {
             )
     }
 
-    pub fn taken_buttons(&self) -> &'static [Btn] {
-        if self.slot_owns_the_shoulders() {
-            &[Btn::L1, Btn::R1]
-        } else {
-            &[]
+    pub fn taken_buttons(&self) -> Vec<Btn> {
+        if !self.slot_owns_the_shoulders() {
+            return Vec::new();
         }
+        [Btn::L1, Btn::R1]
+            .into_iter()
+            .filter(|b| !self.bound_to_game(*b))
+            .collect()
+    }
+
+    fn bound_to_game(&self, b: Btn) -> bool {
+        GameButton::of(self.platform).iter().any(|g| {
+            self.controls
+                .game(*g)
+                .is_some_and(|x| x.modifier.is_none() && crate::input::device_btn(x.button) == b)
+        })
+    }
+
+    pub fn controls(&self) -> Controls {
+        self.controls
+    }
+
+    pub fn shortcuts(&self) -> ShortcutKeys {
+        self.shortcuts
+    }
+
+    pub fn set_plugged_face(&mut self, tex: TexId) {
+        self.plugged_face = Some(tex);
+    }
+
+    pub fn capturing(&self) -> bool {
+        self.capture.is_some()
+    }
+
+    pub fn capture_row(&self) -> Option<QuickRow> {
+        self.capture.map(|c| c.row)
+    }
+
+    fn start_capture(&mut self, row: QuickRow) {
+        self.capture = Some(BindCapture {
+            row,
+            menu: false,
+            select: false,
+        });
+    }
+
+    pub fn capture_input(&mut self, ev: RawEvent) {
+        let Some(mut c) = self.capture else {
+            return;
+        };
+        let select_mod = c.row.shortcut().is_some();
+        match ev {
+            RawEvent::Down(Btn::Menu) => c.menu = true,
+            RawEvent::Up(Btn::Menu) => c.menu = false,
+            RawEvent::Down(Btn::Select) if select_mod && !c.menu => c.select = true,
+            RawEvent::Up(Btn::Select) if c.select => {
+                return self.bind(c.row, Binding::plain(Device::Select));
+            }
+            RawEvent::Down(b) => {
+                if let Some(button) = crate::input::btn_device(b) {
+                    let modifier = match (c.menu, c.select) {
+                        (true, _) => Some(Modifier::Menu),
+                        (false, true) => Some(Modifier::Select),
+                        (false, false) => None,
+                    };
+                    return self.bind(c.row, Some(Binding { modifier, button }));
+                }
+            }
+            RawEvent::Up(_) => {}
+        }
+        self.capture = Some(c);
+    }
+
+    fn bind(&mut self, row: QuickRow, binding: Option<Binding>) {
+        self.capture = None;
+        self.set_binding(row, binding);
+        if self.in_game_menu.is_some() {
+            let hidden = self.in_game_hidden();
+            self.in_game_menu = Some(row.down(&hidden));
+        } else if let Phase::QuickMenu { .. } = self.phase {
+            self.phase = Phase::QuickMenu {
+                row: row.down(&self.hidden_rows()),
+            };
+        }
+    }
+
+    fn binding_of(&self, row: QuickRow) -> Option<Binding> {
+        if let Some(g) = row.game_button() {
+            return self.controls.game(g);
+        }
+        if let Some(s) = row.shortcut() {
+            return self.shortcuts.get(s);
+        }
+        row.carousel_action().and_then(|a| self.carousel.get(a))
+    }
+
+    fn reset_page(&mut self, row: QuickRow) {
+        self.reset_prompt = None;
+        let (what, written) = if row.game_button().is_some() {
+            self.controls = Controls::default();
+            let Some(root) = &self.root else {
+                return;
+            };
+            ("controls", write_controls(root, &self.controls))
+        } else if row.shortcut().is_some() {
+            self.shortcuts = ShortcutKeys::default();
+            let Some(root) = &self.root else {
+                return;
+            };
+            ("shortcuts", write_shortcuts(root, &self.shortcuts))
+        } else {
+            self.carousel = CarouselKeys::default();
+            let Some(root) = &self.root else {
+                return;
+            };
+            ("carousel", write_carousel(root, &self.carousel))
+        };
+        if let Err(e) = &written {
+            eprintln!("slot: {what}: {e}");
+        }
+        self.card_writes.wrote(what, &written);
+    }
+
+    fn page_is_default(&self, row: QuickRow) -> bool {
+        if row.game_button().is_some() {
+            self.controls == Controls::default()
+        } else if row.shortcut().is_some() {
+            self.shortcuts == ShortcutKeys::default()
+        } else {
+            self.carousel == CarouselKeys::default()
+        }
+    }
+
+    pub fn reset_prompt(&self) -> bool {
+        self.reset_prompt.is_some()
+    }
+
+    fn reset_prompt_faces(&self, row: QuickRow) -> Vec<(TexId, u32, u32)> {
+        let at = if row.game_button().is_some() {
+            0
+        } else if row.shortcut().is_some() {
+            2
+        } else {
+            4
+        };
+        match self.reset_faces[..] {
+            [_, _, _, _, _, _, cancel, reset] => {
+                vec![
+                    self.reset_faces[at],
+                    self.reset_faces[at + 1],
+                    cancel,
+                    reset,
+                ]
+            }
+            _ => Vec::new(),
+        }
+    }
+
+    fn set_binding(&mut self, row: QuickRow, binding: Option<Binding>) {
+        if let Some(g) = row.game_button() {
+            self.controls.set_game(g, binding);
+            if let Some(root) = &self.root {
+                let written = write_controls(root, &self.controls);
+                if let Err(e) = &written {
+                    eprintln!("slot: controls: {e}");
+                }
+                self.card_writes.wrote("controls", &written);
+            }
+        } else if let Some(s) = row.shortcut() {
+            self.shortcuts.set(s, binding);
+            if let Some(root) = &self.root {
+                let written = write_shortcuts(root, &self.shortcuts);
+                if let Err(e) = &written {
+                    eprintln!("slot: shortcuts: {e}");
+                }
+                self.card_writes.wrote("shortcuts", &written);
+            }
+        } else if let Some(a) = row.carousel_action() {
+            self.carousel.set(a, binding);
+            if let Some(root) = &self.root {
+                let written = write_carousel(root, &self.carousel);
+                if let Err(e) = &written {
+                    eprintln!("slot: carousel: {e}");
+                }
+                self.card_writes.wrote("carousel", &written);
+            }
+        }
+    }
+
+    pub fn binding_texts(&self) -> Vec<String> {
+        let mut texts: Vec<String> = QuickRow::ALL
+            .iter()
+            .filter(|r| r.binds())
+            .map(|r| Binding::text(self.binding_of(*r)))
+            .collect();
+        texts.push(PRESS_A_BUTTON.to_string());
+        texts.sort();
+        texts.dedup();
+        texts
+    }
+
+    pub fn has_binding_face(&self, text: &str) -> bool {
+        self.binding_faces.contains_key(text)
+    }
+
+    pub fn add_binding_face(&mut self, text: String, faces: [(TexId, u32, u32); 2]) {
+        self.binding_faces.insert(text, faces);
+    }
+
+    fn bound_faces(&self) -> Vec<Option<[(TexId, u32, u32); 2]>> {
+        QuickRow::ALL
+            .iter()
+            .map(|r| {
+                if !r.binds() {
+                    return None;
+                }
+                let text = match self.capture_row() == Some(*r) {
+                    true => PRESS_A_BUTTON.to_string(),
+                    false => Binding::text(self.binding_of(*r)),
+                };
+                self.binding_faces.get(&text).copied()
+            })
+            .collect()
+    }
+
+    fn description(&self, row: QuickRow) -> Option<(TexId, u32, u32)> {
+        let faces = self.quick_menu_faces.as_ref()?;
+        if row.shortcut().is_some() {
+            Some(faces.descriptions[1])
+        } else if row.binds() {
+            Some(faces.descriptions[0])
+        } else {
+            None
+        }
+    }
+
+    pub fn carousel(&self) -> CarouselKeys {
+        self.carousel
     }
 
     pub fn takes_from_the_game(&self, action: Action) -> bool {
@@ -1657,6 +2013,13 @@ impl App {
             self.phase = clock_screen(secs, 0, false);
         }
         self.copy_card_log(&power);
+        if let Some(result) = power.take_repair_result() {
+            let toast = match result {
+                RepairResult::Repaired | RepairResult::Clean => Toast::CardRepaired,
+                RepairResult::Failed => Toast::CardRepairFailed,
+            };
+            self.hud.toast(toast, self.now());
+        }
         self.power = Some(power);
         self.battery_at = self.now();
         self.charge_at = self.now();
@@ -1708,20 +2071,20 @@ impl App {
         self.state.rumble
     }
 
+    pub fn set_left_stick(&mut self, present: bool) {
+        self.left_stick = present;
+    }
+
+    pub fn left_stick_dpad(&self) -> bool {
+        self.left_stick && self.state.left_stick_dpad
+    }
+
     pub fn ff_speed(&self) -> u8 {
         self.state.ff_speed
     }
 
     pub fn ff_sound(&self) -> bool {
         self.state.ff_sound
-    }
-
-    pub fn runahead(&self) -> u8 {
-        self.state.runahead
-    }
-
-    pub fn runahead_in_play(&self) -> u8 {
-        runahead_for(self.core, self.platform, self.state.runahead)
     }
 
     pub fn screen_shader(&self) -> Shader {
@@ -1774,12 +2137,34 @@ impl App {
         self.powering_off && self.now() >= self.act_at
     }
 
+    pub fn ready_to_repair(&self) -> bool {
+        self.repairing && self.now() >= self.act_at
+    }
+
+    pub fn repair_offered(&self) -> bool {
+        self.card_read_only
+            && !self.repair_prompt
+            && !self.shutting_down()
+            && matches!(self.phase, Phase::Shelf | Phase::Playing { .. })
+    }
+
+    pub fn repair_prompt(&self) -> bool {
+        self.repair_prompt
+    }
+
+    pub fn repair(&mut self) {
+        self.settle_saves();
+        if let Some(power) = &mut self.power {
+            power.repair_card();
+        }
+    }
+
     pub fn ready_to_restart(&self) -> bool {
         self.restarting && self.now() >= self.act_at
     }
 
     pub fn shutting_down(&self) -> bool {
-        self.powering_off || self.restarting
+        self.powering_off || self.restarting || self.repairing
     }
 
     pub fn restarting(&self) -> bool {
@@ -1791,10 +2176,6 @@ impl App {
         if let Some(power) = &mut self.power {
             power.restart();
         }
-    }
-
-    pub fn power_menu(&self) -> Option<usize> {
-        self.power_menu
     }
 
     pub fn core_picker(&self) -> Option<Core> {
@@ -1919,13 +2300,6 @@ impl App {
             return;
         }
         self.track_held_dir(action);
-        if self.power_menu.is_some() {
-            match action {
-                Action::LidClose => return self.doze(),
-                Action::LidOpen => return self.wake(),
-                _ => return self.power_menu_input(action),
-            }
-        }
         match action {
             Action::LidClose => return self.doze(),
             Action::LidOpen => return self.wake(),
@@ -1941,7 +2315,7 @@ impl App {
                 return self.flush_resume();
             }
             Action::PowerTap => return self.power_press(),
-            Action::PowerHold => return self.open_power_menu(),
+            Action::PowerHold => return self.hold_power(),
             Action::PowerOff => return,
             _ => {}
         }
@@ -1962,6 +2336,26 @@ impl App {
                 }
                 _ => {}
             }
+            return;
+        }
+        if self.repair_prompt {
+            match action {
+                Action::GbaDown(Btn::A) => self.begin_repair(),
+                Action::GbaDown(Btn::B) => self.repair_prompt = false,
+                _ => {}
+            }
+            return;
+        }
+        if let Some(row) = self.reset_prompt {
+            match action {
+                Action::GbaDown(Btn::A) => self.reset_page(row),
+                Action::GbaDown(Btn::B) => self.reset_prompt = None,
+                _ => {}
+            }
+            return;
+        }
+        if action == Action::RepairCard {
+            self.repair_prompt = self.repair_offered();
             return;
         }
         if self.adjust(action) {
@@ -1987,6 +2381,14 @@ impl App {
                     self.open_core_picker()
                 }
                 _ if self.core_picker.is_some() => self.core_picker_input(action),
+                _ if crate::input::carousel_action(&self.carousel, action).is_some() => {
+                    match crate::input::carousel_action(&self.carousel, action) {
+                        Some(CarouselAction::PreviousShelf) => self.switch_shelf(-1),
+                        Some(CarouselAction::NextShelf) => self.switch_shelf(1),
+                        Some(CarouselAction::Favorite) => self.toggle_favorite(),
+                        None => {}
+                    }
+                }
                 Action::GbaDown(Btn::Up) => self.jump_letter(-1),
                 Action::GbaDown(Btn::Down) => self.jump_letter(1),
                 Action::ShelfLeft | Action::GbaDown(Btn::Left) => self.shelf_mut().hold_left(now),
@@ -2001,17 +2403,18 @@ impl App {
                     }
                 }
                 Action::Insert => self.insert(!self.state.eject_save),
-                Action::GbaDown(Btn::L1) => self.switch_shelf(-1),
-                Action::GbaDown(Btn::R1) => self.switch_shelf(1),
-                Action::GbaDown(Btn::Y) => self.toggle_favorite(),
                 _ => {}
             },
             Phase::Inserting { .. } if action == Action::Eject => self.eject(),
             Phase::Playing { .. } => match action {
-                Action::GbaDown(Btn::L1) if self.slot_owns_the_shoulders() => {
+                Action::GbaDown(Btn::L1)
+                    if self.slot_owns_the_shoulders() && !self.bound_to_game(Btn::L1) =>
+                {
                     self.set_picture(VideoMode::Stretch)
                 }
-                Action::GbaDown(Btn::R1) if self.slot_owns_the_shoulders() => {
+                Action::GbaDown(Btn::R1)
+                    if self.slot_owns_the_shoulders() && !self.bound_to_game(Btn::R1) =>
+                {
                     self.set_picture(VideoMode::Actual)
                 }
                 Action::Eject => self.eject(),
@@ -2038,6 +2441,7 @@ impl App {
                     row: QuickRow::About,
                 }
             }
+            Phase::About if action == Action::GbaDown(Btn::X) => self.begin_restart(),
             Phase::QuickMenu { row } => self.quick_menu_input(row, action),
             _ => {}
         }
@@ -2050,9 +2454,21 @@ impl App {
     }
 
     fn quick_menu_input(&mut self, row: QuickRow, action: Action) {
+        if row.binds() {
+            match action {
+                Action::GbaDown(Btn::A) => return self.start_capture(row),
+                Action::GbaDown(Btn::X) => return self.set_binding(row, None),
+                Action::GbaDown(Btn::Y) if !self.page_is_default(row) => {
+                    self.reset_prompt = Some(row);
+                    return;
+                }
+                Action::GbaDown(Btn::Left | Btn::Right) => return,
+                _ => {}
+            }
+        }
         let row = match action {
-            Action::GbaDown(Btn::Up) => row.up(self.hidden_rows()),
-            Action::GbaDown(Btn::Down) => row.down(self.hidden_rows()),
+            Action::GbaDown(Btn::Up) => row.up(&self.hidden_rows()),
+            Action::GbaDown(Btn::Down) => row.down(&self.hidden_rows()),
             Action::GbaDown(Btn::Left) => return self.change_setting(row, false),
             Action::GbaDown(Btn::Right) => return self.change_setting(row, true),
             Action::GbaDown(Btn::A) => return self.open_quick_row(row),
@@ -2070,6 +2486,19 @@ impl App {
 
     fn in_game_menu_input(&mut self, row: QuickRow, action: Action) {
         let hidden = self.in_game_hidden();
+        let hidden = &hidden[..];
+        if row.binds() {
+            match action {
+                Action::GbaDown(Btn::A) => return self.start_capture(row),
+                Action::GbaDown(Btn::X) => return self.set_binding(row, None),
+                Action::GbaDown(Btn::Y) if !self.page_is_default(row) => {
+                    self.reset_prompt = Some(row);
+                    return;
+                }
+                Action::GbaDown(Btn::Left | Btn::Right) => return,
+                _ => {}
+            }
+        }
         self.in_game_menu = match action {
             Action::GbaDown(Btn::Up) => Some(row.up(hidden)),
             Action::GbaDown(Btn::Down) => Some(row.down(hidden)),
@@ -2137,17 +2566,21 @@ impl App {
             QuickRow::About => self.phase = Phase::About,
             QuickRow::Screen
             | QuickRow::Game
-            | QuickRow::General
             | QuickRow::ScreenGba
             | QuickRow::ScreenGbc
-            | QuickRow::ScreenGb
             | QuickRow::ScreenWs
-            | QuickRow::ScreenLynx
             | QuickRow::ScreenGg
             | QuickRow::ScreenNgp
-            | QuickRow::ScreenTg16 => {
+            | QuickRow::ScreenTg16
+            | QuickRow::ScreenLynx
+            | QuickRow::ScreenGb
+            | QuickRow::Shortcuts
+            | QuickRow::General
+            | QuickRow::Controls
+            | QuickRow::ControlsShelf
+            | QuickRow::ControlsInGame => {
                 if let Some(row) = row.child() {
-                    let row = row.shown(self.hidden_rows())[0];
+                    let row = row.shown(&self.hidden_rows())[0];
                     self.phase = Phase::QuickMenu { row };
                 }
             }
@@ -2168,8 +2601,8 @@ impl App {
             | QuickRow::NgpShader
             | QuickRow::Tg16Shader
             | QuickRow::GbPalettes
-            | QuickRow::RunAhead
             | QuickRow::Rumble
+            | QuickRow::LeftStick
             | QuickRow::Theme
             | QuickRow::Recents
             | QuickRow::ShowTitles
@@ -2192,7 +2625,37 @@ impl App {
             | QuickRow::GgBezel
             | QuickRow::NgpBezel
             | QuickRow::Tg16Bezel
-            | QuickRow::Bezel => {}
+            | QuickRow::Bezel
+            | QuickRow::ShelfPrev
+            | QuickRow::ShelfNext
+            | QuickRow::ShelfFavorite
+            | QuickRow::PlayControls
+            | QuickRow::GameUp
+            | QuickRow::GameDown
+            | QuickRow::GameLeft
+            | QuickRow::GameRight
+            | QuickRow::GameA
+            | QuickRow::GameB
+            | QuickRow::GameSelect
+            | QuickRow::GameStart
+            | QuickRow::GameL
+            | QuickRow::GameR
+            | QuickRow::GameTurboA
+            | QuickRow::GameTurboB
+            | QuickRow::ScSave
+            | QuickRow::ScLoad
+            | QuickRow::ScBrightUp
+            | QuickRow::ScBrightDown
+            | QuickRow::ScBlueDown
+            | QuickRow::ScBlueUp
+            | QuickRow::ScColour
+            | QuickRow::ScPaletteBack
+            | QuickRow::ScPaletteNext
+            | QuickRow::ScShaderNext
+            | QuickRow::ScShaderBack
+            | QuickRow::ScFastForward
+            | QuickRow::ScRewind
+            | QuickRow::LidOff => {}
         }
     }
 
@@ -2244,6 +2707,22 @@ impl App {
         }
         if row == QuickRow::ShowTitles {
             self.state.show_titles = !self.state.show_titles;
+            self.persist();
+            return;
+        }
+        if row == QuickRow::LidOff {
+            let n = LID_OFF_MIN.len();
+            let at = LID_OFF_MIN
+                .iter()
+                .position(|m| *m == self.lid_off_min())
+                .unwrap_or(1);
+            self.state.lid_off_min = Some(
+                LID_OFF_MIN[if right {
+                    (at + 1) % n
+                } else {
+                    (at + n - 1) % n
+                }],
+            );
             self.persist();
             return;
         }
@@ -2326,14 +2805,11 @@ impl App {
                 s.shader_tg16 = to;
             }
             QuickRow::Rumble => s.rumble = !s.rumble,
+            QuickRow::LeftStick => s.left_stick_dpad = !s.left_stick_dpad,
             QuickRow::EjectSave => s.eject_save = !s.eject_save,
             QuickRow::Turbo => s.turbo = !s.turbo,
             QuickRow::Rewind => s.rewind = !s.rewind,
             QuickRow::GbPalettes => s.gb_palettes = !s.gb_palettes,
-            QuickRow::RunAhead => {
-                let n = RUN_AHEAD_MAX + 1;
-                s.runahead = (s.runahead + if right { 1 } else { n - 1 }) % n;
-            }
             QuickRow::Theme => s.appearance = s.appearance.toggle(),
             QuickRow::WallpaperTint => s.wallpaper_tint = s.wallpaper_tint.step(right),
             QuickRow::Wallpaper
@@ -2343,7 +2819,6 @@ impl App {
             | QuickRow::About
             | QuickRow::Screen
             | QuickRow::Game
-            | QuickRow::General
             | QuickRow::Resume
             | QuickRow::States
             | QuickRow::Settings
@@ -2369,7 +2844,42 @@ impl App {
             | QuickRow::ScreenGg
             | QuickRow::ScreenNgp
             | QuickRow::ScreenTg16
-            | QuickRow::Bezel => return,
+            | QuickRow::Bezel
+            | QuickRow::General
+            | QuickRow::ShelfPrev
+            | QuickRow::ShelfNext
+            | QuickRow::ShelfFavorite
+            | QuickRow::PlayControls
+            | QuickRow::Shortcuts
+            | QuickRow::GameUp
+            | QuickRow::GameDown
+            | QuickRow::GameLeft
+            | QuickRow::GameRight
+            | QuickRow::GameA
+            | QuickRow::GameB
+            | QuickRow::GameSelect
+            | QuickRow::GameStart
+            | QuickRow::GameL
+            | QuickRow::GameR
+            | QuickRow::GameTurboA
+            | QuickRow::GameTurboB
+            | QuickRow::ScSave
+            | QuickRow::ScLoad
+            | QuickRow::ScBrightUp
+            | QuickRow::ScBrightDown
+            | QuickRow::ScBlueDown
+            | QuickRow::ScBlueUp
+            | QuickRow::ScColour
+            | QuickRow::ScPaletteBack
+            | QuickRow::ScPaletteNext
+            | QuickRow::ScShaderNext
+            | QuickRow::ScShaderBack
+            | QuickRow::ScFastForward
+            | QuickRow::ScRewind
+            | QuickRow::Controls
+            | QuickRow::ControlsShelf
+            | QuickRow::ControlsInGame
+            | QuickRow::LidOff => return,
         }
         self.persist();
     }
@@ -2691,34 +3201,97 @@ impl App {
             self.record_cart(seated);
         }
         self.step_screen(dt);
+        self.step_footer(dt);
     }
 
     fn step_screen(&mut self, dt: f32) {
-        let lit = matches!(self.phase, Phase::Playing { .. } | Phase::Polaroids { .. });
+        self.blank_s = match self.blank_panel() {
+            Some(_) => self.blank_s + dt,
+            None => 0.0,
+        };
+        let lit = matches!(self.phase, Phase::Playing { .. } | Phase::Polaroids { .. })
+            || self.powering_up();
         let step = if lit {
             dt / POWER_ON_S
         } else {
             -dt / POWER_OFF_S
         };
         self.screen = (self.screen + step).clamp(0.0, 1.0);
-        let docked = self.power_menu.is_none()
-            && matches!(
-                self.phase,
-                Phase::Shelf | Phase::Inserting { .. } | Phase::Ejecting { .. }
-            );
-        let sliding = self.power_menu.is_none()
-            && matches!(
-                self.phase,
-                Phase::Inserting { .. }
-                    | Phase::Playing { .. }
-                    | Phase::Polaroids { .. }
-                    | Phase::Ejecting { .. }
-            );
+        let docked = matches!(
+            self.phase,
+            Phase::Shelf | Phase::Inserting { .. } | Phase::Ejecting { .. }
+        );
+        let sliding = matches!(
+            self.phase,
+            Phase::Inserting { .. }
+                | Phase::Playing { .. }
+                | Phase::Polaroids { .. }
+                | Phase::Ejecting { .. }
+        );
         let reach = if sliding { dt / POWER_ON_S } else { 1.0 };
         self.lift = match docked {
             true => (self.lift - reach).max(0.0),
             false => (self.lift + reach).min(1.0),
         };
+    }
+
+    fn step_footer(&mut self, dt: f32) {
+        let shown = match &self.phase {
+            Phase::Playing { .. } => self.in_game_menu_shown(),
+            // The carousel already holds this strip, so the menu does not slide it.
+            Phase::QuickMenu { row } => {
+                self.footer = 1.0;
+                self.footer_row = Some(*row);
+                return;
+            }
+            Phase::Ejecting { .. } => {
+                self.footer = match self.screen > 0.0 {
+                    true => (self.footer + dt / POWER_OFF_S).min(1.0),
+                    false => 1.0,
+                };
+                self.footer_row = None;
+                return;
+            }
+            _ => {
+                self.footer = 0.0;
+                self.footer_row = None;
+                return;
+            }
+        };
+        if let Some(row) = shown {
+            self.footer_row = Some(row);
+        }
+        let target = if shown.is_some() { 1.0 } else { 0.0 };
+        let step = dt / FOOTER_SLIDE_S;
+        self.footer = if target > self.footer {
+            (self.footer + step).min(target)
+        } else {
+            (self.footer - step).max(target)
+        };
+        if self.footer == 0.0 {
+            self.footer_row = None;
+        }
+    }
+
+    fn menu_footer_offset(&self) -> f32 {
+        (1.0 - ease(self.footer)) * MOUTH_H
+    }
+
+    /// The carousel strip shares this canvas, so the picture scales in the space above it.
+    /// A 4:3 game frame is a different canvas; its close keeps the full-frame scale.
+    fn footer_on_carousel_canvas(&self) -> bool {
+        !self.framed_panel() || self.layout() == Layout::Native
+    }
+
+    pub fn screen_footer(&self) -> f32 {
+        if matches!(self.phase, Phase::Ejecting { .. })
+            && self.screen > 0.0
+            && self.footer_on_carousel_canvas()
+        {
+            MOUTH_H * ease(self.footer)
+        } else {
+            0.0
+        }
     }
 
     pub fn set_panel(&mut self, panel: (u32, u32)) {
@@ -2728,6 +3301,9 @@ impl App {
     pub fn layout(&self) -> Layout {
         if matches!(self.phase, Phase::Playing { .. }) && self.in_game_menu_shown().is_some() {
             return IN_GAME_MENU;
+        }
+        if self.powering_up() {
+            return Layout::Framed;
         }
         // A game stretched over a 4:3 panel is drawn at the panel's own size,
         // as the in-game menu is, so the picture can fill it edge to edge.
@@ -2784,9 +3360,32 @@ impl App {
             h: OUT_H as f32,
             colour: [0.0, 0.0, 0.0, 1.0],
         });
-        if self.game_ready && self.screen > 0.0 {
+        if self.panel_lit() && self.screen > 0.0 {
             out.push(Draw::Game);
         }
+    }
+
+    fn powering_up(&self) -> bool {
+        matches!(self.phase, Phase::Inserting { t, resumed: false, .. } if t >= INSERT_S)
+    }
+
+    pub fn blank_panel(&self) -> Option<[u8; 3]> {
+        let waiting = self.powering_up()
+            || (matches!(self.phase, Phase::Playing { .. }) && self.blank_s > 0.0);
+        if self.game_ready || !waiting {
+            return None;
+        }
+        let lit = match self.playing_platform() {
+            Platform::Gb => [0x9b, 0xa5, 0x82],
+            _ => [0xe6, 0xe4, 0xda],
+        };
+        let k = (self.blank_s / BLANK_WARM_S).min(1.0);
+        let level = BLANK_DIM + (1.0 - BLANK_DIM) * (1.0 - (1.0 - k) * (1.0 - k));
+        Some(lit.map(|c| (c as f32 * level) as u8))
+    }
+
+    fn panel_lit(&self) -> bool {
+        self.game_ready || self.blank_panel().is_some()
     }
 
     pub fn screen_power(&self) -> f32 {
@@ -2802,7 +3401,7 @@ impl App {
     }
 
     pub fn game_visible(&self) -> bool {
-        self.game_ready && self.screen > 0.0
+        self.panel_lit() && self.screen > 0.0
     }
 
     pub fn tick_ms(&mut self, now: Millis) {
@@ -2837,6 +3436,11 @@ impl App {
             self.log_card(failing);
         }
         self.hud.set_alarm(failing, self.now());
+        self.hud.set_alarm_toast(if self.repair_offered() {
+            Toast::CardRepair
+        } else {
+            Toast::CardUnwritable
+        });
         if self.now() >= self.battery_at {
             self.battery_at = self.now() + BATTERY_POLL_MS;
             self.battery = self.power.as_ref().and_then(|p| p.battery());
@@ -3120,10 +3724,6 @@ impl App {
     }
 
     pub fn draw(&self, out: &mut Vec<Draw>) {
-        if let Some(index) = self.power_menu {
-            self.draw_power_menu(index, out);
-            return;
-        }
         if self.shutting_down() {
             out.push(Draw::Rect {
                 x: 0.0,
@@ -3132,7 +3732,9 @@ impl App {
                 h: OUT_H as f32,
                 colour: [0.0, 0.0, 0.0, 1.0],
             });
-            let which = if self.restarting {
+            let which = if self.repairing {
+                PowerChoice::Repair
+            } else if self.restarting {
                 PowerChoice::Restart
             } else {
                 PowerChoice::PowerOff
@@ -3149,6 +3751,12 @@ impl App {
             }
             return;
         }
+        if self.repair_prompt {
+            return self.draw_prompt(&self.repair_faces, out);
+        }
+        if let Some(row) = self.reset_prompt {
+            return self.draw_prompt(&self.reset_prompt_faces(row), out);
+        }
         match &self.phase {
             Phase::SetClock {
                 picker, from_menu, ..
@@ -3157,17 +3765,15 @@ impl App {
                     Some((line, hint)) => (Some(line), Some(hint)),
                     None => (None, None),
                 };
-                let back = self
-                    .quick_menu_faces
-                    .as_ref()
-                    .filter(|_| *from_menu)
-                    .map(|f| f.legend[0]);
+                let back = self.clock_back.filter(|_| *from_menu);
                 picker.draw(self.canvas(), line, hint, back, out);
                 return;
             }
             Phase::QuickMenu { row } => QuickMenu {
                 row: *row,
-                hidden: self.hidden_rows(),
+                hidden: &self.hidden_rows(),
+                bound: Some(&self.bound_faces()),
+                description: self.description(*row),
                 values: QuickRow::ALL.map(|r| self.quick_value(r)),
                 clock: self.quick_clock_faces,
                 wallpaper: self.quick_wallpaper_faces,
@@ -3187,6 +3793,8 @@ impl App {
                 .map(|p| self.quick_bezel_faces[bezel_slot(p)]),
                 bezel: None,
                 over_game: false,
+                footer_legends: true,
+                footer_top: OUT_H as f32,
                 canvas: self.canvas(),
             }
             .draw(out),
@@ -3236,7 +3844,15 @@ impl App {
             Phase::About => {
                 slot_ui::draw_menu_ground(self.canvas(), self.menu_ground(), out);
                 draw_sticker(self.canvas(), self.sticker_face, out);
+                self.draw_menu_footer(out);
                 return;
+            }
+            Phase::Inserting { .. } if self.powering_up() && self.framed_panel() => {
+                self.draw_powering(out)
+            }
+            Phase::Inserting { cart, .. } if self.powering_up() => {
+                self.draw_background(out);
+                self.chrome(cart, 0.0, out);
             }
             Phase::Inserting { cart, resumed, .. } => {
                 if !resumed {
@@ -3292,9 +3908,13 @@ impl App {
         if let (Some(row), Phase::Playing { .. }, true) =
             (self.in_game_menu_shown(), &self.phase, self.screen >= 1.0)
         {
+            let hidden = self.in_game_hidden();
+            let bound = self.bound_faces();
             QuickMenu {
                 row,
-                hidden: self.in_game_hidden(),
+                bound: Some(&bound),
+                description: self.description(row),
+                hidden: &hidden,
                 values: QuickRow::ALL.map(|r| self.quick_value(r)),
                 clock: None,
                 wallpaper: None,
@@ -3307,6 +3927,8 @@ impl App {
                 extra_bezels: [None; 5],
                 bezel: self.quick_bezel_faces[bezel_slot(self.playing_platform())],
                 over_game: true,
+                footer_legends: false,
+                footer_top: OUT_H as f32 - MOUTH_H + self.menu_footer_offset(),
                 canvas: self.canvas(),
             }
             .draw(out);
@@ -3321,6 +3943,8 @@ impl App {
                 );
             }
         }
+        self.draw_menu_footer(out);
+        self.draw_close_footer(out);
         if let Some(picker) = self.core_picker_shown() {
             self.draw_core_picker(&picker, out);
         }
@@ -3355,6 +3979,191 @@ impl App {
         }
     }
 
+    fn draw_menu_footer(&self, out: &mut Vec<Draw>) {
+        let carousel = matches!(self.phase, Phase::QuickMenu { .. } | Phase::About);
+        let dy = if carousel {
+            0.0
+        } else {
+            self.menu_footer_offset()
+        };
+        let start = out.len();
+        let row = match &self.phase {
+            Phase::Playing { cart } if self.footer > 0.0 => {
+                let row = self.in_game_menu_shown().or(self.footer_row);
+                match row.is_some_and(QuickRow::binds) {
+                    true => slot_ui::draw_plugged_slot(self.canvas(), self.plugged_face, out),
+                    false => self.draw_seated_mouth(cart, out),
+                }
+                row
+            }
+            // The carousel menu is not a game, so the mouth stays empty, in the
+            // same place the shelf already had it.
+            Phase::QuickMenu { row } if row.binds() => {
+                slot_ui::draw_plugged_slot(self.canvas(), self.plugged_face, out);
+                Some(*row)
+            }
+            Phase::QuickMenu { row } => {
+                draw_empty_slot(self.canvas(), self.slot_faces, out);
+                Some(*row)
+            }
+            Phase::About => {
+                draw_empty_slot(self.canvas(), self.slot_faces, out);
+                self.draw_about_legend(out);
+                return;
+            }
+            _ => return,
+        };
+        shift_down(&mut out[start..], dy);
+        if let Some(row) = row {
+            self.draw_menu_legends(row, LINK_LEGEND_Y + dy, out);
+        }
+    }
+
+    fn draw_close_footer(&self, out: &mut Vec<Draw>) {
+        let Phase::Ejecting { cart, .. } = &self.phase else {
+            return;
+        };
+        if !self.footer_on_carousel_canvas() {
+            return;
+        }
+        let start = out.len();
+        // The framed power-off paints black and the picture, and never the slot. The other
+        // close already draws the seated cart through the chrome.
+        if self.framed_panel() && self.screen > 0.0 {
+            self.draw_seated_mouth(cart, out);
+        }
+        draw_footer(
+            self.canvas(),
+            self.battery,
+            self.battery_percent,
+            self.bolt,
+            self.shelf_clock,
+            footer_ink(self.light()),
+            out,
+        );
+        shift_down(&mut out[start..], self.menu_footer_offset());
+    }
+
+    fn draw_seated_mouth(&self, stem: &str, out: &mut Vec<Draw>) {
+        let Some((cart, face)) = self.shelf().find(stem) else {
+            return;
+        };
+        let (rest, scale) = self.shelf().selected_at(self.canvas());
+        SlotChrome {
+            cart,
+            face,
+            rest,
+            scale,
+            seat: 1.0,
+            turn: self.turn(),
+            alert: None,
+            dim: 0.0,
+            screen: 0.0,
+            game: false,
+            over: true,
+            behind: self.shelf().behind(stem),
+            slot: self.slot_faces,
+            canvas: self.canvas(),
+        }
+        .draw(out);
+    }
+
+    fn draw_prompt(&self, faces: &[(TexId, u32, u32)], out: &mut Vec<Draw>) {
+        out.push(Draw::Rect {
+            x: 0.0,
+            y: 0.0,
+            w: self.canvas().w,
+            h: OUT_H as f32,
+            colour: [0.0, 0.0, 0.0, 1.0],
+        });
+        let [title, detail, no, yes] = match faces[..] {
+            [a, b, c, d] => [a, b, c, d],
+            _ => return,
+        };
+        let top = ((OUT_H - title.2 - REPAIR_GAP - detail.2) / 2) as f32;
+        for ((tex, w, h), y) in [(title, top), (detail, top + (title.2 + REPAIR_GAP) as f32)] {
+            out.push(Draw::Tex {
+                x: self.canvas().centred(w as f32).floor(),
+                y,
+                w: w as f32,
+                h: h as f32,
+                tex,
+                alpha: 1.0,
+            });
+        }
+        self.draw_side_legend((no.0, no.1), false, LINK_LEGEND_Y, out);
+        self.draw_side_legend((yes.0, yes.1), true, LINK_LEGEND_Y, out);
+    }
+
+    fn draw_about_legend(&self, out: &mut Vec<Draw>) {
+        let Some(faces) = &self.quick_menu_faces else {
+            return;
+        };
+        let [back, _, _, _, restart, ..] = match self.light() {
+            true => faces.legend_light,
+            false => faces.legend,
+        };
+        self.draw_side_legend(back, false, LINK_LEGEND_Y, out);
+        self.draw_side_legend(restart, true, LINK_LEGEND_Y, out);
+    }
+
+    fn draw_menu_legends(&self, row: QuickRow, y: f32, out: &mut Vec<Draw>) {
+        let Some(faces) = &self.quick_menu_faces else {
+            return;
+        };
+        let [back, change, open, resume, _, set, clear, reset] = match self.light() {
+            true => faces.legend_light,
+            false => faces.legend,
+        };
+        if row.binds() {
+            let seen = |w: u32| w.saturating_sub(HINT_EDGE) as f32;
+            let legends = match self.page_is_default(row) {
+                true => vec![back, clear, set],
+                false => vec![back, reset, clear, set],
+            };
+            let room = self.canvas().w - 2.0 * LINK_LEGEND_EDGE;
+            let gap = (room - legends.iter().map(|l| seen(l.1)).sum::<f32>())
+                / (legends.len() - 1) as f32;
+            let mut x = LINK_LEGEND_EDGE;
+            for (tex, w) in legends {
+                out.push(Draw::Tex {
+                    x: x.round(),
+                    y,
+                    w: w as f32,
+                    h: MOUTH_H,
+                    tex,
+                    alpha: 1.0,
+                });
+                x += seen(w) + gap;
+            }
+            return;
+        }
+        let left = match row.page() == QuickRow::PLAY {
+            true => resume,
+            false => back,
+        };
+        self.draw_side_legend(left, false, y, out);
+        let right = if row.opens() { open } else { change };
+        self.draw_side_legend(right, true, y, out);
+    }
+
+    fn draw_side_legend(&self, face: (TexId, u32), right: bool, y: f32, out: &mut Vec<Draw>) {
+        let seen = face.1.saturating_sub(HINT_EDGE) as f32;
+        let x = if right {
+            (self.canvas().w - LINK_LEGEND_EDGE - seen).round()
+        } else {
+            LINK_LEGEND_EDGE
+        };
+        out.push(Draw::Tex {
+            x,
+            y,
+            w: face.1 as f32,
+            h: MOUTH_H,
+            tex: face.0,
+            alpha: 1.0,
+        });
+    }
+
     fn chrome(&self, stem: &str, dim: f32, out: &mut Vec<Draw>) {
         let Some((cart, face)) = self.shelf().find(stem) else {
             return;
@@ -3371,13 +4180,14 @@ impl App {
             alert: self.alert_face.filter(|_| alpha > 0.0).map(|t| (t, alpha)),
             dim,
             screen: self.screen,
-            game: self.game_ready,
-            over: !matches!(
-                &self.phase,
-                Phase::Inserting { resumed: true, .. }
-                    | Phase::Playing { .. }
-                    | Phase::Ejecting { .. }
-            ),
+            game: self.panel_lit(),
+            over: !self.powering_up()
+                && !matches!(
+                    &self.phase,
+                    Phase::Inserting { resumed: true, .. }
+                        | Phase::Playing { .. }
+                        | Phase::Ejecting { .. }
+                ),
             behind: self.shelf().behind(stem),
             slot: self.slot_faces,
             canvas: self.canvas(),
@@ -3405,12 +4215,16 @@ impl App {
         self.alert_face = Some(face);
     }
 
-    pub fn set_shutdown_faces(&mut self, faces: Vec<(TexId, u32, u32)>) {
-        self.shutdown_faces = faces;
+    pub fn set_repair_faces(&mut self, faces: Vec<(TexId, u32, u32)>) {
+        self.repair_faces = faces;
     }
 
-    pub fn set_power_menu_faces(&mut self, faces: Vec<(TexId, u32, u32)>) {
-        self.power_menu_faces = faces;
+    pub fn set_reset_faces(&mut self, faces: Vec<(TexId, u32, u32)>) {
+        self.reset_faces = faces;
+    }
+
+    pub fn set_shutdown_faces(&mut self, faces: Vec<(TexId, u32, u32)>) {
+        self.shutdown_faces = faces;
     }
 
     pub fn set_core_interior_face(&mut self, interior: TexId) {
@@ -3476,23 +4290,6 @@ impl App {
 
     pub fn link_sprites_ready(&self) -> bool {
         self.link_sprites.is_some()
-    }
-
-    fn draw_power_menu(&self, index: usize, out: &mut Vec<Draw>) {
-        out.push(Draw::Rect {
-            x: 0.0,
-            y: 0.0,
-            w: self.canvas().w,
-            h: OUT_H as f32,
-            colour: slot_ui::opening(),
-        });
-        draw_menu_rows(
-            self.canvas(),
-            &self.power_menu_faces,
-            Some(index),
-            centred_top(self.power_menu_faces.len()),
-            out,
-        );
     }
 
     fn core_picker_shown(&self) -> Option<CorePicker> {
@@ -3634,18 +4431,22 @@ impl App {
         }
 
         if let [cancel, swap, choose] = self.core_legend_faces.as_slice() {
-            let right = board_x(self.canvas()) + BOARD_W as f32;
             let seen = |w: u32| w.saturating_sub(HINT_EDGE) as f32;
+            let swap_x = self.canvas().centred(seen(swap.1));
             for (tex, w, x) in [
-                (cancel.0, cancel.1, board_x(self.canvas())),
-                (swap.0, swap.1, self.canvas().centred(seen(swap.1))),
-                (choose.0, choose.1, right - seen(choose.1)),
+                (
+                    cancel.0,
+                    cancel.1,
+                    swap_x - CORE_LEGEND_GAP - seen(cancel.1),
+                ),
+                (swap.0, swap.1, swap_x),
+                (choose.0, choose.1, swap_x + seen(swap.1) + CORE_LEGEND_GAP),
             ] {
                 out.push(Draw::Tex {
                     x: x.round(),
                     y: CORE_LEGEND_Y,
                     w: w as f32,
-                    h: HINT_H as f32,
+                    h: MOUTH_H,
                     tex,
                     alpha: lift,
                 });
@@ -3736,7 +4537,7 @@ impl App {
                 x,
                 y: LINK_LEGEND_Y,
                 w: w as f32,
-                h: HINT_H as f32,
+                h: MOUTH_H,
                 tex,
                 alpha: 1.0,
             });
@@ -3924,45 +4725,29 @@ impl App {
         }
     }
 
-    fn open_power_menu(&mut self) {
-        if self.power_menu.is_some() {
-            return;
-        }
-        if self.link_active() {
-            return self.refuse();
-        }
+    fn hold_power(&mut self) {
         self.flush_resume();
-        self.power_menu = Some(0);
+        self.begin_power_off();
     }
 
-    fn power_menu_input(&mut self, action: Action) {
-        let Some(index) = self.power_menu else {
+    fn begin_repair(&mut self) {
+        self.repair_prompt = false;
+        if self.shutting_down() {
             return;
-        };
-        let last = PowerChoice::ALL.len() - 1;
-        match action {
-            Action::GbaDown(Btn::Up) => {
-                self.power_menu = Some(if index == 0 { last } else { index - 1 })
-            }
-            Action::GbaDown(Btn::Down) => {
-                self.power_menu = Some(if index >= last { 0 } else { index + 1 })
-            }
-            Action::GbaDown(Btn::B) => self.power_menu = None,
-            Action::GbaDown(Btn::A) => {
-                self.power_menu = None;
-                self.close_game_menu();
-                match PowerChoice::ALL[index] {
-                    PowerChoice::Restart => {
-                        self.remember_shelf();
-                        self.restarting = true;
-                        self.act_at = self.now() + SHUTDOWN_SHOW_MS;
-                        self.set_led(LedState::Off);
-                    }
-                    PowerChoice::PowerOff => self.begin_power_off(),
-                }
-            }
-            _ => {}
         }
+        self.repairing = true;
+        self.act_at = self.now() + SHUTDOWN_SHOW_MS;
+        self.set_led(LedState::Off);
+    }
+
+    fn begin_restart(&mut self) {
+        if self.shutting_down() {
+            return;
+        }
+        self.remember_shelf();
+        self.restarting = true;
+        self.act_at = self.now() + SHUTDOWN_SHOW_MS;
+        self.set_led(LedState::Off);
     }
 
     fn open_core_picker(&mut self) {
@@ -4272,9 +5057,6 @@ impl App {
     }
 
     fn poll_link(&mut self) {
-        if self.power_menu.is_some() {
-            return;
-        }
         let Some(mut starting) = self.starting.take() else {
             return;
         };
@@ -4354,7 +5136,11 @@ impl App {
         let (Phase::Doze { .. }, Some(power)) = (&self.phase, &self.power) else {
             return false;
         };
-        self.now().saturating_sub(self.dozed_at) >= power.timeout().as_millis() as Millis
+        let timeout = match self.state.lid_off_min {
+            Some(min) => min as Millis * 60_000,
+            None => power.timeout().as_millis() as Millis,
+        };
+        self.now().saturating_sub(self.dozed_at) >= timeout
     }
 
     pub fn settle_saves(&mut self) {
@@ -4626,6 +5412,10 @@ impl App {
         self.hud.alarmed()
     }
 
+    pub fn alarm_toast(&self) -> Option<Toast> {
+        self.hud.alarm_toast()
+    }
+
     pub fn undo(&mut self, now: Millis) {
         if !self.undo_available(now) {
             self.pending = None;
@@ -4739,13 +5529,6 @@ fn shader_value(shader: Shader) -> QuickValue {
     }
 }
 
-pub fn runahead_for(core: Core, platform: Platform, frames: u8) -> u8 {
-    match (core, platform) {
-        (Core::Mgba, Platform::Gba) => frames,
-        _ => 0,
-    }
-}
-
 fn tint_alpha(tint: WallpaperTint) -> f32 {
     match tint {
         WallpaperTint::Off => 0.0,
@@ -4792,47 +5575,14 @@ fn free_stamp(ring: &StateRing, now: i64) -> String {
         .list()
         .map(|l| l.into_iter().map(|e| e.stamp).collect())
         .unwrap_or_default();
-    let mut secs = now;
+    let newest = taken.iter().filter_map(|s| parse_stamp(s)).max();
+    let mut secs = newest.map_or(now, |n| now.max(n + 1));
     let mut stamp = format_stamp(secs);
     while taken.contains(&stamp) {
         secs += 1;
         stamp = format_stamp(secs);
     }
     stamp
-}
-
-fn centred_top(rows: usize) -> f32 {
-    (OUT_H as f32 - POWER_MENU_PITCH * rows as f32) / 2.0
-}
-
-fn draw_menu_rows(
-    canvas: Canvas,
-    faces: &[(TexId, u32, u32)],
-    index: Option<usize>,
-    top: f32,
-    out: &mut Vec<Draw>,
-) {
-    for (row, (tex, w, h)) in faces.iter().copied().enumerate() {
-        let y = top + POWER_MENU_PITCH * row as f32;
-        let x = canvas.centred(w as f32).round();
-        if index == Some(row) {
-            out.push(Draw::Rect {
-                x,
-                y: y + POWER_MENU_BAR_INSET,
-                w: w as f32,
-                h: POWER_MENU_PITCH - 2.0 * POWER_MENU_BAR_INSET,
-                colour: slot_ui::edge(),
-            });
-        }
-        out.push(Draw::Tex {
-            x,
-            y: y + (POWER_MENU_PITCH - h as f32) / 2.0,
-            w: w as f32,
-            h: h as f32,
-            tex,
-            alpha: 1.0,
-        });
-    }
 }
 
 fn bezel_slot(platform: Platform) -> usize {
