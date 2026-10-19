@@ -8,81 +8,43 @@
 
 # What is slotPlus?
 
-A slightly modified Slot. Has support for GBA, GBC, and GB titles as well as WonderSwan, WonderSwan Color and Atari Lynx.
+A slightly modified Slot. Alongside Slot's Game Boy Advance, Game Boy and Game Boy Color, it plays more handhelds, each on its own shelf with its own cart, and it can play on a TV over HDMI.
 
-## Atari Lynx
+Each release comes in two versions. Pick the one you want from the [releases page](https://github.com/nelynes/slotPlus/releases):
+
+- **`slot-plus.zip`, slotPlus:** Game Boy Advance, Game Boy and Game Boy Color, plus WonderSwan and Atari Lynx.
+- **`slot-plusultra.zip`, slotPlusUltra:** everything in slotPlus, plus Game Gear, NeoGeo Pocket and TurboGrafx-16.
+
+| System | Version | Put games in | Files | Core | BIOS |
+|---|---|---|---|---|---|
+| WonderSwan / Color | Plus and Ultra | `Games/WS/` | `.ws` `.wsc` | Beetle WonderSwan (Cygne) | Not needed |
+| Atari Lynx | Plus and Ultra | `Games/Lynx/` | `.lnx` `.lyx` | Beetle Lynx | `lynxboot.img` in `BIOS/` |
+| Sega Game Gear | Ultra | `Games/GG/` | `.gg` | Gearsystem | Not needed |
+| NeoGeo Pocket / Color | Ultra | `Games/NGP/` | `.ngp` `.ngc` `.ngpc` | Beetle NeoPop | Not needed |
+| TurboGrafx-16 / TurboExpress | Ultra | `Games/TG16/` | `.pce` (HuCards) | Beetle PCE Fast | Not needed |
 
 > [!IMPORTANT]
 > Atari Lynx games need `lynxboot.img`, the Lynx boot ROM. It is **not included**. Put your own copy in `BIOS/`.
 
-- **Games:** put `.lnx` and `.lyx` files in `Games/Lynx/`. They get their own shelf. The `Lynx` folders (`Games`, `Labels`, `Saves`, `States`) are created for you on first boot.
-- **Label art:** optional PNGs go in `Labels/Lynx/<game name>.png`, roughly 284x190 px (about 1.5:1).
-- **Core:** Lynx games run on Beetle Lynx.
-- **Screen:** the Screen menu has an Atari Lynx page with its own Shader (Off, LCD3x, Grid or Dot) and Bezel. For a bezel, put your own PNGs in `Bezels/Lynx/`.
-- **HDMI:** on handhelds with a mini-HDMI port, such as the RG SP, plug in a TV to play on it. Plug in or pull the cable at any time and Slot moves to the other screen and carries on where you were.
-- **Carts:** Lynx carts are drawn as the curved-lip card, with its gold contacts behind a clear strip at the foot. Set `Config/cart_shell.txt` to give a single game a different shell.
-- **Saves:** Beetle Lynx has no battery saves. Use save states and the resume state.
+**Installing:** for a fresh install, unzip and copy everything onto the Slot card. To upgrade, unzip and replace the `System` folder on your card with the new one. Switching between Plus and Ultra works the same way, and your games, saves and settings stay put. Going back from Ultra to Plus leaves the Game Gear, NeoGeo Pocket and TurboGrafx-16 games and saves on the card, without their shelves.
 
-### Controls
+- **Folders:** each system's folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
+- **Label art:** optional PNGs go in `Labels/<folder>/<game name>.png`.
+- **Screen menu:** each system has its own page, with its own shader and bezel. In Ultra, the Game Gear and NeoGeo Pocket come with a bundled bezel, and the TurboGrafx-16 with four.
+- **Carts:** each system has its own cart, drawn in Slot 1.7's look. WonderSwan games get a black cart, WonderSwan Color games a frosted clear one, and a HuCard turns over to go into the slot contacts first.
 
-| Press        | Does                                  |
-|--------------|---------------------------------------|
-| D-pad        | D-pad                                 |
-| A / B        | A / B                                 |
-| L1 / R1      | Option 1 / Option 2                   |
-| Start        | Pause (the Lynx's Option button)      |
-| Select       | Turned games: hold upright / turned   |
-| Hold X / Y   | Turbo A / Turbo B                     |
+**Controls, label art sizes, bezels, saves, and how Lynx and WonderSwan games that turn sideways work are all in the [systems guide](SYSTEMS.md).**
 
-### Games that turn
+## Playing on a TV
 
-Some Lynx games were made to be held on their side. Play these with the handheld turned 90 degrees counter-clockwise, like the vertical WonderSwan games: the picture is drawn sideways at full size and comes out upright once you turn the handheld, and the D-pad follows the picture. Press toward the top of the picture for up. A, B, Option 1, Option 2 and Start are unchanged.
+Both versions can show the picture on a TV over HDMI, on handhelds with a mini-HDMI port such as the RG SP.
 
-Press SELECT in a game that turns to hold the handheld the usual way instead: the picture is drawn upright and tall, with bars at the sides, and the D-pad goes back to normal. Press it again to turn the handheld back. Every launch starts turned. SELECT does nothing in other games.
-
-Beetle Lynx knows many of these games, and slot also recognises Klax, Gauntlet III, Lexis and NFL Football by name, whichever dump you have. Every other game is drawn as normal.
-
-For a game that needs it and is not recognised, add a line to `Config/lynx_rotation.txt`, using the game's file name without the extension:
-
-The values are `auto` (let the core decide), `0` (never turn), `90` and `270` (the two ways a game can be made to be turned), `180`, and `manual`. If a game comes up upside down with the handheld turned, swap 90 for 270. With `manual`, SELECT goes to the core instead and each press turns the picture another quarter, so you can find the right setting and then write it into the file. An entry in the file wins over everything else.
+- Plug the TV in before or after switching on. The shelf and games show on the TV at 1080p, with the sound there too, and the handheld's screen goes dark. The handheld is the controller.
+- Plug in or pull the cable at any time, even mid-game. Slot saves the game, starts again on the other screen within a few seconds and picks up where you were.
+- Closing the lid doesn't sleep the handheld while it's on the TV.
 
 > [!NOTE]
-> The turned layout and its D-pad feel are new. If something feels wrong, please open an issue.
-
-## WonderSwan / WonderSwan Color
-
-- **Games:** put `.ws` and `.wsc` files in `Games/WS/`. They get their own shelf next to GBA, GB and GBC. The `WS` folders (`Games`, `Labels`, `Saves`, `States`) are created for you on first boot.
-- **Label art:** optional PNGs go in `Labels/WS/<game name>.png`, roughly 324x132 px (about 2.45:1).
-- **Core:** WonderSwan games run on Beetle WonderSwan (Cygne).
-- **Screen:** the Screen menu has a WonderSwan page with its own Shader (Off, LCD3x, Grid or Simpletex) and Bezel. For a bezel, put your own PNGs in `Bezels/WS/`.
-- **Carts:** WonderSwan carts have their own wide shape, with the oval nameplate on top and the bare board showing below the shoulder, and default to the shell the game came in: black for a WonderSwan game (`.ws`), frosted smoke-clear with the board showing through for a WonderSwan Color game (`.wsc`). Set `Config/cart_shell.txt` to give a single game a different shell.
-
-### Controls (horizontal games)
-
-The WonderSwan has two sets of four direction buttons: the X pad (left side) and the Y pad (right side).
-
-| Press                  | Does                                              |
-|------------------------|---------------------------------------------------|
-| D-pad                  | X pad                                             |
-| A / B                  | A / B                                             |
-| Start                  | Start                                             |
-| Hold **L1** + D-pad    | Y pad (up / right / down / left) |
-| Hold **R1** + X / A / B / Y | Y pad (X = up, A = right, B = down, Y = left) |
-| Select                 | Nothing in horizontal games (they can't be rotated) |
-
-Picture-mode shortcuts are turned off for WonderSwan games, so L1 and R1 can act as the Y-pad modifiers.
-
-### Vertical games
-
-Games made for vertical play are recognized from the ROM. Play them one of two ways:
-
-- **Device upright:** press SELECT and the picture turns upright (it shows at 2x with black bars at the sides).
-- **Device turned 90 degrees counter-clockwise:** leave the picture sideways at full size.
-
-Either way the D-pad is the Y pad, the four face buttons are the X pad, L1 is A and R1 is B. Upright, D-pad up is up in the game. Turned sideways, the buttons keep the WonderSwan's own directions. The L1 / R1 Y-pad modifiers above are for horizontal games only.
-
-> [!NOTE]
-> Vertical controls are new but I have tested with multiple games. If something feels wrong, please open an issue.
+> HDMI has been tested on the RG SP. The other supported handhelds with a mini-HDMI port should work the same way. If yours doesn't, please open an issue.
 
 ---
 
@@ -110,7 +72,7 @@ Release notes can be found in the [changelog](CHANGELOG.md).
 
 <p align="center">
 <img src=".github/resources/screenshots/plus-shelves.gif" width="48%" alt="slotPlus: scrolling the Game Boy Color, Game Boy Advance, Atari Lynx and WonderSwan shelves, then putting Mr. Driller in the slot and resuming at its title screen">
-<img src=".github/resources/screenshots/lynx-shelf.jpg" width="48%" alt="The Atari Lynx shelf, with a curved-lip card cart and gold contacts in the slot and its neighbours on either side">
+<img src=".github/resources/screenshots/ultra-shelves.gif" width="48%" alt="slotPlusUltra: scrolling the Game Gear and NeoGeo Pocket shelves, then the TurboGrafx-16 shelf, where a HuCard turns over, goes in the slot and Devil's Crush starts">
 </p>
 
 ---
