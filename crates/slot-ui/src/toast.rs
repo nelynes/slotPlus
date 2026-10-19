@@ -24,11 +24,14 @@ pub enum Toast {
     ShaderSimpletex,
     ShaderTransparent,
     CardUnwritable,
+    CardRepair,
+    CardRepaired,
+    CardRepairFailed,
     Palette(GbPalette),
 }
 
 impl Toast {
-    const FIXED: [Toast; 16] = [
+    const FIXED: [Toast; 19] = [
         Toast::StateSaved,
         Toast::StateLoaded,
         Toast::NeedsGpsp,
@@ -45,6 +48,9 @@ impl Toast {
         Toast::ShaderSimpletex,
         Toast::ShaderTransparent,
         Toast::CardUnwritable,
+        Toast::CardRepair,
+        Toast::CardRepaired,
+        Toast::CardRepairFailed,
     ];
 
     pub fn all() -> Vec<Toast> {
@@ -62,12 +68,20 @@ impl Toast {
     }
 
     pub fn alarm(self) -> bool {
-        self == Toast::CardUnwritable
+        matches!(self, Toast::CardUnwritable | Toast::CardRepair)
+    }
+
+    pub fn hold_ms(self) -> crate::hud::Millis {
+        match self {
+            Toast::CardRepaired | Toast::CardRepairFailed => REPAIR_HOLD_MS,
+            _ => crate::hud::HUD_MS,
+        }
     }
 
     pub fn detail(self) -> Option<&'static str> {
         match self {
             Toast::CardUnwritable => Some("Progress is not being saved"),
+            Toast::CardRepair => Some("Press SELECT + START to repair"),
             _ => None,
         }
     }
@@ -90,10 +104,15 @@ impl Toast {
             Toast::ShaderSimpletex => "Shader: Simpletex",
             Toast::ShaderTransparent => "Shader: Transparent",
             Toast::CardUnwritable => "Can't write to SD card",
+            Toast::CardRepair => "Can't write to SD card",
+            Toast::CardRepaired => "SD card repaired",
+            Toast::CardRepairFailed => "Card repair failed",
             Toast::Palette(p) => p.label(),
         }
     }
 }
+
+const REPAIR_HOLD_MS: crate::hud::Millis = 6_000;
 
 const TOAST_W: u32 = 240;
 const TOAST_H: u32 = 22;

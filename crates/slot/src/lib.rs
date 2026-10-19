@@ -1,5 +1,6 @@
 pub mod app;
 pub mod audio;
+pub mod baseos;
 pub mod bezel;
 pub mod boot_time;
 pub mod bootlogo;

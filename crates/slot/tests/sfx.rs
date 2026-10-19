@@ -2,7 +2,7 @@ mod common;
 
 use common::tmp_root_with_carts;
 use slot::app::{INSERT_S, SEATED_AT};
-use slot::audio::{ring_capacity, Ring, Sfx, GBA_HZ};
+use slot::audio::{ring_capacity, Ring, Sfx, OUTPUT_HZ};
 use slot::session::Session;
 
 #[test]
@@ -92,7 +92,7 @@ fn a_clip_is_mixed_into_queued_game_audio_rather_than_played_after_it() {
 
 #[test]
 fn the_whole_of_a_cart_sound_reaches_the_device() {
-    for rate in [48_000, GBA_HZ] {
+    for rate in [44_100, OUTPUT_HZ] {
         for s in [Sfx::Insert, Sfx::Eject] {
             let clip = s.render(rate);
             assert!(
@@ -127,7 +127,7 @@ fn the_whole_of_a_cart_sound_reaches_the_device() {
 
 #[test]
 fn the_rest_of_a_clip_is_mixed_into_the_game_it_lands_over() {
-    let rate = GBA_HZ;
+    let rate = OUTPUT_HZ;
     let r = Ring::new(ring_capacity(rate));
     r.reopen(rate);
     let clip = Sfx::Insert.render(rate);

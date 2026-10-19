@@ -113,7 +113,7 @@ pub fn run() {
         true => PanelTurn::None,
         false => panel_turn(
             panel,
-            env("BASEOS_PANEL_ROTATION_CCW").as_deref(),
+            slot::baseos::var("BASEOS_PANEL_ROTATION_CCW").as_deref(),
             env("SLOT_ROTATE").as_deref(),
         ),
     };
@@ -121,9 +121,9 @@ pub fn run() {
     let window = if turned { (panel.1, panel.0) } else { panel };
     eprintln!(
         "slot: baseos target {}, model {}, rotation ccw {}",
-        env("BASEOS_TARGET").unwrap_or_default(),
-        env("BASEOS_MODEL").unwrap_or_default(),
-        env("BASEOS_PANEL_ROTATION_CCW").unwrap_or_default()
+        slot::baseos::var("BASEOS_TARGET").unwrap_or_default(),
+        slot::baseos::var("BASEOS_MODEL").unwrap_or_default(),
+        slot::baseos::var("BASEOS_PANEL_ROTATION_CCW").unwrap_or_default()
     );
     eprintln!(
         "slot: panel {}x{}, canvas {}x{}, turn {turn:?}",
@@ -147,6 +147,8 @@ pub fn run() {
     let mut frontend = Frontend::boot_with(Box::new(platform), sink);
     frontend.set_external_display(on_tv);
     slot::boot_time::mark("frontend");
+    let target = slot::baseos::var("BASEOS_TARGET").unwrap_or_default();
+    frontend.set_left_stick(slot::input::evdev::has_left_stick(&target));
     frontend.upload_boot_faces(&mut compositor);
     slot::boot_time::mark("faces");
     frontend.upload_bezel(&mut compositor, window);
@@ -173,9 +175,13 @@ pub fn run() {
             frontend.relaunch();
             return;
         }
+        input.steer_with_stick(frontend.app().left_stick_dpad());
         frontend.advance(&mut input);
         if frontend.restarting() {
             frontend.restart();
+        }
+        if frontend.repairing() {
+            frontend.repair();
         }
         if frontend.powering_off() {
             frontend.poweroff();

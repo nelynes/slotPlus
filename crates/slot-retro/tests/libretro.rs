@@ -206,3 +206,33 @@ fn the_cartridge_clock_in_a_save_reaches_the_game() {
         "the save's clock never reached the core"
     );
 }
+
+#[test]
+fn mgba_states_repeat_and_load_with_trailing_padding() {
+    let _g = lock();
+    let Some(mut c) = test_core() else { return };
+    c.load(&test_rom()).unwrap();
+    for _ in 0..60 {
+        c.run_frame(ButtonMask::default());
+    }
+    let s = c.serialize().unwrap();
+    assert_eq!(
+        c.serialize().unwrap(),
+        s,
+        "a second save of the same frame differed"
+    );
+
+    c.unserialize(&s).unwrap();
+    c.run_frame(ButtonMask::default());
+    let expected = c.video_xrgb8888().to_vec();
+    for _ in 0..60 {
+        c.run_frame(ButtonMask::default());
+    }
+
+    let mut padded = s.clone();
+    padded.extend_from_slice(&[0u8; 4096]);
+    c.unserialize(&padded)
+        .expect("mGBA refused a state with zeros after it");
+    c.run_frame(ButtonMask::default());
+    assert_eq!(c.video_xrgb8888(), expected);
+}

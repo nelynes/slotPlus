@@ -40,8 +40,6 @@ fn press(a: &mut App, btn: Btn) {
 
 fn power_off(a: &mut App) {
     a.apply(Action::PowerHold);
-    a.apply(Action::GbaDown(Btn::Down));
-    a.apply(Action::GbaDown(Btn::A));
     assert!(a.powering_off());
 }
 
