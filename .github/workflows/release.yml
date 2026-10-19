@@ -109,12 +109,16 @@ jobs:
           tag="$GITHUB_REF_NAME"
           ultra_commit="$(cat ultra-commit.txt)"
           cat > notes.md <<NOTES
-          Two downloads. Pick one, unzip it and copy the contents of its folder onto SD2.
-
+          **Release Highlights:** XYZ
+         
+          SlotPlus comes in two flavors.
           - **\`slot-plus.zip\`, slotPlus:** Game Boy Advance, Game Boy and Game Boy Color, plus WonderSwan and Atari Lynx.
-          - **\`slot-plusultra.zip\`, slotPlusUltra:** everything in slotPlus, plus Game Gear, NeoGeo Pocket and TurboGrafx-16. Built from the slotPlusUltra branch at ${ultra_commit}.
+          - **\`slot-plusultra.zip\`, slotPlusUltra:** everything in slotPlus, plus Game Gear, NeoGeo Pocket and TurboGrafx-16.
 
-          Emulation by mGBA (MPL-2.0), gpSP (GPL-2.0), Beetle WonderSwan / Cygne (GPL-2.0) and Beetle Lynx (GPL-2.0), and in slotPlusUltra also Gearsystem (GPL-3.0), Beetle NeoPop (GPL-2.0) and Beetle PCE Fast (GPL-2.0). Their licences, patches and source are in \`System/licenses/\` in each download.
+          **Fresh install:** pick the version you prefer, unzip, and move all contents into the Slot card.
+          **Upgrade ionstall:** pick the version you prefer, unzip, and replace the 'System' folder in your card with the new one from the release.
+
+          All emulator licences, patches and source are in \`System/licenses/\` in each download.
 
           Atari Lynx games need \`lynxboot.img\`, which is not included. Put your own copy in \`BIOS/\`.
           NOTES
