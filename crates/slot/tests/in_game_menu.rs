@@ -383,6 +383,16 @@ fn menu_faces(a: &mut App) {
         labels: (0..QuickRow::ALL.len())
             .map(|i| [(id(100 + i), 80, 40), (id(130 + i), 80, 40)])
             .collect(),
+        ws_turbo_labels: [
+            [
+                (TexId::from_raw(3000), 200, 40),
+                (TexId::from_raw(3001), 200, 40),
+            ],
+            [
+                (TexId::from_raw(3002), 200, 40),
+                (TexId::from_raw(3003), 200, 40),
+            ],
+        ],
         pointer: (id(700), 16, 40),
         values: Vec::new(),
         carets: [(id(300), 10, 40), (id(301), 10, 40)],
@@ -561,4 +571,66 @@ fn a_hotkey_eject_slides_the_footer_up_while_the_picture_closes() {
         last > MOUTH_H * 0.8,
         "the footer was only at {last} when the picture went"
     );
+}
+
+fn drawn(a: &App, id: usize) -> bool {
+    let mut out = Vec::new();
+    a.draw(&mut out);
+    out.iter()
+        .any(|d| matches!(*d, Draw::Tex { tex, .. } if tex == TexId::from_raw(id)))
+}
+
+fn at_turbo_a(a: &mut App) {
+    go_to(a, QuickRow::PlayControls);
+    press(a, Btn::A);
+    for _ in 0..12 {
+        if a.in_game_menu() == Some(QuickRow::GameTurboA) {
+            break;
+        }
+        press(a, Btn::Down);
+    }
+    assert_eq!(a.in_game_menu(), Some(QuickRow::GameTurboA));
+    frames(a, 30);
+}
+
+#[test]
+fn a_wonderswan_game_names_the_turbo_rows_after_x_and_y() {
+    let d = tmp_root_with_carts(&["Emerald"]);
+    let ws = d.path().join("Games/WS");
+    std::fs::create_dir_all(&ws).unwrap();
+    std::fs::write(ws.join("Swan.ws"), vec![0u8; 0x10000]).unwrap();
+    slot_store::write_slot_state(
+        d.path(),
+        &slot_store::SlotState {
+            cart: Some("Swan".into()),
+            cart_platform: Some(Platform::Ws),
+            clock_set: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let mut a = App::boot(d.path());
+    a.set_snapshot(common::StubSnapshot::boxed());
+    a.on_core_ready();
+    for _ in 0..120 {
+        a.update(1.0 / 60.0);
+    }
+    assert_eq!(a.playing_platform(), Platform::Ws);
+    assert!(a.ws_buttons());
+    menu_faces(&mut a);
+    at_turbo_a(&mut a);
+    let turbo_a = QuickRow::GameTurboA.index();
+    assert!(drawn(&a, 3001), "X Button, lit, is drawn");
+    assert!(drawn(&a, 3002), "Y Button is drawn");
+    assert!(!drawn(&a, 130 + turbo_a), "Turbo A is not");
+}
+
+#[test]
+fn a_game_boy_advance_game_keeps_turbo_a_and_turbo_b() {
+    let (_d, mut a) = playing();
+    assert!(!a.ws_buttons());
+    menu_faces(&mut a);
+    at_turbo_a(&mut a);
+    assert!(drawn(&a, 130 + QuickRow::GameTurboA.index()));
+    assert!(!drawn(&a, 3001) && !drawn(&a, 3002));
 }

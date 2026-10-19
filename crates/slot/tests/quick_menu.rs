@@ -651,6 +651,16 @@ fn fake_faces(a: &mut App) {
         labels: (0..QuickRow::ALL.len())
             .map(|i| [(id(1000 + i), 200, 40), (id(1100 + i), 200, 40)])
             .collect(),
+        ws_turbo_labels: [
+            [
+                (TexId::from_raw(3000), 200, 40),
+                (TexId::from_raw(3001), 200, 40),
+            ],
+            [
+                (TexId::from_raw(3002), 200, 40),
+                (TexId::from_raw(3003), 200, 40),
+            ],
+        ],
         pointer: (id(700), 32, 48),
         values: (0..QuickValue::ALL.len())
             .map(|i| [(id(2000 + i), 60, 40), (id(2100 + i), 60, 40)])
@@ -971,6 +981,16 @@ fn no_row_in_hand_runs_its_arrows_into_its_label() {
                 [(id(1000 + i), w, 40), (id(1100 + i), w, 40)]
             })
             .collect(),
+        ws_turbo_labels: [
+            [
+                (TexId::from_raw(3000), 200, 40),
+                (TexId::from_raw(3001), 200, 40),
+            ],
+            [
+                (TexId::from_raw(3002), 200, 40),
+                (TexId::from_raw(3003), 200, 40),
+            ],
+        ],
         pointer: (id(700), 32, 48),
         values: QuickValue::ALL
             .iter()

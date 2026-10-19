@@ -2054,6 +2054,14 @@ impl App {
         self.colour_correction_for(self.playing_platform())
     }
 
+    /// A WonderSwan game is in the slot, so the In-Game controls page names
+    /// the turbo rows after the X and Y buttons, which it uses for more than
+    /// turbo.
+    pub fn ws_buttons(&self) -> bool {
+        self.seated_cart()
+            .is_some_and(|c| c.platform == Platform::Ws)
+    }
+
     pub fn playing_platform(&self) -> Platform {
         self.seated_cart().map_or(self.platform, |c| c.platform)
     }
@@ -3629,6 +3637,9 @@ impl App {
             Phase::QuickMenu { row } => QuickMenu {
                 row: *row,
                 hidden: &self.hidden_rows(),
+                // Controls are the same for every game, so from the shelf the
+                // turbo rows keep their own names.
+                ws_buttons: false,
                 bound: Some(&self.bound_faces()),
                 description: self.description(*row),
                 values: QuickRow::ALL.map(|r| self.quick_value(r)),
@@ -3764,6 +3775,7 @@ impl App {
                 bound: Some(&bound),
                 description: self.description(row),
                 hidden: &hidden,
+                ws_buttons: self.ws_buttons(),
                 values: QuickRow::ALL.map(|r| self.quick_value(r)),
                 clock: None,
                 wallpaper: None,
