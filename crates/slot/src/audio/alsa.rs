@@ -24,6 +24,22 @@ const RELEASE_AFTER: Duration = Duration::from_secs(3);
 
 const DEVICES: [&str; 4] = ["plug:default", "default", "plughw:0,0", "hw:0,0"];
 
+/// The H700's HDMI sound card, tried first while the picture is on a TV.
+const HDMI_DEVICES: [&str; 2] = ["plughw:CARD=ahubhdmi,DEV=0", "plughw:ahubhdmi"];
+
+/// Set by Slot at start-up, before any sound opens, when the picture is on
+/// HDMI.
+pub const HDMI_ENV: &str = "SLOT_AUDIO_HDMI";
+
+fn devices() -> Vec<&'static str> {
+    let hdmi = std::env::var_os(HDMI_ENV).is_some();
+    hdmi.then_some(HDMI_DEVICES)
+        .into_iter()
+        .flatten()
+        .chain(DEVICES)
+        .collect()
+}
+
 type PcmOpen = unsafe extern "C" fn(*mut *mut c_void, *const c_char, c_int, c_int) -> c_int;
 type PcmSetParams =
     unsafe extern "C" fn(*mut c_void, c_int, c_int, c_uint, c_uint, c_int, c_uint) -> c_int;
@@ -81,7 +97,7 @@ impl Alsa {
 
     fn open_pcm(&self, rate: u32) -> Result<*mut c_void, AudioError> {
         let mut last = AudioError::NoDevice;
-        for name in DEVICES {
+        for name in devices() {
             let Ok(cname) = CString::new(name) else {
                 continue;
             };
