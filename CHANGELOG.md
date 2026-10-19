@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+slotPlus on Slot 1.8.0.
+
+- Brings in everything from Slot 1.8.0, below. Run-Ahead is gone from slotPlus too.
+- The In-Game controls page covers the WonderSwan and Atari Lynx. Both keep the L and R rows, since L1 and R1 are the Lynx's Option 1 and Option 2 and the WonderSwan's Y pad. On the WonderSwan, the Turbo A and Turbo B rows are its X and Y buttons, which it uses for the Y pad.
+
 ## [1.8.0](https://github.com/BrandonKowalski/slot/releases/tag/v1.8.0)
 
 - When the SD card turns read-only, SELECT + START repairs it: slot steps aside, checks FAT32 or exFAT, and restarts. (#72, #111)
