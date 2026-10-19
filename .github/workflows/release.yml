@@ -116,7 +116,7 @@ jobs:
           - **\`slot-plusultra.zip\`, slotPlusUltra:** everything in slotPlus, plus Game Gear, NeoGeo Pocket and TurboGrafx-16.
 
           **Fresh install:** pick the version you prefer, unzip, and move all contents into the Slot card.
-          **Upgrade ionstall:** pick the version you prefer, unzip, and replace the 'System' folder in your card with the new one from the release.
+          **Upgrade install:** pick the version you prefer, unzip, and replace the 'System' folder in your card with the new one from the release.
 
           All emulator licences, patches and source are in \`System/licenses/\` in each download.
 
