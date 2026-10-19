@@ -261,7 +261,7 @@
   if (prevBtn) prevBtn.addEventListener("click", function(){ stepBy(-1); });
   if (nextBtn) nextBtn.addEventListener("click", function(){ stepBy(1); });
 
-  var guidePanel = document.getElementById("guide");
+  var guidePanel = document.getElementById("features");
   if (guidePanel) guidePanel.addEventListener("keydown", function(e){
     if (e.target.closest("[role=tablist]")) return;
     if (e.key === "ArrowLeft") { e.preventDefault(); stepBy(-1); }

@@ -20,9 +20,9 @@ concurrency:
 jobs:
   deploy:
     name: site
-    # The site is Slot's own (slot-cfw.fyi). Forks such as slotPlus don't
-    # publish it, so the job only runs in Slot's repository.
-    if: github.repository == 'BrandonKowalski/slot'
+    # slotPlus's site, at nelynes.github.io/slotPlus. Only this repository
+    # publishes it, so a fork of slotPlus doesn't try to.
+    if: github.repository == 'nelynes/slotPlus'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

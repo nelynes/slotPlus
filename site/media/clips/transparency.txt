@@ -1,0 +1,17 @@
+# state: show_recents=0
+# state: show_titles=0
+# state: cart=
+# state: cart_platform=
+# state: shelf=gbc
+# state: shelf_cart=gbc/Tetris (World) (v1.2) (ModRetro Chromatic) (Aftermarket) (Unl)
+# state: shader_gbc=simpletex
+wait 90
+rec
+wait 20
+tap a
+wait 75
+down select
+wait 4
+tap a
+up select
+wait 330

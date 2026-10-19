@@ -1,51 +1,36 @@
-# cart:
 # state: show_recents=0
 # state: show_titles=0
-# Hero, a loop: from Mario Kart flip right to Recharged Yellow, insert, eject,
-# keep flipping right round the shelf back to Mario Kart.
+# state: shelf=ws
+# state: shelf_cart=ws/Kaze no Klonoa - Moonlight Museum (Japan) (En) (v1.1) (Raccoon Sam)
+# state: cart=
+# The home screen's loop: the WonderSwan, Lynx, Game Gear, NeoGeo Pocket and
+# TurboGrafx-16 shelves, a few carts each.
+wait 90
+rec
+wait 50
+tap right
+wait 40
+tap right
+wait 50
+tap r1
 wait 60
 tap right
-wait 20
+wait 40
 tap right
-wait 20
+wait 50
+tap r1
+wait 60
 tap right
-wait 20
+wait 50
+tap r1
+wait 60
 tap right
-wait 20
+wait 40
 tap right
-wait 20
+wait 50
+tap r1
+wait 60
 tap right
-wait 64
-rec
-wait 5
+wait 40
 tap right
-wait 20
-tap right
-wait 20
-tap right
-wait 20
-tap right
-wait 20
-tap right
-wait 30
-tap a
-wait 110
-tap up
-wait 30
-hold menu 66
-wait 90
-tap right
-wait 20
-tap right
-wait 20
-tap right
-wait 20
-tap right
-wait 20
-tap right
-wait 20
-tap right
-wait 20
-tap right
-wait 64
-cut
+wait 70
