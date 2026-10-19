@@ -5,7 +5,7 @@
 slotPlus on Slot 1.8.0.
 
 - Brings in everything from Slot 1.8.0, below. Run-Ahead is gone from slotPlus too.
-- The In-Game controls page covers the WonderSwan and Atari Lynx. Both keep the L and R rows, since L1 and R1 are the Lynx's Option 1 and Option 2 and the WonderSwan's Y pad. On the WonderSwan, the buttons on the Turbo A and Turbo B rows also work the Y pad with R1 held, and the X pad in vertical games.
+- The In-Game controls page covers the WonderSwan and Atari Lynx. Both keep the L and R rows, since L1 and R1 are the Lynx's Option 1 and Option 2 and the WonderSwan's Y pad. In a WonderSwan game the Turbo A and Turbo B rows are called X Button and Y Button, since those buttons also work the Y pad with R1 held and the X pad in vertical games.
 - slotPlusUltra: the Game Gear, NeoGeo Pocket and TurboGrafx-16 get the In-Game controls page without L and R rows, since L1 and R1 stretch the picture there.
 - slotPlusUltra: the SD card repair stops the NeoGeo Pocket core first, as powering off does, so its save is written if the card still takes it.
 

@@ -611,8 +611,8 @@ impl Session {
                 // A Lynx game's turn and a WonderSwan game's orientation come
                 // from files too, so they are read here with the rest.
                 let ws_vertical = platform == Platform::Ws && slot_store::ws_vertical(&rom);
-                let lynx_turn = (platform == Platform::Lynx)
-                    .then(|| crate::core::lynx_rotation(&root, &stem));
+                let lynx_turn =
+                    (platform == Platform::Lynx).then(|| crate::core::lynx_rotation(&root, &stem));
                 Loaded {
                     opened,
                     rom,
