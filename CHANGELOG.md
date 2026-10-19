@@ -1,29 +1,50 @@
 # Changelog
 
-## Unreleased (slotPlusUltra)
+## [1.7.0-plus2.0](https://github.com/nelynes/slotPlus/releases/tag/v1.7.0-plus2.0)
 
-- HDMI output on handhelds with a mini-HDMI port, such as the RG SP. Plug in a TV before switching on and the shelf and games show on the TV at 1080p, with the sound there too and the handheld's screen off. Plug in or pull the cable at any time: Slot saves the game, starts again on the other screen within a few seconds and picks up where you were. Closing the lid doesn't sleep the handheld while it's on the TV.
+slotPlus 2.0 comes in two versions, both built from this release. Pick one from the release's downloads:
+
+- **`slot-plus.zip`, slotPlus:** Game Boy Advance, Game Boy and Game Boy Color, plus WonderSwan and Atari Lynx.
+- **`slot-plusultra.zip`, slotPlusUltra:** everything in slotPlus, plus Game Gear, NeoGeo Pocket and TurboGrafx-16.
+
+To upgrade, replace the `System` folder on your card with the one from the zip. Switching between the two versions works the same way.
+
+### Both versions
+
+- HDMI output on handhelds with a mini-HDMI port, such as the RG SP. Plug in a TV and the shelf and games show on the TV at 1080p, with the sound there too and the handheld's screen off. Plug in or pull the cable at any time: Slot saves the game, starts again on the other screen within a few seconds and picks up where you were. Closing the lid doesn't sleep the handheld while it's on the TV.
+- The README now covers both versions, with a table of the added systems and which version has each, and shows the Plus and Ultra shelves in motion. Controls, label art sizes, bezels, saves and the games that turn sideways are in a new systems guide, [SYSTEMS.md](SYSTEMS.md).
+
+### slotPlusUltra: TurboGrafx-16
+
 - TurboGrafx-16 HuCard games (`.pce`) get their own shelf, for the TurboExpress. Put them in `Games/TG16/`. They run on the Beetle PCE Fast core with the two-button pad. No BIOS is needed. CD and SuperGrafx games are not supported.
 - HuCards are drawn as the real card: white, with gold contacts across the top over a dark textured panel, a square label in the lower half (art goes in `Labels/TG16/`, 191 px wide and up to 163 tall; it keeps its own shape, spans the card's width and sits at the bottom, so a shorter label leaves plain card above it, as on real HuCards) and a ridged grip tab at the foot. A HuCard turns end over end before it goes into the slot, so it goes in contacts first, and turns back upright when it comes out.
 - The TurboGrafx-16 picture is shown at 2x and follows the width each game draws, from 256 up to the 512-wide mode. L1 stretches it to fill the screen and R1 gives it back. The Screen menu has a TurboGrafx-16 page with its own Shader (Off, LCD3x, Grid or Dot, Grid by default) and Bezel: four bundled, TG16 (a dark face with the TurboGrafx-16 logo down the left side) and PCE (the PC Engine's white case either side of the screen), each with a Wide version for games that draw 320 wide, or your own PNGs in `Bezels/TG16/`. A bundled bezel can now have a name of its own in the Bezel row, rather than Default.
 - The buttons follow the TurboExpress: the left face button is II, the right one I, Start is Run and Select is Select.
 - The `TG16` folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
-- The 1.7.0-plus1.1 menu freeze fix covers the Game Gear and NeoGeo Pocket too.
-- On 4:3 handhelds such as the RG 35XXSP, a stretched game now fills the whole screen instead of its 3:2 window above the SP frame. This is every system but the Game Boy and Game Boy Color, which keep 1.7.0's stretch.
+
+### slotPlusUltra: NeoGeo Pocket
+
 - NeoGeo Pocket and NeoGeo Pocket Color games (`.ngp`, `.ngc`, `.ngpc`) get one shared shelf. Put them in `Games/NGP/`. They run on the Beetle NeoPop core, in English where a game has both languages. No BIOS is needed.
 - NeoGeo Pocket carts are drawn in 1.7.0's look: a ridged cap, a wide label in a recessed frame (art goes in `Labels/NGP/`, about 246x133) and a lower band with a down arrow and SNK and NGP plaques pressed into it, their letters raised, with a dark grey default shell.
 - The NeoGeo Pocket picture is shown actual size at 3x. L1 stretches it to fill the screen and R1 gives it back. The Screen menu has a NeoGeo Pocket page with its own Shader (Off, LCD3x, Grid or Simpletex) and Bezel: a bundled Default with the NeoGeo Pocket name and logo down the left side, or your own PNGs in `Bezels/NGP/`.
 - NeoGeo Pocket saves go to `Saves/NGP/`. The core writes them when the game stops, so slot now stops it before powering off or restarting.
 - The buttons follow the NeoGeo Pocket's layout: the left face button is its A and the right one its B. Start is Option.
 - The `NGP` folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
+
+### slotPlusUltra: Game Gear
+
 - Sega Game Gear games (`.gg`) get their own shelf. Put them in `Games/GG/`. They run on the Gearsystem core. No BIOS is needed.
 - Game Gear carts are drawn in 1.7.0's look: grey moulded plastic tinted by the shell colour, with the raised hood and grip ridges over a squarish label (art goes in `Labels/GG/`, about 290x200), and a black default shell.
 - The Game Gear picture is shown actual size at 3x. L1 stretches it to fill the screen and R1 gives it back.
 - The Screen menu has a Game Gear page with its own Shader (Off, LCD3x, Grid or Simpletex) and Bezel. For the bezel there is a bundled Default, a black face with the Game Gear's green power light glowing above the screen, as well as your own PNGs in `Bezels/GG/` and the SP frame on 4:3 screens. SELECT + B / A in a game changes the Game Gear shader too.
 - SELECT does nothing in a Game Gear game. Gearsystem would take it as a console reset, which the Game Gear does not have.
-- The Bezel rows on every added system's Screen page now show which bezel is picked.
 - The `GG` folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
-- The README's slotPlus section is now a short table of the added systems, with their details (controls, label art sizes, bezels, saves, and games that turn sideways) in a new systems guide, [SYSTEMS.md](SYSTEMS.md). It also shows the Plus and Ultra shelves in motion.
+
+### slotPlusUltra: everything else
+
+- The 1.7.0-plus1.1 menu freeze fix covers the Game Gear and NeoGeo Pocket too.
+- On 4:3 handhelds such as the RG 35XXSP, a stretched game now fills the whole screen instead of its 3:2 window above the SP frame. This is every system but the Game Boy and Game Boy Color, which keep 1.7.0's stretch.
+- The Bezel rows on every added system's Screen page now show which bezel is picked.
 
 ## [1.7.0-plus1.2](https://github.com/nelynes/slotPlus/releases/tag/v1.7.0-plus1.2)
 

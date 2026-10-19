@@ -2,7 +2,9 @@
 
 Everything slotPlus adds on top of Slot's Game Boy Advance, Game Boy and Game Boy Color, one system at a time: where the games go, how big label art should be, what the Screen menu offers, how saves work, and the controls.
 
-For the Game Boy systems, and everything else Slot does, see the [Slot user guide](https://slot-cfw.fyi).
+slotPlus comes in two versions. **slotPlus** (`slot-plus.zip`) adds the WonderSwan and Atari Lynx. **slotPlusUltra** (`slot-plusultra.zip`) adds those two plus the TurboGrafx-16, NeoGeo Pocket and Game Gear. Each system below says which version has it.
+
+For the Game Boy systems, and everything else Slot does, see the [Slot user guide](https://slot-cfw.fyi). For playing on a TV over HDMI, see [Playing on a TV](README.md#playing-on-a-tv) in the README.
 
 - [TurboGrafx-16 / TurboExpress](#turbografx-16--turboexpress)
 - [NeoGeo Pocket / NeoGeo Pocket Color](#neogeo-pocket--neogeo-pocket-color)
@@ -16,7 +18,7 @@ For the Game Boy systems, and everything else Slot does, see the [Slot user guid
 - **Label art:** optional PNGs go in `Labels/<folder>/<game name>.png`, named after the game's file without its extension. Each system's cart has its own label size, given below. Art of a different size is scaled to cover the label and cropped, except on HuCards, where it keeps its own shape (see the TurboGrafx-16).
 - **Screen menu:** each system has its own page under Screen, with its own Shader and Bezel. SELECT + B / A in a game steps through that system's shaders.
 - **Bezels:** your own PNGs go in `Bezels/<folder>/`, 720x480 with the screen area transparent. On 4:3 handhelds such as the RG 35XXSP the SP frame is offered too. A bezel shows at actual size, not when the picture is stretched.
-- **Stretch:** on the TurboGrafx-16, Game Gear and NeoGeo Pocket, L1 stretches the picture to fill the screen and R1 gives back actual size. On the Lynx and WonderSwan, L1 and R1 are the game's own buttons, so a game is set to stretch with a line in `Config/video_mode.txt` (`Game Name (USA) = stretch`). Each game remembers its choice. On a 4:3 handheld the stretched picture fills the whole panel.
+- **Stretch:** on the TurboGrafx-16, Game Gear and NeoGeo Pocket, L1 stretches the picture to fill the screen and R1 gives back actual size. On the Lynx and WonderSwan, L1 and R1 are the game's own buttons, so a game is set to stretch with a line in `Config/video_mode.txt` (`Game Name (USA) = stretch`). Each game remembers its choice. In slotPlusUltra, on a 4:3 handheld the stretched picture fills the whole panel.
 - **Cart shells:** each system's carts have a default shell colour. Set `Config/cart_shell.txt` to give a single game a different one.
 - **Save states and resume** work as they do for every other system.
 
@@ -28,6 +30,7 @@ The TurboExpress was NEC's handheld TurboGrafx-16: it played the same HuCards as
 
 | | |
 |---|---|
+| **Version** | slotPlusUltra only |
 | **Games** | HuCard games as `.pce` in `Games/TG16/`. CD games and SuperGrafx games are not supported. |
 | **BIOS** | Not needed. HuCards boot straight in. |
 | **Core** | Beetle PCE Fast, with the two-button pad. |
@@ -57,6 +60,7 @@ The buttons follow the TurboExpress's layout: II on the left, I on the right.
 
 | | |
 |---|---|
+| **Version** | slotPlusUltra only |
 | **Games** | `.ngp`, `.ngc` and `.ngpc` in `Games/NGP/`. Black-and-white and colour games share one shelf. |
 | **BIOS** | Not needed. The core stands in for it. |
 | **Core** | Beetle NeoPop, set to English for games that have both languages. |
@@ -88,6 +92,7 @@ The buttons follow the NeoGeo Pocket's own layout, so its A is the left button a
 
 | | |
 |---|---|
+| **Version** | slotPlusUltra only |
 | **Games** | `.gg` in `Games/GG/`. |
 | **BIOS** | Not needed. Games boot straight in. |
 | **Core** | Gearsystem. |
@@ -118,6 +123,7 @@ The buttons follow the NeoGeo Pocket's own layout, so its A is the left button a
 
 | | |
 |---|---|
+| **Version** | slotPlus and slotPlusUltra |
 | **Games** | `.lnx` and `.lyx` in `Games/Lynx/`. |
 | **BIOS** | `lynxboot.img` in `BIOS/` (not included). |
 | **Core** | Beetle Lynx. |
@@ -164,6 +170,7 @@ The values are `auto` (let the core decide), `0` (never turn), `90` and `270` (t
 
 | | |
 |---|---|
+| **Version** | slotPlus and slotPlusUltra |
 | **Games** | `.ws` and `.wsc` in `Games/WS/`. Both share one shelf. |
 | **BIOS** | Not needed. |
 | **Core** | Beetle WonderSwan (Cygne). |

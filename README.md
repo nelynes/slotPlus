@@ -8,26 +8,43 @@
 
 # What is slotPlus?
 
-A slightly modified Slot. Alongside Slot's Game Boy Advance, Game Boy and Game Boy Color, it plays five more handhelds, each on its own shelf with its own cart:
+A slightly modified Slot. Alongside Slot's Game Boy Advance, Game Boy and Game Boy Color, it plays more handhelds, each on its own shelf with its own cart, and it can play on a TV over HDMI.
 
-| System | Put games in | Files | Core | BIOS |
-|---|---|---|---|---|
-| TurboGrafx-16 / TurboExpress | `Games/TG16/` | `.pce` (HuCards) | Beetle PCE Fast | Not needed |
-| NeoGeo Pocket / Color | `Games/NGP/` | `.ngp` `.ngc` `.ngpc` | Beetle NeoPop | Not needed |
-| Sega Game Gear | `Games/GG/` | `.gg` | Gearsystem | Not needed |
-| Atari Lynx | `Games/Lynx/` | `.lnx` `.lyx` | Beetle Lynx | `lynxboot.img` in `BIOS/` |
-| WonderSwan / Color | `Games/WS/` | `.ws` `.wsc` | Beetle WonderSwan (Cygne) | Not needed |
+Each release comes in two versions. Pick the one you want from the [releases page](https://github.com/nelynes/slotPlus/releases):
+
+- **`slot-plus.zip`, slotPlus:** Game Boy Advance, Game Boy and Game Boy Color, plus WonderSwan and Atari Lynx.
+- **`slot-plusultra.zip`, slotPlusUltra:** everything in slotPlus, plus Game Gear, NeoGeo Pocket and TurboGrafx-16.
+
+| System | Version | Put games in | Files | Core | BIOS |
+|---|---|---|---|---|---|
+| WonderSwan / Color | Plus and Ultra | `Games/WS/` | `.ws` `.wsc` | Beetle WonderSwan (Cygne) | Not needed |
+| Atari Lynx | Plus and Ultra | `Games/Lynx/` | `.lnx` `.lyx` | Beetle Lynx | `lynxboot.img` in `BIOS/` |
+| Sega Game Gear | Ultra | `Games/GG/` | `.gg` | Gearsystem | Not needed |
+| NeoGeo Pocket / Color | Ultra | `Games/NGP/` | `.ngp` `.ngc` `.ngpc` | Beetle NeoPop | Not needed |
+| TurboGrafx-16 / TurboExpress | Ultra | `Games/TG16/` | `.pce` (HuCards) | Beetle PCE Fast | Not needed |
 
 > [!IMPORTANT]
 > Atari Lynx games need `lynxboot.img`, the Lynx boot ROM. It is **not included**. Put your own copy in `BIOS/`.
 
+**Installing:** for a fresh install, unzip and copy everything onto the Slot card. To upgrade, unzip and replace the `System` folder on your card with the new one. Switching between Plus and Ultra works the same way, and your games, saves and settings stay put. Going back from Ultra to Plus leaves the Game Gear, NeoGeo Pocket and TurboGrafx-16 games and saves on the card, without their shelves.
+
 - **Folders:** each system's folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
 - **Label art:** optional PNGs go in `Labels/<folder>/<game name>.png`.
-- **Screen menu:** each system has its own page, with its own shader and bezel. The Game Gear and NeoGeo Pocket come with a bundled bezel, and the TurboGrafx-16 with four.
-- **HDMI:** on handhelds with a mini-HDMI port, such as the RG SP, plug in a TV to play on it. Plug in or pull the cable at any time and Slot moves to the other screen and carries on where you were.
+- **Screen menu:** each system has its own page, with its own shader and bezel. In Ultra, the Game Gear and NeoGeo Pocket come with a bundled bezel, and the TurboGrafx-16 with four.
 - **Carts:** each system has its own cart, drawn in Slot 1.7's look. WonderSwan games get a black cart, WonderSwan Color games a frosted clear one, and a HuCard turns over to go into the slot contacts first.
 
 **Controls, label art sizes, bezels, saves, and how Lynx and WonderSwan games that turn sideways work are all in the [systems guide](SYSTEMS.md).**
+
+## Playing on a TV
+
+Both versions can show the picture on a TV over HDMI, on handhelds with a mini-HDMI port such as the RG SP.
+
+- Plug the TV in before or after switching on. The shelf and games show on the TV at 1080p, with the sound there too, and the handheld's screen goes dark. The handheld is the controller.
+- Plug in or pull the cable at any time, even mid-game. Slot saves the game, starts again on the other screen within a few seconds and picks up where you were.
+- Closing the lid doesn't sleep the handheld while it's on the TV.
+
+> [!NOTE]
+> HDMI has been tested on the RG SP. The other supported handhelds with a mini-HDMI port should work the same way. If yours doesn't, please open an issue.
 
 ---
 
