@@ -20,7 +20,7 @@ use slot::session::Session;
 use slot_input::{Action, Btn, Millis, RawEvent};
 use slot_retro::{ButtonMask, LinkChannel};
 use slot_store::{write_slot_state, Core, Platform, SlotState};
-use slot_ui::{arrows_hint_face, hint_face, Draw, TexId, Toast, FOOTER_Y, HINT_EDGE, OUT_H, OUT_W};
+use slot_ui::{arrows_hint_face, hint_face, Draw, TexId, Toast, HINT_EDGE, MOUTH_H, OUT_H, OUT_W};
 use tempfile::TempDir;
 
 const BAIL: Duration = Duration::from_secs(5);
@@ -1257,18 +1257,18 @@ fn pick_names_cancel_mode_swap_and_link_across_the_strip() {
         ],
     );
     assert!(
-        keys.iter().all(|k| k.1 == FOOTER_Y),
-        "the keys are not on the carousel footer line"
+        keys.iter().all(|k| k.1 == OUT_H as f32 - MOUTH_H),
+        "the keys do not fill the carousel footer"
     );
     let left = keys[0].0;
     let (x, _, w, _) = keys[keys.len() - 1];
     let right = x + w - HINT_EDGE as f32;
     assert!(
-        (left - 24.0).abs() < 1.0,
+        left.abs() < 1.0,
         "Cancel is not on the left of the strip: {left}"
     );
     assert!(
-        (right - (OUT_W as f32 - 24.0)).abs() < 1.0,
+        (right - OUT_W as f32).abs() < 1.0,
         "Link is not on the right of the strip: {right}"
     );
     let mode_end = keys[1].0 + keys[1].2 - HINT_EDGE as f32;

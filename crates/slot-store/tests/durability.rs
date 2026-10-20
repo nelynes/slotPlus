@@ -174,7 +174,6 @@ fn a_first_boot_rumbles_and_fast_forwards_silently_at_the_default() {
     );
     assert_eq!(s.shader_gba, Shader::Grid);
     assert_eq!(s.shader_gb, Shader::Simpletex);
-    assert_eq!(s.runahead, 0, "boots with run-ahead on");
 }
 
 #[test]
@@ -212,7 +211,6 @@ fn a_card_from_before_the_settings_keeps_all_its_values() {
             eject_save: true,
             turbo: true,
             rewind: true,
-            runahead: 0,
             gb_palettes: false,
             gb_palette: GbPalette::DEFAULT,
             appearance: Appearance::Dark,
@@ -220,6 +218,8 @@ fn a_card_from_before_the_settings_keeps_all_its_values() {
             wallpaper_tint: WallpaperTint::Off,
             show_recents: false,
             show_titles: false,
+            left_stick_dpad: true,
+            lid_off_min: None,
             bezel_gba: BezelPick::Ags102,
             bezel_gb: BezelPick::Ags102,
             bezel_gbc: BezelPick::Ags102,
@@ -248,7 +248,6 @@ fn the_quick_menu_settings_round_trip_as_their_own_lines() {
         eject_save: false,
         turbo: false,
         rewind: false,
-        runahead: 1,
         gb_palettes: true,
         gb_palette: GbPalette::parse("GBC Dark Green →A").unwrap(),
         wallpaper_tint: WallpaperTint::Medium,
@@ -282,7 +281,6 @@ fn the_quick_menu_settings_round_trip_as_their_own_lines() {
         "eject_save=0",
         "turbo=0",
         "rewind=0",
-        "runahead=1",
         "gb_palettes=1",
         "gb_palette=GBC Dark Green →A",
         "appearance=dark",
@@ -304,22 +302,21 @@ fn the_quick_menu_settings_round_trip_as_their_own_lines() {
 }
 
 #[test]
-fn a_run_ahead_the_row_does_not_offer_reads_as_off() {
+fn a_card_that_still_carries_run_ahead_keeps_the_rest_of_its_values() {
     let d = tmp_root();
     let s = SlotState {
         clock_set: true,
-        runahead: 1,
+        rewind: false,
         ..SlotState::default()
     };
     write_slot_state(d.path(), &s).unwrap();
     let path = d.path().join("Config/slot.state");
     let text = std::fs::read_to_string(&path).unwrap();
-    std::fs::write(&path, text.replace("runahead=1", "runahead=9")).unwrap();
-    assert_eq!(read_slot_state(d.path()).runahead, 0);
-    assert!(
-        read_slot_state(d.path()).clock_set,
-        "the rest of the card was thrown away with it"
-    );
+    std::fs::write(&path, text.replace("rewind=0\n", "rewind=0\nrunahead=1\n")).unwrap();
+    assert!(std::fs::read_to_string(&path)
+        .unwrap()
+        .contains("runahead=1"));
+    assert_eq!(read_slot_state(d.path()), s);
 }
 
 #[test]
@@ -609,4 +606,23 @@ fn transparent_is_on_both_game_boy_lists_and_no_other() {
     assert_eq!(s.shader_gb, Shader::Transparent);
     assert_eq!(s.shader_gbc, Shader::Transparent);
     assert_eq!(s.shader_ws, SlotState::default().shader_ws);
+}
+
+#[test]
+fn lid_power_off_minutes_round_trip_and_drop_a_value_the_menu_does_not_offer() {
+    let d = tmp_root();
+    for min in [1, 3, 5, 10, 15, 30] {
+        let s = SlotState {
+            lid_off_min: Some(min),
+            ..Default::default()
+        };
+        write_slot_state(d.path(), &s).unwrap();
+        assert_eq!(read_slot_state(d.path()).lid_off_min, Some(min));
+    }
+    let path = d.path().join("Config").join("slot.state");
+    let text = std::fs::read_to_string(&path)
+        .unwrap()
+        .replace("lid_off_min=30", "lid_off_min=7");
+    std::fs::write(&path, text).unwrap();
+    assert_eq!(read_slot_state(d.path()).lid_off_min, None);
 }

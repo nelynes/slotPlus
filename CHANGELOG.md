@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+slotPlus on Slot 1.8.0.
+
+- Brings in everything from Slot 1.8.0, below. Run-Ahead is gone from slotPlus too.
+- The In-Game controls page covers the WonderSwan and Atari Lynx. Both keep the L and R rows, since L1 and R1 are the Lynx's Option 1 and Option 2 and the WonderSwan's Y pad. In a WonderSwan game the Turbo A and Turbo B rows are called X Button and Y Button, since those buttons also work the Y pad with R1 held and the X pad in vertical games.
+
+## [1.8.0](https://github.com/BrandonKowalski/slot/releases/tag/v1.8.0)
+
+- When the SD card turns read-only, SELECT + START repairs it: slot steps aside, checks FAT32 or exFAT, and restarts. (#72, #111)
+- Power off, including the shutdown after the lid has been closed for 3 minutes, no longer hangs on a black screen: the Wi-Fi driver is unloaded first, as Restart already does.
+- If slot stops responding with the lid closed, a separate watcher powers off a minute after the Lid Off time.
+- Run-Ahead is removed. It scrambled saves in games with a 128 KB flash chip, such as Super Mario Advance 4. (#104)
+- Turbo A and Turbo B have their own rows on the In-Game controls page and can be moved off X and Y. (#127)
+- Loading a state while a game is saving to a 128 KB flash chip no longer writes the save into the wrong half of the chip.
+- The cart insertion animation no longer stutters, and a large ROM still loading after the cart seats powers the screen on to a blank panel that brightens until the game appears. (#119)
+- On Anbernics with a left stick, the stick works as the D-pad. Left Stick as D-Pad on the Gameplay page turns it off. (#106, #107)
+
 ## [1.7.0-plus2.0](https://github.com/nelynes/slotPlus/releases/tag/v1.7.0-plus2.0)
 
 slotPlus 2.0 comes in two versions, both built from this release. Pick one from the release's downloads:
