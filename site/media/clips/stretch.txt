@@ -1,0 +1,16 @@
+# state: show_recents=0
+# state: show_titles=0
+# state: cart=
+# state: cart_platform=
+# state: shelf=gg
+# state: shelf_cart=gg/Sonic Chaos (USA, Europe, Brazil) (En)
+# state: shader_gg=lcd3x
+wait 90
+tap a
+wait 600
+rec
+wait 120
+tap l1
+wait 150
+tap r1
+wait 120

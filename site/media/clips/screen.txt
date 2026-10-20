@@ -1,0 +1,28 @@
+# state: show_recents=0
+# state: show_titles=0
+# state: cart=
+# state: cart_platform=
+# state: shelf=tg16
+# state: shelf_cart=tg16/Blazing Lazers (USA)
+# state: bezel_tg16=bundled:TG16
+# state: shader_tg16=off
+wait 90
+tap a
+wait 480
+rec
+wait 90
+down select
+wait 4
+tap a
+up select
+wait 90
+down select
+wait 4
+tap a
+up select
+wait 90
+down select
+wait 4
+tap a
+up select
+wait 100

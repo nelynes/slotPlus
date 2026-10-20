@@ -17,6 +17,11 @@
   --etch:rgba(0,0,0,.46);
   --warn:#e8b83a;
   --warn-bg:rgba(232,184,58,.08);
+
+  /* slotPlus: the banner's cyan plus, Ultra's glow and the extras' amber. */
+  --plus:#00ffff;
+  --ultra:#46dcff;
+  --extras:#ffb240;
 }
 
 *{box-sizing:border-box}
@@ -499,6 +504,95 @@ kbd{
 .guide-stage.is-pair .device{width:calc(var(--dw) * .64)}
 .guide-stage.is-pair .device.is-peer{display:block}
 
+/* HDMI: the SP beside a monitor on a stand, joined by a cable that app.js
+   draws in, at which the SP's screen goes dark and the monitor lights. */
+.guide-stage .tv,.guide-stage .tv-cable{display:none}
+.guide-stage.is-tv{align-items:flex-end;gap:clamp(22px,3vw,40px)}
+.guide-stage.is-tv .device{width:calc(var(--dw) * .6)}
+.guide-stage.is-tv .tv{display:flex}
+.guide-stage.is-tv .tv-cable{display:block}
+.tv{
+  width:calc(var(--dw) * 1.2);
+  flex-direction:column;
+  align-items:center;
+  position:relative;
+  z-index:1;
+}
+.tv-panel{
+  position:relative;
+  width:100%;
+  aspect-ratio:16/9;
+  padding:3.2%;
+  border-radius:7px;
+  background:linear-gradient(#2b2b32,var(--housing) 40%,var(--recess));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 16px 30px rgba(0,0,0,.45);
+}
+.tv-glass{
+  position:relative;
+  width:100%;
+  height:100%;
+  border-radius:2px;
+  overflow:hidden;
+  background:var(--opening);
+}
+/* The glass when it is off: a faint sheen across black. */
+.tv-glass::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(118deg,rgba(255,255,255,.07) 0 22%,rgba(255,255,255,0) 46%);
+  transition:opacity .5s ease;
+  pointer-events:none;
+}
+/* slotPlus puts its 3:2 picture in the middle of a 16:9 TV. */
+.tv-still,.tv-picture{
+  position:absolute;
+  top:0;
+  left:7.8125%;
+  width:84.375%;
+  height:100%;
+  opacity:0;
+  transition:opacity .5s ease;
+}
+.tv-led{
+  position:absolute;
+  right:5%;
+  bottom:1.1%;
+  width:4px;
+  height:4px;
+  border-radius:50%;
+  background:#5a2a24;
+  transition:background .3s ease,box-shadow .3s ease;
+}
+.tv-neck{width:9%;height:calc(var(--dw) * .1);background:linear-gradient(90deg,var(--recess),var(--housing),var(--recess))}
+.tv-foot{width:46%;height:calc(var(--dw) * .028);border-radius:3px 3px 1px 1px;background:linear-gradient(var(--edge),var(--housing))}
+.tv-cable{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  overflow:visible;
+  pointer-events:none;
+  z-index:0;
+}
+.tv-cable-line{
+  fill:none;
+  stroke:var(--edge);
+  stroke-width:5;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  transition:stroke-dashoffset 1.1s cubic-bezier(.5,0,.3,1);
+}
+.guide-stage.tv-unplug .tv-cable-line{transition-duration:.7s}
+
+/* Plugged in: the SP's screen goes dark and the monitor shows its picture. */
+.guide-stage.tv-on .guide-screen{opacity:0 !important}
+.guide-stage.tv-on .tv-glass::after{opacity:.35}
+/* The still sits under the copied picture, for reduced motion or a slow video. */
+.guide-stage.tv-on .tv-picture,
+.guide-stage.tv-on .tv-still{opacity:1}
+.guide-stage.tv-on .tv-led{background:#46dc8c;box-shadow:0 0 6px rgba(70,220,140,.8)}
+
 .guide-stage .dv-lid,.guide-stage .device{transition:transform 1.15s cubic-bezier(.45,.05,.3,1)}
 .guide-stage .device.is-shut{transform:perspective(calc(var(--dw) * 2.5)) translateY(-23%)}
 .guide-stage .device.no-swing,
@@ -562,6 +656,9 @@ kbd{
     position:static;
     margin:0 auto clamp(18px,3vh,30px);
   }
+  .guide-stage.is-tv .device{width:calc(var(--dw) * .58)}
+  .guide-stage.is-tv .tv{width:min(calc(var(--dw) * 1.05),calc(100vw - 48px - var(--dw) * .58 - 22px))}
+  .guide-stage.is-tv{gap:22px;position:relative;top:0}
   .guide-steps{min-height:150px}
   .step h3{font-size:21px}
   .step p{line-height:1.58}
@@ -618,6 +715,8 @@ kbd{
 @media (max-width:880px) and (max-height:700px){
   .guide-stage .dv-deck{display:none}
   .guide-stage{--dw:min(calc(100vw - 56px),380px)}
+  .guide-stage.is-tv .device{width:calc(var(--dw) * .42)}
+  .guide-stage.is-tv .tv{width:min(calc(var(--dw) * 1.05),calc(100vw - 48px - var(--dw) * .42 - 22px))}
   .guide-stage .device.is-shut,
   .guide-stage .device.is-shut .dv-lid{transform:none}
   .guide-stage .device.is-shut .dv-front{display:none}
@@ -641,4 +740,151 @@ kbd{
 
 @media (prefers-reduced-motion:reduce){
   *{transition:none!important;animation:none!important}
+}
+
+
+/* ---- slotPlus ---------------------------------------------------------- */
+
+.plus{
+  color:var(--plus);
+  font-weight:700;
+  text-shadow:0 0 .35em rgba(0,255,255,.45);
+}
+.mast-mark .dot{color:var(--ink)}
+.mast-mark .plus{position:relative;top:-.42em;margin-left:.04em;font-size:.95em}
+.wordmark .plus{
+  display:inline-block;
+  font-size:.62em;
+  vertical-align:top;
+  margin:-.04em 0 0 .03em;
+  letter-spacing:0;
+}
+.tab-plus{color:var(--plus);font-weight:700;margin-right:1px}
+.tab-plus.after{margin:0 0 0 1px}
+.plus-inline{color:var(--plus);font-weight:700}
+
+.btn.ultra{
+  background:transparent;
+  color:var(--ink);
+  border-color:var(--ultra);
+  box-shadow:0 0 0 1px rgba(70,220,255,.18),0 0 18px rgba(70,220,255,.18);
+}
+.btn.ultra:hover{box-shadow:0 0 0 1px rgba(70,220,255,.35),0 0 24px rgba(70,220,255,.3)}
+
+.editions{list-style:none;margin:22px 0 0;padding:0;display:grid;gap:8px;max-width:46ch}
+.edition{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:7px 12px 7px 0;
+  border:1px solid var(--rule);
+  border-radius:8px;
+  background:#23232b;
+  font-size:14px;
+  line-height:1.4;
+  overflow:hidden;
+}
+.ed-name{
+  flex:none;
+  align-self:stretch;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  white-space:nowrap;
+  min-width:68px;
+  padding:0 14px 0 12px;
+  margin:-7px 0;
+  background:#141419;
+  clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,0 100%);
+  font-weight:900;
+  font-family:Nunito,"Open Sans",sans-serif;
+  font-size:16px;
+}
+.plus-ed .ed-name{color:var(--ink)}
+.plus-ed .ed-name::after{content:"+";color:var(--plus);margin-left:1px;text-shadow:0 0 6px rgba(0,255,255,.6)}
+.ultra-ed .ed-name{
+  font-family:Orbitron,"Open Sans",sans-serif;
+  font-weight:800;
+  font-size:14px;
+  color:#ebfaff;
+  text-shadow:0 0 8px rgba(90,225,255,.8);
+}
+.ed-sys{color:var(--muted)}
+.hero-copy p.sub a{color:var(--ink)}
+
+.lede{color:var(--muted);max-width:64ch;margin:0 0 22px}
+.lede a,.note a{color:var(--ink)}
+.note{color:var(--muted);max-width:64ch;margin:0 0 14px;font-size:17px}
+
+.ed-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:18px;margin:0 0 26px}
+.ed-card{
+  border:1px solid var(--rule);
+  border-radius:12px;
+  padding:20px 22px 22px;
+  background:#202027;
+}
+.ed-card.plus-ed{border-color:rgba(0,255,255,.35)}
+.ed-card.ultra-ed{border-color:rgba(70,220,255,.5);box-shadow:0 0 28px rgba(70,220,255,.08)}
+.ed-card h3{display:flex;align-items:center;gap:12px;margin:0;font-size:21px}
+.ed-tab{
+  display:inline-block;
+  padding:2px 14px 2px 10px;
+  background:#141419;
+  border-radius:6px 0 0 6px;
+  clip-path:polygon(0 0,100% 0,calc(100% - 9px) 100%,0 100%);
+  font:900 18px/1.5 Nunito,"Open Sans",sans-serif;
+}
+.ed-tab.ultra-tab{font:800 16px/1.7 Orbitron,"Open Sans",sans-serif;color:#ebfaff;text-shadow:0 0 8px rgba(90,225,255,.8)}
+.ed-for{margin:4px 0 12px;color:var(--muted);font-size:16px}
+.ed-card ul{margin:0 0 18px;padding-left:20px;color:var(--muted);font-size:17px;line-height:1.6}
+.ed-card .btn{font-size:15px;padding:10px 16px}
+.ed-card .btn code{background:none;padding:0;color:inherit;font-size:.92em}
+
+.badges{display:flex;gap:6px;margin:0 0 8px}
+.badge{
+  display:inline-block;
+  padding:1px 9px;
+  border-radius:999px;
+  font-size:12.5px;
+  font-weight:700;
+  letter-spacing:.02em;
+  line-height:1.6;
+  border:1px solid;
+}
+.badge.plus{color:#bffcff;border-color:rgba(0,255,255,.55);background:rgba(0,255,255,.08);text-shadow:none}
+.badge.ultra{color:#d7f6ff;border-color:rgba(70,220,255,.6);background:rgba(70,220,255,.1);font-family:Orbitron,"Open Sans",sans-serif;font-weight:800;font-size:11px;letter-spacing:.06em}
+.badge.extras{color:#ffe7c4;border-color:rgba(255,178,64,.6);background:rgba(255,178,64,.1)}
+.systems .subpanel > .badges{margin:0 0 16px}
+
+.guide-intro{color:var(--muted);font-size:16px;margin:0 0 14px}
+.guide-more{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:22px 0 0;color:var(--muted);font-size:15px}
+.guide-more .btn{padding:9px 16px;font-size:15px}
+
+.systems{padding:clamp(26px,4vh,52px) 0}
+.systems h2{margin-bottom:22px}
+.systems pre{max-width:64ch;margin:0 0 14px}
+.systems .admonition{margin:18px 0}
+
+.credits .lede{margin-bottom:8px}
+.credits .note{margin:12px 0 0;font-size:16px}
+.endnote-body p{color:var(--muted);max-width:64ch;margin:0 0 12px;font-size:18px}
+.endnote-body a{color:var(--ink)}
+
+.studio-soon h2 .plus{font-size:.8em;vertical-align:top;margin-left:.04em}
+.studio-soon .soon{
+  display:inline-block;
+  margin:0 0 22px;
+  padding:3px 12px;
+  border:1px solid rgba(255,178,64,.6);
+  border-radius:999px;
+  color:#ffe7c4;
+  background:rgba(255,178,64,.1);
+  font-size:15px;
+  font-weight:600;
+}
+.studio-soon .actions{margin-top:26px}
+
+@media (max-width:880px){
+  .editions{margin-left:auto;margin-right:auto;text-align:left}
+  .hero-copy p.sub{text-align:center}
 }

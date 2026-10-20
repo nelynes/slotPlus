@@ -3,23 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>slot.</title>
-<meta name="description" content="A bespoke, Game Boy-centric frontend for the Anbernic RG SP.">
-<meta property="og:title" content="slot.">
-<meta property="og:description" content="A bespoke, Game Boy-centric frontend for the Anbernic RG SP.">
+<title>slot+</title>
+<meta name="description" content="slotPlus: Slot's bespoke, Game Boy-centric frontend for the Anbernic RG SP, plus WonderSwan, Atari Lynx, Game Gear, NeoGeo Pocket, TurboGrafx-16 and HDMI out.">
+<meta property="og:title" content="slot+">
+<meta property="og:description" content="Slot's bespoke, Game Boy-centric frontend for the Anbernic RG SP, plus more handhelds and HDMI out.">
 <meta property="og:type" content="website">
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Nunito:wght@800;900&family=Orbitron:wght@800&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <header class="mast">
-  <a class="mast-mark" href="/">slot.</a>
+  <a class="mast-mark" href="./">slot<span class="dot">.</span><span class="plus" aria-hidden="true">+</span><span class="sr-only">Plus</span></a>
 
   <button class="menu-btn" type="button" id="menu-btn" aria-expanded="false"
           aria-controls="section-tabs" aria-label="Sections">
@@ -27,38 +27,33 @@
   </button>
   <nav class="tabs" id="section-tabs" role="tablist" aria-label="Sections">
     <button class="tab" role="tab" id="t-install" aria-controls="install" aria-selected="false" tabindex="-1">Installing</button>
-    <button class="tab" role="tab" id="t-guide" aria-controls="guide" aria-selected="false" tabindex="-1">Guide</button>
-    <button class="tab" role="tab" id="t-buttons" aria-controls="buttons" aria-selected="false" tabindex="-1">Buttons</button>
-    <button class="tab" role="tab" id="t-questions" aria-controls="questions" aria-selected="false" tabindex="-1">Questions</button>
-    <button class="tab" role="tab" id="t-credits" aria-controls="credits" aria-selected="false" tabindex="-1">Credits</button>
-    <button class="tab" role="tab" id="t-disclosure" aria-controls="disclosure" aria-selected="false" tabindex="-1">AI</button>
-    <a class="tab" href="https://studio.slot-cfw.fyi">Studio</a>
+    <button class="tab" role="tab" id="t-features" aria-controls="features" aria-selected="false" tabindex="-1"><span class="tab-plus">+</span>Features</button>
+    <button class="tab" role="tab" id="t-systems" aria-controls="systems" aria-selected="false" tabindex="-1">Systems</button>
+    <button class="tab" role="tab" id="t-about" aria-controls="about" aria-selected="false" tabindex="-1">About</button>
+    <button class="tab" role="tab" id="t-studio" aria-controls="studio" aria-selected="false" tabindex="-1">Studio<span class="tab-plus after">+</span></button>
   </nav>
-  <a class="mast-gh" href="https://github.com/BrandonKowalski/slot" aria-label="slot on GitHub">
+<a class="mast-gh" href="https://github.com/nelynes/slotPlus" aria-label="slotPlus on GitHub">
     <svg viewBox="0 0 16 16" width="28" height="28" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
   </a>
 </header>
 
 <main>
 
-<section class="panel hero" id="hero" aria-label="slot.">
+<section class="panel hero" id="hero" aria-label="slot+">
   <div class="hero-copy">
     <div class="wordmark-row">
-      <h1 class="wordmark">slot.</h1>
-      <button class="say" type="button" aria-label="Hear how slot is pronounced" title="Pronunciation">
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path class="say-body" d="M3 9.5h4.2L12.5 5v14l-5.3-4.5H3z"/>
-          <path class="say-wave say-wave-1" d="M15.5 9.2a4 4 0 0 1 0 5.6"/>
-          <path class="say-wave say-wave-2" d="M18.3 6.4a8 8 0 0 1 0 11.2"/>
-        </svg>
-      </button>
-      <audio id="say-slot" src="media/slot.mp3" preload="none"></audio>
+      <h1 class="wordmark">slot.<span class="plus" aria-hidden="true">+</span><span class="sr-only">Plus</span></h1>
     </div>
-    <p class="tagline">A bespoke, Game Boy-centric frontend for the Anbernic RG SP.</p>
+    <p class="tagline">Slot's bespoke, Game Boy-centric frontend for the Anbernic RG SP, with more handhelds on the shelf and a TV on the end of a cable.</p>
     <div class="actions">
-      <a class="btn" href="https://github.com/BrandonKowalski/slot/releases/latest">Download</a>
-      <a class="btn ghost" href="https://studio.slot-cfw.fyi" target="_blank">Cart Studio</a>
+      <a class="btn" href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-plus.zip">Download Plus</a>
+      <a class="btn ultra" href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-plusultra.zip">Download Ultra</a>
     </div>
+    <ul class="editions" aria-label="The two versions">
+      <li class="edition plus-ed"><span class="ed-name">Plus</span><span class="ed-sys">WonderSwan, WonderSwan Color, Atari Lynx</span></li>
+      <li class="edition ultra-ed"><span class="ed-name">Ultra</span><span class="ed-sys">All of Plus, and Game Gear, NeoGeo Pocket, TurboGrafx-16</span></li>
+    </ul>
+    <p class="sub">Both keep everything Slot does for Game Boy, Game Boy Color and Game Boy Advance. <a href="https://github.com/nelynes/slotPlus/releases/latest">All releases</a></p>
   </div>
 
   <div class="hero-device">
@@ -94,13 +89,43 @@
 <section class="panel install" id="install" role="tabpanel" aria-labelledby="t-install" hidden>
   <div class="wrap">
     <h2>Installing</h2>
-    <nav class="subtabs" role="tablist" aria-label="Card setup">
-      <button class="subtab" role="tab" id="t-install-single" aria-controls="install-single" aria-selected="true">Single SD Card</button>
+    <nav class="subtabs" role="tablist" aria-label="Installing">
+      <button class="subtab" role="tab" id="t-install-which" aria-controls="install-which" aria-selected="true">Which Version?</button>
+      <button class="subtab" role="tab" id="t-install-single" aria-controls="install-single" aria-selected="false" tabindex="-1">Single SD Card</button>
       <button class="subtab" role="tab" id="t-install-dual" aria-controls="install-dual" aria-selected="false" tabindex="-1">Dual SD Cards</button>
+      <button class="subtab" role="tab" id="t-install-from-slot" aria-controls="install-from-slot" aria-selected="false" tabindex="-1">Coming from slot</button>
       <button class="subtab" role="tab" id="t-install-update" aria-controls="install-update" aria-selected="false" tabindex="-1">Updating</button>
     </nav>
 
-    <div class="subpanel" id="install-single" role="tabpanel" aria-labelledby="t-install-single">
+    <div class="subpanel" id="install-which" role="tabpanel" aria-labelledby="t-install-which">
+      <p class="lede">Every release comes in two versions. Both are built from the same code, so pick by the systems you want on your shelf.</p>
+      <div class="ed-cards">
+        <div class="ed-card plus-ed">
+          <h3><span class="ed-tab">Plus<span class="plus" aria-hidden="true">+</span></span> slotPlus</h3>
+          <p class="ed-for">For the 3:2 fan</p>
+          <ul>
+            <li>Game Boy Advance, Game Boy Color and Game Boy</li>
+            <li>WonderSwan and WonderSwan Color</li>
+            <li>Atari Lynx</li>
+          </ul>
+          <a class="btn" href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-plus.zip">Download <code>slot-plus.zip</code></a>
+        </div>
+        <div class="ed-card ultra-ed">
+          <h3><span class="ed-tab ultra-tab">Ultra</span> slotPlusUltra</h3>
+          <p class="ed-for">For the ultimate handheld</p>
+          <ul>
+            <li>Everything in slotPlus</li>
+            <li>Sega Game Gear</li>
+            <li>NeoGeo Pocket and NeoGeo Pocket Color</li>
+            <li>TurboGrafx-16 HuCards</li>
+          </ul>
+          <a class="btn ultra" href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-plusultra.zip">Download <code>slot-plusultra.zip</code></a>
+        </div>
+      </div>
+      <p class="install-note">Not sure? Start with Plus. Moving to Ultra later is just a matter of swapping one folder, and your games, saves and settings stay put. Moving back works the same way.</p>
+    </div>
+
+    <div class="subpanel" id="install-single" role="tabpanel" aria-labelledby="t-install-single" hidden>
       <ol class="install-steps">
         <li>
           <h3>Flash BaseOS to an SD Card</h3>
@@ -116,24 +141,27 @@
         </li>
         <li>
           <h3>Download the latest release</h3>
-          <p>Go fetch the <a href="https://github.com/BrandonKowalski/slot/releases/latest">latest slot release</a> from GitHub.</p>
+          <p>Fetch <a href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-plus.zip"><code>slot-plus.zip</code></a> or <a href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-plusultra.zip"><code>slot-plusultra.zip</code></a> from the <a href="https://github.com/nelynes/slotPlus/releases/latest">latest release</a>.</p>
         </li>
         <li>
           <h3>Copy it onto your SD Card</h3>
-          <p>Eject the SD card from <code>SD1</code> and connect it back to your computer. Unzip the release zip you downloaded and copy the contents to the root of the SD card.</p>
+          <p>Eject the SD card from <code>SD1</code> and connect it back to your computer. Unzip the release and copy the contents to the root of the SD card.</p>
         </li>
         <li>
           <h3>Add your games</h3>
-          <p>Drop your legally obtained ROM files into their corresponding platform's folder in <code>Games/</code>. You may optionally place labels into the matching platform folder found in
-             <code>Labels/</code>.</p>
+          <p>Drop your legally obtained ROM files into their system's folder in <code>Games/</code>. The <a href="#systems">Systems</a> tab lists every folder and file type. You may optionally place labels into the matching folder in <code>Labels/</code>.</p>
           <aside class="admonition" role="note">
             <p class="admonition-title">ROMs must be unzipped!</p>
-            <p>slot does not read <code>.zip</code> or <code>.7z</code> files.</p>
+            <p>slotPlus does not read <code>.zip</code> or <code>.7z</code> files.</p>
+          </aside>
+          <aside class="admonition" role="note">
+            <p class="admonition-title">Atari Lynx needs its boot ROM</p>
+            <p>Put your own copy of <code>lynxboot.img</code> in <code>BIOS/</code>. It is not included. No other system needs a BIOS.</p>
           </aside>
         </li>
         <li>
           <h3>Re-insert the card into <code>SD1</code> and boot!</h3>
-          <p>I hope you enjoy using slot!</p>
+          <p>Each system's folders under <code>Games</code>, <code>Labels</code>, <code>Saves</code>, <code>States</code> and <code>Bezels</code> are created on first boot, if they aren't there already.</p>
         </li>
       </ol>
     </div>
@@ -149,48 +177,66 @@
         </li>
         <li>
           <h3>Download the latest release</h3>
-          <p>Go fetch the <a href="https://github.com/BrandonKowalski/slot/releases/latest">latest slot release</a> from GitHub.</p>
+          <p>Fetch <a href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-plus.zip"><code>slot-plus.zip</code></a> or <a href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-plusultra.zip"><code>slot-plusultra.zip</code></a> from the <a href="https://github.com/nelynes/slotPlus/releases/latest">latest release</a>.</p>
         </li>
         <li>
           <h3>Copy it onto SD2</h3>
           <p>Prepare your second SD card by formatting it to <code>FAT32</code> or <code>exFAT</code> with a <code>Master Boot Record (MBR)</code> partition scheme.</p>
-          <p>Once formatted, unzip the release zip you downloaded and copy the contents to the second SD card.</p>
+          <p>Once formatted, unzip the release and copy the contents to the second SD card.</p>
         </li>
         <li>
           <h3>Add your games</h3>
-          <p>Drop your legally obtained ROM files into their corresponding platform's folder in <code>Games/</code>. You may optionally place labels into the matching platform folder found in
-             <code>Labels/</code>.</p>
+          <p>Drop your legally obtained ROM files into their system's folder in <code>Games/</code>. The <a href="#systems">Systems</a> tab lists every folder and file type. You may optionally place labels into the matching folder in <code>Labels/</code>.</p>
           <aside class="admonition" role="note">
             <p class="admonition-title">ROMs must be unzipped!</p>
-            <p>slot does not read <code>.zip</code> or <code>.7z</code> files.</p>
+            <p>slotPlus does not read <code>.zip</code> or <code>.7z</code> files.</p>
+          </aside>
+          <aside class="admonition" role="note">
+            <p class="admonition-title">Atari Lynx needs its boot ROM</p>
+            <p>Put your own copy of <code>lynxboot.img</code> in <code>BIOS/</code>. It is not included. No other system needs a BIOS.</p>
           </aside>
         </li>
         <li>
           <h3>Put the second card into <code>SD2</code> and boot!</h3>
-          <p>I hope you enjoy using slot!</p>
+          <p>Each system's folders are created on first boot, if they aren't there already.</p>
         </li>
       </ol>
     </div>
 
-    <div class="subpanel" id="install-update" role="tabpanel" aria-labelledby="t-install-update" hidden>
-      <aside class="admonition" role="note">
-        <p class="admonition-title">Updating from a version before 1.4.0?</p>
-        <p>Older versions kept settings in <code>System/</code>. They now live in <code>Config/</code></p>
-        <p>For this update only, copy the new <code>System/</code> over the old one instead of deleting it. slot will move your settings into a new <code>Config/</code> folder, so future updates can delete <code>System/</code> as normal.</p>
-        <p>Your games, saves and save states aren't affected.</p>
-        <p>Sorry for the hassle! slot started as a throwaway project and I never expected it to need an update procedure.</p>
-      </aside>
-
+    <div class="subpanel" id="install-from-slot" role="tabpanel" aria-labelledby="t-install-from-slot" hidden>
+      <p class="lede">Already playing on slot? slotPlus drops in over it. Everything you have stays: games, saves, save states, labels, wallpapers, favorites and settings. You can go back to slot the same way.</p>
       <ol class="install-steps">
         <li>
-          <h3>Download the latest release</h3>
-          <p>Go fetch the <a href="https://github.com/BrandonKowalski/slot/releases/latest">latest slot release</a> from GitHub and unzip it.</p>
+          <h3>Download Plus or Ultra</h3>
+          <p>Pick a version on the <a href="#install-which">Which Version?</a> tab and unzip it.</p>
         </li>
         <li>
           <h3>Replace the <code>System/</code> folder</h3>
           <p>Connect the card that holds slot to your computer. That is the card in <code>SD1</code> if you use a single card, or the card in <code>SD2</code> if you use two.</p>
-          <p>Delete the <code>System/</code> folder on the card and copy the new <code>System/</code> folder from the release in its place.
-             Your games, saves, save states, labels and wallpapers all live outside <code>System/</code> and are left alone.</p>
+          <p>Delete the <code>System/</code> folder on the card and copy the new <code>System/</code> folder from the zip in its place. Only the <code>System/</code> folder changes. Everything else on the card is yours and is left alone.</p>
+        </li>
+        <li>
+          <h3>Playing Lynx games? Add the boot ROM</h3>
+          <p>Put your own copy of <code>lynxboot.img</code> in <code>BIOS/</code>. No other system needs one.</p>
+        </li>
+        <li>
+          <h3>Put the card back and boot</h3>
+          <p>slotPlus creates the new systems' folders under <code>Games</code>, <code>Labels</code>, <code>Saves</code>, <code>States</code> and <code>Bezels</code>. Fill <code>Games/</code> and the new shelves appear.</p>
+        </li>
+      </ol>
+      <p class="install-note"><strong>Switching between Plus and Ultra</strong> works the same way: replace <code>System/</code> with the other version's. Going from Ultra back to Plus leaves the Game Gear, NeoGeo Pocket and TurboGrafx-16 games and saves on the card, just without their shelves.</p>
+    </div>
+
+    <div class="subpanel" id="install-update" role="tabpanel" aria-labelledby="t-install-update" hidden>
+      <ol class="install-steps">
+        <li>
+          <h3>Download the latest release</h3>
+          <p>Fetch the same version you're running, Plus or Ultra, from the <a href="https://github.com/nelynes/slotPlus/releases/latest">latest release</a> and unzip it.</p>
+        </li>
+        <li>
+          <h3>Replace the <code>System/</code> folder</h3>
+          <p>Connect the card that holds slotPlus to your computer, delete its <code>System/</code> folder and copy the new one in its place.
+             Your games, saves, save states, labels, bezels and wallpapers all live outside <code>System/</code> and are left alone.</p>
         </li>
         <li>
           <h3>Put the card back and boot!</h3>
@@ -200,8 +246,8 @@
   </div>
 </section>
 
-<section class="panel guide" id="guide" role="tabpanel" aria-labelledby="t-guide" hidden>
-  <h2 class="sr-only">User guide</h2>
+<section class="panel guide" id="features" role="tabpanel" aria-labelledby="t-features" hidden>
+  <h2 class="sr-only">What slotPlus adds</h2>
   <div class="guide-stage">
       <div class="device pose-flat">
         <div class="dv-lid">
@@ -228,481 +274,296 @@
           <span class="dv-ao" aria-hidden="true"></span>
         </div>
       </div>
+      <svg class="tv-cable" aria-hidden="true" focusable="false"><path class="tv-cable-line" d=""/></svg>
+      <div class="tv" aria-hidden="true">
+        <div class="tv-panel">
+          <div class="tv-glass">
+            <img class="tv-still" src="media/main.webp" alt="" width="720" height="480">
+            <canvas class="tv-picture" width="720" height="480"></canvas>
+          </div>
+          <span class="tv-led"></span>
+        </div>
+        <span class="tv-neck"></span>
+        <span class="tv-foot"></span>
+      </div>
   </div>
   <div class="guide-body">
+  <p class="guide-intro">What slotPlus adds to slot. For everything else, slot's own guide has you covered.</p>
   <ol class="guide-steps">
-      <li class="step" id="browse" data-clip="carousel.mp4">
-        <h3>Browse the Carousel</h3>
-        <p><kbd>Left</kbd> and <kbd>Right</kbd> to flip through games on the shelf.<br><kbd>L1</kbd> and <kbd>R1</kbd> to switch platforms.</p>
+      <li class="step" id="shelves" data-clip="main.mp4">
+        <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+        <h3>More Shelves</h3>
+        <p><kbd>L1</kbd> and <kbd>R1</kbd> switch shelves, just like slot.<br>Plus adds WonderSwan and Atari Lynx.<br>Ultra adds Game Gear, NeoGeo Pocket and TurboGrafx-16.</p>
       </li>
-      <li class="step" id="favorites" data-still="carousel.webp">
-        <h3>Favorites</h3>
-        <p>Press <kbd>Y</kbd> to star the cart you're on.<br>Pressing <kbd>Y</kbd> again takes the star off.</p>
+      <li class="step" id="carts" data-still="carts.webp">
+        <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+        <h3>A Cart for Every System</h3>
+        <p>Each system gets its own cart, drawn in slot's look.<br>WonderSwan games come in black, WonderSwan Color games in frosted clear.<br>Give any game its own shell in <code>Config/cart_shell.txt</code>.</p>
       </li>
-      <li class="step" id="core-picker" data-clip="core-picker.mp4">
-        <h3>Pick an Emulator</h3>
-        <p>Press <kbd>START</kbd> to open a cart.<br><kbd>Left</kbd> and <kbd>Right</kbd> swaps the core "chip".<br><kbd>A</kbd> saves your choice.</p>
+      <li class="step" id="hucard" data-clip="hucard.mp4">
+        <p class="badges"><span class="badge ultra">Ultra</span></p>
+        <h3>HuCards Go In Contacts First</h3>
+        <p>A HuCard turns end over end before it slides into the slot.<br>It turns back upright when you eject it.</p>
       </li>
-      <li class="step" id="insert" data-clip="insert.mp4">
-        <h3>Insert and Play</h3>
-        <p>Tapping <kbd>A</kbd> loads the last save state.<br>Holding <kbd>A</kbd> starts the game fresh.</p>
+      <li class="step" id="turned" data-clip="turned.mp4">
+        <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+        <h3>Games Made to Be Held Sideways</h3>
+        <p>Vertical WonderSwan games and sideways Lynx games are drawn turned, for playing with the handheld on its side.<br><kbd>SELECT</kbd> stands the picture upright instead.</p>
       </li>
-      <li class="step" id="eject" data-clip="eject.mp4">
-        <h3>Ejecting a Game</h3>
-        <p>Hold <kbd>MENU</kbd> to eject the cart.<br>On exit, slot creates a save state.</p>
+      <li class="step" id="stretch" data-clip="stretch.mp4">
+        <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+        <h3>Stretch Every System</h3>
+        <p><kbd>L1</kbd> stretches Game Gear, NeoGeo Pocket and TurboGrafx-16 games.<br><kbd>R1</kbd> puts them back.<br>WonderSwan and Lynx games stretch with a line in <code>Config/video_mode.txt</code>.</p>
       </li>
-      <li class="step" id="save-states" data-clip="states.mp4">
-        <h3>Save States</h3>
-        <p><kbd>SELECT</kbd> + <kbd>R1</kbd> creates a save state.<br><kbd>SELECT</kbd> + <kbd>L1</kbd> loads the most recent.</p>
+      <li class="step" id="screen" data-clip="screen.mp4">
+        <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+        <h3>Shaders and Bezels for Each System</h3>
+        <p>Each system has its own page under Screen, with its own Shader and Bezel.<br><kbd>SELECT</kbd> + <kbd>B</kbd> / <kbd>A</kbd> steps through that system's shaders.<br>Ultra bundles bezels for the Game Gear, NeoGeo Pocket and TurboGrafx-16.</p>
       </li>
-      <li class="step" id="switcher" data-clip="switcher.mp4">
-        <h3>Save State Switcher</h3>
-        <p>Double tap <kbd>MENU</kbd> to view your save states.<br><kbd>A</kbd> loads the one currently selected.<br><kbd>B</kbd> goes back to the game.</p>
+      <li class="step" id="transparency" data-clip="transparency.mp4">
+        <p class="badges"><span class="badge extras">Every version</span></p>
+        <h3>Pixel Transparency</h3>
+        <p>A new Transparent shader for Game Boy and Game Boy Color.<br>Light pixels let a warm, grainy backing show through, and dark pixels cast soft shadows onto it.</p>
       </li>
-      <li class="step" id="fast-forward" data-clip="rewind.mp4">
-        <h3>Fast-Forward and Rewind</h3>
-        <p>Hold <kbd>R2</kbd> to fast-forward.<br>Double tap <kbd>R2</kbd> to lock FF on.<br>Hold <kbd>L2</kbd> to rewind.</p>
-      </li>
-      <li class="step" id="expand" data-clip="gbc-stretch.mp4">
-        <h3>Commit Aspect Ratio Crimes</h3>
-        <p>Just like the OG, <kbd>L1</kbd> stretches GB and GBC games.<br><kbd>R1</kbd> puts them back to their original size.</p>
-      </li>
-      <li class="step" id="shaders" data-clip="shaders.mp4">
-        <h3>Screen Shaders</h3>
-        <p><kbd>SELECT</kbd> + <kbd>B</kbd> / <kbd>A</kbd> changes the active shader.<br><kbd>SELECT</kbd> + <kbd>Y</kbd> toggles color correction.</p>
-      </li>
-      <li class="step" id="palettes" data-clip="palettes.mp4">
-        <h3>Game Boy Palettes</h3>
-        <p>Turn on GB Palettes in the Screen settings.<br><kbd>SELECT</kbd> + <kbd>L2</kbd> / <kbd>R2</kbd> steps through them.</p>
-      </li>
-      <li class="step" id="link" data-clip="link.mp4" data-pair="link-join.mp4">
-        <h3>Link Up</h3>
-        <p><kbd>SELECT</kbd> + <kbd>MENU</kbd> opens the link screen.<br>Host on one SP, Join on the other.<br>The link is hosted over an Ad Hoc network.</p>
-      </li>
-      <li class="step" id="settings" data-clip="settings.mp4">
-        <h3>Settings</h3>
-        <p>Tap <kbd>MENU</kbd> to open settings.</p>
-      </li>
-      <li class="step" id="brightness" data-clip="brightness.mp4">
-        <h3>Brightness and Blue Light</h3>
-        <p><kbd>SELECT</kbd> + <kbd>Up</kbd> / <kbd>Down</kbd> adjusts brightness.<br><kbd>SELECT</kbd> + <kbd>Left</kbd> / <kbd>Right</kbd> adjusts color temperature.<br>You can change both on the carousel or in-game.</p>
-      </li>
-      <li class="step" id="lid-detection" data-still="carousel.webp" data-lid="shut">
-        <h3>Lid Detection</h3>
-        <p>Closing the lid writes a save state and turns off the display. Open it again and you're back in the game.</p><br>
-        <p>Leave it shut for three minutes and slot powers off. It will resume with that save state on the next boot.</p>
+      <li class="step" id="hdmi" data-clip="main.mp4" data-tv>
+        <p class="badges"><span class="badge extras">Every version</span></p>
+        <h3>HDMI Support</h3>
+        <p>Plug a TV into the mini-HDMI port and the shelf and games move to it, sound and all.<br>Pull the cable mid-game and slotPlus saves, moves back to the handheld and carries on.</p>
       </li>
   </ol>
   <div class="stepper">
     <button class="step-nav" type="button" id="step-prev" aria-label="Previous step">&#8592;</button>
-    <p class="step-count" aria-live="polite"><span id="step-at">1</span> of <span id="step-of">6</span></p>
+    <p class="step-count" aria-live="polite"><span id="step-at">1</span> of <span id="step-of">8</span></p>
     <button class="step-nav" type="button" id="step-next" aria-label="Next step">&#8594;</button>
   </div>
+  <p class="guide-more"><a class="btn ghost" href="https://slot-cfw.fyi/#guide">slot's guide</a> <span>Carousel, save states, rewind, link cable and the rest.</span></p>
   </div>
 </section>
 
-<section class="panel reference" id="buttons" role="tabpanel" aria-labelledby="t-buttons" hidden>
+<section class="panel reference systems" id="systems" role="tabpanel" aria-labelledby="t-systems" hidden>
   <div class="wrap">
-    <h2>Button Reference</h2>
-    <nav class="subtabs" role="tablist" aria-label="Button reference">
-      <button class="subtab" role="tab" id="t-controls" aria-controls="controls" aria-selected="true">Everywhere</button>
-      <button class="subtab" role="tab" id="t-controls-carousel" aria-controls="controls-carousel" aria-selected="false" tabindex="-1">Carousel</button>
-      <button class="subtab" role="tab" id="t-controls-in-game" aria-controls="controls-in-game" aria-selected="false" tabindex="-1">In Game</button>
-      <button class="subtab" role="tab" id="t-controls-switcher" aria-controls="controls-switcher" aria-selected="false" tabindex="-1">Save State Switcher</button>
+    <h2>Systems</h2>
+    <nav class="subtabs" role="tablist" aria-label="Systems">
+      <button class="subtab" role="tab" id="t-sys-shared" aria-controls="sys-shared" aria-selected="true">Every System</button>
+      <button class="subtab" role="tab" id="t-sys-ws" aria-controls="sys-ws" aria-selected="false" tabindex="-1">WonderSwan</button>
+      <button class="subtab" role="tab" id="t-sys-lynx" aria-controls="sys-lynx" aria-selected="false" tabindex="-1">Atari Lynx</button>
+      <button class="subtab" role="tab" id="t-sys-gg" aria-controls="sys-gg" aria-selected="false" tabindex="-1">Game Gear</button>
+      <button class="subtab" role="tab" id="t-sys-ngp" aria-controls="sys-ngp" aria-selected="false" tabindex="-1">NeoGeo Pocket</button>
+      <button class="subtab" role="tab" id="t-sys-tg16" aria-controls="sys-tg16" aria-selected="false" tabindex="-1">TurboGrafx-16</button>
     </nav>
 
-    <div class="subpanel" id="controls" role="tabpanel" aria-labelledby="t-controls">
+    <div class="subpanel" id="sys-shared" role="tabpanel" aria-labelledby="t-sys-shared">
+      <p class="lede">What every added system has in common. The Game Boy systems work exactly as they do in <a href="https://slot-cfw.fyi/#buttons">slot</a>.</p>
       <dl class="keys">
-        <div class="key">
-          <dt><kbd>SELECT</kbd> + <kbd>Up</kbd> / <kbd>Down</kbd></dt>
-          <dd>Adjust brightness</dd>
-        </div>
-        <div class="key">
-          <dt><kbd>SELECT</kbd> + <kbd>Left</kbd> / <kbd>Right</kbd></dt>
-          <dd>Adjust blue light</dd>
-        </div>
-        <div class="key">
-          <dt><kbd>MENU</kbd> + <kbd>Up</kbd> / <kbd>Down</kbd></dt>
-          <dd>Adjust brightness, RG34XX only</dd>
-        </div>
-        <div class="key">
-          <dt><kbd>MENU</kbd> + <kbd>Left</kbd> / <kbd>Right</kbd></dt>
-          <dd>Adjust blue light, RG34XX only</dd>
-        </div>
-        <div class="key">
-          <dt><kbd>VOL+</kbd> / <kbd>VOL&minus;</kbd></dt>
-          <dd>Change the volume</dd>
-        </div>
-        <div class="key">
-          <dt>
-            <p><kbd>VOL+</kbd> + <kbd>VOL&minus;</kbd></p>
-            <p><kbd>SELECT</kbd> + <kbd>VOL+</kbd> or <kbd>VOL&minus;</kbd></p>
-          </dt>
-          <dd>Toggle mute</dd>
-        </div>
+        <div class="key"><dt>Shelf</dt><dd>Each system gets its own shelf. Its folders under <code>Games</code>, <code>Labels</code>, <code>Saves</code>, <code>States</code> and <code>Bezels</code> are created on first boot.</dd></div>
+        <div class="key"><dt>Label art</dt><dd>Optional PNGs in <code>Labels/&lt;folder&gt;/&lt;game name&gt;.png</code>, named after the game's file without its extension. Art of another size is scaled to cover the label and cropped, except on HuCards, which keep the art's own shape.</dd></div>
+        <div class="key"><dt>Screen menu</dt><dd>Each system has its own page under Screen, with its own Shader and Bezel. <kbd>SELECT</kbd> + <kbd>B</kbd> / <kbd>A</kbd> in a game steps through that system's shaders.</dd></div>
+        <div class="key"><dt>Your own bezels</dt><dd>PNGs in <code>Bezels/&lt;folder&gt;/</code>, 720x480 with the screen area transparent. On 4:3 handhelds such as the RG 35XXSP, the SP frame is offered too. A bezel shows at actual size, not when the picture is stretched.</dd></div>
+        <div class="key"><dt>Stretch</dt><dd>Game Gear, NeoGeo Pocket and TurboGrafx-16: <kbd>L1</kbd> stretches, <kbd>R1</kbd> gives back actual size. Lynx and WonderSwan use L1 and R1 as game buttons, so a game is set to stretch in <code>Config/video_mode.txt</code>, as <code>Game Name (USA) = stretch</code>. Each game remembers its choice.</dd></div>
+        <div class="key"><dt>Cart shells</dt><dd>Each system's carts have a default shell. <code>Config/cart_shell.txt</code> gives a single game its own.</dd></div>
+        <div class="key"><dt>States and resume</dt><dd>Save states and the resume state work as they do for every other system.</dd></div>
       </dl>
     </div>
 
-    <div class="subpanel" id="controls-carousel" role="tabpanel" aria-labelledby="t-controls-carousel" hidden>
+    <div class="subpanel" id="sys-ws" role="tabpanel" aria-labelledby="t-sys-ws" hidden>
+      <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
       <dl class="keys">
-        <div class="key">
-          <dt><kbd>Left</kbd> / <kbd>Right</kbd></dt>
-          <dd>Move along the shelf</dd>
-        </div>
-        <div class="key">
-          <dt><kbd>Up</kbd> / <kbd>Down</kbd></dt>
-          <dd>Skip to next letter</dd>
-        </div>
-        <div class="key">
-          <dt><kbd>L1</kbd> / <kbd>R1</kbd></dt>
-          <dd>Switch between platforms</dd>
-        </div>
-        <div class="key">
-          <dt>Tap <kbd>A</kbd></dt>
-          <dd>Resume the last save state</dd>
-        </div>
-        <div class="key">
-          <dt>Hold <kbd>A</kbd></dt>
-          <dd>Start the game fresh</dd>
-        </div>
-        <div class="key">
-          <dt><kbd>Y</kbd></dt>
-          <dd>Favorite / Unfavorite selected game</dd>
-        </div>
-        <div class="key">
-          <dt><kbd>MENU</kbd></dt>
-          <dd>Open the settings menu</dd>
-        </div>
-        <div class="key">
-          <dt><kbd>START</kbd></dt>
-          <dd>Choose which emulator runs the cart (GBA only)</dd>
-        </div>
+        <div class="key"><dt>Games</dt><dd><code>.ws</code> and <code>.wsc</code> in <code>Games/WS/</code>. Both share one shelf.</dd></div>
+        <div class="key"><dt>BIOS</dt><dd>Not needed</dd></div>
+        <div class="key"><dt>Core</dt><dd>Beetle WonderSwan (Cygne)</dd></div>
+        <div class="key"><dt>Label art</dt><dd><code>Labels/WS/</code>, about 324x132 px</dd></div>
+        <div class="key"><dt>Picture</dt><dd>Horizontal games at 3x, or stretched through <code>Config/video_mode.txt</code>. Vertical games are turned (below).</dd></div>
+        <div class="key"><dt>Shaders</dt><dd>Off, LCD3x, Grid, Simpletex</dd></div>
+        <div class="key"><dt>Bezel</dt><dd>Your own in <code>Bezels/WS/</code></dd></div>
+        <div class="key"><dt>Cart</dt><dd>The wide WonderSwan cart: black for a WonderSwan game, frosted smoke-clear with the board showing through for a WonderSwan Color game</dd></div>
+        <div class="key"><dt>Saves</dt><dd>Battery saves in <code>Saves/WS/</code></dd></div>
+      </dl>
+      <h3>Controls, horizontal games</h3>
+      <p class="note">The WonderSwan has two sets of four direction buttons: the X pad on the left and the Y pad on the right.</p>
+      <dl class="keys">
+        <div class="key"><dt><kbd>D-pad</kbd></dt><dd>X pad</dd></div>
+        <div class="key"><dt><kbd>A</kbd> / <kbd>B</kbd></dt><dd>A / B</dd></div>
+        <div class="key"><dt><kbd>START</kbd></dt><dd>Start</dd></div>
+        <div class="key"><dt>Hold <kbd>L1</kbd> + <kbd>D-pad</kbd></dt><dd>Y pad</dd></div>
+        <div class="key"><dt>Hold <kbd>R1</kbd> + <kbd>X</kbd> <kbd>A</kbd> <kbd>B</kbd> <kbd>Y</kbd></dt><dd>Y pad: X up, A right, B down, Y left</dd></div>
+      </dl>
+      <h3>Vertical games</h3>
+      <p class="note">Recognised from the ROM. Play them one of two ways: turn the handheld 90 degrees counter-clockwise and leave the picture sideways at full size, or press <kbd>SELECT</kbd> to stand it upright at 2x.</p>
+      <dl class="keys">
+        <div class="key"><dt><kbd>D-pad</kbd></dt><dd>Y pad</dd></div>
+        <div class="key"><dt><kbd>X</kbd> <kbd>A</kbd> <kbd>B</kbd> <kbd>Y</kbd></dt><dd>X pad</dd></div>
+        <div class="key"><dt><kbd>L1</kbd> / <kbd>R1</kbd></dt><dd>A / B</dd></div>
+        <div class="key"><dt><kbd>SELECT</kbd></dt><dd>Picture upright or sideways</dd></div>
       </dl>
     </div>
 
-    <div class="subpanel" id="controls-in-game" role="tabpanel" aria-labelledby="t-controls-in-game" hidden>
+    <div class="subpanel" id="sys-lynx" role="tabpanel" aria-labelledby="t-sys-lynx" hidden>
+      <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+      <aside class="admonition" role="note">
+        <p class="admonition-title">Lynx games need <code>lynxboot.img</code></p>
+        <p>The Lynx boot ROM is not included. Put your own copy in <code>BIOS/</code>.</p>
+      </aside>
       <dl class="keys">
-        <div class="key">
-          <dt>Hold <kbd>MENU</kbd></dt>
-          <dd>Save state, eject the cart, back to the carousel.</dd>
-        </div>
-        <div class="key">
-          <dt>Tap <kbd>MENU</kbd></dt>
-          <dd>Open the in-game menu</dd>
-        </div>
-        <div class="key">
-          <dt>Double tap <kbd>MENU</kbd></dt>
-          <dd>Open the save state switcher</dd>
-        </div>
-        <div class="key">
-          <dt><kbd>SELECT</kbd> + <kbd>MENU</kbd></dt>
-          <dd>Link with another device running <code>slot</code>.</dd>
-        </div>
-        <div class="key">
-          <dt><kbd>SELECT</kbd> + <kbd>R1</kbd></dt>
-          <dd>Save state</dd>
-        </div>
-        <div class="key">
-          <dt><kbd>SELECT</kbd> + <kbd>L1</kbd></dt>
-          <dd>Load the most recent save state.</dd>
-        </div>
-        <div class="key">
-          <dt><kbd>SELECT</kbd> + <kbd>B</kbd> / <kbd>A</kbd></dt>
-          <dd>Previous / next screen shader.</dd>
-        </div>
-        <div class="key">
-          <dt><kbd>SELECT</kbd> + <kbd>Y</kbd></dt>
-          <dd>Toggle color correction.</dd>
-        </div>
-        <div class="key">
-          <dt><kbd>SELECT</kbd> + <kbd>L2</kbd> / <kbd>R2</kbd></dt>
-          <dd>Previous / next Game Boy palette, when GB Palettes is on.</dd>
-        </div>
-        <div class="key">
-          <dt>Hold <kbd>L2</kbd></dt>
-          <dd>Rewind</dd>
-        </div>
-        <div class="key">
-          <dt>Hold <kbd>R2</kbd></dt>
-          <dd>Fast-forward</dd>
-        </div>
-        <div class="key">
-          <dt>Double tap <kbd>R2</kbd></dt>
-          <dd>Lock fast-forward on. Press again to unlock.</dd>
-        </div>
-        <div class="key">
-          <dt>Hold <kbd>X</kbd></dt>
-          <dd>Turbo <kbd>A</kbd></dd>
-        </div>
-        <div class="key">
-          <dt>Hold <kbd>Y</kbd></dt>
-          <dd>Turbo <kbd>B</kbd></dd>
-        </div>
-        <div class="key">
-          <dt><kbd>L1</kbd> / <kbd>R1</kbd></dt>
-          <dd>Stretch to fill the screen / original size.<br>Game Boy and Game Boy Color only.</dd>
-        </div>
+        <div class="key"><dt>Games</dt><dd><code>.lnx</code> and <code>.lyx</code> in <code>Games/Lynx/</code></dd></div>
+        <div class="key"><dt>Core</dt><dd>Beetle Lynx</dd></div>
+        <div class="key"><dt>Label art</dt><dd><code>Labels/Lynx/</code>, about 284x190 px</dd></div>
+        <div class="key"><dt>Picture</dt><dd>4x, or stretched through <code>Config/video_mode.txt</code>. Games made to be held sideways are drawn turned (below).</dd></div>
+        <div class="key"><dt>Shaders</dt><dd>Off, LCD3x, Grid, Dot</dd></div>
+        <div class="key"><dt>Bezel</dt><dd>Your own in <code>Bezels/Lynx/</code></dd></div>
+        <div class="key"><dt>Cart</dt><dd>The curved-lip card, with its gold contacts behind a clear strip at the foot</dd></div>
+        <div class="key"><dt>Saves</dt><dd>The core has no battery saves. Use save states and the resume state.</dd></div>
+      </dl>
+      <h3>Controls</h3>
+      <dl class="keys">
+        <div class="key"><dt><kbd>D-pad</kbd></dt><dd>D-pad</dd></div>
+        <div class="key"><dt><kbd>A</kbd> / <kbd>B</kbd></dt><dd>A / B</dd></div>
+        <div class="key"><dt><kbd>L1</kbd> / <kbd>R1</kbd></dt><dd>Option 1 / Option 2</dd></div>
+        <div class="key"><dt><kbd>START</kbd></dt><dd>Pause</dd></div>
+        <div class="key"><dt><kbd>SELECT</kbd></dt><dd>Sideways games: picture upright or turned</dd></div>
+        <div class="key"><dt>Hold <kbd>X</kbd> / <kbd>Y</kbd></dt><dd>Turbo A / turbo B</dd></div>
+      </dl>
+      <h3>Games that turn</h3>
+      <p class="note">Some Lynx games were made to be held on their side. Play them with the handheld turned 90 degrees counter-clockwise: the picture is drawn sideways at full size and the D-pad follows it. <kbd>SELECT</kbd> stands the picture upright instead. Beetle Lynx knows many of these games, and slotPlus also recognises Klax, Gauntlet III, Lexis and NFL Football by name.</p>
+      <p class="note">For one that isn't recognised, add a line to <code>Config/lynx_rotation.txt</code>:</p>
+      <pre><code>Game Name (USA) = 90</code></pre>
+      <p class="note">The values are <code>auto</code>, <code>0</code>, <code>90</code>, <code>270</code>, <code>180</code> and <code>manual</code>. If a game comes up upside down, swap 90 for 270. With <code>manual</code>, each <kbd>SELECT</kbd> turns the picture another quarter, so you can find the right value.</p>
+    </div>
+
+    <div class="subpanel" id="sys-gg" role="tabpanel" aria-labelledby="t-sys-gg" hidden>
+      <p class="badges"><span class="badge ultra">Ultra</span></p>
+      <dl class="keys">
+        <div class="key"><dt>Games</dt><dd><code>.gg</code> in <code>Games/GG/</code></dd></div>
+        <div class="key"><dt>BIOS</dt><dd>Not needed</dd></div>
+        <div class="key"><dt>Core</dt><dd>Gearsystem</dd></div>
+        <div class="key"><dt>Label art</dt><dd><code>Labels/GG/</code>, about 290x200 px</dd></div>
+        <div class="key"><dt>Picture</dt><dd>The 160x144 screen at 3x, or stretched</dd></div>
+        <div class="key"><dt>Shaders</dt><dd>Off, LCD3x, Grid, Simpletex</dd></div>
+        <div class="key"><dt>Bezel</dt><dd>A bundled Default, a black face with the Game Gear's green power light above the screen, or your own in <code>Bezels/GG/</code></dd></div>
+        <div class="key"><dt>Cart</dt><dd>The Game Gear pak: a raised hood with grip ridges over the label and the SEGA plaque at the foot. Black by default.</dd></div>
+        <div class="key"><dt>Saves</dt><dd>Battery saves in <code>Saves/GG/</code></dd></div>
+      </dl>
+      <h3>Controls</h3>
+      <dl class="keys">
+        <div class="key"><dt><kbd>D-pad</kbd></dt><dd>D-pad</dd></div>
+        <div class="key"><dt><kbd>B</kbd> / <kbd>A</kbd></dt><dd>Button 1 / Button 2</dd></div>
+        <div class="key"><dt><kbd>START</kbd></dt><dd>Start</dd></div>
+        <div class="key"><dt><kbd>L1</kbd> / <kbd>R1</kbd></dt><dd>Stretch / actual size</dd></div>
+        <div class="key"><dt>Hold <kbd>Y</kbd> / <kbd>X</kbd></dt><dd>Turbo 1 / turbo 2</dd></div>
+        <div class="key"><dt><kbd>SELECT</kbd></dt><dd>Nothing: the Game Gear has no Select</dd></div>
       </dl>
     </div>
 
-    <div class="subpanel" id="controls-switcher" role="tabpanel" aria-labelledby="t-controls-switcher" hidden>
+    <div class="subpanel" id="sys-ngp" role="tabpanel" aria-labelledby="t-sys-ngp" hidden>
+      <p class="badges"><span class="badge ultra">Ultra</span></p>
       <dl class="keys">
-        <div class="key">
-          <dt><kbd>Left</kbd> / <kbd>Right</kbd></dt>
-          <dd>Flick through the states</dd>
-        </div>
-        <div class="key">
-          <dt><kbd>A</kbd></dt>
-          <dd>Load the one on screen</dd>
-        </div>
-        <div class="key">
-          <dt><kbd>Y</kbd></dt>
-          <dd>Delete the one on screen</dd>
-        </div>
-        <div class="key">
-          <dt><kbd>X</kbd></dt>
-          <dd>Undo the last save or load, up to 30 seconds after</dd>
-        </div>
-        <div class="key">
-          <dt><kbd>B</kbd></dt>
-          <dd>Back to the game</dd>
-        </div>
+        <div class="key"><dt>Games</dt><dd><code>.ngp</code>, <code>.ngc</code> and <code>.ngpc</code> in <code>Games/NGP/</code>. Black-and-white and colour games share one shelf.</dd></div>
+        <div class="key"><dt>BIOS</dt><dd>Not needed: the core stands in for it</dd></div>
+        <div class="key"><dt>Core</dt><dd>Beetle NeoPop, in English where a game has both languages</dd></div>
+        <div class="key"><dt>Label art</dt><dd><code>Labels/NGP/</code>, about 246x133 px</dd></div>
+        <div class="key"><dt>Picture</dt><dd>The 160x152 screen at 3x, or stretched</dd></div>
+        <div class="key"><dt>Shaders</dt><dd>Off, LCD3x, Grid, Simpletex</dd></div>
+        <div class="key"><dt>Bezel</dt><dd>A bundled Default with the NeoGeo Pocket name and logo down the left side, or your own in <code>Bezels/NGP/</code></dd></div>
+        <div class="key"><dt>Cart</dt><dd>The NeoGeo Pocket pak: a ridged cap, the label in a recessed frame, and a lower band with SNK and NGP plaques and a down arrow. Dark grey by default.</dd></div>
+        <div class="key"><dt>Saves</dt><dd><code>Saves/NGP/&lt;game name&gt;.flash</code></dd></div>
+      </dl>
+      <aside class="admonition" role="note">
+        <p class="admonition-title">Saves are written when the game stops</p>
+        <p>Eject the cart, power off or restart from the menu as usual, and slotPlus stops the core first so the save is written. Switching off with the power switch mid-game can lose it.</p>
+      </aside>
+      <h3>Controls</h3>
+      <p class="note">The buttons follow the NeoGeo Pocket's layout, so its A is the left button and its B the right one.</p>
+      <dl class="keys">
+        <div class="key"><dt><kbd>D-pad</kbd></dt><dd>Joystick</dd></div>
+        <div class="key"><dt><kbd>B</kbd> / <kbd>A</kbd></dt><dd>A / B</dd></div>
+        <div class="key"><dt><kbd>START</kbd></dt><dd>Option</dd></div>
+        <div class="key"><dt><kbd>L1</kbd> / <kbd>R1</kbd></dt><dd>Stretch / actual size</dd></div>
+        <div class="key"><dt>Hold <kbd>Y</kbd> / <kbd>X</kbd></dt><dd>Turbo A / turbo B</dd></div>
+      </dl>
+    </div>
+
+    <div class="subpanel" id="sys-tg16" role="tabpanel" aria-labelledby="t-sys-tg16" hidden>
+      <p class="badges"><span class="badge ultra">Ultra</span></p>
+      <dl class="keys">
+        <div class="key"><dt>Games</dt><dd>HuCard games as <code>.pce</code> in <code>Games/TG16/</code>. CD and SuperGrafx games are not supported.</dd></div>
+        <div class="key"><dt>BIOS</dt><dd>Not needed: HuCards boot straight in</dd></div>
+        <div class="key"><dt>Core</dt><dd>Beetle PCE Fast, with the two-button pad</dd></div>
+        <div class="key"><dt>Label art</dt><dd><code>Labels/TG16/</code>, 191 px wide and up to 163 px tall. The art spans the card at its own shape and sits at the bottom, so a shorter label leaves plain card above it, as on real HuCards.</dd></div>
+        <div class="key"><dt>Picture</dt><dd>Most games draw 256x240, shown at 2x. Wider modes up to 352 stay at 2x; the 512-wide mode is drawn 1x across and 2x down.</dd></div>
+        <div class="key"><dt>Shaders</dt><dd>Off, LCD3x, Grid, Dot</dd></div>
+        <div class="key"><dt>Bezel</dt><dd>Four bundled: TG16 and PCE, each with a Wide version for games that draw 320 wide. Or your own in <code>Bezels/TG16/</code>, with the 512x480 window from x 104 clear (640x480 from x 40 for a wide one).</dd></div>
+        <div class="key"><dt>Cart</dt><dd>The HuCard. It turns end over end to go into the slot contacts first, and turns back when it comes out.</dd></div>
+        <div class="key"><dt>Saves</dt><dd>Backup memory in <code>Saves/TG16/</code></dd></div>
+      </dl>
+      <h3>Controls</h3>
+      <p class="note">The buttons follow the TurboExpress: II on the left, I on the right.</p>
+      <dl class="keys">
+        <div class="key"><dt><kbd>D-pad</kbd></dt><dd>D-pad</dd></div>
+        <div class="key"><dt><kbd>B</kbd> / <kbd>A</kbd></dt><dd>II / I</dd></div>
+        <div class="key"><dt><kbd>START</kbd></dt><dd>Run</dd></div>
+        <div class="key"><dt><kbd>SELECT</kbd></dt><dd>Select. Select + Run resets the game, as on the real console.</dd></div>
+        <div class="key"><dt><kbd>L1</kbd> / <kbd>R1</kbd></dt><dd>Stretch / actual size</dd></div>
+        <div class="key"><dt>Hold <kbd>Y</kbd> / <kbd>X</kbd></dt><dd>Turbo II / turbo I</dd></div>
       </dl>
     </div>
   </div>
 </section>
 
-<section class="panel faq" id="questions" role="tabpanel" aria-labelledby="t-questions" hidden>
+<section class="panel reference credits" id="about" role="tabpanel" aria-labelledby="t-about" hidden>
   <div class="wrap">
-    <h2>Anticipated Questions Answered</h2>
-    <nav class="subtabs" role="tablist" aria-label="Anticipated questions">
-      <button class="subtab" role="tab" id="t-faq" aria-controls="faq" aria-selected="true">The basics</button>
-      <button class="subtab" role="tab" id="t-faq-games" aria-controls="faq-games" aria-selected="false" tabindex="-1">Your games</button>
-      <button class="subtab" role="tab" id="t-faq-shelf" aria-controls="faq-shelf" aria-selected="false" tabindex="-1">Your shelf</button>
-      <button class="subtab" role="tab" id="t-faq-linking" aria-controls="faq-linking" aria-selected="false" tabindex="-1">Linking</button>
-      <button class="subtab" role="tab" id="t-faq-requests" aria-controls="faq-requests" aria-selected="false" tabindex="-1">Common Requests</button>
-    </nav>
-
-    <div class="subpanel" id="faq" role="tabpanel" aria-labelledby="t-faq">
-      <dl>
-        <div class="qa">
-          <dt>Which devices does slot run on?</dt>
-          <dd>
-            <table class="devices">
-              <thead><tr><th>Device</th><th>Supported</th><th>Since Version</th></tr></thead>
-              <tbody>
-                <tr><td>Anbernic RG&nbsp;SP</td><td class="yes">Yes</td><td>Always</td></tr>
-                <tr><td>Anbernic RG34XX</td><td>Yes</td><td>1.4.0</td></tr>
-                <tr><td>Anbernic RG34XXSP</td><td>Yes (Needs Left Stick as D-Pad Verification)</td><td>1.4.0</td></tr>
-                <tr><td>Anbernic RG35XXSP</td><td class="yes">Yes</td><td>1.5.0</td></tr>
-                <tr><td>Anbernic 35XX Plus</td><td class="yes">Yes</td><td>1.5.0</td></tr>
-                <tr><td>Anbernic RG28XX</td><td class="yes">Yes</td><td>1.6.0</td></tr>
-                <tr><td>Anbernic RG35XX-H</td><td class="yes">Yes</td><td>1.7.0</td></tr>
-              </tbody>
-            </table>
-            <p>If you have one of the untested devices, or have tried slot on a device not listed, please <a href="https://github.com/BrandonKowalski/slot/issues">open an issue on GitHub</a> and let me know how it went.</p>
-          </dd>
-        </div>
-        <div class="qa">
-          <dt>Will slot run anything other than GBA?</dt>
-          <dd>Yes. You can bring your GB and GBC carts to the party.</dd>
-        </div>
-      </dl>
-    </div>
-
-    <div class="subpanel" id="faq-games" role="tabpanel" aria-labelledby="t-faq-games" hidden>
-      <dl>
-        <div class="qa">
-          <dt>Where do games go?</dt>
-          <dd>Each platform has its own folder under <code>Games/</code>.</dd>
-        </div>
-        <div class="qa">
-          <dt>Where do the games come from?</dt>
-          <dd>Your own legally obtained backups.</dd>
-        </div>
-        <div class="qa">
-          <dt>Is there a BIOS boot animation on game start?</dt>
-          <dd>Yes! Drop the following files you legally obtained into <code>BIOS/</code>.
-            <ul>
-              <li>gba_bios.bin</li>
-              <li>gbc_bios.bin</li>
-              <li>gb_bios.bin</li>
-            </ul>
-          </dd>
-        </div>
-      </dl>
-    </div>
-
-    <div class="subpanel" id="faq-shelf" role="tabpanel" aria-labelledby="t-faq-shelf" hidden>
-      <dl>
-        <div class="qa">
-          <dt>How do I add cart labels?</dt>
-          <dd>Drop a <code>.png</code> into the <code>Labels/</code> folder for that platform, named
-              after the ROM. For example, <code>Labels/GBA/Metroid Fusion.png</code> matches
-              <code>Games/GBA/Metroid Fusion.gba</code>.</dd>
-        </div>
-        <div class="qa">
-          <dt>What size should a label be?</dt>
-          <dd>
-            <p>The image is scaled to fill the label and trimmed evenly from the edges, so match its shape.
-               Bigger is fine.</p>
-            <ul>
-              <li>GBA: 1.94:1, such as 1280&times;661</li>
-              <li>Game Boy and Game Boy Color: 1.13:1, such as 1024&times;901</li>
-            </ul>
-            <p>The <code>README.txt</code> in <code>Labels/</code> has the exact label boxes and the
-               <code>cart_shell.txt</code> format for shell colours.</p>
-          </dd>
-        </div>
-        <div class="qa">
-          <dt>Do I have to craft them by hand?</dt>
-          <dd>Nah! You can use the <a href="https://studio.slot-cfw.fyi">slot Cart Studio</a>.</dd>
-        </div>
-        <div class="qa">
-          <dt>Can I see the game's name on the shelf?</dt>
-          <dd>Turn on Game Titles in the General settings.</dd>
-        </div>
-        <div class="qa">
-          <dt>Can I use my own wallpaper?</dt>
-          <dd>
-            <p>Drop a <code>.png</code> into <code>Wallpapers/</code> and pick it under Wallpaper in the General settings.</p>
-            <p>Make it 720&times;480. Other sizes are scaled to fill the screen and trimmed evenly from the edges.
-               640&times;480 devices lose up to 40 pixels from each side, so keep anything important in the middle.</p>
-          </dd>
-        </div>
-        <div class="qa">
-          <dt>Can I make my own bezels?</dt>
-          <dd>
-            <p>For Game Boy and Game Boy Color, yes. Drop a 720&times;480 <code>.png</code> into <code>Bezels/GB/</code>
-               or <code>Bezels/GBC/</code> and pick it under Bezel in that system's Screen settings.</p>
-            <p>The bezel is drawn over the game, so leave the screen transparent. The game covers 480&times;432
-               starting 120 pixels from the left and 24 from the top.</p>
-          </dd>
-        </div>
-      </dl>
-    </div>
-
-    <div class="subpanel" id="faq-linking" role="tabpanel" aria-labelledby="t-faq-linking" hidden>
-      <dl>
-        <div class="qa">
-          <dt>Can I trade Pokémon with a friend?</dt>
-          <dd>
-            <p>Yes, with a second device running <code>slot</code>.</p>
-            <p>First, navigate to the game and press <kbd>START</kbd> to open the core selection menu. Pick <code>gpSP</code>.</p>
-            <p>While in game, press <span class="chord"><kbd>SELECT</kbd> + <kbd>MENU</kbd></span> and choose <code>LINK</code>.</p>
-            <p>One player needs to pick <code>HOST</code> while the other chooses <code>JOIN</code>.</p>
-          </dd>
-        </div>
-        <div class="qa">
-          <dt>Which games can link?</dt>
-          <dd><p>Pokémon Emerald, LeafGreen, and FireRed.</p><p>Additionally, both Advance Wars have worked for me.</p>
-          <p>A hacky implementation of link play using mGBA can be used to play Mario Kart Advance.</p></dd>
-        </div>
-      </dl>
-    </div>
-
-    <div class="subpanel" id="faq-requests" role="tabpanel" aria-labelledby="t-faq-requests" hidden>
-      <dl>
-        <div class="qa">
-          <dt>This is almost perfect but needs more systems. Will you add them?</dt>
-          <dd>No. I want to recreate the feeling I had playing my GBA SP as a child.</dd>
-        </div>
-        <div class="qa">
-          <dt>RetroAchievements and cheats would make this perfect. Will you add them?</dt>
-          <dd>No. These are two features I do not want to support. If they matter to you, a few of the forks have added them.</dd>
-        </div>
-        <div class="qa">
-          <dt>Does slot allow you to pair Bluetooth headphones?</dt>
-          <dd>No. Use the headphone jack.</dd>
-        </div>
-        <div class="qa">
-          <dt>Do you accept contributions?</dt>
-          <dd>
-              <p>I am not opposed to accepting pull requests. I just ask that you come discuss planned work in an issue on GitHub ahead of time.</p>
-              <p>slot is intentionally light on features. I am not looking to add the kitchen sink. If this form of collaboration doesn't appeal to you, several individuals have forked slot and gone off to make it their own.</p>
-          </dd>
-        </div>
-      </dl>
-    </div>
-  </div>
-</section>
-
-<section class="panel reference credits" id="credits" role="tabpanel" aria-labelledby="t-credits" hidden>
-  <div class="wrap">
-    <h2>Credits</h2>
+    <h2>About</h2>
+    <p class="lede">slotPlus is a fork of <a href="https://slot-cfw.fyi">slot</a> by <a href="https://github.com/BrandonKowalski">Brandon Kowalski</a>. Everything that makes slot slot is his; slotPlus adds systems and a few extras on top.</p>
 
     <h3>Design</h3>
     <dl class="keys">
-      <div class="key">
-        <dt>Skeuomorphic UI</dt>
-        <dd><a href="https://github.com/MarkusMaribu">Markus</a></dd>
-      </div>
+      <div class="key"><dt>Skeuomorphic UI</dt><dd><a href="https://github.com/MarkusMaribu">Markus</a>, whose look the new carts follow</dd></div>
+      <div class="key"><dt>TG16 and PCE bezels</dt><dd><a href="https://github.com/nelynes">nelynes</a></dd></div>
+      <div class="key"><dt>RG35XXSP bezel</dt><dd>"Perfect GBA SP" by <a href="https://github.com/mugwomp93/Knulli_Customization">mugwomp93</a>, from <a href="https://github.com/chrizzo-hb/knulli-bezels">knulli-bezels</a>, under CC BY-SA 4.0</dd></div>
     </dl>
 
-    <h3>Software</h3>
+    <h3>Emulation</h3>
     <dl class="keys">
-      <div class="key">
-        <dt>Emulation</dt>
-        <dd><a href="https://mgba.io">mGBA</a> and <a href="https://github.com/libretro/gpsp">gpSP</a></dd>
-      </div>
-      <div class="key">
-        <dt>Underlying OS</dt>
-        <dd><a href="https://github.com/pvaibhav/BaseOS">BaseOS</a> by <a href="https://github.com/pvaibhav">Prashant Vaibhav</a></dd>
-      </div>
+      <div class="key"><dt>Game Boy Advance</dt><dd><a href="https://mgba.io">mGBA</a> and <a href="https://github.com/libretro/gpsp">gpSP</a></dd></div>
+      <div class="key"><dt>Game Boy and Color</dt><dd><a href="https://mgba.io">mGBA</a></dd></div>
+      <div class="key"><dt>WonderSwan</dt><dd><a href="https://github.com/libretro/beetle-wswan-libretro">Beetle WonderSwan</a>, from Mednafen's Cygne</dd></div>
+      <div class="key"><dt>Atari Lynx</dt><dd><a href="https://github.com/libretro/beetle-lynx-libretro">Beetle Lynx</a>, from Mednafen</dd></div>
+      <div class="key"><dt>Game Gear</dt><dd><a href="https://github.com/drhelius/Gearsystem">Gearsystem</a> by Ignacio Sanchez</dd></div>
+      <div class="key"><dt>NeoGeo Pocket</dt><dd><a href="https://github.com/libretro/beetle-ngp-libretro">Beetle NeoPop</a>, from Mednafen</dd></div>
+      <div class="key"><dt>TurboGrafx-16</dt><dd><a href="https://github.com/libretro/beetle-pce-fast-libretro">Beetle PCE Fast</a>, from Mednafen</dd></div>
+      <div class="key"><dt>Underlying OS</dt><dd><a href="https://github.com/pvaibhav/BaseOS">BaseOS</a> by <a href="https://github.com/pvaibhav">Prashant Vaibhav</a></dd></div>
     </dl>
+    <p class="note">Every core's licence, the patches slotPlus makes and its source are in <code>System/licenses/</code> in each download.</p>
 
     <h3>Screen</h3>
     <dl class="keys">
-      <div class="key">
-        <dt>Panel mask</dt>
-        <dd>Derived from LCD3x, a public-domain shader by Gigaherz in the libretro shader collection</dd>
-      </div>
-      <div class="key">
-        <dt>Dot shader</dt>
-        <dd>A port of Dot by Themaister, from the libretro shader collection</dd>
-      </div>
-      <div class="key">
-        <dt>Simpletex shader</dt>
-        <dd>A port of simpletex_lcd by jdgleaver, from the libretro shader collection</dd>
-      </div>
-      <div class="key">
-        <dt>RG35XXSP bezel</dt>
-        <dd>"Perfect GBA SP" by <a href="https://github.com/mugwomp93/Knulli_Customization">mugwomp93</a>, from <a href="https://github.com/chrizzo-hb/knulli-bezels">knulli-bezels</a>, under CC BY-SA 4.0</dd>
-      </div>
+      <div class="key"><dt>Pixel transparency</dt><dd>The idea comes from Matt Akins' Pixel Transparency shader for RetroArch. slotPlus's version is written from scratch.</dd></div>
+      <div class="key"><dt>Panel mask</dt><dd>Derived from LCD3x, a public-domain shader by Gigaherz in the libretro shader collection</dd></div>
+      <div class="key"><dt>Dot shader</dt><dd>A port of Dot by Themaister, from the libretro shader collection</dd></div>
+      <div class="key"><dt>Simpletex shader</dt><dd>A port of simpletex_lcd by jdgleaver, from the libretro shader collection</dd></div>
     </dl>
 
     <h3>Type</h3>
     <dl class="keys">
-      <div class="key">
-        <dt>Typeface</dt>
-        <dd><a href="https://github.com/googlefonts/opensans">Open Sans</a>, under the SIL Open Font License</dd>
-      </div>
-      <div class="key">
-        <dt>Symbols</dt>
-        <dd><a href="https://www.nerdfonts.com">Nerd Fonts</a> by Ryan L. McIntyre, under MIT</dd>
-      </div>
+      <div class="key"><dt>Typeface</dt><dd><a href="https://github.com/googlefonts/opensans">Open Sans</a>, with <a href="https://github.com/googlefonts/nunito">Nunito</a> and <a href="https://github.com/theleagueof/orbitron">Orbitron</a> for the Plus and Ultra tabs, all under the SIL Open Font License</dd></div>
+      <div class="key"><dt>Symbols</dt><dd><a href="https://www.nerdfonts.com">Nerd Fonts</a> by Ryan L. McIntyre, under MIT</dd></div>
     </dl>
 
-    <h3>Sound</h3>
-    <dl class="keys">
-      <div class="key">
-        <dt>Cartridge sounds</dt>
-        <dd>A recording of me shoving a cartridge into my childhood GBA</dd>
-      </div>
-    </dl>
+    <h3 id="disclosure">AI Disclosure</h3>
+    <div class="endnote-body">
+      <p>slot has its own AI disclosure, which you can <a href="https://slot-cfw.fyi/#disclosure">read here</a>.</p>
+      <p>slotPlus's additions, code, cart art, and the site were put together by <a href="https://github.com/nelynes">nelynes</a> and Claude, but always reviewed and tested before committing. Claude helped to troubleshoot bugs, and fill my knowledge gap of Rust.</p>
+    </div>
 
-    <p class="credits-fine">Game Boy is a trademark of Nintendo. slot is not affiliated with Nintendo.</p>
+    <p class="credits-fine">Game Boy is a trademark of Nintendo. WonderSwan is a trademark of Bandai. Lynx is a trademark of Atari. Game Gear is a trademark of Sega. NeoGeo Pocket is a trademark of SNK. TurboGrafx-16, PC Engine, TurboExpress and HuCard are trademarks of their respective owners. slotPlus is not affiliated with any of them.</p>
   </div>
 </section>
 
-<section class="panel endnote" id="disclosure" role="tabpanel" aria-labelledby="t-disclosure" hidden>
+<section class="panel endnote studio-soon" id="studio" role="tabpanel" aria-labelledby="t-studio" hidden>
   <div class="wrap">
-    <h2>AI Disclosure</h2>
-    <p>The Rust frontend, and the SVGs on this page, were put together by Claude. I reviewed everything that was produced. All documentation is 100% free-range, meatbag prose.</p>
-    <p>My goal with this project was to recreate the feeling of playing my GBA SP in the back seat as a kid, but with a few modern creature comforts.</p>
-    <p>Nothing about this project is exciting or groundbreaking from a technological perspective, and as a result, I delegated the glue code. mGBA and gpSP have been around forever and are the true stars of this show. The incredible skeuomorphic art is the work of Markus, an artist who saw the bare-bones version and offered to dress it up.</p>
-    <p>I understand if my use of AI is a dealbreaker for you. Just know it's the least interesting part of what's here.</p>
-    <p>Figured I should share the end result of all the wasted water. ✌🏻</p>
+    <h2>Studio<span class="plus" aria-hidden="true">+</span></h2>
+    <p class="soon">Coming soon</p>
+    <p>Cart Studio<span class="plus-inline">+</span> will make labels for every system on your card, all eight of them, previewed on the exact cart slotPlus draws. Pick your SD card, choose art and shell colours, and it writes the labels straight back.</p>
+    <p>Until then, slot's own Cart Studio does labels for Game Boy, Game Boy Color and Game Boy Advance, and they work in slotPlus as they are. For the other systems, drop PNGs into <code>Labels/&lt;folder&gt;/</code>. The <a href="#systems">Systems</a> tab has each label's size.</p>
+    <p class="actions"><a class="btn ghost" href="https://studio.slot-cfw.fyi" target="_blank" rel="noopener">slot's Cart Studio</a></p>
   </div>
 </section>
 

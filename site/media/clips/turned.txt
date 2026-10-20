@@ -1,0 +1,15 @@
+# state: show_recents=0
+# state: show_titles=0
+# state: cart=
+# state: cart_platform=
+# state: shelf=ws
+# state: shelf_cart=ws/GunPey (Japan)
+wait 90
+tap a
+wait 330
+rec
+wait 120
+tap select
+wait 150
+tap select
+wait 120

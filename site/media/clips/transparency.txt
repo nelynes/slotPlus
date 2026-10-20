@@ -1,0 +1,55 @@
+# state: show_recents=0
+# state: show_titles=0
+# state: cart=
+# state: cart_platform=
+# state: shelf=gb
+# state: shelf_cart=gb/Pokemon - Yellow Version - Special Pikachu Edition (USA, Europe) (CGB+SGB Enhanced)
+# state: shader_gb=off
+# Pixel transparency on Pokemon Yellow: the cart goes in, then, past the
+# intro, Oak's white screen with the shader on and off a few times.
+wait 90
+rec y_in
+wait 30
+tap a
+wait 200
+cut
+wait 894
+down start
+wait 30
+up start
+wait 120
+down a
+wait 30
+up a
+wait 90
+down a
+wait 30
+up a
+wait 400
+rec y_oak
+wait 70
+down select
+wait 4
+tap b
+up select
+wait 120
+down select
+wait 4
+tap a
+up select
+wait 100
+down select
+wait 4
+tap b
+up select
+wait 120
+down select
+wait 4
+tap a
+up select
+wait 100
+down select
+wait 4
+tap b
+up select
+wait 150

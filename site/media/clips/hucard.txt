@@ -1,0 +1,13 @@
+# state: show_recents=0
+# state: show_titles=0
+# state: cart=
+# state: cart_platform=
+# state: shelf=tg16
+# state: shelf_cart=tg16/Devil's Crush (USA)
+wait 90
+rec
+wait 45
+tap a
+wait 300
+hold menu 70
+wait 130

@@ -166,6 +166,95 @@
     }
   }
 
+  // HDMI: a monitor beside the SP. A cable draws in from the SP, its screen goes
+  // dark and the monitor lights with the same picture, copied from the SP's
+  // video each frame. After a while the cable comes out and it starts again.
+  var tv = stage ? stage.querySelector(".tv") : null;
+  var cable = stage ? stage.querySelector(".tv-cable-line") : null;
+  var tvPanel = tv ? tv.querySelector(".tv-panel") : null;
+  var tvCanvas = tv ? tv.querySelector(".tv-picture") : null;
+  var tvCtx = tvCanvas && tvCanvas.getContext ? tvCanvas.getContext("2d") : null;
+  var tvOn = false, tvPlugged = false, tvTimers = [], tvFrame = 0, cableLen = 0;
+  var TV_PLUG_AT = 1400, TV_LIGHT_AT = 2600, TV_UNPLUG_AT = 8600, TV_AGAIN_AT = 10200;
+
+  function setCable(plugged, animate){
+    tvPlugged = plugged;
+    if (!cable) return;
+    if (!animate) cable.style.transition = "none";
+    cable.style.strokeDashoffset = plugged ? "0" : String(cableLen);
+    if (!animate) { cable.getBoundingClientRect(); cable.style.transition = ""; }
+  }
+  function routeCable(){
+    if (!tvOn || !cable || !tvPanel) return;
+    var box = stage.getBoundingClientRect();
+    var dev = gdev.getBoundingClientRect();
+    var panel = tvPanel.getBoundingClientRect();
+    // Out of the SP's right side near the bottom, across to the monitor and up
+    // behind it, all inside the stage.
+    var sx = dev.right - box.left - 3;
+    var sy = dev.bottom - box.top - dev.height * 0.12;
+    var ex = panel.left + panel.width * 0.22 - box.left;
+    var ey = panel.bottom - box.top - 4;
+    var low = Math.min(box.height - 3, sy + dev.height * 0.06);
+    var r = Math.max(4, Math.min(14, (ex - sx) / 4, (low - ey) / 2));
+    cable.setAttribute("d",
+      "M" + sx + " " + sy +
+      " C" + (sx + r * 1.6) + " " + sy + " " + (sx + r) + " " + low + " " + (sx + r * 2.4) + " " + low +
+      " L" + (ex - r) + " " + low +
+      " Q" + ex + " " + low + " " + ex + " " + (low - r) +
+      " L" + ex + " " + ey);
+    cableLen = cable.getTotalLength ? cable.getTotalLength() : 1000;
+    cable.style.strokeDasharray = String(cableLen);
+    setCable(tvPlugged, false);
+  }
+  function paintTv(){
+    if (!tvOn) return;
+    if (tvCtx && vid && vid.readyState >= 2 && stage.classList.contains("tv-on")) {
+      try { tvCtx.drawImage(vid, 0, 0, tvCanvas.width, tvCanvas.height); } catch (e) {}
+    }
+    tvFrame = requestAnimationFrame(paintTv);
+  }
+  function tvLater(ms, fn){ tvTimers.push(setTimeout(fn, ms)); }
+  function tvCycle(){
+    if (!tvOn) return;
+    stage.classList.remove("tv-on", "tv-unplug");
+    setCable(false, false);
+    tvLater(TV_PLUG_AT, function(){ setCable(true, true); });
+    tvLater(TV_LIGHT_AT, function(){ stage.classList.add("tv-on"); });
+    tvLater(TV_UNPLUG_AT, function(){
+      stage.classList.remove("tv-on");
+      stage.classList.add("tv-unplug");
+      setCable(false, true);
+    });
+    tvLater(TV_AGAIN_AT, tvCycle);
+  }
+  function showTv(on){
+    if (!tv || !stage) return;
+    on = !!on;
+    if (on === tvOn) return;
+    tvOn = on;
+    for (var i = 0; i < tvTimers.length; i++) clearTimeout(tvTimers[i]);
+    tvTimers = [];
+    cancelAnimationFrame(tvFrame);
+    stage.classList.remove("tv-on", "tv-unplug");
+    stage.classList.toggle("is-tv", on);
+    tvPlugged = false;
+    if (!on) return;
+    requestAnimationFrame(function(){
+      if (!tvOn) return;
+      routeCable();
+      if (reduced) {
+        // Without motion, the cable is in and the picture is on the monitor.
+        setCable(true, false);
+        stage.classList.add("tv-on");
+        return;
+      }
+      tvCycle();
+      tvFrame = requestAnimationFrame(paintTv);
+    });
+  }
+  window.addEventListener("resize", function(){ if (tvOn) routeCable(); });
+
   var current = null;
 
   var LID_SWING_MS = 1150;
@@ -214,6 +303,7 @@
     }
 
     showPeer(step.getAttribute("data-pair"));
+    showTv(step.hasAttribute("data-tv"));
     var only = step.getAttribute("data-still");
     if (only) {
       vid.removeAttribute("src");
@@ -261,7 +351,7 @@
   if (prevBtn) prevBtn.addEventListener("click", function(){ stepBy(-1); });
   if (nextBtn) nextBtn.addEventListener("click", function(){ stepBy(1); });
 
-  var guidePanel = document.getElementById("guide");
+  var guidePanel = document.getElementById("features");
   if (guidePanel) guidePanel.addEventListener("keydown", function(e){
     if (e.target.closest("[role=tablist]")) return;
     if (e.key === "ArrowLeft") { e.preventDefault(); stepBy(-1); }
