@@ -504,6 +504,95 @@ kbd{
 .guide-stage.is-pair .device{width:calc(var(--dw) * .64)}
 .guide-stage.is-pair .device.is-peer{display:block}
 
+/* HDMI: the SP beside a monitor on a stand, joined by a cable that app.js
+   draws in, at which the SP's screen goes dark and the monitor lights. */
+.guide-stage .tv,.guide-stage .tv-cable{display:none}
+.guide-stage.is-tv{align-items:flex-end;gap:clamp(22px,3vw,40px)}
+.guide-stage.is-tv .device{width:calc(var(--dw) * .6)}
+.guide-stage.is-tv .tv{display:flex}
+.guide-stage.is-tv .tv-cable{display:block}
+.tv{
+  width:calc(var(--dw) * 1.2);
+  flex-direction:column;
+  align-items:center;
+  position:relative;
+  z-index:1;
+}
+.tv-panel{
+  position:relative;
+  width:100%;
+  aspect-ratio:16/9;
+  padding:3.2%;
+  border-radius:7px;
+  background:linear-gradient(#2b2b32,var(--housing) 40%,var(--recess));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 16px 30px rgba(0,0,0,.45);
+}
+.tv-glass{
+  position:relative;
+  width:100%;
+  height:100%;
+  border-radius:2px;
+  overflow:hidden;
+  background:var(--opening);
+}
+/* The glass when it is off: a faint sheen across black. */
+.tv-glass::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(118deg,rgba(255,255,255,.07) 0 22%,rgba(255,255,255,0) 46%);
+  transition:opacity .5s ease;
+  pointer-events:none;
+}
+/* slotPlus puts its 3:2 picture in the middle of a 16:9 TV. */
+.tv-still,.tv-picture{
+  position:absolute;
+  top:0;
+  left:7.8125%;
+  width:84.375%;
+  height:100%;
+  opacity:0;
+  transition:opacity .5s ease;
+}
+.tv-led{
+  position:absolute;
+  right:5%;
+  bottom:1.1%;
+  width:4px;
+  height:4px;
+  border-radius:50%;
+  background:#5a2a24;
+  transition:background .3s ease,box-shadow .3s ease;
+}
+.tv-neck{width:9%;height:calc(var(--dw) * .1);background:linear-gradient(90deg,var(--recess),var(--housing),var(--recess))}
+.tv-foot{width:46%;height:calc(var(--dw) * .028);border-radius:3px 3px 1px 1px;background:linear-gradient(var(--edge),var(--housing))}
+.tv-cable{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  overflow:visible;
+  pointer-events:none;
+  z-index:0;
+}
+.tv-cable-line{
+  fill:none;
+  stroke:var(--edge);
+  stroke-width:5;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  transition:stroke-dashoffset 1.1s cubic-bezier(.5,0,.3,1);
+}
+.guide-stage.tv-unplug .tv-cable-line{transition-duration:.7s}
+
+/* Plugged in: the SP's screen goes dark and the monitor shows its picture. */
+.guide-stage.tv-on .guide-screen{opacity:0 !important}
+.guide-stage.tv-on .tv-glass::after{opacity:.35}
+/* The still sits under the copied picture, for reduced motion or a slow video. */
+.guide-stage.tv-on .tv-picture,
+.guide-stage.tv-on .tv-still{opacity:1}
+.guide-stage.tv-on .tv-led{background:#46dc8c;box-shadow:0 0 6px rgba(70,220,140,.8)}
+
 .guide-stage .dv-lid,.guide-stage .device{transition:transform 1.15s cubic-bezier(.45,.05,.3,1)}
 .guide-stage .device.is-shut{transform:perspective(calc(var(--dw) * 2.5)) translateY(-23%)}
 .guide-stage .device.no-swing,
@@ -567,6 +656,9 @@ kbd{
     position:static;
     margin:0 auto clamp(18px,3vh,30px);
   }
+  .guide-stage.is-tv .device{width:calc(var(--dw) * .58)}
+  .guide-stage.is-tv .tv{width:min(calc(var(--dw) * 1.05),calc(100vw - 48px - var(--dw) * .58 - 22px))}
+  .guide-stage.is-tv{gap:22px;position:relative;top:0}
   .guide-steps{min-height:150px}
   .step h3{font-size:21px}
   .step p{line-height:1.58}
@@ -623,6 +715,8 @@ kbd{
 @media (max-width:880px) and (max-height:700px){
   .guide-stage .dv-deck{display:none}
   .guide-stage{--dw:min(calc(100vw - 56px),380px)}
+  .guide-stage.is-tv .device{width:calc(var(--dw) * .42)}
+  .guide-stage.is-tv .tv{width:min(calc(var(--dw) * 1.05),calc(100vw - 48px - var(--dw) * .42 - 22px))}
   .guide-stage .device.is-shut,
   .guide-stage .device.is-shut .dv-lid{transform:none}
   .guide-stage .device.is-shut .dv-front{display:none}
