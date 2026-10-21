@@ -30,6 +30,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # A browser may keep style.css and app.js for a while, so each publish names them with its
+      # commit and a returning visitor never pairs a new page with an old stylesheet.
+      - name: Stamp the stylesheet and script with the commit
+        run: |
+          set -eu
+          v="${GITHUB_SHA::7}"
+          sed -i "s|href=\"style.css\"|href=\"style.css?v=$v\"|; s|src=\"app.js\"|src=\"app.js?v=$v\"|" site/index.html
+          grep -q "style.css?v=$v" site/index.html
+          grep -q "app.js?v=$v" site/index.html
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
