@@ -444,6 +444,10 @@ kbd{
 .endnote p{max-width:64ch;margin:0 0 18px}
 .endnote p:last-child{margin-bottom:0}
 .endnote a{color:var(--ink)}
+/* A solid button keeps its dark text on these pages, whose links are light. */
+.endnote a.btn:not(.ghost){color:var(--opening)}
+/* slotPlus's plus, deep enough to read on a solid (light) button. */
+.btn:not(.ghost) .plus-inline{color:#00838f}
 
 
 .sl{stop-color:var(--shell-light)}
