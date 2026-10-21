@@ -66,10 +66,50 @@ impl Paths {
             .any(|f| reads_on(&extcon.join(f)))
     }
 
+    fn disp_sys(&self) -> Option<String> {
+        std::fs::read_to_string(self.sys.join("class/disp/disp/attr/sys")).ok()
+    }
+
     /// Whether the display driver is sending the picture to HDMI right now.
     pub fn on_hdmi(&self) -> bool {
-        std::fs::read_to_string(self.sys.join("class/disp/disp/attr/sys"))
-            .is_ok_and(|s| s.contains("hdmi output"))
+        self.disp_sys().is_some_and(|s| s.contains("hdmi output"))
+    }
+
+    /// The panel's own size, as the display driver reports it while the
+    /// picture is on the panel.
+    pub fn lcd_size(&self) -> Option<(u32, u32)> {
+        lcd_size(&self.disp_sys()?)
+    }
+}
+
+/// The size on the driver's "lcd output" line, which ends with the panel's
+/// timing, as in `lcd output  backlight( 50)  fps:60.0   720x 480`.
+pub fn lcd_size(sys: &str) -> Option<(u32, u32)> {
+    let line = sys.lines().find(|l| l.contains("lcd output"))?;
+    let (left, right) = line.rsplit_once('x')?;
+    let w: String = left
+        .trim_end()
+        .chars()
+        .rev()
+        .take_while(char::is_ascii_digit)
+        .collect();
+    let w: String = w.chars().rev().collect();
+    let h: String = right
+        .trim_start()
+        .chars()
+        .take_while(char::is_ascii_digit)
+        .collect();
+    let (w, h) = (w.parse().ok()?, h.parse().ok()?);
+    (w > 0 && h > 0).then_some((w, h))
+}
+
+/// The size to put the panel's framebuffer back to: the one the driver
+/// reports, unless it is missing or turned the other way from the size
+/// BaseOS's device list gives (a portrait panel Slot turns itself).
+pub fn panel_to_restore(reported: Option<(u32, u32)>, listed: (u32, u32)) -> (u32, u32) {
+    match reported {
+        Some((w, h)) if (w >= h) == (listed.0 >= listed.1) => (w, h),
+        _ => listed,
     }
 }
 
@@ -89,41 +129,82 @@ fn reads_on(path: &Path) -> bool {
 pub fn panel_for(target: Option<&str>) -> (u32, u32) {
     match target.unwrap_or("") {
         "rgcubexx" => (720, 720),
-        "rg34xx" | "rg34xxsp" => (720, 480),
+        // "rgsp" is the RG 34XX SP as BaseOS names it ("RG SP"): two of them
+        // reported at 720x480 by the driver, and squashed at 640x480.
+        "rg34xx" | "rg34xxsp" | "rgsp" => (720, 480),
         // A portrait panel, turned by Slot.
         "rg28xx" => (480, 640),
         _ => (640, 480),
     }
 }
 
+/// Where the picture ended up, and the framebuffer size Slot set for it, if
+/// it set one. Graphics must open at that size: the framebuffer's own mode
+/// file can still name the size it had before.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Synced {
+    pub on_tv: bool,
+    pub fb: Option<(u32, u32)>,
+}
+
 /// Put the picture where the cable says it should be: on HDMI if one is
-/// plugged in, on the panel if not. Returns whether the picture is on HDMI
-/// afterwards. Does nothing on a kernel without the sunxi display driver.
-pub fn sync(paths: &Paths, panel: (u32, u32)) -> bool {
+/// plugged in, on the panel if not. Does nothing on a kernel without the
+/// sunxi display driver.
+///
+/// On the panel, a framebuffer left at another size is put back to the
+/// panel's own: a picture brought back from HDMI at the wrong size would
+/// otherwise stay squashed until the handheld restarts.
+pub fn sync(paths: &Paths, panel: (u32, u32)) -> Synced {
     if !paths.switchable() {
-        return false;
+        return Synced {
+            on_tv: false,
+            fb: None,
+        };
     }
     let want = paths.cable_in();
+    let mut fb = None;
     if paths.on_hdmi() != want {
         eprintln!(
             "slot: hdmi: cable {}, switching to the {}",
             if want { "in" } else { "out" },
             if want { "TV" } else { "panel" }
         );
-        switch(paths, want, panel);
+        fb = Some(switch(paths, want, panel));
     }
-    let on = paths.on_hdmi();
+    let on_tv = paths.on_hdmi();
     eprintln!(
         "slot: hdmi: cable {}, picture on the {}",
         if paths.cable_in() { "in" } else { "out" },
-        if on { "TV" } else { "panel" }
+        if on_tv { "TV" } else { "panel" }
     );
-    on
+    if !on_tv && fb.is_none() {
+        fb = repair_panel(paths, panel);
+    }
+    Synced { on_tv, fb }
 }
 
-/// Move the picture to HDMI or back to the panel. Must run while no EGL
-/// surface exists.
-pub fn switch(paths: &Paths, to_hdmi: bool, panel: (u32, u32)) {
+/// Put the panel's framebuffer back to the panel's size if something left it
+/// at another, and say the size it is now when it had to.
+fn repair_panel(paths: &Paths, listed: (u32, u32)) -> Option<(u32, u32)> {
+    let reported = paths.lcd_size()?;
+    let want = panel_to_restore(Some(reported), listed);
+    let fb0 = paths.dev.join("fb0");
+    let have = framebuffer_size(&fb0)?;
+    if have == want {
+        return None;
+    }
+    eprintln!(
+        "slot: hdmi: the panel is {}x{} but its framebuffer was {}x{}, putting it back",
+        want.0, want.1, have.0, have.1
+    );
+    set_framebuffer_size(&fb0, want);
+    commit_layer(&paths.dev.join("disp"), want, want);
+    Some(want)
+}
+
+/// Move the picture to HDMI or back to the panel, and return the framebuffer
+/// size it set. Must run while no EGL surface exists.
+pub fn switch(paths: &Paths, to_hdmi: bool, panel: (u32, u32)) -> (u32, u32) {
     let began = Instant::now();
     let blank = paths.sys.join("class/graphics/fb0/blank");
     put(&blank, "4");
@@ -150,7 +231,20 @@ pub fn switch(paths: &Paths, to_hdmi: bool, panel: (u32, u32)) {
     }
     let (fb, out) = match to_hdmi {
         true => (HDMI_FB, HDMI_SIGNAL),
-        false => (panel, panel),
+        false => {
+            // Back on the panel, the driver knows its size better than the
+            // device list, which can name the wrong model's.
+            let reported = paths.lcd_size();
+            let size = panel_to_restore(reported, panel);
+            match reported {
+                Some(r) => eprintln!(
+                    "slot: hdmi: the driver reports the panel at {}x{}",
+                    r.0, r.1
+                ),
+                None => eprintln!("slot: hdmi: the driver reports no panel size"),
+            }
+            (size, size)
+        }
     };
     let fb0 = paths.dev.join("fb0");
     set_framebuffer_size(&fb0, fb);
@@ -166,6 +260,7 @@ pub fn switch(paths: &Paths, to_hdmi: bool, panel: (u32, u32)) {
         fb.1,
         began.elapsed().as_millis()
     );
+    fb
 }
 
 fn put(path: &Path, value: &str) {
@@ -257,6 +352,23 @@ fn set_framebuffer_size(fb0: &Path, (w, h): (u32, u32)) {
 
 #[cfg(not(unix))]
 fn set_framebuffer_size(_: &Path, _: (u32, u32)) {}
+
+/// The framebuffer's visible size.
+#[cfg(unix)]
+fn framebuffer_size(fb0: &Path) -> Option<(u32, u32)> {
+    use std::os::unix::io::AsRawFd;
+    let file = std::fs::OpenOptions::new().read(true).open(fb0).ok()?;
+    let mut var = [0u32; 40];
+    if unsafe { ioctl(file.as_raw_fd(), FBIOGET_VSCREENINFO, var.as_mut_ptr()) } != 0 {
+        return None;
+    }
+    (var[XRES] > 0 && var[YRES] > 0).then_some((var[XRES], var[YRES]))
+}
+
+#[cfg(not(unix))]
+fn framebuffer_size(_: &Path) -> Option<(u32, u32)> {
+    None
+}
 
 /// The parts of the sunxi disp2 UAPI (include/video/sunxi_display2.h in the
 /// 4.9 sun50iw9 BSP kernel) needed to rewrite the fb0 scanout layer. Their
@@ -549,12 +661,47 @@ mod tests {
             dev: d.path().join("dev"),
         };
         assert!(!paths.switchable());
-        assert!(!sync(&paths, (720, 480)));
+        assert_eq!(
+            sync(&paths, (720, 480)),
+            Synced {
+                on_tv: false,
+                fb: None
+            }
+        );
+    }
+
+    #[test]
+    fn the_driver_reports_the_panel_size_on_its_lcd_line() {
+        // As the 4.9 sunxi driver prints it, and as Allwinner's guide shows it.
+        let sys = "screen 0:\nde_rate 696000000 hz, ref_fps:60\nmgr0: 720x480 fmt[rgb] cs[0x204] range[full] eotf[0x4] bits[8bits] err[0] force_sync[0] unblank direct_show[false] iommu[1]\n\tlcd output\tbacklight( 50)\tfps:60.0\t 720x 480\n\terr:0\tskip:0\tirq:1234\tvsync:0\tvsync_skip:0\t\n";
+        assert_eq!(lcd_size(sys), Some((720, 480)));
+        assert_eq!(
+            lcd_size("lcd output backlight( 50) fps:60.9 1280x 800"),
+            Some((1280, 800))
+        );
+        assert_eq!(
+            lcd_size("lcd output backlight( 50) fps:60.0 640x480"),
+            Some((640, 480))
+        );
+        assert_eq!(
+            lcd_size("screen 0:\nhdmi output mode(10)\tfps:60.0\t1920x1080\n"),
+            None
+        );
+        assert_eq!(lcd_size(""), None);
+    }
+
+    #[test]
+    fn the_panel_comes_back_at_the_size_the_driver_reports() {
+        assert_eq!(panel_to_restore(Some((720, 480)), (640, 480)), (720, 480));
+        assert_eq!(panel_to_restore(Some((640, 480)), (720, 480)), (640, 480));
+        assert_eq!(panel_to_restore(None, (640, 480)), (640, 480));
+        // A portrait panel Slot turns keeps the device list's size.
+        assert_eq!(panel_to_restore(Some((640, 480)), (480, 640)), (480, 640));
     }
 
     #[test]
     fn each_panel_has_its_own_size_to_come_back_to() {
-        assert_eq!(panel_for(Some("rgsp")), (640, 480));
+        assert_eq!(panel_for(Some("rgsp")), (720, 480));
         assert_eq!(panel_for(Some("rg34xxsp")), (720, 480));
         assert_eq!(panel_for(Some("rgcubexx")), (720, 720));
         assert_eq!(panel_for(Some("rg28xx")), (480, 640));

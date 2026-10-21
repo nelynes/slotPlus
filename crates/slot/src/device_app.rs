@@ -72,7 +72,8 @@ pub fn run() {
     // start, and before any other thread, so sound can be told where to go.
     let hdmi_paths = hdmi::Paths::default();
     let target = std::env::var("BASEOS_TARGET").ok();
-    let on_tv = hdmi::sync(&hdmi_paths, hdmi::panel_for(target.as_deref()));
+    let synced = hdmi::sync(&hdmi_paths, hdmi::panel_for(target.as_deref()));
+    let on_tv = synced.on_tv;
     if on_tv {
         std::env::set_var("SLOT_AUDIO_HDMI", "1");
     }
@@ -86,9 +87,11 @@ pub fn run() {
     let root = std::env::var_os("SLOT_ROOT")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(CARD));
-    let opened = match on_tv {
-        true => FbdevSurface::sized(hdmi::HDMI_FB),
-        false => FbdevSurface::new(),
+    // At the size Slot just set, if it set one: after a switch the
+    // framebuffer's mode file can still name the size it had before.
+    let opened = match synced.fb {
+        Some(size) => FbdevSurface::sized(size),
+        None => FbdevSurface::new(),
     };
     let mut surface = match opened {
         Ok(s) => s,
