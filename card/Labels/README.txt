@@ -10,8 +10,19 @@ every device.
   Game Boy          1.13:1   1024 x 901
   Game Boy Color    1.12:1   1024 x 901
 
-Other sizes are scaled to fill the label and cropped from the centre.
+slotPlus adds these, in the same way (Ultra only for GG, NGP and TG16):
+
+  Cart              Folder   Shown at
+  WonderSwan        WS       324 x 132
+  Atari Lynx        Lynx     284 x 190
+  Game Gear         GG       290 x 200
+  NeoGeo Pocket     NGP      246 x 133
+  TurboGrafx-16     TG16     191 wide, up to 163 tall
+
+Other sizes are scaled to fill the label and cropped from the centre, except
+on a HuCard (TG16), where the art keeps its own shape and sits at the bottom.
 Cart Studio makes these: https://studio.slot-cfw.fyi
+Cart Studio+ makes them for every slotPlus system: https://nelynes.github.io/slotPlus-studio/
 
 
 # Shells

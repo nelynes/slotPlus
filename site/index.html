@@ -357,8 +357,9 @@
       <dl class="keys">
         <div class="key"><dt>Shelf</dt><dd>Each system gets its own shelf. Its folders under <code>Games</code>, <code>Labels</code>, <code>Saves</code>, <code>States</code> and <code>Bezels</code> are created on first boot.</dd></div>
         <div class="key"><dt>Label art</dt><dd>Optional PNGs in <code>Labels/&lt;folder&gt;/&lt;game name&gt;.png</code>, named after the game's file without its extension. Art of another size is scaled to cover the label and cropped, except on HuCards, which keep the art's own shape.</dd></div>
-        <div class="key"><dt>Screen menu</dt><dd>Each system has its own page under Screen, with its own Shader and Bezel. <kbd>SELECT</kbd> + <kbd>B</kbd> / <kbd>A</kbd> in a game steps through that system's shaders.</dd></div>
-        <div class="key"><dt>Your own bezels</dt><dd>PNGs in <code>Bezels/&lt;folder&gt;/</code>, 720x480 with the screen area transparent. On 4:3 handhelds such as the RG 35XXSP, the SP frame is offered too. A bezel shows at actual size, not when the picture is stretched.</dd></div>
+        <div class="key"><dt>Controls</dt><dd>The In-Game controls page in Settings covers every system, so any of the buttons below can be moved. The tables show where they start.</dd></div>
+        <div class="key"><dt>Screen menu</dt><dd>Each system has its own page under Screen, with its own Shader and Bezel, beside General for Brightness and Blue Light. <kbd>SELECT</kbd> + <kbd>B</kbd> / <kbd>A</kbd> in a game steps through that system's shaders.</dd></div>
+        <div class="key"><dt>Your own bezels</dt><dd>PNGs in <code>Bezels/&lt;folder&gt;/</code> the size of the screen, with the screen area transparent: 720x480, or 640x480 on a 4:3 handheld such as the RG 35XXSP, where it shows pixel for pixel and the SP frame is offered too. A bezel shows at actual size, not when the picture is stretched.</dd></div>
         <div class="key"><dt>Stretch</dt><dd>Game Gear, NeoGeo Pocket and TurboGrafx-16: <kbd>L1</kbd> stretches, <kbd>R1</kbd> gives back actual size. Lynx and WonderSwan use L1 and R1 as game buttons, so a game is set to stretch in <code>Config/video_mode.txt</code>, as <code>Game Name (USA) = stretch</code>. Each game remembers its choice.</dd></div>
         <div class="key"><dt>Cart shells</dt><dd>Each system's carts have a default shell. <code>Config/cart_shell.txt</code> gives a single game its own.</dd></div>
         <div class="key"><dt>States and resume</dt><dd>Save states and the resume state work as they do for every other system.</dd></div>
@@ -561,7 +562,7 @@
   <div class="wrap">
     <h2>Studio<span class="plus" aria-hidden="true">+</span></h2>
     <p>Labels for every system on your card, all eight of them, previewed on the exact cart slotPlus draws. Pick your SD card and it finds your games, gives each a logo on a colour taken from its box art, and lets you change the art and the shell before writing the labels straight back.</p>
-    <p>Game Gear, NeoGeo Pocket, TurboGrafx-16 and WonderSwan games get their logos from libretro, and the Game Boys use slot's own art set first. A game with no logo anywhere, such as every Atari Lynx game for now, gets its title screen instead. Any cart can take your own logo or label.</p>
+    <p>Every game looks in slotPlus's own art set first, which fills in each day from ScreenScraper with labels and logos for the WonderSwan, Atari Lynx, Game Gear, NeoGeo Pocket and TurboGrafx-16. After that the Game Boys try slot's art set, every system tries libretro's logos, and a game with no art anywhere gets its title screen. Any cart can take your own logo or label.</p>
     <p class="actions"><a class="btn" href="https://nelynes.github.io/slotPlus-studio/" target="_blank" rel="noopener">Open Cart Studio<span class="plus-inline">+</span></a></p>
   </div>
 </section>
