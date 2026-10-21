@@ -31,7 +31,7 @@ Each release comes in two versions. Pick the one you want from the [releases pag
 **Installing:** for a fresh install, unzip and copy everything onto the Slot card. To upgrade, unzip and replace the `System` folder on your card with the new one. Switching between Plus and Ultra works the same way, and your games, saves and settings stay put. Going back from Ultra to Plus leaves the Game Gear, NeoGeo Pocket and TurboGrafx-16 games and saves on the card, without their shelves.
 
 - **Folders:** each system's folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
-- **Label art:** optional PNGs go in `Labels/<folder>/<game name>.png`.
+- **Label art:** optional PNGs go in `Labels/<folder>/<game name>.png`. [Cart Studio+](https://nelynes.github.io/slotPlus-studio/) makes them for every system: pick your SD card and it finds your games, fetches their labels and logos, previews each on the cart slotPlus draws, and writes the labels back to the card.
 - **Controls:** the In-Game controls page covers every system, so its buttons can be remapped like the Game Boys'.
 - **Screen menu:** each system has its own page, with its own shader and bezel. In Ultra, the Game Gear and NeoGeo Pocket come with a bundled bezel, and the TurboGrafx-16 with four.
 - **Carts:** each system has its own cart, drawn in Slot's look. WonderSwan games get a black cart, WonderSwan Color games a frosted clear one, and a HuCard turns over to go into the slot contacts first.
