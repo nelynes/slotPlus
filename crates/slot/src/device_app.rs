@@ -158,7 +158,10 @@ pub fn run() {
     let card = root.clone();
     let _ = std::thread::Builder::new()
         .name("slot-bootlogo".into())
-        .spawn(move || slot::bootlogo::refresh(&card));
+        .spawn(move || {
+            slot::bootlogo::refresh(&card);
+            slot::root::sweep_temps(&card);
+        });
     let mut drawn = false;
     frontend.drive_emulator();
     let mut pacer = Pacer::new();
@@ -187,12 +190,18 @@ pub fn run() {
             frontend.poweroff();
             return;
         }
+        if slot::crash::stopping() {
+            eprintln!("slot: told to stop, saving first");
+            frontend.stop();
+            return;
+        }
         frontend.step_emulator(pacer.period, STEP_TIMEOUT);
         frontend.render(&mut compositor, window);
         let swap = Instant::now();
         let work = swap - began;
         if let Err(e) = surface.swap() {
             eprintln!("slot: {e}");
+            frontend.stop();
             return;
         }
         let swap_took = swap.elapsed();

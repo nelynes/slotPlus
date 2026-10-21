@@ -1,7 +1,7 @@
-use slot_store::GbPalette;
+use slot_store::{GbColors, GbPalette};
 use slot_ui::{
-    toast_face, toast_rect, Canvas, Draw, Hud, HudKind, TexId, Toast, ALARM_BAND_H, OUT_H, OUT_W,
-    PLATE_H,
+    toast_face, toast_rect, Canvas, Draw, Hud, HudKind, QuickRow, TexId, Toast, ALARM_BAND_H,
+    OUT_H, OUT_W, PLATE_H,
 };
 
 #[test]
@@ -28,7 +28,7 @@ fn a_cart_gpsp_cannot_link_says_there_is_no_link() {
 fn the_banner_says_what_happened_and_never_what_is_on_screen() {
     let all = Toast::all();
     assert_eq!(
-        all[..19],
+        all[..20],
         [
             Toast::StateSaved,
             Toast::StateLoaded,
@@ -47,15 +47,27 @@ fn the_banner_says_what_happened_and_never_what_is_on_screen() {
             Toast::ShaderTransparent,
             Toast::CardUnwritable,
             Toast::CardRepair,
+            Toast::CardRepairCharge,
             Toast::CardRepaired,
             Toast::CardRepairFailed,
         ],
         "a banner was added or dropped: every face is uploaded by its place in this list"
     );
+    let palettes = GbColors::all().count();
+    assert_eq!(palettes, 49);
     assert_eq!(
-        all[19..],
-        GbPalette::all().map(Toast::Palette).collect::<Vec<_>>()[..],
+        all[20..20 + palettes],
+        GbColors::all().map(Toast::Palette).collect::<Vec<_>>()[..],
         "the palette banners do not follow the fixed ones in palette order"
+    );
+    assert_eq!(
+        all[20 + palettes..],
+        QuickRow::ALL
+            .into_iter()
+            .filter(|r| r.binds())
+            .map(Toast::Duplicate)
+            .collect::<Vec<_>>()[..],
+        "the duplicate warnings do not follow the palettes in row order"
     );
     for (i, t) in all.iter().enumerate() {
         assert_eq!(t.index(), i, "{t:?} does not answer to its own place");
@@ -71,9 +83,18 @@ fn the_banner_says_what_happened_and_never_what_is_on_screen() {
 fn no_toast_is_shrunk_to_fit_its_box() {
     let rows = |t: Toast| {
         let f = toast_face(t);
-        let inked: Vec<usize> = (0..f.h as usize)
-            .filter(|y| (0..f.w as usize).any(|x| f.rgba[(y * f.w as usize + x) * 4 + 3] > 0))
-            .collect();
+        let (w, h) = (f.w as usize, f.h as usize);
+        let ink = |x: usize, y: usize| f.rgba[(y * w + x) * 4 + 3] > 0;
+        let mut from = 0;
+        if t.icon().is_some() {
+            let cols: Vec<usize> = (0..w).filter(|x| (0..h).any(|y| ink(*x, y))).collect();
+            let gap = cols
+                .windows(2)
+                .position(|p| p[1] - p[0] > 3)
+                .expect("no icon gap");
+            from = cols[gap + 1];
+        }
+        let inked: Vec<usize> = (0..h).filter(|y| (from..w).any(|x| ink(x, *y))).collect();
         let first = *inked.first().expect("the banner is blank");
         let last = *inked.last().expect("the banner is blank");
         (first, last)
@@ -173,7 +194,11 @@ fn a_toast_takes_the_band_from_the_bar() {
 #[test]
 fn a_palette_banner_names_the_palette_without_its_boot_combo() {
     let p = GbPalette::parse("GBC Dark Green →A").unwrap();
-    assert_eq!(Toast::Palette(p).text(), "GBC Dark Green");
+    assert_eq!(
+        Toast::Palette(GbColors::Palette(p)).text(),
+        "GBC Dark Green"
+    );
+    assert_eq!(Toast::Palette(GbColors::Auto).text(), "Auto");
 }
 
 fn band(h: &Hud, now: u64) -> Option<(f32, f32, [f32; 4])> {
