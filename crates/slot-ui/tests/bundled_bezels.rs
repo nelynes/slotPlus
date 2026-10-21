@@ -14,7 +14,7 @@ fn at(rgba: &[u8], x: u32, y: u32) -> [u8; 4] {
 #[test]
 fn the_game_gear_has_a_black_bezel_with_a_green_power_light_over_its_screen() {
     assert!(has_default_game_bezel(Platform::Gg));
-    let face = default_game_bezel_face(Platform::Gg).expect("a Game Gear bezel");
+    let face = default_game_bezel_face(Platform::Gg, OUT_W, OUT_H).expect("a Game Gear bezel");
     assert_eq!(face.len(), (OUT_W * OUT_H * 4) as usize);
     // The 3x picture, 480x432 from (120, 24), shows through.
     for (x, y) in [(360, 240), (130, 34), (590, 446)] {
@@ -41,7 +41,7 @@ fn the_game_gear_has_a_black_bezel_with_a_green_power_light_over_its_screen() {
 
 #[test]
 fn the_neogeo_pocket_bezel_leaves_its_whole_3x_screen_clear() {
-    let face = default_game_bezel_face(Platform::Ngp).expect("a NeoGeo Pocket bezel");
+    let face = default_game_bezel_face(Platform::Ngp, OUT_W, OUT_H).expect("a NeoGeo Pocket bezel");
     // The 160x152 picture at 3x: 480x456 from (120, 12).
     for (x, y) in [(120, 12), (599, 12), (120, 467), (599, 467), (360, 240)] {
         assert_eq!(at(&face, x, y)[3], 0, "the window is covered at {x},{y}");
@@ -64,7 +64,7 @@ fn only_the_game_boys_the_game_gear_and_the_neogeo_pocket_have_a_bundled_bezel()
         );
         assert_eq!(has_default_game_bezel(platform), bundled, "{platform:?}");
         assert_eq!(
-            default_game_bezel_face(platform).is_some(),
+            default_game_bezel_face(platform, OUT_W, OUT_H).is_some(),
             bundled,
             "{platform:?}"
         );
@@ -79,7 +79,7 @@ fn the_turbografx_16_bundles_tg16_and_pce_bezels_round_its_2x_picture() {
     );
     assert!(!has_default_game_bezel(Platform::Tg16), "no plain Default");
     for name in ["TG16", "PCE"] {
-        let face = bundled_game_bezel_face(Platform::Tg16, name).expect(name);
+        let face = bundled_game_bezel_face(Platform::Tg16, name, OUT_W, OUT_H).expect(name);
         assert_eq!(face.len(), (OUT_W * OUT_H * 4) as usize);
         // A 256-wide picture at 2x: 512x480 from (104, 0), all of it clear.
         for (x, y) in [(104, 0), (615, 0), (104, 479), (615, 479), (360, 240)] {
@@ -93,7 +93,7 @@ fn the_turbografx_16_bundles_tg16_and_pce_bezels_round_its_2x_picture() {
             assert_eq!(at(&face, x, y)[3], 255, "{name}: see-through at {x},{y}");
         }
     }
-    assert!(bundled_game_bezel_face(Platform::Tg16, "Express").is_none());
+    assert!(bundled_game_bezel_face(Platform::Tg16, "Express", OUT_W, OUT_H).is_none());
 }
 
 #[test]
@@ -110,7 +110,7 @@ fn only_the_turbografx_16_has_bezels_bundled_under_their_own_names() {
 #[test]
 fn the_wide_turbografx_16_bezels_leave_a_320_wide_picture_clear() {
     for name in ["TG16 Wide", "PCE Wide"] {
-        let face = bundled_game_bezel_face(Platform::Tg16, name).expect(name);
+        let face = bundled_game_bezel_face(Platform::Tg16, name, OUT_W, OUT_H).expect(name);
         // A 320-wide picture at 2x: 640x480 from (40, 0), every pixel clear.
         for y in 0..OUT_H {
             for x in 40..680 {

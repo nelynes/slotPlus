@@ -50,7 +50,7 @@ repair() {
 		AGS_UMOUNT="$TMP/bin/umount" AGS_MOUNT="$TMP/bin/mount" AGS_FUSER="$TMP/bin/fuser" \
 		AGS_SYNC="$TMP/bin/sync" AGS_REBOOT="$TMP/bin/reboot" AGS_RMMOD="$TMP/bin/rmmod" AGS_SPLASH="$TMP/bin/splash" \
 		AGS_FSCK_FAT="$TMP/bin/fsck.fat" AGS_FSCK_EXFAT="$TMP/bin/fsck.exfat" \
-		AGS_OUT="$TMP/out" AGS_UPTIME="$TMP/uptime" AGS_SLEEP="$TMP/bin/sleep" \
+		AGS_OUT="$TMP/out" AGS_UPTIME="$TMP/uptime" AGS_SLEEP="$TMP/bin/sleep" AGS_WIFI_WAIT=100000 \
 		sh "$SCRIPT" /dev/mmcblk0p7 /mnt/sdcard "${1:-vfat}"
 }
 
@@ -81,7 +81,7 @@ before "rmmod 8821cs" "reboot " || fail "rebooted with the WiFi driver loaded, w
 	|| fail "the screen did not walk through the job: $(grep '^splash' "$TMP/calls" | tr '\n' '|')"
 before "splash --important -1 UNMOUNTING DISK" "umount /mnt/sdcard" || fail "unmounted before saying so"
 before "fsck.fat -a /dev/mmcblk0p7" "splash --important -1 REPAIR COMPLETE" || fail "said complete before fsck ran"
-grep -q "fsck.fat -a /dev/mmcblk0p7 exit 1" "$TMP/data/slot-repair.log" || fail "the log did not keep fsck's exit"
+grep -q "fsck.fat -a /dev/mmcblk0p7 pass 1 exit 1" "$TMP/data/slot-repair.log" || fail "the log did not keep fsck's exit"
 [ "$(grep -c '^sleep 2.00$' "$TMP/calls")" = 3 ] && called "sleep 2" \
 	|| fail "a step was not held for two seconds: $(grep '^sleep' "$TMP/calls" | tr '\n' '|')"
 
@@ -91,9 +91,20 @@ repair
 [ "$(result)" = clean ] || fail "a card with nothing to fix did not read as clean: $(result)"
 
 setup
-codes 1 1
+codes 1 1 0
+repair
+[ "$(result)" = repaired ] || fail "a card that took two passes to fix did not read as repaired: $(result)"
+
+setup
+codes 1 1 1 0
+repair
+[ "$(result)" = repaired ] || fail "a FAT card that took a pass per layer of damage did not read as repaired: $(result)"
+
+setup
+codes 1 1 1 1 1 1
 repair
 [ "$(result)" = failed ] || fail "a card still damaged after repair did not read as failed: $(result)"
+[ "$(grep -c '^fsck.fat -a /dev/mmcblk0p7$' "$TMP/calls")" = 6 ] || fail "gave up before six passes"
 called "splash --important -1 REPAIR FAILED: USE A COMPUTER" || fail "a failed repair did not say so"
 called "splash --important -1 REBOOTING" || fail "a failed repair did not say it was rebooting"
 
@@ -139,12 +150,12 @@ cat >> "$TMP/mounts" <<-M
 	/dev/mmcblk1p1 /mnt/other exfat ro,noatime 0 0
 M
 fake umount 'grep -v " $1 " "$TMP/mounts" > "$TMP/m" || true; mv "$TMP/m" "$TMP/mounts"'
-codes 0 0 1 0
+codes 0 1 0
 AGS_DATA="$TMP/data" AGS_RUN="$TMP/run" AGS_MOUNTS="$TMP/mounts" \
 	AGS_UMOUNT="$TMP/bin/umount" AGS_MOUNT="$TMP/bin/mount" AGS_FUSER="$TMP/bin/fuser" \
 	AGS_SYNC="$TMP/bin/sync" AGS_REBOOT="$TMP/bin/reboot" AGS_RMMOD="$TMP/bin/rmmod" AGS_SPLASH="$TMP/bin/splash" \
 	AGS_FSCK_FAT="$TMP/bin/fsck.fat" AGS_FSCK_EXFAT="$TMP/bin/fsck.exfat" \
-	AGS_OUT="$TMP/out" AGS_UPTIME="$TMP/uptime" AGS_SLEEP="$TMP/bin/sleep" \
+	AGS_OUT="$TMP/out" AGS_UPTIME="$TMP/uptime" AGS_SLEEP="$TMP/bin/sleep" AGS_WIFI_WAIT=100000 \
 	sh "$SCRIPT" /dev/mmcblk0p7 /mnt/sdcard vfat /dev/mmcblk1p1 /mnt/other exfat
 called "splash --important -1 UNMOUNTING DISKS" || fail "two cards were not called disks"
 called "umount /mnt/other" || fail "the second card was not unmounted"
