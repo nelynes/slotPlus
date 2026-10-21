@@ -16,8 +16,9 @@ For the Game Boy systems, and everything else Slot does, see the [Slot user guid
 
 - **Shelf:** each system gets its own shelf. Its folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
 - **Label art:** optional PNGs go in `Labels/<folder>/<game name>.png`, named after the game's file without its extension. Each system's cart has its own label size, given below. Art of a different size is scaled to cover the label and cropped, except on HuCards, where it keeps its own shape (see the TurboGrafx-16).
-- **Screen menu:** each system has its own page under Screen, with its own Shader and Bezel. SELECT + B / A in a game steps through that system's shaders.
-- **Bezels:** your own PNGs go in `Bezels/<folder>/`, 720x480 with the screen area transparent. On 4:3 handhelds such as the RG 35XXSP the SP frame is offered too. A bezel shows at actual size, not when the picture is stretched.
+- **Controls:** the In-Game controls page in Settings covers every system, so any button can be moved. The tables below show where each one starts.
+- **Screen menu:** each system has its own page under Screen, with its own Shader and Bezel, beside General for Brightness and Blue Light. SELECT + B / A in a game steps through that system's shaders.
+- **Bezels:** your own PNGs go in `Bezels/<folder>/`, the size of the screen with the screen area transparent: 720x480, or 640x480 on a 4:3 handheld such as the RG 35XXSP, where it shows pixel for pixel and the SP frame is offered too. A bezel shows at actual size, not when the picture is stretched.
 - **Stretch:** on the TurboGrafx-16, Game Gear and NeoGeo Pocket, L1 stretches the picture to fill the screen and R1 gives back actual size. On the Lynx and WonderSwan, L1 and R1 are the game's own buttons, so a game is set to stretch with a line in `Config/video_mode.txt` (`Game Name (USA) = stretch`). Each game remembers its choice. In slotPlusUltra, on a 4:3 handheld the stretched picture fills the whole panel.
 - **Cart shells:** each system's carts have a default shell colour. Set `Config/cart_shell.txt` to give a single game a different one.
 - **Save states and resume** work as they do for every other system.

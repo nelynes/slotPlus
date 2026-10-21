@@ -14,6 +14,10 @@ Make it the size of the screen:
   RG35XX-H       640 x 480   x 107, y 48, 427 x 384
   RG28XX         640 x 480   x 107, y 48, 427 x 384
 
+slotPlus gives every system its own folder: WS, Lynx, and in Ultra GG, NGP
+and TG16. Pick one in Settings > Screen > that system > Bezel. Make it the
+size of the screen too, with the game's area left clear.
+
 The bezel is drawn over the game, so leave the game area transparent.
 Other sizes are scaled to fill and cropped from the centre. On the 640 x 480
 devices a 640 x 427 bezel covers only the game area, with black above and below.
