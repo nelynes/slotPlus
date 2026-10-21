@@ -14,10 +14,6 @@ To upgrade, replace the `System` folder on your card with the one from the zip.
 - Everything from Slot 1.8.0, below: remappable controls, Brightness and Blue Light rows, one Palette row for the Game Boy, SD card repair and safer saving. Run-Ahead is gone from slotPlus too.
 - HDMI: pulling the cable on an RG SP no longer brings the picture back squashed on the handheld's screen. Slot now takes the screen's size from the display driver, and a handheld already stuck squashed is put right the next time Slot starts.
 - The In-Game controls page covers the WonderSwan and Atari Lynx. Both keep the L and R rows, since L1 and R1 are the Lynx's Option 1 and Option 2 and the WonderSwan's Y pad. In a WonderSwan game the Turbo A and Turbo B rows are called X Button and Y Button, since those buttons also work the Y pad with R1 held and the X pad in vertical games.
-- slotPlusUltra: the Game Gear, NeoGeo Pocket and TurboGrafx-16 get the In-Game controls page without L and R rows, since L1 and R1 stretch the picture there.
-- slotPlusUltra: the SD card repair stops the NeoGeo Pocket core first, as powering off does, so its save is written if the card still takes it.
-- slotPlusUltra: the Game Gear, NeoGeo Pocket and TurboGrafx-16 bezels are fitted to the screen's own size, as Slot 1.8.0 does for the Game Boy's.
-- slotPlusUltra: the Screen settings page scrolls, since General and the eight consoles are more rows than fit.
 
 ### slotPlusUltra
 
