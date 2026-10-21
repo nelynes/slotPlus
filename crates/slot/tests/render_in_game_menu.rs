@@ -10,7 +10,7 @@ use slot::frontend::Frontend;
 use slot_gfx::{Compositor, HeadlessSurface, OUT_H, OUT_W};
 use slot_input::{Btn, InputSource, Millis, RawEvent};
 use slot_power::SimPlatform;
-use slot_ui::{quick_row_top, QuickRow};
+use slot_ui::{quick_row_top, QuickRow, MOUTH_H};
 
 struct Script(VecDeque<Vec<RawEvent>>);
 
@@ -137,11 +137,113 @@ fn the_in_game_menu_darkens_the_game_and_screen_leaves_it_bare() {
         ink > 100,
         "no Shader label in the panel: {ink} bright pixels"
     );
-    let below = at(&screen, 700, OUT_H as usize - 4);
-    let above = at(&screen, 700, panel - 8);
+    let band = |rows: std::ops::Range<usize>| {
+        let n = rows.len() as u32;
+        rows.map(|y| bright(at(&screen, 700, y))).sum::<u32>() / n
+    };
+    let mouth = OUT_H as usize - MOUTH_H as usize;
+    let below = band(mouth - 17..mouth - 2);
+    let above = band(panel - 23..panel - 8);
     assert!(
-        bright(below) <= bright(above),
-        "the panel is not darker than the game above it"
+        below <= above,
+        "the panel is not darker than the game above it: {below} under, {above} over"
+    );
+}
+
+#[test]
+fn the_brightness_rows_render_on_the_screen_page() {
+    let Ok(surface) = HeadlessSurface::new() else {
+        return;
+    };
+    let Ok(mut c) = Compositor::new(&surface) else {
+        return;
+    };
+    let d = tmp_root_with_carts(&["Emerald", "Fusion"]);
+    clocked(d.path());
+    let mut f = Frontend::boot(Box::new(SimPlatform::at(d.path().to_path_buf())));
+    f.upload_faces(&mut c);
+    let mut input = Script(VecDeque::new());
+    tap(&mut f, &mut input, Btn::A);
+    run_for(&mut f, &mut input, 4.0);
+    tap(&mut f, &mut input, Btn::Menu);
+    run_for(&mut f, &mut input, 0.5);
+    for btn in [Btn::Down, Btn::Down, Btn::A, Btn::A] {
+        tap(&mut f, &mut input, btn);
+    }
+    while f.app().in_game_menu() != Some(QuickRow::PlayBrightness) {
+        tap(&mut f, &mut input, Btn::Down);
+    }
+    run_for(&mut f, &mut input, 0.3);
+    let hidden = f.app().in_game_hidden();
+    for row in [QuickRow::PlayBrightness, QuickRow::PlayBlueLight] {
+        if f.app().in_game_menu() != Some(row) {
+            tap(&mut f, &mut input, Btn::Down);
+            run_for(&mut f, &mut input, 0.2);
+        }
+        assert_eq!(f.app().in_game_menu(), Some(row));
+        let px = composed(&mut f, &mut c, &format!("screen-{row:?}"));
+        let top = quick_row_top(row, &hidden) as usize;
+        let value = (top..top + 40)
+            .flat_map(|y| (360..OUT_W as usize - 24).map(move |x| (x, y)))
+            .filter(|&(x, y)| bright(at(&px, x, y)) > 600)
+            .map(|(x, _)| x)
+            .max()
+            .expect("a row with no value");
+        assert!(
+            (679..=688).contains(&value),
+            "{row:?}'s value ends at x {value}"
+        );
+    }
+}
+
+#[test]
+fn deleting_a_state_asks_with_b_to_keep_and_x_to_delete() {
+    let Ok(surface) = HeadlessSurface::new() else {
+        return;
+    };
+    let Ok(mut c) = Compositor::new(&surface) else {
+        return;
+    };
+    let d = tmp_root_with_carts(&["Emerald", "Fusion"]);
+    clocked(d.path());
+    let mut f = Frontend::boot(Box::new(SimPlatform::at(d.path().to_path_buf())));
+    f.upload_faces(&mut c);
+    let mut input = Script(VecDeque::new());
+    tap(&mut f, &mut input, Btn::A);
+    run_for(&mut f, &mut input, 4.0);
+    for ev in [
+        RawEvent::Down(Btn::Select),
+        RawEvent::Down(Btn::R1),
+        RawEvent::Up(Btn::R1),
+        RawEvent::Up(Btn::Select),
+    ] {
+        input.0.push_back(vec![ev]);
+        f.advance(&mut input);
+    }
+    run_for(&mut f, &mut input, 0.5);
+    tap(&mut f, &mut input, Btn::Menu);
+    tap(&mut f, &mut input, Btn::Menu);
+    run_for(&mut f, &mut input, 0.5);
+    tap(&mut f, &mut input, Btn::Y);
+    assert!(f.app().delete_prompt(), "Y did not ask before deleting");
+    let px = composed(&mut f, &mut c, "delete-prompt");
+    let lit = |ys: std::ops::Range<usize>, xs: std::ops::Range<usize>| {
+        ys.flat_map(|y| xs.clone().map(move |x| (x, y)))
+            .filter(|&(x, y)| bright(at(&px, x, y)) > 600)
+            .count()
+    };
+    assert!(
+        lit(180..300, 100..620) > 300,
+        "no question in the middle of the screen"
+    );
+    assert!(
+        lit(0..150, 0..OUT_W as usize) == 0,
+        "the game shows through the prompt"
+    );
+    assert!(lit(420..480, 0..240) > 50, "no Keep legend on the left");
+    assert!(
+        lit(420..480, 480..720) > 50,
+        "no Delete legend on the right"
     );
 }
 
