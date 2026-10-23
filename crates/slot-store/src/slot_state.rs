@@ -11,7 +11,7 @@ pub const VOLUME_MAX: u8 = 100;
 pub const UTC_OFFSET_MIN: i16 = -720;
 pub const UTC_OFFSET_MAX: i16 = 840;
 
-pub const FF_SPEEDS: [u8; 4] = [2, 3, 4, 6];
+pub const FF_SPEEDS: [u8; 5] = [0, 2, 3, 4, 6];
 
 pub const LID_OFF_MIN: [u8; 6] = [1, 3, 5, 10, 15, 30];
 
@@ -215,6 +215,7 @@ pub struct SlotState {
     pub shader_gbc: Shader,
     pub shader_ws: Shader,
     pub shader_lynx: Shader,
+    pub auto_load: bool,
     pub eject_save: bool,
     pub turbo: bool,
     pub rewind: bool,
@@ -373,6 +374,7 @@ impl Default for SlotState {
             shader_gbc: Shader::Simpletex,
             shader_ws: Shader::Simpletex,
             shader_lynx: Shader::Grid,
+            auto_load: true,
             eject_save: true,
             turbo: true,
             rewind: true,
@@ -483,6 +485,7 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     text.push_str(&format!("show_recents={}\n", s.show_recents as u8));
     text.push_str(&format!("show_titles={}\n", s.show_titles as u8));
     text.push_str(&format!("left_stick_dpad={}\n", s.left_stick_dpad as u8));
+    text.push_str(&format!("auto_load={}\n", s.auto_load as u8));
     if let Some(min) = s.lid_off_min {
         text.push_str(&format!("lid_off_min={min}\n"));
     }
@@ -528,6 +531,7 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut shader_gbc = None;
     let mut shader_ws = None;
     let mut shader_lynx = None;
+    let mut auto_load = None;
     let mut eject_save = None;
     let mut turbo = None;
     let mut rewind = None;
@@ -570,6 +574,7 @@ fn parse(text: &str) -> Option<SlotState> {
             "colour_correction_gb" => colour_correction_gb = flag(value),
             "colour_correction_gbc" => colour_correction_gbc = flag(value),
             "shader_gba" => shader_gba = Shader::parse(value).filter(|s| Shader::GBA.contains(s)),
+            "auto_load" => auto_load = flag(value),
             "eject_save" => eject_save = flag(value),
             "turbo" => turbo = flag(value),
             "rewind" => rewind = flag(value),
@@ -633,6 +638,7 @@ fn parse(text: &str) -> Option<SlotState> {
             .or(shader_gb.filter(|s| Shader::WS.contains(s)))
             .unwrap_or(fallback.shader_ws),
         shader_lynx: shader_lynx.or(shader_gba).unwrap_or(fallback.shader_lynx),
+        auto_load: auto_load.unwrap_or(fallback.auto_load),
         eject_save: eject_save.unwrap_or(fallback.eject_save),
         turbo: turbo.unwrap_or(fallback.turbo),
         rewind: rewind.unwrap_or(fallback.rewind),

@@ -1,7 +1,7 @@
 # Bezels
 
-Add .png files to GB or GBC. Pick one in Settings > Screen > Game Boy (or
-Game Boy Color) > Bezel.
+Add .png files to GBA, GB or GBC. Pick one in Settings > Screen > Game Boy
+Advance (or Game Boy, or Game Boy Color) > Bezel.
 
 Make it the size of the screen:
 
@@ -13,6 +13,9 @@ Make it the size of the screen:
   RG35XX Plus    640 x 480   x 107, y 48, 427 x 384
   RG35XX-H       640 x 480   x 107, y 48, 427 x 384
   RG28XX         640 x 480   x 107, y 48, 427 x 384
+
+GBA bezels show only on the 640 x 480 devices, where the game shows at
+x 0, y 27, 640 x 427. On the 720 x 480 devices a GBA game fills the screen.
 
 slotPlus gives every system its own folder: WS, Lynx, and in Ultra GG, NGP
 and TG16. Pick one in Settings > Screen > that system > Bezel. Make it the

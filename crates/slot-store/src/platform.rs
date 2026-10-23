@@ -13,8 +13,8 @@ pub enum Platform {
 impl Platform {
     pub const ALL: [Platform; 5] = [
         Platform::Gba,
-        Platform::Gb,
         Platform::Gbc,
+        Platform::Gb,
         Platform::Ws,
         Platform::Lynx,
     ];

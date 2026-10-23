@@ -1,5 +1,32 @@
 # Changelog
 
+## Unreleased
+
+slotPlus on Slot 1.9.0.
+
+- Brings in everything from Slot 1.8.1 and 1.9.0, below.
+
+## [1.9.0](https://github.com/BrandonKowalski/slot/releases/tag/v1.9.0)
+
+- mGBA no longer crashes on an empty resume state, which a card repair can leave behind. Booting with that cart in the slot crashed slot every time.
+- Saves, states, settings and slot's log reach the card as soon as they are written, not up to 30 seconds later. That shrinks the window in which pressing reset or the battery dying can leave the card read-only. (#72, #144)
+- A game's own save is written to the card every minute while it plays. The resume state is written every 5 minutes instead of every minute.
+- If a game takes slot down while it loads, slot starts on the shelf next time instead of loading it again.
+- A core that stops answering no longer freezes slot. Saving waits at most 2 seconds for it, and ejecting at most 10 before slot restarts.
+- Caching New Labels no longer stays up forever on a label it cannot read. After 20 seconds without progress the shelf comes up, and a label that crashes its decoder is skipped.
+- GBA can use your own bezels on 640x480 devices. Add .png files to `Bezels/GBA` and pick one in Settings > Screen > Game Boy Advance > Bezel. On 720x480 devices a GBA game fills the screen, so there is no bezel.
+- A card repair no longer hangs on a card too damaged to check. Each step is given up on after a time limit, the repair reports that it failed, and the device restarts.
+- For 30 seconds after a save or a load, the in-game menu now offers Undo Save or Undo Load under Resume. This option is also accessible with X on the state switcher screen.
+
+## [1.8.1](https://github.com/BrandonKowalski/slot/releases/tag/v1.8.1)
+
+- Game Boy games on an MBC2 cartridge, such as Kirby's Pinball Land, no longer freeze after the boot screen. mGBA crashed on the first read of their save RAM; slot now builds it with upstream's fix. (#137)
+- Load State on Insert, a new row on the Gameplay page, decides whether putting a cart in, or booting with one in the slot, loads its state. Auto Save on Eject is renamed Save State on Eject and only decides whether ejecting saves one.
+- Holding Up or Down to jump through the shelf a letter at a time no longer empties the shelf.
+- The BaseOS startup sound plays again. slot no longer takes the speaker while it boots, only once it has something to play. (#135)
+- Save states and rewind are smaller: slot no longer keeps the extra space mGBA sets aside before a game finds its save chip. Metroid Fusion's states drop from 528 KB to 430 KB. (#126)
+- Fast Forward can be set to Off, so holding it does nothing. (#123)
+
 ## [1.8.0-plus2.2](https://github.com/nelynes/slotPlus/releases/tag/v1.8.0-plus2.2)
 
 slotPlus 2.2 adds a rotation picker for Atari Lynx games. Both versions get it.
