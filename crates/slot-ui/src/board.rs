@@ -2,7 +2,10 @@ use slot_gfx::Canvas;
 use slot_store::{Cart, Core};
 
 use crate::bitmaps;
-use crate::cart::{clean_label, CartFace, CART_H, CART_W};
+use crate::cart::{
+    cart_back_shell, clean_label, CartFace, CART_H, CART_W, LYNX_LABEL_H, LYNX_LABEL_W,
+    LYNX_LABEL_X, LYNX_LABEL_Y,
+};
 use crate::shelf::foot_y;
 use crate::slot_chrome::ease;
 use crate::text;
@@ -284,6 +287,105 @@ pub fn socket_face(core: Core) -> CartFace {
     face
 }
 
+/// The ways a Lynx can be held, in the order of the sockets on the back of its
+/// cart: north, west, east, south. The chip's socket says which way the top of
+/// the handheld points while the game is played.
+pub const HOLD_NAMES: [&str; 4] = ["UPRIGHT", "LEFT", "RIGHT", "FLIPPED"];
+
+const HOLD_EDGE: u32 = 10;
+
+/// Where each hold's socket sits on the back of a Lynx cart, as the top-left
+/// corner of the socket in the face's own pixels: a compass in the recessed
+/// panel the label sits in on the front.
+pub const fn hold_socket_at(i: usize) -> (u32, u32) {
+    let (x, y) = (LYNX_LABEL_X, LYNX_LABEL_Y);
+    let (cx, cy) = (x + LYNX_LABEL_W / 2, y + LYNX_LABEL_H / 2);
+    match i {
+        0 => (cx - SOCKET_W / 2, y + HOLD_EDGE),
+        1 => (x + HOLD_EDGE + 4, cy - SOCKET_H / 2),
+        2 => (
+            x + LYNX_LABEL_W - HOLD_EDGE - 4 - SOCKET_W,
+            cy - SOCKET_H / 2,
+        ),
+        _ => (cx - SOCKET_W / 2, y + LYNX_LABEL_H - HOLD_EDGE - SOCKET_H),
+    }
+}
+
+/// Where the chip sits when it is seated in a hold's socket, its top-left
+/// corner in the back face's pixels.
+pub fn hold_chip_at(i: usize) -> (f32, f32) {
+    let (x, y) = hold_socket_at(i);
+    (
+        x as f32 + (SOCKET_W - CHIP_W) as f32 / 2.0,
+        y as f32 + (SOCKET_H - CHIP_H) as f32 / 2.0,
+    )
+}
+
+/// A socket marked with a word instead of a core's name.
+pub fn named_socket_face(name: &str) -> CartFace {
+    let mut face = bitmap_face(bitmaps::socket(), SOCKET_W, SOCKET_H);
+    if let Some(layout) = word_layout(name, (SOCKET_W - 12) as f32) {
+        ink_band(&mut face, 4, 37, &layout, SOCKET_INK, 0.5);
+    }
+    face
+}
+
+/// The back of a Lynx cart: its shell from behind, with a socket for each way
+/// the handheld can be held and HOLD marked in the middle of them.
+pub fn lynx_back_face(cart: &Cart) -> CartFace {
+    let mut face = cart_back_shell(cart);
+    recess(&mut face);
+    for (i, name) in HOLD_NAMES.iter().enumerate() {
+        let (x, y) = hold_socket_at(i);
+        over(&mut face, &named_socket_face(name), x, y);
+    }
+    if let Some(layout) = word_layout("HOLD", 60.0) {
+        let line_h = (NAME_PX * 1.4).ceil() as u32;
+        let top = LYNX_LABEL_Y + LYNX_LABEL_H / 2 - line_h / 2;
+        let mut band = CartFace {
+            rgba: vec![0; (face.w * line_h * 4) as usize],
+            w: face.w,
+            h: line_h,
+        };
+        ink_band(&mut band, 0, line_h, &layout, SOCKET_INK, 0.55);
+        over(&mut face, &band, 0, top);
+    }
+    face
+}
+
+/// On the front the label covers the recessed panel. On the back it is bare
+/// plastic: the shell's own colour, a shade darker for the recess, keeping the
+/// moulding's grain.
+fn recess(face: &mut CartFace) {
+    const DEPTH: f32 = 0.82;
+    let w = face.w as usize;
+    let mut sum = [0f32; 3];
+    let mut n = 0f32;
+    for y in RECESS_SAMPLE_Y..RECESS_SAMPLE_Y + 12 {
+        for x in LYNX_LABEL_X..LYNX_LABEL_X + LYNX_LABEL_W {
+            let at = (y as usize * w + x as usize) * 4;
+            for (k, total) in sum.iter_mut().enumerate() {
+                *total += face.rgba[at + k] as f32;
+            }
+            n += 1.0;
+        }
+    }
+    let shell = sum.map(|c| c / n);
+    for y in LYNX_LABEL_Y..LYNX_LABEL_Y + LYNX_LABEL_H {
+        for x in LYNX_LABEL_X..LYNX_LABEL_X + LYNX_LABEL_W {
+            let at = (y as usize * w + x as usize) * 4;
+            // The neutral panel's grain, around mid grey, rides on the shell colour.
+            let grain = 1.0 + (face.rgba[at] as f32 / 128.0 - 1.0) * 0.5;
+            for (k, c) in shell.iter().enumerate() {
+                face.rgba[at + k] = (c * DEPTH * grain).round().clamp(0.0, 255.0) as u8;
+            }
+        }
+    }
+}
+
+/// A row of plain shell above the panel, where the colour is taken from.
+const RECESS_SAMPLE_Y: u32 = 40;
+
 pub fn chip_face(core: Option<Core>) -> CartFace {
     let mut face = bitmap_face(bitmaps::chip(), CHIP_W, CHIP_H);
     if let Some(layout) = core.and_then(|c| name_layout(c, (CHIP_W - 8) as f32)) {
@@ -307,14 +409,18 @@ pub fn chip_shadow_face() -> CartFace {
 }
 
 fn name_layout(core: Core, max_w: f32) -> Option<text::Layout> {
+    word_layout(core.text(), max_w)
+}
+
+fn word_layout(word: &str, max_w: f32) -> Option<text::Layout> {
     let font = text::label_font()?;
     let tracking = |px: f32| (px * 0.10).round();
     let mut px = NAME_PX;
-    while px > NAME_MIN_PX && text::line_width(font, core.text(), px, tracking(px)) > max_w {
+    while px > NAME_MIN_PX && text::line_width(font, word, px, tracking(px)) > max_w {
         px -= 1.0;
     }
     Some(text::Layout {
-        lines: vec![core.text().to_string()],
+        lines: vec![word.to_string()],
         px,
         tracking: tracking(px),
     })

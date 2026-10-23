@@ -19,6 +19,7 @@ pub mod core;
 pub mod core_picker;
 #[cfg(unix)]
 pub mod crash;
+pub mod hold_picker;
 #[cfg(not(unix))]
 pub mod crash {
     pub fn install() {}

@@ -22,6 +22,7 @@ use slot_ui::{
 
 use crate::audio::Sfx;
 use crate::core_picker::{Chip, CorePicker, Outcome, Press};
+use crate::hold_picker::{self, Hold, HoldPicker};
 use crate::link_kind::{link_carried, link_dual, link_kind, serial_option, LinkKind};
 use crate::link_radio::{radio_jobs, LinkRole, RadioJob, RadioJobs};
 use crate::link_screen::LinkSprites;
@@ -115,6 +116,8 @@ const LID_SHADOW_H: f32 = 18.0;
 const LID_SHADOW_DROP: f32 = 27.1;
 const LID_SHADOW_ALPHA: f32 = 0.8;
 const FACES_WAIT_MS: Millis = 1500;
+/// How far the Lynx cart lifts as it turns over on its way up.
+const HOLD_FLIP_RISE: f32 = 30.0;
 
 const ALERT_HOLD: f32 = 0.45;
 const ALERT_GONE: f32 = 0.9;
@@ -339,6 +342,7 @@ pub struct App {
     shutdown_faces: Vec<(TexId, u32, u32)>,
     repair_faces: Vec<(TexId, u32, u32)>,
     core_picker: Option<CorePicker>,
+    hold_picker: Option<HoldPicker>,
     core_board_face: Option<TexId>,
     core_interior_face: Option<TexId>,
     core_lid_face: Option<TexId>,
@@ -523,6 +527,7 @@ impl App {
             shutdown_faces: Vec::new(),
             repair_faces: Vec::new(),
             core_picker: None,
+            hold_picker: None,
             core_board_face: None,
             core_interior_face: None,
             core_lid_face: None,
@@ -758,7 +763,7 @@ impl App {
         match self.phase {
             Phase::SetClock { .. } => true,
             Phase::QuickMenu { .. } => vertical,
-            Phase::Shelf => vertical && self.core_picker.is_none(),
+            Phase::Shelf => vertical && !self.picker_open(),
             Phase::Polaroids { .. } => !vertical,
             Phase::Playing { .. } => vertical && self.in_game_menu.is_some(),
             _ => false,
@@ -974,7 +979,9 @@ impl App {
                 own if own == row => None,
                 own => self.quick_value(own),
             },
-            QuickRow::PlayBrightness | QuickRow::PlayBlueLight => self.quick_value(self.playing_row(row)),
+            QuickRow::PlayBrightness | QuickRow::PlayBlueLight => {
+                self.quick_value(self.playing_row(row))
+            }
             QuickRow::Brightness => Some(QuickValue::level(self.state.brightness)),
             QuickRow::BlueLight => Some(match self.state.blue_light {
                 0 => QuickValue::Off,
@@ -1717,7 +1724,7 @@ impl App {
             || self.repair_prompt()
             || self.shutting_down();
         let shelf = matches!(self.phase, Phase::Shelf)
-            && self.core_picker.is_none()
+            && !self.picker_open()
             && !self.repair_prompt
             && self.reset_prompt.is_none();
         match self.phase {
@@ -2456,10 +2463,9 @@ impl App {
         let now = self.now();
         match self.phase {
             Phase::Shelf => match action {
-                Action::GbaDown(Btn::Start) if self.core_picker.is_none() => {
-                    self.open_core_picker()
-                }
+                Action::GbaDown(Btn::Start) if !self.picker_open() => self.open_core_picker(),
                 _ if self.core_picker.is_some() => self.core_picker_input(action),
+                _ if self.hold_picker.is_some() => self.hold_picker_input(action),
                 Action::PreviousShelf => self.switch_shelf(-1),
                 Action::NextShelf => self.switch_shelf(1),
                 Action::Favorite => self.toggle_favorite(),
@@ -3202,6 +3208,14 @@ impl App {
         if self.core_picker.is_some_and(|p| p.finished(now)) {
             self.core_picker = None;
         }
+        if let Some(picker) = &mut self.hold_picker {
+            if picker.waiting() && (ready || picker.waited(now) >= FACES_WAIT_MS) {
+                picker.start(now);
+            }
+        }
+        if self.hold_picker.is_some_and(|p| p.finished(now)) {
+            self.hold_picker = None;
+        }
         if !self.on_shelf() {
             self.shelf_mut().release_hold();
         }
@@ -3853,9 +3867,13 @@ impl App {
             .draw(out),
             Phase::Shelf => {
                 self.draw_background(out);
-                match (self.core_picker_shown(), self.selected_stem()) {
-                    (Some(picker), Some(stem)) => {
-                        let open = ease(picker.openness(self.now()));
+                let openness = self
+                    .core_picker_shown()
+                    .map(|p| p.openness(self.now()))
+                    .or_else(|| self.hold_picker_shown().map(|p| p.openness(self.now())));
+                match (openness, self.selected_stem()) {
+                    (Some(openness), Some(stem)) => {
+                        let open = ease(openness);
                         let dim = 1.0 + (CORE_PICKER_DIM - 1.0) * open;
                         self.shelf().draw_row(
                             self.canvas(),
@@ -4007,6 +4025,9 @@ impl App {
         if let Some(picker) = self.core_picker_shown() {
             self.draw_core_picker(&picker, out);
         }
+        if let Some(picker) = self.hold_picker_shown() {
+            self.draw_hold_picker(&picker, out);
+        }
         if let Some(menu) = self.game_menu {
             self.draw_game_menu(menu, out);
         }
@@ -4022,7 +4043,7 @@ impl App {
     }
 
     pub fn shelf_shake(&self) -> f32 {
-        self.shake_when(self.on_shelf() && self.core_picker.is_none(), self.now())
+        self.shake_when(self.on_shelf() && !self.picker_open(), self.now())
     }
 
     fn shake_when(&self, mine: bool, now: Millis) -> f32 {
@@ -4359,6 +4380,160 @@ impl App {
 
     fn core_picker_shown(&self) -> Option<CorePicker> {
         self.core_picker.filter(|p| !p.waiting())
+    }
+
+    fn hold_picker_shown(&self) -> Option<HoldPicker> {
+        self.hold_picker.filter(|p| !p.waiting())
+    }
+
+    pub fn hold_picker(&self) -> Option<Hold> {
+        self.hold_picker.map(|p| p.seat())
+    }
+
+    /// The Lynx cart comes up off the shelf to the middle of the screen,
+    /// turning over on the way: front first, then its back with the sockets.
+    fn draw_hold_picker(&self, picker: &HoldPicker, out: &mut Vec<Draw>) {
+        let now = self.now();
+        let progress = ease(picker.openness(now));
+        let (cw, ch) = slot_ui::cart_box(Platform::Lynx);
+        let (cw, ch) = (cw as f32, ch as f32);
+        let (rest_x, scale) = self.shelf().selected_at(self.canvas());
+        let from = Placed {
+            x: rest_x,
+            y: slot_ui::foot_y(ch) - ch * scale,
+            w: cw * scale,
+            h: ch * scale,
+        };
+        let to = Placed {
+            x: self.canvas().centred(cw),
+            y: ((CORE_LEGEND_Y - ch) / 2.0).round(),
+            w: cw,
+            h: ch,
+        };
+        let at = Placed {
+            x: from.x + (to.x - from.x) * progress,
+            y: from.y + (to.y - from.y) * progress
+                - HOLD_FLIP_RISE * (std::f32::consts::PI * progress).sin(),
+            w: from.w + (to.w - from.w) * progress,
+            h: from.h + (to.h - from.h) * progress,
+        };
+        // Turning over: the cart narrows to an edge halfway and widens again
+        // showing its back.
+        let squeeze = (std::f32::consts::PI * progress).cos();
+        let seen = squeeze.abs().max(0.02);
+        let drawn = Placed {
+            x: at.x + at.w * (1.0 - seen) / 2.0,
+            w: at.w * seen,
+            ..at
+        };
+        let ready = self.core_faces_ready();
+        let shown_back = squeeze < 0.0;
+        if shown_back && ready {
+            if let Some(tex) = self.core_board_face {
+                out.push(Draw::Tex {
+                    x: drawn.x,
+                    y: drawn.y,
+                    w: drawn.w,
+                    h: drawn.h,
+                    tex,
+                    alpha: 1.0,
+                });
+            }
+            self.draw_hold_chip(picker, drawn, cw, out);
+        } else {
+            let front = match ready {
+                true => self.core_lid_face.map(|tex| (tex, TURN_PAD as f32)),
+                false => self
+                    .selected_stem()
+                    .and_then(|stem| self.shelf().find(stem))
+                    .and_then(|(_, tex)| tex)
+                    .map(|tex| (tex, 0.0)),
+            };
+            if let Some((tex, pad)) = front {
+                let k = drawn.w / cw;
+                let pad_x = pad * k;
+                let pad_y = pad * drawn.h / ch;
+                out.push(Draw::Tex {
+                    x: drawn.x - pad_x,
+                    y: drawn.y - pad_y,
+                    w: drawn.w + 2.0 * pad_x,
+                    h: drawn.h + 2.0 * pad_y,
+                    tex,
+                    alpha: 1.0,
+                });
+            }
+        }
+        if let [cancel, swap, choose] = self.core_legend_faces.as_slice() {
+            let seen_w = |w: u32| w.saturating_sub(HINT_EDGE) as f32;
+            let swap_x = self.canvas().centred(seen_w(swap.1));
+            for (tex, w, x) in [
+                (
+                    cancel.0,
+                    cancel.1,
+                    swap_x - CORE_LEGEND_GAP - seen_w(cancel.1),
+                ),
+                (swap.0, swap.1, swap_x),
+                (
+                    choose.0,
+                    choose.1,
+                    swap_x + seen_w(swap.1) + CORE_LEGEND_GAP,
+                ),
+            ] {
+                out.push(Draw::Tex {
+                    x: x.round(),
+                    y: CORE_LEGEND_Y,
+                    w: w as f32,
+                    h: MOUTH_H,
+                    tex,
+                    alpha: progress,
+                });
+            }
+        }
+    }
+
+    /// The chip on the back of the Lynx cart, seated in its socket or hopping
+    /// between two, squeezed with the cart while it turns.
+    fn draw_hold_chip(&self, picker: &HoldPicker, back: Placed, cart_w: f32, out: &mut Vec<Draw>) {
+        let chip = picker.chip(self.now());
+        let (fx, fy) = slot_ui::hold_chip_at(chip.from.index());
+        let (tx, ty) = slot_ui::hold_chip_at(chip.to.index());
+        let (u, v) = (fx + (tx - fx) * chip.t, fy + (ty - fy) * chip.t);
+        let kx = back.w / cart_w;
+        let ky = back.h / slot_ui::cart_box(Platform::Lynx).1 as f32;
+        if chip.lift > 0.0 {
+            if let Some(tex) = self.core_chip_shadow_face {
+                let (w, h) = (SHADOW_W as f32 * kx, SHADOW_H as f32 * ky);
+                let cx = back.x + (u + CHIP_W as f32 / 2.0) * kx;
+                let cy = back.y + (v + CHIP_H as f32 - 4.0) * ky;
+                out.push(Draw::Tex {
+                    x: cx - w / 2.0,
+                    y: cy - h / 2.0,
+                    w,
+                    h,
+                    tex,
+                    alpha: 0.6 * chip.lift,
+                });
+            }
+        }
+        let Some(tex) = self.core_blank_chip_face else {
+            return;
+        };
+        let body = Placed {
+            x: back.x + u * kx + chip.shake,
+            y: back.y + (v - HOP_LIFT * chip.lift) * ky,
+            w: CHIP_W as f32 * kx,
+            h: CHIP_H as f32 * ky,
+        };
+        let at = grown(body, TURN_PAD as f32 * kx);
+        out.push(Draw::Turned {
+            x: at.x.round(),
+            y: at.y.round(),
+            w: at.w,
+            h: at.h,
+            tex,
+            alpha: 1.0,
+            turn: chip.tip,
+        });
     }
 
     fn draw_core_picker(&self, picker: &CorePicker, out: &mut Vec<Draw>) {
@@ -4763,6 +4938,7 @@ impl App {
         }
         self.close_game_menu();
         self.core_picker = None;
+        self.hold_picker = None;
         if matches!(self.phase, Phase::Doze { .. }) {
             return;
         }
@@ -4846,6 +5022,18 @@ impl App {
         let Some(cart) = self.shelf().carts.get(self.shelf().index) else {
             return;
         };
+        if cart.platform == Platform::Lynx {
+            let seat = hold_picker::hold_for(&root, &cart.stem, &cart.rom);
+            let now = self.now();
+            let mut picker = HoldPicker::open(seat, now);
+            if self.core_faces_ready() {
+                picker.start(now);
+            }
+            self.hold_picker = Some(picker);
+            self.shelf_mut().release_hold();
+            self.play_held = None;
+            return;
+        }
         if cart.platform != Platform::Gba {
             return;
         }
@@ -4858,6 +5046,41 @@ impl App {
         self.core_picker = Some(picker);
         self.shelf_mut().release_hold();
         self.play_held = None;
+    }
+
+    fn picker_open(&self) -> bool {
+        self.core_picker.is_some() || self.hold_picker.is_some()
+    }
+
+    fn hold_picker_input(&mut self, action: Action) {
+        use hold_picker::{Outcome as HoldOutcome, Press as HoldPress};
+        let press = match action {
+            Action::GbaDown(Btn::Up) => HoldPress::Toward(Hold::Upright),
+            Action::GbaDown(Btn::Left) | Action::ShelfLeft => HoldPress::Toward(Hold::Left),
+            Action::GbaDown(Btn::Right) | Action::ShelfRight => HoldPress::Toward(Hold::Right),
+            Action::GbaDown(Btn::Down) => HoldPress::Toward(Hold::Flipped),
+            Action::GbaDown(Btn::A) => HoldPress::Keep,
+            Action::GbaDown(Btn::B) => HoldPress::Back,
+            _ => return,
+        };
+        let now = self.now();
+        let Some(picker) = &mut self.hold_picker else {
+            return;
+        };
+        if let HoldOutcome::Write(hold) = picker.press(press, now) {
+            let (Some(root), Some(cart)) = (
+                self.root.clone(),
+                self.shelf().carts.get(self.shelf().index),
+            ) else {
+                return;
+            };
+            if let Err(e) = hold_picker::write_hold(&root, &cart.stem, hold) {
+                eprintln!(
+                    "slot: lynx: could not write {}: {e}",
+                    hold_picker::LYNX_HOLD_FILE
+                );
+            }
+        }
     }
 
     fn core_faces_ready(&self) -> bool {
