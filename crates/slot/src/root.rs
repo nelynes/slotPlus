@@ -1,8 +1,9 @@
 use std::path::{Path, PathBuf};
 
-pub const DIRS: [&str; 34] = [
+pub const DIRS: [&str; 35] = [
     "BIOS",
     "Bezels",
+    "Bezels/GBA",
     "Bezels/GB",
     "Bezels/GBC",
     "Bezels/WS",

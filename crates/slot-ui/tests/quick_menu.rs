@@ -55,11 +55,12 @@ fn a_long_label_is_set_as_large_as_a_short_one() {
 }
 
 #[test]
-fn the_fast_forward_row_offers_the_four_ceilings_the_card_can_hold() {
-    assert_eq!(FF_SPEEDS, [2, 3, 4, 6]);
+fn the_fast_forward_row_offers_off_and_the_four_ceilings_the_card_can_hold() {
+    assert_eq!(FF_SPEEDS, [0, 2, 3, 4, 6]);
     assert_eq!(
         FF_SPEEDS.map(QuickValue::speed),
         [
+            Some(QuickValue::Off),
             Some(QuickValue::Speed2),
             Some(QuickValue::Speed3),
             Some(QuickValue::Speed4),
@@ -145,7 +146,8 @@ fn the_rows_run_in_the_order_the_user_chose() {
             "Turbo Buttons",
             "Rumble",
             "Left Stick as D-Pad",
-            "Auto Save on Eject"
+            "Load State on Insert",
+            "Save State on Eject"
         ]
     );
     let opens: Vec<QuickRow> = QuickRow::ALL.into_iter().filter(|r| r.opens()).collect();
@@ -158,6 +160,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::Game,
             QuickRow::Resume,
             QuickRow::States,
+            QuickRow::Screenshots,
             QuickRow::Settings,
             QuickRow::ExitGame,
             QuickRow::PlayScreen,
@@ -173,7 +176,9 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::Controls,
             QuickRow::ControlsShelf,
             QuickRow::ControlsInGame,
-            QuickRow::ScreenGeneral
+            QuickRow::ScreenGeneral,
+            QuickRow::UndoSave,
+            QuickRow::UndoLoad
         ]
     );
     for page in [
@@ -349,7 +354,10 @@ fn the_in_game_pages_hold_their_rows_in_order() {
         QuickRow::PLAY,
         [
             QuickRow::Resume,
+            QuickRow::UndoSave,
+            QuickRow::UndoLoad,
             QuickRow::States,
+            QuickRow::Screenshots,
             QuickRow::Settings,
             QuickRow::ExitGame
         ]

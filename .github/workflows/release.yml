@@ -104,6 +104,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: CHANGELOG.md
+          sparse-checkout-cone-mode: false
+
       - uses: actions/download-artifact@v8
         with:
           pattern: card-*
@@ -116,12 +121,15 @@ jobs:
           set -eu
           tag="$GITHUB_REF_NAME"
           ultra_commit="$(cat ultra-commit.txt)"
-          cat > notes.md <<NOTES
-          **Release Highlights:** XYZ
-         
-          SlotPlus comes in two flavors.
-          - **\`slot-plus.zip\`, slotPlus:** Game Boy Advance, Game Boy and Game Boy Color, plus WonderSwan and Atari Lynx.
-          - **\`slot-plusultra.zip\`, slotPlusUltra:** everything in slotPlus, plus Game Gear, NeoGeo Pocket and TurboGrafx-16.
+          # The release's own notes are its entry in the changelog, from its
+          # heading to the next one, followed by how to install.
+          awk -v head="## [${tag#v}]" '
+            index($0, head) == 1 { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md | sed -e '/./,$!d' > notes.md
+          test -s notes.md
+          cat >> notes.md <<NOTES
 
           **Fresh install:** pick the version you prefer, unzip, and move all contents into the Slot card.
           **Upgrade install:** pick the version you prefer, unzip, and replace the 'System' folder in your card with the new one from the release.
