@@ -1039,6 +1039,8 @@ pub fn core_button_legends() -> Vec<UndoFace> {
             true,
         ),
         with_hint(button_face(ButtonLegend::A), "Choose", None, false),
+        // The Lynx rotation picker's chip goes any of four ways.
+        with_hint(four_way(), "Swap", None, true),
     ]
 }
 
@@ -1108,6 +1110,51 @@ fn button_face(which: ButtonLegend) -> UndoFace {
         h,
     }
 }
+
+/// All four directions: Slot's up and down halves stacked into a rocker, at
+/// half size so the pair fits the footer's height, beside the left and right
+/// rocker.
+fn four_way() -> UndoFace {
+    let (up, uw, uh) = button_legend(ButtonLegend::Up);
+    let (down, dw, dh) = button_legend(ButtonLegend::Down);
+    let (sw, sh) = (uw.max(dw), uh + dh);
+    let mut stacked = vec![0u8; (sw * sh * 4) as usize];
+    blit(&mut stacked, sw, up, uw, uh, 0, 0);
+    blit(&mut stacked, sw, down, dw, dh, 0, uh);
+    let (vw, vh) = (sw / 2, sh / 2);
+    let mut rocker = vec![0u8; (vw * vh * 4) as usize];
+    for y in 0..vh {
+        for x in 0..vw {
+            let mut sum = [0u32; 4];
+            for (dx, dy) in [(0, 0), (1, 0), (0, 1), (1, 1)] {
+                let at = (((2 * y + dy) * sw + 2 * x + dx) * 4) as usize;
+                for (k, total) in sum.iter_mut().enumerate() {
+                    *total += stacked[at + k] as u32;
+                }
+            }
+            let at = ((y * vw + x) * 4) as usize;
+            for k in 0..4 {
+                rocker[at + k] = (sum[k] / 4) as u8;
+            }
+        }
+    }
+    let across = button_pair(ButtonLegend::Left, ButtonLegend::Right);
+    let (w, h) = (vw + ACROSS_GAP + across.w, vh.max(across.h));
+    let mut rgba = vec![0u8; (w * h * 4) as usize];
+    blit(&mut rgba, w, &rocker, vw, vh, 0, (h - vh) / 2);
+    blit(
+        &mut rgba,
+        w,
+        &across.rgba,
+        across.w,
+        across.h,
+        vw + ACROSS_GAP,
+        (h - across.h) / 2,
+    );
+    UndoFace { rgba, w, h }
+}
+
+const ACROSS_GAP: u32 = 4;
 
 fn button_pair(left: ButtonLegend, right: ButtonLegend) -> UndoFace {
     let (a, aw, ah) = button_legend(left);

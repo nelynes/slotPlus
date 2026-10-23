@@ -4463,7 +4463,7 @@ impl App {
                 });
             }
         }
-        if let [cancel, swap, choose] = self.core_legend_faces.as_slice() {
+        if let [cancel, _, choose, swap] = self.core_legend_faces.as_slice() {
             let seen_w = |w: u32| w.saturating_sub(HINT_EDGE) as f32;
             let swap_x = self.canvas().centred(seen_w(swap.1));
             for (tex, w, x) in [
@@ -4670,7 +4670,7 @@ impl App {
             });
         }
 
-        if let [cancel, swap, choose] = self.core_legend_faces.as_slice() {
+        if let [cancel, swap, choose, ..] = self.core_legend_faces.as_slice() {
             let seen = |w: u32| w.saturating_sub(HINT_EDGE) as f32;
             let swap_x = self.canvas().centred(seen(swap.1));
             for (tex, w, x) in [
