@@ -1,9 +1,14 @@
 # Changelog
 
-## Unreleased
+## [1.8.0-plus2.2](https://github.com/nelynes/slotPlus/releases/tag/v1.8.0-plus2.2)
+
+slotPlus 2.2 adds a rotation picker for Atari Lynx games. Both versions get it.
+
+To upgrade, replace the `System` folder on your card with the one from the zip.
 
 - Atari Lynx: START on a Lynx cart turns it over to choose how the handheld is held for that game: Upright, 90CCW, 90CW or 180. The game starts upright for that hold, with the D-pad turned to match, and the choice is kept in `Config/lynx_hold.txt`.
-- Atari Lynx: a game made to be held turned clockwise now plays that way at full size, instead of upside down with the handheld turned the other way. SELECT switches between the way you hold it and the picture upright.
+- Atari Lynx: a game made to be held turned clockwise, such as Klax, now plays that way at full size, instead of upside down with the handheld turned the other way. SELECT switches between the chosen rotation and the picture upright.
+- The card's `Labels/README.txt` and `Bezels/README.txt` cover slotPlus's systems and point to Cart Studio+.
 
 ## [1.8.0-plus2.1](https://github.com/nelynes/slotPlus/releases/tag/v1.8.0-plus2.1)
 
