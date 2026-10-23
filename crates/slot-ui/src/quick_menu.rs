@@ -1163,50 +1163,85 @@ fn button_face(which: ButtonLegend) -> UndoFace {
     }
 }
 
-/// All four directions: Slot's up and down halves stacked into a rocker, at
-/// half size so the pair fits the footer's height, beside the left and right
-/// rocker.
+/// All four directions as one cross-shaped D-pad, drawn in the style of
+/// Slot's button art: a black outline, a light grey face lit from above with
+/// a darker bevel, dark arrows, a soft shadow above and a pale rim below.
 fn four_way() -> UndoFace {
-    let (up, uw, uh) = button_legend(ButtonLegend::Up);
-    let (down, dw, dh) = button_legend(ButtonLegend::Down);
-    let (sw, sh) = (uw.max(dw), uh + dh);
-    let mut stacked = vec![0u8; (sw * sh * 4) as usize];
-    blit(&mut stacked, sw, up, uw, uh, 0, 0);
-    blit(&mut stacked, sw, down, dw, dh, 0, uh);
-    let (vw, vh) = (sw / 2, sh / 2);
-    let mut rocker = vec![0u8; (vw * vh * 4) as usize];
-    for y in 0..vh {
-        for x in 0..vw {
-            let mut sum = [0u32; 4];
-            for (dx, dy) in [(0, 0), (1, 0), (0, 1), (1, 1)] {
-                let at = (((2 * y + dy) * sw + 2 * x + dx) * 4) as usize;
-                for (k, total) in sum.iter_mut().enumerate() {
-                    *total += stacked[at + k] as u32;
+    let (_, _, h) = button_legend(ButtonLegend::Left);
+    let w = h;
+    let c = w as f32 / 2.0;
+    // Half the length of an arm, half its width, and the corner rounding.
+    let (reach, half, round) = (24.5, 10.5, 3.0);
+    let sd = |x: f32, y: f32| {
+        let rect = |hx: f32, hy: f32| {
+            let (qx, qy) = ((x - c).abs() - hx + round, (y - c).abs() - hy + round);
+            let out = (qx.max(0.0).powi(2) + qy.max(0.0).powi(2)).sqrt();
+            out + qx.max(qy).min(0.0) - round
+        };
+        rect(reach, half).min(rect(half, reach))
+    };
+    // An arrow in each arm, pointing out from the middle.
+    let arrow = |x: f32, y: f32| {
+        let (dx, dy) = (x - c, y - c);
+        let along_across = [(-dy, dx), (dy, -dx), (-dx, dy), (dx, -dy)];
+        along_across.iter().any(|&(along, across)| {
+            let t = along - 10.5;
+            (0.0..8.5).contains(&t) && across.abs() <= (8.5 - t) * 0.62
+        })
+    };
+    const SS: u32 = 4;
+    let mut rgba = vec![0u8; (w * h * 4) as usize];
+    for py in 0..h {
+        for px in 0..w {
+            let mut acc = [0f32; 4];
+            for sy in 0..SS {
+                for sx in 0..SS {
+                    let x = px as f32 + (sx as f32 + 0.5) / SS as f32;
+                    let y = py as f32 + (sy as f32 + 0.5) / SS as f32;
+                    let d = sd(x, y);
+                    let (rgb, a) = if d <= -2.5 {
+                        let shade = if arrow(x, y) {
+                            60.0
+                        } else {
+                            // Lit from above: a bright line along the top
+                            // edge, darker towards the bevel at the sides.
+                            let lit = if sd(x, y - 2.0) > -2.5 { 227.0 } else { 177.0 };
+                            let bevel = (1.0 - ((-d - 2.5) / 3.0).min(1.0)) * 50.0;
+                            lit - bevel
+                        };
+                        ([shade; 3], 1.0)
+                    } else if d <= 0.0 {
+                        ([0.0; 3], 1.0)
+                    } else if sd(x, y - 3.0) <= 0.0 {
+                        // A pale rim below the key.
+                        ([246.0; 3], 0.3)
+                    } else if d <= 2.5 {
+                        // A soft shadow round it.
+                        ([0.0; 3], 0.27 * (1.0 - d / 2.5))
+                    } else {
+                        ([0.0; 3], 0.0)
+                    };
+                    for k in 0..3 {
+                        acc[k] += rgb[k] * a;
+                    }
+                    acc[3] += a;
                 }
             }
-            let at = ((y * vw + x) * 4) as usize;
-            for k in 0..4 {
-                rocker[at + k] = (sum[k] / 4) as u8;
+            let n = (SS * SS) as f32;
+            let at = ((py * w + px) * 4) as usize;
+            let a = acc[3] / n;
+            for k in 0..3 {
+                rgba[at + k] = if acc[3] > 0.0 {
+                    (acc[k] / acc[3]).round() as u8
+                } else {
+                    0
+                };
             }
+            rgba[at + 3] = (a * 255.0).round() as u8;
         }
     }
-    let across = button_pair(ButtonLegend::Left, ButtonLegend::Right);
-    let (w, h) = (vw + ACROSS_GAP + across.w, vh.max(across.h));
-    let mut rgba = vec![0u8; (w * h * 4) as usize];
-    blit(&mut rgba, w, &rocker, vw, vh, 0, (h - vh) / 2);
-    blit(
-        &mut rgba,
-        w,
-        &across.rgba,
-        across.w,
-        across.h,
-        vw + ACROSS_GAP,
-        (h - across.h) / 2,
-    );
     UndoFace { rgba, w, h }
 }
-
-const ACROSS_GAP: u32 = 4;
 
 fn button_pair(left: ButtonLegend, right: ButtonLegend) -> UndoFace {
     let (a, aw, ah) = button_legend(left);
