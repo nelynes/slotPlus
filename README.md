@@ -86,7 +86,7 @@ Release notes can be found in the [changelog](CHANGELOG.md).
 |--------------------|----------------------------------------------|---------------|
 | Anbernic RG SP     | Yes                                          | Always        |
 | Anbernic RG34XX    | Yes                                          | 1.4.0         |
-| Anbernic RG34XXSP  | Yes (Needs Left Stick as D-Pad Verification) | 1.4.0         |
+| Anbernic RG34XXSP  | Yes                                          | 1.4.0         |
 | Anbernic RG35XXSP  | Yes                                          | 1.5.0         |
 | Anbernic 35XX Plus | Yes                                          | 1.5.0         |
 | Anbernic RG28XX    | Yes                                          | 1.6.0         |
@@ -114,3 +114,11 @@ I understand if my use of AI is a dealbreaker for you. Just know it's the least 
 what's here.
 
 Figured I should share the end result of all the wasted water. ✌🏻
+
+---
+
+# Spread Joy!
+
+I've spent a lot of time building slot.
+
+If you enjoy using it and feel inclined to pay it forward, go do something nice for someone! ❤️

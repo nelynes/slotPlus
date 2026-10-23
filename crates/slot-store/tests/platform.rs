@@ -5,7 +5,7 @@ fn every_platform_has_a_directory() {
     let names: Vec<&str> = Platform::ALL.iter().map(|p| p.dir_name()).collect();
     assert_eq!(
         names,
-        vec!["GBA", "GB", "GBC", "WS", "Lynx", "GG", "NGP", "TG16"]
+        vec!["GBA", "GBC", "GB", "WS", "Lynx", "GG", "NGP", "TG16"]
     );
 }
 
@@ -15,8 +15,8 @@ fn every_platform_is_a_shelf_of_its_own() {
         Platform::ALL,
         [
             Platform::Gba,
-            Platform::Gb,
             Platform::Gbc,
+            Platform::Gb,
             Platform::Ws,
             Platform::Lynx,
             Platform::Gg,

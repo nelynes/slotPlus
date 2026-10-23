@@ -8,7 +8,7 @@ use slot::app::Phase;
 use slot::persist;
 use slot::session::Session;
 use slot_input::{Action, Btn, RawEvent};
-use slot_store::{Core, Platform, StateRing};
+use slot_store::{write_slot_state, Core, Platform, SlotState, StateRing};
 
 #[test]
 fn a_tap_resumes_and_a_hold_starts_clean() {
@@ -31,6 +31,31 @@ fn a_tap_resumes_and_a_hold_starts_clean() {
     hold.apply_at(Action::GbaDown(Btn::A), 0);
     hold.tick_ms(500);
     assert!(hold.starting_clean(), "holding A still resumed");
+}
+
+#[test]
+fn auto_load_alone_decides_whether_a_tap_resumes() {
+    for (auto_load, eject_save) in [(false, true), (true, false)] {
+        let d = tmp_root_with_carts(&["Emerald", "Fusion"]);
+        StateRing::new(d.path(), Platform::Gba, Core::Mgba, "Emerald")
+            .write_resume(&[7u8; 64])
+            .unwrap();
+        let s = SlotState {
+            clock_set: true,
+            auto_load,
+            eject_save,
+            ..SlotState::default()
+        };
+        write_slot_state(d.path(), &s).unwrap();
+        let mut a = boot(d.path());
+        a.apply_at(Action::GbaDown(Btn::A), 0);
+        a.apply_at(Action::GbaUp(Btn::A), 120);
+        assert_eq!(
+            a.starting_clean(),
+            !auto_load,
+            "auto_load {auto_load} eject_save {eject_save}"
+        );
+    }
 }
 
 #[test]
@@ -86,7 +111,7 @@ fn counter_after(root: &Path, hold: bool) -> u64 {
         s.update(1.0 / 60.0);
         std::thread::sleep(Duration::from_millis(1));
     }
-    s.app_mut().tick_ms(60_000);
+    s.app_mut().tick_ms(300_000);
     s.app_mut().settle_saves();
     let state = persist::read_resume(root, Platform::Gba, Core::Mgba, "Emerald")
         .unwrap()
