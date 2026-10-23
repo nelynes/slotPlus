@@ -489,6 +489,29 @@ fn paste_decal(face: &mut CartFace, decal: &[u8]) {
     }
 }
 
+/// The back of a cart: its coloured shell with no label, seen from behind, so
+/// mirrored left to right and clipped to the mirrored outline.
+pub fn cart_back_shell(cart: &Cart) -> CartFace {
+    let s = spec(shape_of(cart));
+    let front = shell_face(&s, &shell_for(cart));
+    let (w, h) = (front.w as usize, front.h as usize);
+    let mut rgba = vec![0u8; front.rgba.len()];
+    for y in 0..h {
+        for x in 0..w {
+            let from = (y * w + (w - 1 - x)) * 4;
+            let to = (y * w + x) * 4;
+            rgba[to..to + 4].copy_from_slice(&front.rgba[from..from + 4]);
+            let cover = s.mask[y * w + (w - 1 - x)] as u32;
+            rgba[to + 3] = ((rgba[to + 3] as u32 * cover + 127) / 255) as u8;
+        }
+    }
+    CartFace {
+        rgba,
+        w: front.w,
+        h: front.h,
+    }
+}
+
 fn clip_to_silhouette(s: &Spec, face: &mut CartFace) {
     for (px, cover) in face.rgba.chunks_exact_mut(4).zip(s.mask) {
         px[3] = ((px[3] as u32 * *cover as u32 + 127) / 255) as u8;

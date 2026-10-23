@@ -2,7 +2,10 @@ use slot_gfx::Canvas;
 use slot_store::{Cart, Core};
 
 use crate::bitmaps;
-use crate::cart::{clean_label, CartFace, CART_H, CART_W};
+use crate::cart::{
+    cart_back_shell, clean_label, CartFace, CART_H, CART_W, LYNX_CART_H, LYNX_CART_W, LYNX_LABEL_W,
+    LYNX_LABEL_X,
+};
 use crate::shelf::foot_y;
 use crate::slot_chrome::ease;
 use crate::text;
@@ -284,6 +287,185 @@ pub fn socket_face(core: Core) -> CartFace {
     face
 }
 
+/// The ways a Lynx can be held, in the order of the sockets on the back of its
+/// cart: north, west, east, south. The chip's socket says which way the top of
+/// the handheld points while the game is played.
+pub const HOLD_NAMES: [&str; 4] = ["Upright", "90CCW", "90CW", "180"];
+
+const HOLD_EDGE: u32 = 10;
+
+/// Where each hold's socket sits on the back of a Lynx cart, as the top-left
+/// corner of the socket in the face's own pixels: a compass in the recessed
+/// panel the label sits in on the front.
+pub const fn hold_socket_at(i: usize) -> (u32, u32) {
+    let (x, y, w, h) = (BACK_FLAT_X, BACK_FLAT_Y, BACK_FLAT_W, BACK_FLAT_H);
+    let (cx, cy) = (x + w / 2, y + h / 2);
+    match i {
+        0 => (cx - SOCKET_W / 2, y + HOLD_EDGE),
+        1 => (x + HOLD_EDGE, cy - SOCKET_H / 2),
+        2 => (x + w - HOLD_EDGE - SOCKET_W, cy - SOCKET_H / 2),
+        _ => (cx - SOCKET_W / 2, y + h - HOLD_EDGE - SOCKET_H),
+    }
+}
+
+/// The lip across the top of a Lynx cart's back: the front's curved top stands
+/// proud of the flat back by this much, and casts a short shadow below it.
+const BACK_LIP_H: u32 = 32;
+const BACK_LIP_TOP: u32 = 22;
+const BACK_LIP_SHADOW: u32 = 12;
+/// The flat of the back below the lip, where the sockets go.
+const BACK_FLAT_X: u32 = 22;
+const BACK_FLAT_Y: u32 = BACK_LIP_H + 22;
+const BACK_FLAT_W: u32 = LYNX_CART_W - 2 * BACK_FLAT_X;
+const BACK_FLAT_H: u32 = LYNX_CART_H - BACK_FLAT_Y - 26;
+
+/// Where the chip sits when it is seated in a hold's socket, its top-left
+/// corner in the back face's pixels.
+pub fn hold_chip_at(i: usize) -> (f32, f32) {
+    let (x, y) = hold_socket_at(i);
+    (
+        x as f32 + (SOCKET_W - CHIP_W) as f32 / 2.0,
+        y as f32 + (SOCKET_H - CHIP_H) as f32 / 2.0,
+    )
+}
+
+/// A socket marked with a word instead of a core's name.
+pub fn named_socket_face(name: &str) -> CartFace {
+    let mut face = bitmap_face(bitmaps::socket(), SOCKET_W, SOCKET_H);
+    if let Some(layout) = word_layout(name, (SOCKET_W - 12) as f32) {
+        ink_band(&mut face, 4, 37, &layout, SOCKET_INK, 0.5);
+    }
+    face
+}
+
+/// The back of a Lynx cart: flat plastic in the shell's colour, with the lip
+/// of the curved top standing out across it, and a socket for each rotation
+/// with Rotation marked in the middle of them.
+pub fn lynx_back_face(cart: &Cart) -> CartFace {
+    let mut face = cart_back_shell(cart);
+    flat_back(&mut face);
+    for (i, name) in HOLD_NAMES.iter().enumerate() {
+        let (x, y) = hold_socket_at(i);
+        over(&mut face, &named_socket_face(name), x, y);
+    }
+    if let Some(layout) = word_layout("Rotation", 100.0) {
+        let line_h = (NAME_PX * 1.4).ceil() as u32;
+        let top = BACK_FLAT_Y + BACK_FLAT_H / 2 - line_h / 2;
+        let mut band = CartFace {
+            rgba: vec![0; (face.w * line_h * 4) as usize],
+            w: face.w,
+            h: line_h,
+        };
+        // Moulded into the plastic: a shade lighter or darker than the shell,
+        // whichever reads on it.
+        let ink = match luminance(shell_colour(&face)) > 0.45 {
+            true => [0x40, 0x40, 0x44],
+            false => SOCKET_INK,
+        };
+        ink_band(&mut band, 0, line_h, &layout, ink, 0.55);
+        over(&mut face, &band, 0, top);
+    }
+    face
+}
+
+/// The shell's own colour, from the plain plastic near the top of the face.
+fn shell_colour(face: &CartFace) -> [f32; 3] {
+    let w = face.w as usize;
+    let mut sum = [0f32; 3];
+    let mut n = 0f32;
+    for y in RECESS_SAMPLE_Y..RECESS_SAMPLE_Y + 12 {
+        for x in LYNX_LABEL_X..LYNX_LABEL_X + LYNX_LABEL_W {
+            let at = (y as usize * w + x as usize) * 4;
+            for (k, total) in sum.iter_mut().enumerate() {
+                *total += face.rgba[at + k] as f32;
+            }
+            n += 1.0;
+        }
+    }
+    sum.map(|c| c / n)
+}
+
+fn luminance(c: [f32; 3]) -> f32 {
+    (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) / 255.0
+}
+
+/// Repaint the face as the back of the cart. The front's curved line, label
+/// recess and contact strip are not on the back: it is one flat face, lit
+/// from above, with a lip across the top. The plastic's grain is kept as a
+/// faint texture, and the outline keeps a soft rounded edge.
+fn flat_back(face: &mut CartFace) {
+    let shell = shell_colour(face);
+    let (w, h) = (face.w as usize, face.h as usize);
+    let alpha: Vec<u8> = face.rgba.chunks_exact(4).map(|px| px[3]).collect();
+    let inside = |x: i32, y: i32| {
+        x >= 0
+            && y >= 0
+            && (x as usize) < w
+            && (y as usize) < h
+            && alpha[y as usize * w + x as usize] > 128
+    };
+    for y in 0..h {
+        for x in 0..w {
+            let at = (y * w + x) * 4;
+            if alpha[y * w + x] == 0 {
+                continue;
+            }
+            let yy = y as u32;
+            let light = if yy < BACK_LIP_TOP {
+                // The top of the lip faces the light.
+                1.12
+            } else if yy < BACK_LIP_H {
+                // Its front turns down towards the flat, darkening as it goes.
+                let t = (yy - BACK_LIP_TOP) as f32 / (BACK_LIP_H - BACK_LIP_TOP) as f32;
+                1.02 - 0.22 * t
+            } else if yy < BACK_LIP_H + BACK_LIP_SHADOW {
+                // The shadow the lip throws on the flat, fading out.
+                let t = (yy - BACK_LIP_H) as f32 / BACK_LIP_SHADOW as f32;
+                0.62 + 0.34 * t * t.sqrt()
+            } else {
+                0.96
+            };
+            // A rounded edge all the way round: darker the nearer the outline.
+            let mut near = 0;
+            for d in 1..=EDGE_BEVEL as i32 {
+                let (x, y) = (x as i32, y as i32);
+                if !(inside(x - d, y) && inside(x + d, y) && inside(x, y - d) && inside(x, y + d)) {
+                    near = EDGE_BEVEL as i32 + 1 - d;
+                    break;
+                }
+            }
+            let bevel = 1.0 - 0.07 * near as f32;
+            let grain = 1.0 + (hash_noise(x as u32, y as u32) - 0.5) * 0.05;
+            for (k, c) in shell.iter().enumerate() {
+                face.rgba[at + k] = (c * light * bevel * grain).round().clamp(0.0, 255.0) as u8;
+            }
+        }
+    }
+    // A bright line along the lip's edge, where its top turns down.
+    for y in [BACK_LIP_TOP as usize - 1, BACK_LIP_TOP as usize] {
+        for x in 0..w {
+            let at = (y * w + x) * 4;
+            if alpha[y * w + x] > 0 {
+                for (k, c) in shell.iter().enumerate() {
+                    face.rgba[at + k] = (c * 1.3).round().min(255.0) as u8;
+                }
+            }
+        }
+    }
+}
+
+const EDGE_BEVEL: u32 = 4;
+
+/// A fixed fine noise, for the moulding's grain.
+fn hash_noise(x: u32, y: u32) -> f32 {
+    let mut n = x.wrapping_mul(374_761_393) ^ y.wrapping_mul(668_265_263);
+    n = (n ^ (n >> 13)).wrapping_mul(1_274_126_177);
+    (n ^ (n >> 16)) as f32 / u32::MAX as f32
+}
+
+/// A row of plain shell above the panel, where the colour is taken from.
+const RECESS_SAMPLE_Y: u32 = 40;
+
 pub fn chip_face(core: Option<Core>) -> CartFace {
     let mut face = bitmap_face(bitmaps::chip(), CHIP_W, CHIP_H);
     if let Some(layout) = core.and_then(|c| name_layout(c, (CHIP_W - 8) as f32)) {
@@ -307,14 +489,18 @@ pub fn chip_shadow_face() -> CartFace {
 }
 
 fn name_layout(core: Core, max_w: f32) -> Option<text::Layout> {
+    word_layout(core.text(), max_w)
+}
+
+fn word_layout(word: &str, max_w: f32) -> Option<text::Layout> {
     let font = text::label_font()?;
     let tracking = |px: f32| (px * 0.10).round();
     let mut px = NAME_PX;
-    while px > NAME_MIN_PX && text::line_width(font, core.text(), px, tracking(px)) > max_w {
+    while px > NAME_MIN_PX && text::line_width(font, word, px, tracking(px)) > max_w {
         px -= 1.0;
     }
     Some(text::Layout {
-        lines: vec![core.text().to_string()],
+        lines: vec![word.to_string()],
         px,
         tracking: tracking(px),
     })
