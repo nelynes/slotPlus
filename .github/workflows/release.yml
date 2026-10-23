@@ -4,11 +4,19 @@ name: release
 # commit, and slotPlusUltra, built from the head of the slotPlusUltra branch
 # as it is when the tag is pushed. Bring main's changes into slotPlusUltra
 # before tagging, so the Ultra download has them too.
+#
+# Run by hand from another branch to try it on a card, it builds Ultra from
+# the branch named in ultra_ref: the Ultra side of the branch being tried,
+# not slotPlusUltra, or the Ultra download would not have the change.
 
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      ultra_ref:
+        description: Branch to build slotPlusUltra from
+        default: slotPlusUltra
 
 permissions:
   contents: read
@@ -27,7 +35,7 @@ jobs:
             suffix: ''
             zip: slot-plus.zip
           - edition: ultra
-            ref: slotPlusUltra
+            ref: ${{ inputs.ultra_ref || 'slotPlusUltra' }}
             suffix: '-ultra'
             zip: slot-plusultra.zip
     steps:
