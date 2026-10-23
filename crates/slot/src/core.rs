@@ -267,17 +267,6 @@ pub fn lynx_select_toggles(turn: &str) -> bool {
     turn != "manual"
 }
 
-/// What to tell the host about how the handheld is held. Turned a quarter
-/// anticlockwise, a game that turns fills the screen sideways. Held the usual
-/// way (`upright`), it is drawn upright, tall, with bars at the sides.
-pub fn handheld_turn_value(upright: bool) -> &'static str {
-    if upright {
-        "off"
-    } else {
-        "ccw"
-    }
-}
-
 pub fn apply_core_options(
     core: &mut LibretroCore,
     which: Core,
@@ -317,7 +306,9 @@ pub fn apply_core_options(
     if which == Core::Lynx {
         // The core turns the picture itself to the way the cart was made to be
         // held, and asks Slot to draw it that way; it also turns the D-pad to
-        // match. SELECT is left unused so nothing else can fight it.
+        // match. The session sets each game's own turn when it starts, from
+        // the rotation chosen for it. SELECT is left unused so nothing else
+        // can fight it.
         core.set_option("lynx_rot_screen", "auto");
     }
     if which == Core::Gpsp {
@@ -375,12 +366,6 @@ mod tests {
             assert!(lynx_select_toggles(turn), "{turn}");
         }
         assert!(!lynx_select_toggles("manual"));
-    }
-
-    #[test]
-    fn the_handheld_starts_turned_and_select_holds_it_the_usual_way() {
-        assert_eq!(handheld_turn_value(false), "ccw");
-        assert_eq!(handheld_turn_value(true), "off");
     }
 
     #[test]

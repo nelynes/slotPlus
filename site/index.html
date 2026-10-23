@@ -308,7 +308,7 @@
       <li class="step" id="turned" data-clip="turned.mp4">
         <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
         <h3>Games Made to Be Held Sideways</h3>
-        <p>Vertical WonderSwan games and sideways Lynx games are drawn turned, for playing with the handheld on its side.<br><kbd>SELECT</kbd> stands the picture upright instead.</p>
+        <p>Vertical WonderSwan games and sideways Lynx games are drawn turned, for playing with the handheld on its side.<br><kbd>START</kbd> on a Lynx cart turns it over to choose how you'll hold it.<br><kbd>SELECT</kbd> stands the picture upright instead.</p>
       </li>
       <li class="step" id="stretch" data-clip="stretch.mp4">
         <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
@@ -420,12 +420,14 @@
         <div class="key"><dt><kbd>A</kbd> / <kbd>B</kbd></dt><dd>A / B</dd></div>
         <div class="key"><dt><kbd>L1</kbd> / <kbd>R1</kbd></dt><dd>Option 1 / Option 2</dd></div>
         <div class="key"><dt><kbd>START</kbd></dt><dd>Pause</dd></div>
-        <div class="key"><dt><kbd>SELECT</kbd></dt><dd>Sideways games: picture upright or turned</dd></div>
+        <div class="key"><dt><kbd>SELECT</kbd></dt><dd>Picture upright, or the way the game is made to be held</dd></div>
         <div class="key"><dt>Hold <kbd>X</kbd> / <kbd>Y</kbd></dt><dd>Turbo A / turbo B</dd></div>
       </dl>
       <h3>Games that turn</h3>
-      <p class="note">Some Lynx games were made to be held on their side. Play them with the handheld turned 90 degrees counter-clockwise: the picture is drawn sideways at full size and the D-pad follows it. <kbd>SELECT</kbd> stands the picture upright instead. Beetle Lynx knows many of these games, and slotPlus also recognises Klax, Gauntlet III, Lexis and NFL Football by name.</p>
-      <p class="note">For one that isn't recognised, add a line to <code>Config/lynx_rotation.txt</code>:</p>
+      <p class="note">Some Lynx games were made to be held on their side, one way or the other. These start with the picture drawn the way the game is made, at full size: turn the handheld the way it was meant to be held and the game is upright, with the D-pad following it. Beetle Lynx knows many of these games, and slotPlus also recognises Klax, Gauntlet III, Lexis and NFL Football by name.</p>
+      <h3>Choosing a rotation</h3>
+      <p class="note">On the shelf, press <kbd>START</kbd> on a Lynx cart to turn it over. Its back has a socket for each way you can hold the handheld: Upright, 90CCW, 90CW and 180. Move the chip with the <kbd>D-pad</kbd> and press <kbd>A</kbd> to keep it, or <kbd>B</kbd> to leave it as it was. The game then starts upright for the way you chose, with the D-pad turned to match, whichever way it was made to be held. In a game, <kbd>SELECT</kbd> switches to the picture upright and back.</p>
+      <p class="note">For a sideways game slotPlus doesn't recognise, add a line to <code>Config/lynx_rotation.txt</code> so it knows which way the game is made:</p>
       <pre><code>Game Name (USA) = 90</code></pre>
       <p class="note">The values are <code>auto</code>, <code>0</code>, <code>90</code>, <code>270</code>, <code>180</code> and <code>manual</code>. If a game comes up upside down, swap 90 for 270. With <code>manual</code>, each <kbd>SELECT</kbd> turns the picture another quarter, so you can find the right value.</p>
     </div>

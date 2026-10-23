@@ -143,24 +143,32 @@ The buttons follow the NeoGeo Pocket's own layout, so its A is the left button a
 | A / B      | A / B                                        |
 | L1 / R1    | Option 1 / Option 2                          |
 | Start      | Pause (the Lynx's Option button)             |
-| Select     | Games that turn: hold upright / turned       |
+| Select     | Picture upright / the way the game is made   |
 | Hold X / Y | Turbo A / turbo B                            |
 
 ### Games that turn
 
-Some Lynx games were made to be held on their side. Play these with the handheld turned 90 degrees counter-clockwise, like the vertical WonderSwan games: the picture is drawn sideways at full size and comes out upright once you turn the handheld, and the D-pad follows the picture, so press toward the top of the picture for up. A, B, Option 1, Option 2 and Start are unchanged.
-
-Press SELECT in a game that turns to hold the handheld the usual way instead: the picture is drawn upright and tall, with bars at the sides, and the D-pad goes back to normal. Press it again to turn back. Every launch starts turned. SELECT does nothing in other games.
+Some Lynx games were made to be held on their side, some turned a quarter anticlockwise and some a quarter clockwise. Each starts with its picture drawn the way the game is made, at full size: turn the handheld the way the game was meant to be held and it is upright, with the D-pad following it, so press toward the top of the picture for up. A, B, Option 1, Option 2 and Start are unchanged.
 
 Beetle Lynx knows many of these games, and slotPlus also recognises Klax, Gauntlet III, Lexis and NFL Football by name, whichever dump you have. Every other game is drawn as normal.
 
-For a game that needs turning and is not recognised, add a line to `Config/lynx_rotation.txt`, using the game's file name without the extension:
+### Choosing a rotation
+
+On the shelf, press START on a Lynx cart to turn it over. Its back has a socket for each way the handheld can be held: Upright (north), 90CCW (west), 90CW (east) and 180 (south). Each D-pad direction moves the chip to that socket. Press A to keep it or B to leave the game as it was. The choice is saved in `Config/lynx_hold.txt`.
+
+The game then starts upright for the way you chose, with the D-pad turned to match, whichever way the game is made to be held: Upright on a sideways game draws it standing up with bars at the sides, and 180 plays any game with the handheld upside down.
+
+In a game, SELECT switches between the way you are holding it and the picture upright, or, held upright, the way the game is made to be held. Press it again to go back.
+
+### Games slotPlus doesn't recognise
+
+For a game that is made to be held sideways and is not recognised, add a line to `Config/lynx_rotation.txt`, using the game's file name without the extension, so slotPlus knows which way it is made:
 
 ```
 Game Name (USA) = 90
 ```
 
-The values are `auto` (let the core decide), `0` (never turn), `90` and `270` (the two ways a game can be made to be turned), `180`, and `manual`. If a game comes up upside down with the handheld turned, swap 90 for 270. With `manual`, SELECT goes to the core instead and each press turns the picture another quarter, so you can find the right setting and then write it into the file. An entry in the file wins over everything else.
+The values are `auto` (let the core decide), `0` (not turned), `90` (made to be held a quarter anticlockwise), `270` (a quarter clockwise), `180`, and `manual`. If a game comes up upside down, swap 90 for 270. With `manual`, SELECT goes to the core instead and each press turns the picture another quarter, so you can find the right setting and then write it into the file. An entry in the file wins over everything else.
 
 > [!NOTE]
 > The turned layout and its D-pad feel are new. If something feels wrong, please open an issue.

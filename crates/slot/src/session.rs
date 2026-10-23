@@ -42,6 +42,8 @@ pub struct Session {
     lynx_select: bool,
     /// The Lynx game is held the usual way, drawn upright with bars at the sides.
     lynx_upright: bool,
+    /// How the handheld is held for the Lynx game playing, as the host is told.
+    lynx_held: &'static str,
 }
 
 impl Session {
@@ -71,6 +73,7 @@ impl Session {
             ws_vertical: false,
             lynx_select: false,
             lynx_upright: false,
+            lynx_held: "off",
         };
         // A game left running comes straight back. Its core loads on its own thread, so start it
         // now and let the card read overlap the rest of the boot. Waiting for the first update
@@ -257,9 +260,14 @@ impl Session {
         }
     }
 
+    /// SELECT switches between the way the handheld was being held and the
+    /// other natural way: upright, or the way the game is made to be held.
     fn flip_lynx_layout(&mut self) {
         self.lynx_upright = !self.lynx_upright;
-        let value = crate::core::handheld_turn_value(self.lynx_upright);
+        let value = match self.lynx_upright {
+            true => crate::hold_picker::select_held(self.lynx_held),
+            false => self.lynx_held,
+        };
         if trace() {
             eprintln!("slot: lynx: {HANDHELD_TURN_OPTION}={value}");
         }
@@ -583,8 +591,8 @@ impl Session {
                 // A Lynx game's turn and a WonderSwan game's orientation come
                 // from files too, so they are read here with the rest.
                 let ws_vertical = platform == Platform::Ws && slot_store::ws_vertical(&rom);
-                let lynx_turn =
-                    (platform == Platform::Lynx).then(|| crate::core::lynx_rotation(&root, &stem));
+                let lynx_turn = (platform == Platform::Lynx)
+                    .then(|| crate::hold_picker::lynx_setup(&root, &stem));
                 Loaded {
                     opened,
                     rom,
@@ -639,14 +647,15 @@ impl Session {
         self.ws_vertical = loaded.ws_vertical;
         self.lynx_select = false;
         self.lynx_upright = false;
-        if let Some(turn) = loaded.lynx_turn {
-            eprintln!("slot: lynx: lynx_rot_screen={turn}");
-            emu.set_option("lynx_rot_screen", turn);
-            emu.set_option(
-                HANDHELD_TURN_OPTION,
-                crate::core::handheld_turn_value(false),
+        if let Some(setup) = loaded.lynx_turn {
+            eprintln!(
+                "slot: lynx: lynx_rot_screen={}, {HANDHELD_TURN_OPTION}={}",
+                setup.core_turn, setup.held
             );
-            self.lynx_select = crate::core::lynx_select_toggles(turn);
+            emu.set_option("lynx_rot_screen", setup.core_turn);
+            emu.set_option(HANDHELD_TURN_OPTION, setup.held);
+            self.lynx_held = setup.held;
+            self.lynx_select = crate::core::lynx_select_toggles(setup.core_turn);
         }
         emu.set_volume(self.app.output_volume());
         emu.set_driven(self.driven);
@@ -697,7 +706,7 @@ struct Loaded {
     sav: std::io::Result<Option<Vec<u8>>>,
     resume: std::io::Result<Option<Vec<u8>>>,
     ws_vertical: bool,
-    lynx_turn: Option<&'static str>,
+    lynx_turn: Option<crate::hold_picker::LynxSetup>,
 }
 
 struct Opening {
