@@ -290,7 +290,7 @@ pub fn socket_face(core: Core) -> CartFace {
 /// The ways a Lynx can be held, in the order of the sockets on the back of its
 /// cart: north, west, east, south. The chip's socket says which way the top of
 /// the handheld points while the game is played.
-pub const HOLD_NAMES: [&str; 4] = ["UPRIGHT", "LEFT", "RIGHT", "FLIPPED"];
+pub const HOLD_NAMES: [&str; 4] = ["Upright", "90CCW", "90CW", "180"];
 
 const HOLD_EDGE: u32 = 10;
 
@@ -331,7 +331,7 @@ pub fn named_socket_face(name: &str) -> CartFace {
 }
 
 /// The back of a Lynx cart: its shell from behind, with a socket for each way
-/// the handheld can be held and HOLD marked in the middle of them.
+/// the handheld can be held and Rotation marked in the middle of them.
 pub fn lynx_back_face(cart: &Cart) -> CartFace {
     let mut face = cart_back_shell(cart);
     recess(&mut face);
@@ -339,7 +339,7 @@ pub fn lynx_back_face(cart: &Cart) -> CartFace {
         let (x, y) = hold_socket_at(i);
         over(&mut face, &named_socket_face(name), x, y);
     }
-    if let Some(layout) = word_layout("HOLD", 60.0) {
+    if let Some(layout) = word_layout("Rotation", 100.0) {
         let line_h = (NAME_PX * 1.4).ceil() as u32;
         let top = LYNX_LABEL_Y + LYNX_LABEL_H / 2 - line_h / 2;
         let mut band = CartFace {
