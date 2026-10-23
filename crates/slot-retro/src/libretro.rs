@@ -16,11 +16,35 @@ const VIDEO_BYTES: usize = (GBA_W * GBA_H * 4) as usize;
 
 static LIVE: AtomicBool = AtomicBool::new(false);
 
-/// A host option, not a core one. Set it to `ccw` and games whose core asks
-/// to be turned (SET_ROTATION) are drawn for a handheld held turned a quarter
-/// anticlockwise: the picture fills the screen, and the pad's directions are
-/// turned to follow it. Games that don't ask to be turned are left alone.
+/// A host option, not a core one: how the handheld is held. `off` (upright),
+/// `ccw` (a quarter anticlockwise), `180` (upside down) or `cw` (a quarter
+/// clockwise) draw the core's picture so it is upright to someone holding the
+/// handheld that way, and turn the pad's directions to follow it. `native`
+/// holds it however the core asks its picture to be turned (SET_ROTATION), so
+/// the picture is drawn as the core made it and the pad is left as it is, as
+/// on the console held the way the game was made to be held.
 pub const HANDHELD_TURN_OPTION: &str = "slot_handheld_turn";
+
+/// How the handheld is held, from `HANDHELD_TURN_OPTION`.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+enum Held {
+    /// Turned this many quarters anticlockwise.
+    Turned(u32),
+    /// However the core asks its picture to be turned.
+    Native,
+}
+
+impl Held {
+    fn parse(value: &str) -> Held {
+        match value {
+            "ccw" => Held::Turned(1),
+            "180" => Held::Turned(2),
+            "cw" => Held::Turned(3),
+            "native" => Held::Native,
+            _ => Held::Turned(0),
+        }
+    }
+}
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 enum PixelFormat {
@@ -37,10 +61,8 @@ struct Host {
     /// Quarter turns anticlockwise the core asked the frontend to draw its
     /// picture at (libretro's SET_ROTATION). 0 is upright.
     rotation: u32,
-    /// The handheld is held turned a quarter anticlockwise, so a game that
-    /// asks to be turned is drawn one quarter less and the pad is turned to
-    /// match. See `HANDHELD_TURN_OPTION`.
-    handheld_turn: bool,
+    /// How the handheld is held. See `HANDHELD_TURN_OPTION`.
+    held: Held,
     format: PixelFormat,
     audio: Vec<i16>,
     inputs: [u16; 2],
@@ -416,16 +438,26 @@ unsafe fn frame_pixel(format: PixelFormat, row: *const u8, x: usize) -> [u8; 4] 
     }
 }
 
-/// Quarter turns anticlockwise to draw the core's frame at. A core that asks
-/// for none is drawn as it is. On a handheld held turned a quarter
-/// anticlockwise a core that asks for some is drawn one quarter less: its
-/// picture is upright to the player once the handheld is turned back.
-fn drawn_turns(h: &Host) -> u32 {
-    if h.handheld_turn && h.rotation != 0 {
-        (h.rotation + 3) % 4
-    } else {
-        h.rotation
+/// Quarter turns anticlockwise the handheld is held at.
+fn held_turns(h: &Host) -> u32 {
+    match h.held {
+        Held::Turned(t) => t,
+        Held::Native => h.rotation,
     }
+}
+
+/// Quarter turns anticlockwise to draw the core's frame at: the turn the core
+/// asks for, less the turn the handheld is held at, so the picture is upright
+/// to the player holding it.
+fn drawn_turns(h: &Host) -> u32 {
+    (h.rotation + 4 - held_turns(h)) % 4
+}
+
+/// The pad as the core should see it: as though the handheld were upright.
+/// Held turned, the handheld's own directions are turned with it, a quarter
+/// for each quarter it is turned.
+fn held_pad(h: &Host, input: u16) -> u16 {
+    (0..held_turns(h)).fold(input, |pad, _| turned_pad(pad))
 }
 
 /// The pad as the core should see it. On a handheld held turned a quarter
@@ -509,11 +541,7 @@ unsafe extern "C" fn input_state(port: c_uint, device: c_uint, _index: c_uint, i
         let Some(&input) = h.inputs.get(port as usize) else {
             return 0;
         };
-        let input = if h.handheld_turn && h.rotation != 0 {
-            turned_pad(input)
-        } else {
-            input
-        };
+        let input = held_pad(h, input);
         match id {
             JOYPAD_MASK => input as i16,
             _ if id < 16 => ((input >> id) & 1) as i16,
@@ -577,7 +605,7 @@ impl LibretroCore {
 
     pub fn set_option(&mut self, key: &str, value: &str) {
         if key == HANDHELD_TURN_OPTION {
-            self.host.handheld_turn = value == "ccw";
+            self.host.held = Held::parse(value);
             return;
         }
         if !self.host.declared.is_empty() {
@@ -630,7 +658,7 @@ impl LibretroCore {
             shown_w: GBA_W,
             shown_h: GBA_H,
             rotation: 0,
-            handheld_turn: false,
+            held: Held::Turned(0),
             format: PixelFormat::Xrgb8888,
             audio: Vec::new(),
             inputs: [0; 2],
@@ -882,7 +910,7 @@ mod tests {
             shown_w: GBA_W,
             shown_h: GBA_H,
             rotation: 0,
-            handheld_turn: false,
+            held: Held::Turned(0),
             format: PixelFormat::Xrgb8888,
             audio: Vec::new(),
             inputs: [0; 2],
@@ -1878,13 +1906,17 @@ mod tests {
 
     /// The same frame, on a handheld held turned a quarter anticlockwise.
     fn drawn_on_turned_handheld(rotation: u32) -> (Vec<Vec<u8>>, (u32, u32)) {
-        drawn(rotation, true)
+        drawn_held(rotation, "ccw")
     }
 
-    fn drawn(rotation: u32, handheld_turn: bool) -> (Vec<Vec<u8>>, (u32, u32)) {
+    fn drawn(rotation: u32, _: bool) -> (Vec<Vec<u8>>, (u32, u32)) {
+        drawn_held(rotation, "off")
+    }
+
+    fn drawn_held(rotation: u32, held: &str) -> (Vec<Vec<u8>>, (u32, u32)) {
         let mut host = host_with(HashMap::new(), false);
         host.rotation = rotation;
-        host.handheld_turn = handheld_turn;
+        host.held = Held::parse(held);
         let _active = Active::bind(&mut host);
         let mut frame = vec![0u8; 3 * 2 * 4];
         for n in 0..6 {
@@ -1949,21 +1981,44 @@ mod tests {
     }
 
     #[test]
-    fn a_game_the_core_leaves_alone_is_left_alone_on_a_turned_handheld() {
+    fn an_upright_game_on_a_turned_handheld_is_turned_back_to_upright() {
         let (rows, size) = drawn_on_turned_handheld(0);
-        assert_eq!(size, (3, 2));
-        assert_eq!(rows, vec![vec![1, 2, 3], vec![4, 5, 6]]);
+        assert_eq!(size, (2, 3));
+        assert_eq!(rows, vec![vec![4, 1], vec![5, 2], vec![6, 3]]);
     }
 
     #[test]
-    fn a_turned_handheld_draws_one_quarter_less_for_every_turn_the_core_asks() {
-        for (asked, expected) in [(0, 0), (1, 0), (2, 1), (3, 2)] {
+    fn each_hold_draws_the_turn_the_core_asks_less_its_own() {
+        for (held, turns) in [("off", 0), ("ccw", 1), ("180", 2), ("cw", 3)] {
+            for asked in 0..4 {
+                let mut host = host_with(HashMap::new(), false);
+                host.rotation = asked;
+                host.held = Held::parse(held);
+                assert_eq!(
+                    drawn_turns(&host),
+                    (asked + 4 - turns) % 4,
+                    "{held}, asked {asked}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn held_the_way_the_core_asks_the_picture_is_drawn_as_it_is() {
+        for asked in 0..4 {
             let mut host = host_with(HashMap::new(), false);
             host.rotation = asked;
-            assert_eq!(drawn_turns(&host), asked, "an upright handheld");
-            host.handheld_turn = true;
-            assert_eq!(drawn_turns(&host), expected, "asked for {asked}");
+            host.held = Held::Native;
+            assert_eq!(drawn_turns(&host), 0, "asked {asked}");
         }
+        let (rows, _) = drawn_held(3, "native");
+        assert_eq!(rows, vec![vec![1, 2, 3], vec![4, 5, 6]]);
+        let (rows, _) = drawn_held(3, "cw");
+        assert_eq!(
+            rows,
+            vec![vec![1, 2, 3], vec![4, 5, 6]],
+            "the same as cw for a right-turned game"
+        );
     }
 
     #[test]
@@ -1988,8 +2043,12 @@ mod tests {
     }
 
     fn pad_seen(handheld_turn: bool, rotation: u32, held: u16) -> (i16, i16) {
+        pad_held(if handheld_turn { "ccw" } else { "off" }, rotation, held)
+    }
+
+    fn pad_held(hold: &str, rotation: u32, held: u16) -> (i16, i16) {
         let mut host = host_with(HashMap::new(), false);
-        host.handheld_turn = handheld_turn;
+        host.held = Held::parse(hold);
         host.rotation = rotation;
         host.inputs[0] = held;
         let _active = Active::bind(&mut host);
@@ -2010,14 +2069,31 @@ mod tests {
     }
 
     #[test]
-    fn the_pad_is_left_alone_unless_the_handheld_is_turned_and_the_game_turns() {
+    fn the_pad_turns_with_the_handheld_and_not_otherwise() {
         let held = ButtonMask::RIGHT | ButtonMask::A;
         let (mask, up) = pad_seen(false, 1, held);
         assert_eq!(mask as u16, held, "an upright handheld");
         assert_eq!(up, 0);
-        let (mask, up) = pad_seen(true, 0, held);
-        assert_eq!(mask as u16, held, "a game the core does not turn");
-        assert_eq!(up, 0);
+        let (mask, _) = pad_held("180", 0, held);
+        assert_eq!(
+            mask as u16,
+            ButtonMask::LEFT | ButtonMask::A,
+            "upside down, right is left"
+        );
+        let (mask, _) = pad_held("cw", 0, held);
+        assert_eq!(
+            mask as u16,
+            ButtonMask::DOWN | ButtonMask::A,
+            "a quarter clockwise, right is down"
+        );
+        for asked in 0..4 {
+            let (mask, _) = pad_held("native", asked, held);
+            let (turned, _) = pad_held(["off", "ccw", "180", "cw"][asked as usize], asked, held);
+            assert_eq!(
+                mask, turned,
+                "native is the hold the core asks for, {asked}"
+            );
+        }
     }
 
     #[test]

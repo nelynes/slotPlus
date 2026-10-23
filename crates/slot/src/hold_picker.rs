@@ -53,23 +53,84 @@ impl Hold {
         let text = text.trim().to_ascii_lowercase();
         Hold::ALL.into_iter().find(|h| h.key() == text)
     }
+
+    /// The hold a turn of the Lynx core's picture is upright for: Beetle Lynx's
+    /// `90` is a game made for a Lynx turned a quarter anticlockwise, `270`
+    /// one turned clockwise.
+    fn for_turn(turn: &str) -> Hold {
+        match turn {
+            "90" => Hold::Left,
+            "180" => Hold::Flipped,
+            "270" => Hold::Right,
+            _ => Hold::Upright,
+        }
+    }
+
+    /// The host's `slot_handheld_turn` for a handheld held this way.
+    pub fn held(self) -> &'static str {
+        match self {
+            Hold::Upright => "off",
+            Hold::Left => "ccw",
+            Hold::Flipped => "180",
+            Hold::Right => "cw",
+        }
+    }
 }
 
-/// The hold a game is played in: the one chosen for it in
-/// `Config/lynx_hold.txt`, or else the one slotPlus has always used, turned
-/// a quarter anticlockwise for a game made to be held on its side.
-pub fn hold_for(root: &Path, stem: &str, rom: &Path) -> Hold {
-    if let Some(asked) = slot_store::ini::value(root, LYNX_HOLD_FILE, stem) {
-        if let Some(hold) = Hold::parse(&asked) {
-            return hold;
-        }
+/// How a Lynx game is started: the turn Beetle Lynx gives its picture and
+/// pad, and how the handheld is held for it.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub struct LynxSetup {
+    pub core_turn: &'static str,
+    pub held: &'static str,
+}
+
+/// The core works out which way the game is made to be held, from the cart,
+/// its own list or `Config/lynx_rotation.txt`. The rotation chosen for the
+/// game says how the handheld is held to play it, and Slot turns the picture
+/// and the pad so the game is upright to the player held that way. Without a
+/// choice, the handheld is held the way the game is made for, so the picture
+/// fills the screen as it is. With `manual` the core turns the picture at each
+/// SELECT, so the handheld is taken as upright.
+pub fn lynx_setup(root: &Path, stem: &str) -> LynxSetup {
+    let core_turn = crate::core::lynx_rotation(root, stem);
+    let held = match (core_turn, chosen_hold(root, stem)) {
+        ("manual", _) => "off",
+        (_, Some(hold)) => hold.held(),
+        (_, None) => "native",
+    };
+    LynxSetup { core_turn, held }
+}
+
+/// What SELECT switches to in a game: a turned handheld to upright, with the
+/// picture stood up and bars at its sides, and an upright one to the way the
+/// game is made to be held. Pressed again it goes back.
+pub fn select_held(held: &'static str) -> &'static str {
+    match held {
+        "off" => "native",
+        _ => "off",
+    }
+}
+
+fn chosen_hold(root: &Path, stem: &str) -> Option<Hold> {
+    let asked = slot_store::ini::value(root, LYNX_HOLD_FILE, stem)?;
+    let hold = Hold::parse(&asked);
+    if hold.is_none() {
         eprintln!("slot: lynx: {LYNX_HOLD_FILE}: {asked:?} for {stem} is not a hold");
     }
-    let turn = crate::core::lynx_rotation(root, stem);
-    let sideways = matches!(turn, "90" | "270") || (turn == "auto" && header_turns(rom));
-    match sideways {
-        true => Hold::Left,
-        false => Hold::Upright,
+    hold
+}
+
+/// The rotation the picker starts on: the one chosen for the game in
+/// `Config/lynx_hold.txt`, or else the way it is made to be held, from
+/// `Config/lynx_rotation.txt`, slotPlus's own list or the cart's header.
+pub fn hold_for(root: &Path, stem: &str, rom: &Path) -> Hold {
+    if let Some(hold) = chosen_hold(root, stem) {
+        return hold;
+    }
+    match crate::core::lynx_rotation(root, stem) {
+        "auto" => header_hold(rom),
+        turn => Hold::for_turn(turn),
     }
 }
 
@@ -86,13 +147,17 @@ pub fn write_hold(root: &Path, stem: &str, hold: Hold) -> std::io::Result<()> {
     slot_store::ini::write(root, LYNX_HOLD_FILE, stem, hold.key())
 }
 
-/// Whether a `.lnx` file's header says the game is played turned: byte 58
-/// is 1 for a game turned left and 2 for one turned right.
-fn header_turns(rom: &Path) -> bool {
+/// The way a `.lnx` file's header says the game is held: byte 58 is 1 for a
+/// game turned left, a quarter anticlockwise, and 2 for one turned right.
+fn header_hold(rom: &Path) -> Hold {
     use std::io::Read;
     let mut head = [0u8; 64];
     let read = std::fs::File::open(rom).and_then(|mut f| f.read_exact(&mut head));
-    read.is_ok() && &head[..4] == b"LYNX" && matches!(head[58], 1 | 2)
+    match (read.is_ok() && &head[..4] == b"LYNX", head[58]) {
+        (true, 1) => Hold::Left,
+        (true, 2) => Hold::Right,
+        _ => Hold::Upright,
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -329,14 +394,95 @@ mod tests {
         let rom = d.path().join("Games/Lynx/Klax (World).lnx");
         assert_eq!(
             hold_for(d.path(), "Klax (World)", &rom),
+            Hold::Right,
+            "made for a Lynx turned right"
+        );
+        assert_eq!(
+            hold_for(d.path(), "Lexis (USA)", &rom),
             Hold::Left,
-            "a known sideways game"
+            "made for one turned left"
         );
         assert_eq!(
             hold_for(d.path(), "California Games (USA)", &rom),
             Hold::Upright
         );
-        write_hold(d.path(), "Klax (World)", Hold::Right).unwrap();
-        assert_eq!(hold_for(d.path(), "Klax (World)", &rom), Hold::Right);
+        write_hold(d.path(), "Klax (World)", Hold::Flipped).unwrap();
+        assert_eq!(hold_for(d.path(), "Klax (World)", &rom), Hold::Flipped);
+    }
+
+    #[test]
+    fn a_header_says_which_way_a_game_is_held() {
+        let d = tempfile::tempdir().unwrap();
+        for (byte, hold) in [(0u8, Hold::Upright), (1, Hold::Left), (2, Hold::Right)] {
+            let rom = d.path().join(format!("{byte}.lnx"));
+            let mut head = vec![0u8; 64];
+            head[..4].copy_from_slice(b"LYNX");
+            head[58] = byte;
+            std::fs::write(&rom, head).unwrap();
+            assert_eq!(hold_for(d.path(), "Some Game (USA)", &rom), hold);
+        }
+    }
+
+    #[test]
+    fn a_chosen_rotation_holds_the_handheld_that_way_for_the_game_the_core_finds() {
+        let d = tempfile::tempdir().unwrap();
+        for (hold, held) in [
+            (Hold::Upright, "off"),
+            (Hold::Left, "ccw"),
+            (Hold::Flipped, "180"),
+            (Hold::Right, "cw"),
+        ] {
+            write_hold(d.path(), "Klax (World)", hold).unwrap();
+            assert_eq!(
+                lynx_setup(d.path(), "Klax (World)"),
+                LynxSetup {
+                    core_turn: "270",
+                    held
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn without_a_choice_the_handheld_is_held_the_way_the_game_is_made_for() {
+        let d = tempfile::tempdir().unwrap();
+        assert_eq!(
+            lynx_setup(d.path(), "California Games (USA)"),
+            LynxSetup {
+                core_turn: "auto",
+                held: "native"
+            }
+        );
+        assert_eq!(
+            lynx_setup(d.path(), "Klax (World)"),
+            LynxSetup {
+                core_turn: "270",
+                held: "native"
+            }
+        );
+        slot_store::ini::write(
+            d.path(),
+            crate::core::LYNX_ROTATION_FILE,
+            "Lexis (USA)",
+            "manual",
+        )
+        .unwrap();
+        write_hold(d.path(), "Lexis (USA)", Hold::Right).unwrap();
+        assert_eq!(
+            lynx_setup(d.path(), "Lexis (USA)"),
+            LynxSetup {
+                core_turn: "manual",
+                held: "off"
+            },
+            "a manual turn is the core's to make"
+        );
+    }
+
+    #[test]
+    fn select_switches_between_upright_and_the_way_it_was_held() {
+        for held in ["ccw", "180", "cw", "native"] {
+            assert_eq!(select_held(held), "off");
+        }
+        assert_eq!(select_held("off"), "native");
     }
 }
