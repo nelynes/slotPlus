@@ -323,9 +323,13 @@ impl Frontend {
                 let [back, front, plugged] = strips.map(|bytes| {
                     compositor.create_texture(slot_ui::SLOT_W, slot_ui::SLOT_H, bytes)
                 });
-                self.session
-                    .app_mut()
-                    .set_bespoke_slot(platform, back, front, plugged);
+                self.session.app_mut().set_bespoke_slot(
+                    platform,
+                    back,
+                    front,
+                    plugged,
+                    slot_ui::bespoke_slot_light(platform),
+                );
             }
         }
         let plugged = [
@@ -342,6 +346,7 @@ impl Frontend {
             compositor.create_texture(dark_bolt.w, dark_bolt.h, &dark_bolt.rgba),
             compositor.create_texture(light_bolt.w, light_bolt.h, &light_bolt.rgba),
         ];
+        self.session.app_mut().set_bolt_faces(bolt);
         self.look = Some(ShelfLook {
             slot,
             plugged,

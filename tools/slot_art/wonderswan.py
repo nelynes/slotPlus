@@ -142,7 +142,9 @@ def front(base):
         light[:, x + 1] *= 1.1
     img = to_image(light, base, np.where(m, 0.0, 255.0))
     d = ImageDraw.Draw(img)
-    for cx, cy in ((180, 15), (540, 15), (54, 44), (666, 44)):
+    # The battery and clock sit on the ends of the bottom half, so the screws
+    # and marks keep to the top and the seams.
+    for cx, cy in ((180, 15), (540, 15), (180, 44), (540, 44)):
         screw(d, cx, cy, 6, base)
     # The top of the silver label, under the bay.
     label = [258, 47, 462, 60]
@@ -155,8 +157,8 @@ def front(base):
         d.line([x0, 52, x1, 52], fill=(120, 122, 126))
         d.line([x0, 55, x1 - 14, 55], fill=(140, 142, 146))
     # The EXT. and CONTRAST marks on the ends.
-    embossed(d, (24, 18), 'EXT.', 8, base, 'lm')
-    embossed(d, (696, 18), 'CONTRAST', 8, base, 'rm')
+    embossed(d, (24, 9), 'EXT.', 8, base, 'lm')
+    embossed(d, (696, 9), 'CONTRAST', 8, base, 'rm')
     # Keep the opening open whatever was drawn across it.
     out = np.array(img)
     out[:, :, 3] = np.where(m, 0, out[:, :, 3])

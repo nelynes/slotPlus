@@ -23,7 +23,9 @@ fn on_ws_shelf(bespoke: bool) -> (tempfile::TempDir, App) {
         TexId::from_raw(11),
         TexId::from_raw(12),
         TexId::from_raw(13),
+        true,
     );
+    a.set_bolt_faces([TexId::from_raw(21), TexId::from_raw(22)]);
     for _ in 0..30 {
         a.update(1.0 / 60.0);
     }
@@ -97,4 +99,30 @@ fn cart_slot_is_kept_on_the_card() {
     };
     slot_store::write_slot_state(d.path(), &state).unwrap();
     assert!(slot_store::read_slot_state(d.path()).bespoke_slot);
+}
+
+#[test]
+fn the_battery_and_clock_take_the_pale_slots_ink_in_the_dark_theme() {
+    let (_d, a) = on_ws_shelf(false);
+    assert!(
+        !a.band_light(),
+        "Slot's dark slot keeps the dark theme's ink"
+    );
+    assert_eq!(a.status_ink(), slot_ui::footer_ink(false));
+    let (_d, a) = on_ws_shelf(true);
+    assert!(a.band_light(), "the pearl WonderSwan slot is pale");
+    assert_eq!(a.status_ink(), slot_ui::footer_ink(true));
+}
+
+#[test]
+fn the_wonderswan_has_a_pale_slot_of_its_own_and_the_game_boys_keep_slots() {
+    use slot_ui::{bespoke_slot, bespoke_slot_light, SLOT_H, SLOT_W};
+    let strips = bespoke_slot(Platform::Ws).expect("the WonderSwan's own");
+    for s in strips {
+        assert_eq!(s.len(), (SLOT_W * SLOT_H * 4) as usize);
+    }
+    assert!(bespoke_slot_light(Platform::Ws));
+    for p in [Platform::Gba, Platform::Gbc, Platform::Gb] {
+        assert!(bespoke_slot(p).is_none(), "{p:?} keeps Slot's");
+    }
 }
