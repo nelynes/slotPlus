@@ -1,10 +1,22 @@
 # Changelog
 
-## Unreleased
+## [1.9.0-plus2.2](https://github.com/nelynes/slotPlus/releases/tag/v1.9.0-plus2.2)
 
-slotPlus on Slot 1.9.0.
+slotPlus brought up to Slot 1.9.0, with Slot 1.8.1 on the way. Both versions get everything below.
 
-- Brings in everything from Slot 1.8.1 and 1.9.0, below.
+To upgrade, replace the `System` folder on your card with the one from the zip.
+
+- Saves, save states, settings and the log reach the card as soon as they are written, and a game's own save is written every minute while it plays, so a reset or a dead battery loses far less.
+- Undo Save and Undo Load: for 30 seconds after a save or a load, the in-game menu offers to undo it, under Resume. X on the state switcher does the same.
+- Load State on Insert, a new row on the Gameplay page, decides whether putting a cart in loads its state. Auto Save on Eject is now Save State on Eject.
+- A core that stops answering no longer freezes the handheld, and a game that crashes while loading starts you on the shelf next time instead of loading it again.
+- GBA bezels on 640x480 handhelds: put .png files in `Bezels/GBA` and pick one under Settings > Screen > Game Boy Advance > Bezel.
+- Game Boy games on an MBC2 cartridge, such as Kirby's Pinball Land, no longer freeze after the boot screen.
+- Fast Forward can be turned off, save states are smaller, and holding Up or Down on the shelf to jump a letter at a time no longer empties it.
+- The shelves follow Slot's new order: Game Boy Advance, Game Boy Color, Game Boy, then WonderSwan and Atari Lynx (and the Game Gear, NeoGeo Pocket and TurboGrafx-16 in slotPlusUltra).
+- Card repair no longer hangs on a badly damaged card, and the BaseOS startup sound plays again.
+
+Slot's own notes for 1.9.0 and 1.8.1 follow.
 
 ## [1.9.0](https://github.com/BrandonKowalski/slot/releases/tag/v1.9.0)
 
