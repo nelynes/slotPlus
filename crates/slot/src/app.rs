@@ -428,6 +428,8 @@ pub struct App {
     bolt: Option<TexId>,
     hud_bolt: Option<TexId>,
     slot_faces: Option<(TexId, TexId)>,
+    /// The systems with a cart slot of their own: back, front and plugged.
+    bespoke_slots: Vec<(Platform, [TexId; 3])>,
     shelf_platform: slot_ui::Printed,
     shelf_title: slot_ui::Printed,
     name_pending: bool,
@@ -640,6 +642,7 @@ impl App {
             bolt: None,
             hud_bolt: None,
             slot_faces: None,
+            bespoke_slots: Vec::new(),
             shelf_platform: slot_ui::Printed::default(),
             shelf_title: slot_ui::Printed::default(),
             name_pending: false,
@@ -1181,6 +1184,11 @@ impl App {
             } else {
                 QuickValue::Hide
             }),
+            QuickRow::CartSlot => Some(if self.state.bespoke_slot {
+                QuickValue::SlotBespoke
+            } else {
+                QuickValue::SlotDefault
+            }),
             QuickRow::ShowTitles => Some(if self.state.show_titles {
                 QuickValue::Show
             } else {
@@ -1577,6 +1585,49 @@ impl App {
 
     pub fn set_hud_bolt_face(&mut self, bolt: TexId) {
         self.hud_bolt = Some(bolt);
+    }
+
+    /// A system's own cart slot, shown on its shelf when Cart Slot is Bespoke.
+    pub fn set_bespoke_slot(
+        &mut self,
+        platform: Platform,
+        back: TexId,
+        front: TexId,
+        plugged: TexId,
+    ) {
+        self.bespoke_slots.retain(|(p, _)| *p != platform);
+        self.bespoke_slots.push((platform, [back, front, plugged]));
+    }
+
+    /// The cart slot for the system in play, or on the shelf being looked at:
+    /// its own when Cart Slot is Bespoke and it has one, Slot's otherwise.
+    fn bespoke_now(&self) -> Option<[TexId; 3]> {
+        if !self.state.bespoke_slot {
+            return None;
+        }
+        // A seated cart's own system; on the shelf, the shelf's. Recents and
+        // Favorites mix systems, so they keep Slot's slot.
+        let platform = match self.seated_cart() {
+            Some(cart) => cart.platform,
+            None => self.shelves[self.shelf_at].0.platform()?,
+        };
+        self.bespoke_slots
+            .iter()
+            .find(|(p, _)| *p == platform)
+            .map(|(_, faces)| *faces)
+    }
+
+    fn slot_now(&self) -> Option<(TexId, TexId)> {
+        match self.bespoke_now() {
+            Some([back, front, _]) => Some((back, front)),
+            None => self.slot_faces,
+        }
+    }
+
+    fn plugged_now(&self) -> Option<TexId> {
+        self.bespoke_now()
+            .map(|[_, _, plugged]| plugged)
+            .or(self.plugged_face)
     }
 
     pub fn set_slot_faces(&mut self, back: TexId, front: TexId) {
@@ -2879,6 +2930,7 @@ impl App {
             | QuickRow::Theme
             | QuickRow::Recents
             | QuickRow::ShowTitles
+            | QuickRow::CartSlot
             | QuickRow::Wallpaper
             | QuickRow::WallpaperTint
             | QuickRow::Resume
@@ -2996,6 +3048,11 @@ impl App {
             self.persist();
             return;
         }
+        if row == QuickRow::CartSlot {
+            self.state.bespoke_slot = !self.state.bespoke_slot;
+            self.persist();
+            return;
+        }
         if row == QuickRow::LidOff {
             let n = LID_OFF_MIN.len();
             let at = LID_OFF_MIN
@@ -3085,6 +3142,7 @@ impl App {
             | QuickRow::Wallpaper
             | QuickRow::Recents
             | QuickRow::ShowTitles
+            | QuickRow::CartSlot
             | QuickRow::DateTime
             | QuickRow::About
             | QuickRow::Screen
@@ -4108,11 +4166,11 @@ impl App {
                             dim,
                             out,
                         );
-                        draw_empty_slot(self.canvas(), self.slot_faces, out);
+                        draw_empty_slot(self.canvas(), self.slot_now(), out);
                     }
                     _ => {
                         self.shelf()
-                            .draw(self.canvas(), self.shelf_shake(), self.slot_faces, out);
+                            .draw(self.canvas(), self.shelf_shake(), self.slot_now(), out);
                         draw_slot_name(
                             self.canvas(),
                             self.shelf_platform,
@@ -4311,7 +4369,7 @@ impl App {
             Phase::Playing { cart } if self.footer > 0.0 => {
                 let row = self.in_game_menu_shown().or(self.footer_row);
                 match row.is_some_and(QuickRow::binds) {
-                    true => slot_ui::draw_plugged_slot(self.canvas(), self.plugged_face, out),
+                    true => slot_ui::draw_plugged_slot(self.canvas(), self.plugged_now(), out),
                     false => self.draw_seated_mouth(cart, out),
                 }
                 row
@@ -4319,15 +4377,15 @@ impl App {
             // The carousel menu is not a game, so the mouth stays empty, in the
             // same place the shelf already had it.
             Phase::QuickMenu { row } if row.binds() => {
-                slot_ui::draw_plugged_slot(self.canvas(), self.plugged_face, out);
+                slot_ui::draw_plugged_slot(self.canvas(), self.plugged_now(), out);
                 Some(*row)
             }
             Phase::QuickMenu { row } => {
-                draw_empty_slot(self.canvas(), self.slot_faces, out);
+                draw_empty_slot(self.canvas(), self.slot_now(), out);
                 Some(*row)
             }
             Phase::About => {
-                draw_empty_slot(self.canvas(), self.slot_faces, out);
+                draw_empty_slot(self.canvas(), self.slot_now(), out);
                 self.draw_about_legend(out);
                 return;
             }
@@ -4381,7 +4439,7 @@ impl App {
             game: false,
             over: true,
             behind: self.shelf().behind(stem),
-            slot: self.slot_faces,
+            slot: self.slot_now(),
             canvas: self.canvas(),
         }
         .draw(out);
@@ -4507,7 +4565,7 @@ impl App {
                         | Phase::Ejecting { .. }
                 ),
             behind: self.shelf().behind(stem),
-            slot: self.slot_faces,
+            slot: self.slot_now(),
             canvas: self.canvas(),
         }
         .draw(out);

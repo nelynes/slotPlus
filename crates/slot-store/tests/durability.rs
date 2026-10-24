@@ -246,6 +246,7 @@ fn a_card_from_before_the_settings_keeps_all_its_values() {
             wallpaper_tint: WallpaperTint::Off,
             show_recents: false,
             show_titles: false,
+            bespoke_slot: false,
             left_stick_dpad: true,
             lid_off_min: None,
             bezel_gba: BezelPick::Ags102,

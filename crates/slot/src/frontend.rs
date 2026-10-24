@@ -317,6 +317,17 @@ impl Frontend {
                 [upload(slot_back_light()), upload(slot_front_light())],
             ]
         };
+        // The systems with a cart slot of their own, for Cart Slot set to Bespoke.
+        for platform in slot_store::Platform::ALL {
+            if let Some(strips) = slot_ui::bespoke_slot(platform) {
+                let [back, front, plugged] = strips.map(|bytes| {
+                    compositor.create_texture(slot_ui::SLOT_W, slot_ui::SLOT_H, bytes)
+                });
+                self.session
+                    .app_mut()
+                    .set_bespoke_slot(platform, back, front, plugged);
+            }
+        }
         let plugged = [
             compositor.create_texture(slot_ui::SLOT_W, slot_ui::SLOT_H, slot_ui::slot_plugged()),
             compositor.create_texture(

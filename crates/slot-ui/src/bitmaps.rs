@@ -276,6 +276,18 @@ pub fn chip() -> &'static [u8] {
     load(CHIP_PNG, CHIP_W, CHIP_H, &P)
 }
 
+/// A system's own cart slot, for Cart Slot set to Bespoke: the back, front and
+/// plugged strips, the size of Slot's and with its mouth in the same place, in
+/// the handheld's own colours. A system without one keeps Slot's.
+///
+/// Each is `assets/slot_<system>_{back,front,plugged}.png`, added here as it is
+/// drawn.
+pub fn bespoke_slot(platform: slot_store::Platform) -> Option<[&'static [u8]; 3]> {
+    // None is drawn yet; each arrives as an arm matching its platform.
+    let _ = platform;
+    None
+}
+
 pub fn slot_back() -> &'static [u8] {
     static P: OnceLock<Vec<u8>> = OnceLock::new();
     load(SLOT_BACK_DARK_PNG, SLOT_W, SLOT_H, &P)

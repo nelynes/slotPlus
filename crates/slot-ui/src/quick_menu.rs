@@ -30,6 +30,7 @@ pub enum QuickRow {
     Wallpaper,
     Recents,
     ShowTitles,
+    CartSlot,
     WallpaperTint,
     GbcShader,
     GbcColourCorrection,
@@ -104,7 +105,7 @@ pub enum QuickRow {
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 90] = [
+    pub const ALL: [QuickRow; 91] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -124,6 +125,7 @@ impl QuickRow {
         QuickRow::Wallpaper,
         QuickRow::Recents,
         QuickRow::ShowTitles,
+        QuickRow::CartSlot,
         QuickRow::WallpaperTint,
         QuickRow::GbcShader,
         QuickRow::GbcColourCorrection,
@@ -205,12 +207,13 @@ impl QuickRow {
         QuickRow::About,
     ];
 
-    pub const GENERAL: [QuickRow; 7] = [
+    pub const GENERAL: [QuickRow; 8] = [
         QuickRow::Theme,
         QuickRow::Wallpaper,
         QuickRow::WallpaperTint,
         QuickRow::Recents,
         QuickRow::ShowTitles,
+        QuickRow::CartSlot,
         QuickRow::LidOff,
         QuickRow::DateTime,
     ];
@@ -371,6 +374,7 @@ impl QuickRow {
             | QuickRow::Theme
             | QuickRow::Recents
             | QuickRow::ShowTitles
+            | QuickRow::CartSlot
             | QuickRow::LidOff => &QuickRow::GENERAL,
             QuickRow::ControlsShelf | QuickRow::Shortcuts | QuickRow::ControlsInGame => {
                 &QuickRow::CONTROL_PAGES
@@ -501,6 +505,7 @@ impl QuickRow {
             QuickRow::Wallpaper => "Wallpaper",
             QuickRow::Recents => "Recents",
             QuickRow::ShowTitles => "Game Titles",
+            QuickRow::CartSlot => "Cart Slot",
             QuickRow::WallpaperTint => "Wallpaper Tint",
             QuickRow::Resume => "Resume",
             QuickRow::UndoSave => "Undo Save",
@@ -697,10 +702,12 @@ pub enum QuickValue {
     Level7,
     Level8,
     Level9,
+    SlotDefault,
+    SlotBespoke,
 }
 
 impl QuickValue {
-    pub const ALL: [QuickValue; 34] = [
+    pub const ALL: [QuickValue; 36] = [
         QuickValue::Speed2,
         QuickValue::Speed3,
         QuickValue::Speed4,
@@ -735,6 +742,8 @@ impl QuickValue {
         QuickValue::Level7,
         QuickValue::Level8,
         QuickValue::Level9,
+        QuickValue::SlotDefault,
+        QuickValue::SlotBespoke,
     ];
 
     pub const LEVELS: [QuickValue; 10] = [
@@ -799,6 +808,8 @@ impl QuickValue {
             QuickValue::Level7 => "7",
             QuickValue::Level8 => "8",
             QuickValue::Level9 => "9",
+            QuickValue::SlotDefault => "Default",
+            QuickValue::SlotBespoke => "Bespoke",
         }
     }
 
