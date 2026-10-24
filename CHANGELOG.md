@@ -16,8 +16,6 @@ To upgrade, replace the `System` folder on your card with the one from the zip.
 - The shelves follow Slot's new order: Game Boy Advance, Game Boy Color, Game Boy, then WonderSwan and Atari Lynx (and the Game Gear, NeoGeo Pocket and TurboGrafx-16 in slotPlusUltra).
 - Card repair no longer hangs on a badly damaged card, and the BaseOS startup sound plays again.
 
-Slot's own notes for 1.9.0 and 1.8.1 follow.
-
 ## [1.9.0](https://github.com/BrandonKowalski/slot/releases/tag/v1.9.0)
 
 - mGBA no longer crashes on an empty resume state, which a card repair can leave behind. Booting with that cart in the slot crashed slot every time.
