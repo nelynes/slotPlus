@@ -107,6 +107,9 @@ const SLOT_WS_PLUGGED_PNG: &[u8] = include_bytes!("../../../assets/slot_ws_plugg
 const SLOT_GG_BACK_PNG: &[u8] = include_bytes!("../../../assets/slot_gg_back.png");
 const SLOT_GG_FRONT_PNG: &[u8] = include_bytes!("../../../assets/slot_gg_front.png");
 const SLOT_GG_PLUGGED_PNG: &[u8] = include_bytes!("../../../assets/slot_gg_plugged.png");
+const SLOT_NGP_BACK_PNG: &[u8] = include_bytes!("../../../assets/slot_ngp_back.png");
+const SLOT_NGP_FRONT_PNG: &[u8] = include_bytes!("../../../assets/slot_ngp_front.png");
+const SLOT_NGP_PLUGGED_PNG: &[u8] = include_bytes!("../../../assets/slot_ngp_plugged.png");
 const PORT_DARK_PNG: &[u8] = include_bytes!("../../../assets/link_port_dark.png");
 const PORT_LIGHT_PNG: &[u8] = include_bytes!("../../../assets/link_port_light.png");
 const PLUG_HOST_PNG: &[u8] = include_bytes!("../../../assets/link_plug_host.png");
@@ -367,6 +370,17 @@ pub fn bespoke_slot(platform: slot_store::Platform) -> Option<[&'static [u8]; 3]
                 load(SLOT_GG_BACK_PNG, SLOT_W, SLOT_H, &B),
                 load(SLOT_GG_FRONT_PNG, SLOT_W, SLOT_H, &F),
                 load(SLOT_GG_PLUGGED_PNG, SLOT_W, SLOT_H, &P),
+            ])
+        }
+        // The carbon Neo Geo Pocket Color.
+        Platform::Ngp => {
+            static B: OnceLock<Vec<u8>> = OnceLock::new();
+            static F: OnceLock<Vec<u8>> = OnceLock::new();
+            static P: OnceLock<Vec<u8>> = OnceLock::new();
+            Some([
+                load(SLOT_NGP_BACK_PNG, SLOT_W, SLOT_H, &B),
+                load(SLOT_NGP_FRONT_PNG, SLOT_W, SLOT_H, &F),
+                load(SLOT_NGP_PLUGGED_PNG, SLOT_W, SLOT_H, &P),
             ])
         }
         _ => None,

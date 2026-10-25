@@ -133,3 +133,10 @@ fn the_game_gear_has_a_dark_slot_of_its_own() {
     assert!(bespoke_slot(Platform::Gg).is_some());
     assert!(!bespoke_slot_light(Platform::Gg), "grey plastic keeps light ink");
 }
+
+#[test]
+fn the_neo_geo_pocket_has_a_dark_slot_of_its_own() {
+    use slot_ui::{bespoke_slot, bespoke_slot_light};
+    assert!(bespoke_slot(Platform::Ngp).is_some());
+    assert!(!bespoke_slot_light(Platform::Ngp), "carbon keeps light ink");
+}
