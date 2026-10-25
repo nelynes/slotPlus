@@ -101,6 +101,12 @@ const SLOT_FRONT_DARK_PNG: &[u8] = include_bytes!("../../../assets/slot_front_da
 const SLOT_FRONT_LIGHT_PNG: &[u8] = include_bytes!("../../../assets/slot_front_light.png");
 const SLOT_PLUGGED_DARK_PNG: &[u8] = include_bytes!("../../../assets/slot_plugged_dark.png");
 const SLOT_PLUGGED_LIGHT_PNG: &[u8] = include_bytes!("../../../assets/slot_plugged_light.png");
+const SLOT_WS_BACK_PNG: &[u8] = include_bytes!("../../../assets/slot_ws_back.png");
+const SLOT_WS_FRONT_PNG: &[u8] = include_bytes!("../../../assets/slot_ws_front.png");
+const SLOT_WS_PLUGGED_PNG: &[u8] = include_bytes!("../../../assets/slot_ws_plugged.png");
+const SLOT_GG_BACK_PNG: &[u8] = include_bytes!("../../../assets/slot_gg_back.png");
+const SLOT_GG_FRONT_PNG: &[u8] = include_bytes!("../../../assets/slot_gg_front.png");
+const SLOT_GG_PLUGGED_PNG: &[u8] = include_bytes!("../../../assets/slot_gg_plugged.png");
 const PORT_DARK_PNG: &[u8] = include_bytes!("../../../assets/link_port_dark.png");
 const PORT_LIGHT_PNG: &[u8] = include_bytes!("../../../assets/link_port_light.png");
 const PLUG_HOST_PNG: &[u8] = include_bytes!("../../../assets/link_plug_host.png");
@@ -329,6 +335,48 @@ pub fn socket() -> &'static [u8] {
 pub fn chip() -> &'static [u8] {
     static P: OnceLock<Vec<u8>> = OnceLock::new();
     load(CHIP_PNG, CHIP_W, CHIP_H, &P)
+}
+
+/// A system's own cart slot, for Cart Slot set to Bespoke: the back, front and
+/// plugged strips, the size of Slot's and with its mouth in the same place, in
+/// the handheld's own colours. A system without one keeps Slot's.
+///
+/// Each is `assets/slot_<system>_{back,front,plugged}.png`, added here as it is
+/// drawn.
+/// tools/slot_art draws them.
+pub fn bespoke_slot(platform: slot_store::Platform) -> Option<[&'static [u8]; 3]> {
+    use slot_store::Platform;
+    match platform {
+        // The pearl white WonderSwan, the WonderSwan Color's too.
+        Platform::Ws => {
+            static B: OnceLock<Vec<u8>> = OnceLock::new();
+            static F: OnceLock<Vec<u8>> = OnceLock::new();
+            static P: OnceLock<Vec<u8>> = OnceLock::new();
+            Some([
+                load(SLOT_WS_BACK_PNG, SLOT_W, SLOT_H, &B),
+                load(SLOT_WS_FRONT_PNG, SLOT_W, SLOT_H, &F),
+                load(SLOT_WS_PLUGGED_PNG, SLOT_W, SLOT_H, &P),
+            ])
+        }
+        // The grey Game Gear.
+        Platform::Gg => {
+            static B: OnceLock<Vec<u8>> = OnceLock::new();
+            static F: OnceLock<Vec<u8>> = OnceLock::new();
+            static P: OnceLock<Vec<u8>> = OnceLock::new();
+            Some([
+                load(SLOT_GG_BACK_PNG, SLOT_W, SLOT_H, &B),
+                load(SLOT_GG_FRONT_PNG, SLOT_W, SLOT_H, &F),
+                load(SLOT_GG_PLUGGED_PNG, SLOT_W, SLOT_H, &P),
+            ])
+        }
+        _ => None,
+    }
+}
+
+/// Whether a system's own cart slot is pale plastic, so the battery and clock
+/// printed over it take the light theme's ink whatever the theme.
+pub fn bespoke_slot_light(platform: slot_store::Platform) -> bool {
+    matches!(platform, slot_store::Platform::Ws)
 }
 
 pub fn slot_back() -> &'static [u8] {
