@@ -147,3 +147,10 @@ fn the_turbografx_has_the_turboexpresss_dark_slot() {
     assert!(bespoke_slot(Platform::Tg16).is_some());
     assert!(!bespoke_slot_light(Platform::Tg16), "charcoal keeps light ink");
 }
+
+#[test]
+fn the_lynx_has_a_dark_slot_of_its_own() {
+    use slot_ui::{bespoke_slot, bespoke_slot_light};
+    assert!(bespoke_slot(Platform::Lynx).is_some());
+    assert!(!bespoke_slot_light(Platform::Lynx), "grey keeps light ink");
+}
