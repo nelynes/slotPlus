@@ -140,3 +140,10 @@ fn the_neo_geo_pocket_has_a_dark_slot_of_its_own() {
     assert!(bespoke_slot(Platform::Ngp).is_some());
     assert!(!bespoke_slot_light(Platform::Ngp), "carbon keeps light ink");
 }
+
+#[test]
+fn the_turbografx_has_the_turboexpresss_dark_slot() {
+    use slot_ui::{bespoke_slot, bespoke_slot_light};
+    assert!(bespoke_slot(Platform::Tg16).is_some());
+    assert!(!bespoke_slot_light(Platform::Tg16), "charcoal keeps light ink");
+}
