@@ -126,3 +126,10 @@ fn the_wonderswan_has_a_pale_slot_of_its_own_and_the_game_boys_keep_slots() {
         assert!(bespoke_slot(p).is_none(), "{p:?} keeps Slot's");
     }
 }
+
+#[test]
+fn the_lynx_has_a_dark_slot_of_its_own() {
+    use slot_ui::{bespoke_slot, bespoke_slot_light};
+    assert!(bespoke_slot(Platform::Lynx).is_some());
+    assert!(!bespoke_slot_light(Platform::Lynx), "grey keeps light ink");
+}

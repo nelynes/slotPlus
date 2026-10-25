@@ -86,6 +86,9 @@ const SLOT_PLUGGED_LIGHT_PNG: &[u8] = include_bytes!("../../../assets/slot_plugg
 const SLOT_WS_BACK_PNG: &[u8] = include_bytes!("../../../assets/slot_ws_back.png");
 const SLOT_WS_FRONT_PNG: &[u8] = include_bytes!("../../../assets/slot_ws_front.png");
 const SLOT_WS_PLUGGED_PNG: &[u8] = include_bytes!("../../../assets/slot_ws_plugged.png");
+const SLOT_LYNX_BACK_PNG: &[u8] = include_bytes!("../../../assets/slot_lynx_back.png");
+const SLOT_LYNX_FRONT_PNG: &[u8] = include_bytes!("../../../assets/slot_lynx_front.png");
+const SLOT_LYNX_PLUGGED_PNG: &[u8] = include_bytes!("../../../assets/slot_lynx_plugged.png");
 const PORT_DARK_PNG: &[u8] = include_bytes!("../../../assets/link_port_dark.png");
 const PORT_LIGHT_PNG: &[u8] = include_bytes!("../../../assets/link_port_light.png");
 const PLUG_HOST_PNG: &[u8] = include_bytes!("../../../assets/link_plug_host.png");
@@ -298,6 +301,17 @@ pub fn bespoke_slot(platform: slot_store::Platform) -> Option<[&'static [u8]; 3]
                 load(SLOT_WS_BACK_PNG, SLOT_W, SLOT_H, &B),
                 load(SLOT_WS_FRONT_PNG, SLOT_W, SLOT_H, &F),
                 load(SLOT_WS_PLUGGED_PNG, SLOT_W, SLOT_H, &P),
+            ])
+        }
+        // The grey Lynx II.
+        Platform::Lynx => {
+            static B: OnceLock<Vec<u8>> = OnceLock::new();
+            static F: OnceLock<Vec<u8>> = OnceLock::new();
+            static P: OnceLock<Vec<u8>> = OnceLock::new();
+            Some([
+                load(SLOT_LYNX_BACK_PNG, SLOT_W, SLOT_H, &B),
+                load(SLOT_LYNX_FRONT_PNG, SLOT_W, SLOT_H, &F),
+                load(SLOT_LYNX_PLUGGED_PNG, SLOT_W, SLOT_H, &P),
             ])
         }
         _ => None,
