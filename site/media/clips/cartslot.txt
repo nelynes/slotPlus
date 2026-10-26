@@ -1,0 +1,42 @@
+# state: show_recents=0
+# state: show_titles=0
+# state: cart=
+# state: cart_platform=
+# state: shelf=gba
+# state: bespoke_slot=0
+wait 60
+rec
+wait 50
+tap menu
+wait 40
+tap a
+wait 40
+tap down
+wait 15
+tap down
+wait 15
+tap down
+wait 15
+tap down
+wait 40
+tap right
+wait 70
+tap b
+wait 30
+tap b
+wait 60
+tap r1
+wait 75
+tap r1
+wait 75
+tap r1
+wait 75
+tap r1
+wait 75
+tap r1
+wait 75
+tap r1
+wait 75
+tap r1
+wait 75
+wait 90
