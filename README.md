@@ -32,6 +32,7 @@ Each release comes in two versions. Pick the one you want from the [releases pag
 
 - **Folders:** each system's folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
 - **Carts:** each system has its own cart, drawn in Slot's look. WonderSwan games get a black cart, WonderSwan Color games a frosted clear one, and a HuCard turns over to go into the slot contacts first.
+- **Cart Slot:** set Settings > General > Cart Slot to Bespoke and the slot on each shelf becomes the back of that system's handheld: a pearl WonderSwan and a Lynx II, plus a Game Gear, a carbon NeoGeo Pocket Color and a TurboExpress in Ultra. The Game Boy shelves keep Slot's own.
 
 **Controls, label art sizes, bezels, saves, and how Lynx and WonderSwan games that turn sideways work are all in the [systems guide](SYSTEMS.md).**
 
@@ -78,6 +79,10 @@ Release notes can be found in the [changelog](CHANGELOG.md).
 <p align="center">
 <img src=".github/resources/screenshots/plus-shelves.gif" width="48%" alt="slotPlus: scrolling the Game Boy Color, Game Boy Advance, Atari Lynx and WonderSwan shelves, then putting Mr. Driller in the slot and resuming at its title screen">
 <img src=".github/resources/screenshots/ultra-shelves.gif" width="48%" alt="slotPlusUltra: scrolling the Game Gear and NeoGeo Pocket shelves, then the TurboGrafx-16 shelf, where a HuCard turns over, goes in the slot and Devil's Crush starts">
+</p>
+
+<p align="center">
+<img src=".github/resources/screenshots/cart-slot.gif" width="48%" alt="slotPlusUltra: setting Cart Slot to Bespoke in Settings, then scrolling every shelf: the Game Boy shelves keep Slot's slot, and the WonderSwan, Lynx, Game Gear, NeoGeo Pocket and TurboGrafx-16 shelves each show the back of their own handheld">
 </p>
 
 ---
