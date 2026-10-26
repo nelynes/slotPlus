@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [1.9.0-plus2.3](https://github.com/nelynes/slotPlus/releases/tag/v1.9.0-plus2.3)
+
+To upgrade, replace the `System` folder on your card with the one from the zip.
 
 - Cart Slot, a new row on the General page of Settings: set it to Bespoke and the slot at the bottom of each shelf becomes the back of that system's handheld, where its carts go in. The WonderSwan gets a pearl white WonderSwan and the Atari Lynx a Lynx II (and in slotPlusUltra, the Game Gear a grey Game Gear, the NeoGeo Pocket a carbon NeoGeo Pocket Color, and the TurboGrafx-16 a TurboExpress). The Game Boy shelves keep Slot's slot, and Default keeps it everywhere.
 
