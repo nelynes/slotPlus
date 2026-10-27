@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- A new default wallpaper, with new stickers, in slotPlus and in slotPlusUltra.
+
 ## [1.9.0-plus2.3](https://github.com/nelynes/slotPlus/releases/tag/v1.9.0-plus2.3)
 
 To upgrade, replace the `System` folder on your card with the one from the zip.
