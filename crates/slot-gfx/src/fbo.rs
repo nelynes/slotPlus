@@ -36,6 +36,7 @@ pub struct Compositor {
     game_panel: bool,
     turn: Option<Turn>,
     captured: Option<(u32, u32, Vec<u8>)>,
+    inset: Option<([f32; 4], [f32; 4])>,
 }
 
 impl Compositor {
@@ -88,6 +89,7 @@ impl Compositor {
                 game_panel: false,
                 turn: None,
                 captured: None,
+                inset: None,
             })
         }
     }
@@ -122,7 +124,10 @@ impl Compositor {
     }
 
     pub fn draw_game(&mut self) {
-        self.in_game_rect(|c| c.game.draw(&c.quad));
+        self.in_game_rect(|c| {
+            c.game.draw(&c.quad);
+            c.draw_inset();
+        });
     }
 
     pub fn draw_list(&mut self, items: &[Draw]) {
@@ -133,6 +138,7 @@ impl Compositor {
                     self.sprites.draw(&items[from..i], &self.quad);
                     self.in_game_rect(|c| {
                         c.game.draw(&c.quad);
+                        c.draw_inset();
                         if c.panel_bezel().is_none() {
                             c.draw_game_bezel();
                         }
@@ -195,6 +201,18 @@ impl Compositor {
     /// at the panel's own size, instead of in its 3:2 window.
     pub fn set_game_fills_panel(&mut self, on: bool) {
         self.fills_panel = on;
+    }
+
+    /// A second part of the game's frame to draw over the first, plain: the
+    /// part of the frame, and where on the canvas, in its pixels.
+    pub fn set_game_inset(&mut self, inset: Option<([f32; 4], [f32; 4])>) {
+        self.inset = inset;
+    }
+
+    fn draw_inset(&self) {
+        if let Some((src, dst)) = self.inset {
+            self.game.draw_inset(&self.quad, src, dst);
+        }
     }
 
     pub fn set_game_layout(&mut self, layout: crate::GameLayout) {

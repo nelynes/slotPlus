@@ -225,7 +225,7 @@ impl Session {
                     continue;
                 }
             }
-            if self.ds_takes(ev) {
+            if self.ds_takes(ev, now) {
                 self.gestures.observe(ev);
                 continue;
             }
@@ -241,18 +241,23 @@ impl Session {
         self.sync_pad();
     }
 
-    /// A DS game's own controls, ahead of slot's: L2 steps through its views
+    /// A DS game's own controls, ahead of slot's: L2 swaps its main screen,
+    /// SELECT + L2 steps through its layouts,
     /// and R2 holds the stylus out, which the D-pad moves and A touches. They
     /// are taken from slot's L2 and R2 shortcuts (rewind and fast forward) in
     /// a DS game. Letting go of a stylus button still reaches the game, so
     /// nothing it held when the stylus came out stays down.
-    fn ds_takes(&mut self, ev: RawEvent) -> bool {
+    fn ds_takes(&mut self, ev: RawEvent, now: Millis) -> bool {
         if !self.app.ds_controls() {
             return false;
         }
         match ev {
+            RawEvent::Down(Btn::L2) if self.gestures.take_select_chord(now) => {
+                self.app.next_ds_layout();
+                true
+            }
             RawEvent::Down(Btn::L2) => {
-                self.app.next_ds_view();
+                self.app.swap_ds_screens();
                 true
             }
             RawEvent::Up(Btn::L2) => true,

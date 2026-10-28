@@ -203,14 +203,27 @@ impl GamePass {
             }
             _ => self.src,
         };
-        self.draw_source(self.game, quad, src, self.layout);
+        self.draw_source(self.game, quad, src, self.layout, self.effect);
+    }
+
+    /// Draw another part of the game's frame somewhere else on the canvas,
+    /// plain: a DS game's second screen.
+    pub fn draw_inset(&self, quad: &Quad, src: [f32; 4], layout: [f32; 4]) {
+        self.draw_source(self.game, quad, src, layout, ScreenEffect::None);
     }
 
     pub fn draw_still(&self, tex: gl::types::GLuint, quad: &Quad) {
-        self.draw_source(tex, quad, self.src, self.layout);
+        self.draw_source(tex, quad, self.src, self.layout, self.effect);
     }
 
-    fn draw_source(&self, tex: gl::types::GLuint, quad: &Quad, src: [f32; 4], layout: [f32; 4]) {
+    fn draw_source(
+        &self,
+        tex: gl::types::GLuint,
+        quad: &Quad,
+        src: [f32; 4],
+        layout: [f32; 4],
+        effect: ScreenEffect,
+    ) {
         let (x, y, w, h) = placed_in(self.frame(), layout);
         let bright = if self.fills {
             1.0
@@ -228,7 +241,7 @@ impl GamePass {
             gl::Uniform4f(self.u_rect, x, y, w, h);
             gl::Uniform4f(self.u_uv, src[0], src[1], src[2], src[3]);
             gl::Uniform1f(self.u_bright, bright);
-            gl::Uniform1f(self.u_mode, self.effect.mode());
+            gl::Uniform1f(self.u_mode, effect.mode());
             gl::Uniform1f(self.u_paper_size, self.paper_size);
             gl::Uniform2f(self.u_fbo, self.fbo_scale[0], self.fbo_scale[1]);
             gl::Uniform2f(self.u_origin, self.origin[0], self.origin[1]);

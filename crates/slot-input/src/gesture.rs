@@ -486,6 +486,16 @@ impl Gestures {
         }
     }
 
+    /// Whether SELECT is held as a modifier, for a chord a caller takes
+    /// itself. Taking it keeps SELECT from reaching the game.
+    pub fn take_select_chord(&mut self, now: Millis) -> bool {
+        let chording = self.chording(now);
+        if chording {
+            self.mark_chorded();
+        }
+        chording
+    }
+
     fn mark_chorded(&mut self) {
         if let Select::Held { chorded, .. } = &mut self.select {
             *chorded = true;

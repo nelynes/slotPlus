@@ -940,3 +940,23 @@ fn a_press_seen_during_a_capture_leaves_nothing_behind() {
         "a stale L1 completed the pair"
     );
 }
+
+#[test]
+fn a_select_chord_taken_by_the_caller_keeps_select_from_the_game() {
+    let mut g = gestures();
+    assert!(!g.take_select_chord(0), "nothing held");
+    assert!(g.feed(Down(Select), 0).is_empty());
+    // The DS takes SELECT + L2 itself: the caller observes L2, not feeds it.
+    assert!(g.take_select_chord(40));
+    g.observe(Down(L2));
+    g.observe(Up(L2));
+    assert!(
+        g.tick(SELECT_CHORD_MS + 10).is_empty(),
+        "SELECT stays a modifier"
+    );
+    assert!(
+        g.feed(Up(Select), 900).is_empty(),
+        "and never reaches the game"
+    );
+    assert!(!g.take_select_chord(901));
+}

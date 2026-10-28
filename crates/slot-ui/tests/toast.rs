@@ -62,14 +62,20 @@ fn the_banner_says_what_happened_and_never_what_is_on_screen() {
         GbColors::all().map(Toast::Palette).collect::<Vec<_>>()[..],
         "the palette banners do not follow the fixed ones in palette order"
     );
+    let duplicates = QuickRow::ALL.into_iter().filter(|r| r.binds()).count();
     assert_eq!(
-        all[22 + palettes..],
+        all[22 + palettes..22 + palettes + duplicates],
         QuickRow::ALL
             .into_iter()
             .filter(|r| r.binds())
             .map(Toast::Duplicate)
             .collect::<Vec<_>>()[..],
         "the duplicate warnings do not follow the palettes in row order"
+    );
+    assert_eq!(
+        all[22 + palettes + duplicates..],
+        (0..5).map(Toast::DsLayout).collect::<Vec<_>>()[..],
+        "the DS layouts come last, in the order SELECT + L2 steps them"
     );
     for (i, t) in all.iter().enumerate() {
         assert_eq!(t.index(), i, "{t:?} does not answer to its own place");

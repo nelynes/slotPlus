@@ -32,7 +32,7 @@ use crate::link_start::{link_port, LinkFail, LinkProgress, LinkStarter, LinkStep
 use crate::loading_mark::LoadingMark;
 use crate::persist::{self, Snapshot};
 use crate::stylus::Stylus;
-use crate::video_mode::{self, DsView, VideoMode};
+use crate::video_mode::{self, DsLayout, DsPart, DsScreen, DsView, VideoMode};
 use slot_store::{
     read_carousel, read_controls, read_shortcuts, write_carousel, write_controls, write_shortcuts,
     Binding, CarouselKeys, Controls, Device, GameButton, Modifier, ShortcutKeys, LID_OFF_MIN,
@@ -1092,6 +1092,11 @@ impl App {
         ) {
             hidden.extend([QuickRow::GameL, QuickRow::GameR]);
         }
+        // A DS game records no rewind (its states are ~6 MB each), so it
+        // offers none.
+        if platform == Platform::Nds {
+            hidden.extend([QuickRow::Rewind, QuickRow::ScRewind]);
+        }
         if !self.left_stick {
             hidden.push(QuickRow::LeftStick);
         }
@@ -2001,17 +2006,46 @@ impl App {
     }
 
     /// The view drawn: while the stylus is out, the bottom screen it touches
-    /// is shown even if the game was on the top one alone.
+    /// is the main one, unless both are already shown full size.
     fn ds_view_shown(&self) -> DsView {
-        match (self.ds_view, self.stylus.is_some()) {
-            (DsView::Top, true) => DsView::Bottom,
-            (view, _) => view,
+        match (self.ds_view.layout, self.stylus.is_some()) {
+            (DsLayout::Stacked, _) | (_, false) => self.ds_view,
+            (layout, true) => DsView {
+                main: DsScreen::Bottom,
+                layout,
+            },
         }
     }
 
-    /// Step a DS game to its next view, L2's job, and remember it for the game.
-    pub fn next_ds_view(&mut self) {
-        self.ds_view = self.ds_view.next();
+    /// The DS screens drawn, the main one and maybe the other over it.
+    pub fn ds_parts(&self) -> (DsPart, Option<DsPart>) {
+        self.ds_view_shown().parts()
+    }
+
+    /// The DS's other screen, where its layout draws one over the main one:
+    /// the part of the buffer, and where on the canvas.
+    pub fn game_inset(&self) -> Option<([f32; 4], [f32; 4])> {
+        if self.playing_platform() != Platform::Nds {
+            return None;
+        }
+        self.ds_parts().1.map(|p| (p.src, p.dst))
+    }
+
+    /// Swap which of a DS game's screens is the main one, L2's job.
+    pub fn swap_ds_screens(&mut self) {
+        self.ds_view = self.ds_view.swapped();
+        self.keep_ds_view();
+    }
+
+    /// Step a DS game to its next layout, SELECT + L2's job, and say which.
+    pub fn next_ds_layout(&mut self) {
+        self.ds_view = self.ds_view.next_layout();
+        self.keep_ds_view();
+        let at = self.ds_view.layout.index() as u8;
+        self.hud.toast(Toast::DsLayout(at), self.now());
+    }
+
+    fn keep_ds_view(&mut self) {
         let (Some(root), Phase::Playing { cart }) = (self.root.clone(), &self.phase) else {
             return;
         };
@@ -2067,11 +2101,18 @@ impl App {
         let Some(s) = self.stylus else {
             return;
         };
-        // The bottom screen sits at 232, 240 in the DS's 720x480 buffer, and
-        // the view's window of that buffer is stretched over the canvas.
-        let [rx, ry, rw, rh] = self.ds_view_shown().source_rect();
-        let x = ((232.0 + s.x) / 720.0 - rx) / rw * OUT_W as f32;
-        let y = ((240.0 + s.y) / 480.0 - ry) / rh * OUT_H as f32;
+        // Over the bottom screen, wherever the layout draws it.
+        let (main, other) = self.ds_parts();
+        let Some(bottom) = [Some(main), other]
+            .into_iter()
+            .flatten()
+            .find(|p| p.screen == DsScreen::Bottom)
+        else {
+            return;
+        };
+        let [dx, dy, dw, dh] = bottom.dst;
+        let x = dx + s.x / crate::stylus::SCREEN_W * dw;
+        let y = dy + s.y / crate::stylus::SCREEN_H * dh;
         let (arm, thick) = (11.0, 3.0);
         let bar = |out: &mut Vec<Draw>, w: f32, h: f32, pad: f32, colour: [f32; 4]| {
             out.push(Draw::Rect {
@@ -2105,7 +2146,7 @@ impl App {
     pub fn source_rect(&self) -> [f32; 4] {
         match self.playing_platform().hardware() {
             Platform::Gba | Platform::Gb | Platform::Gbc => self.picture().1,
-            Platform::Nds => self.ds_view_shown().source_rect(),
+            Platform::Nds => self.ds_parts().0.src,
             _ => video_mode::source_rect_shown(
                 self.platform,
                 self.video_mode,
@@ -2165,6 +2206,12 @@ impl App {
     }
 
     pub fn game_layout(&self) -> GameLayout {
+        if self.playing_platform() == Platform::Nds {
+            return GameLayout {
+                panel: false,
+                rect: self.ds_parts().0.dst,
+            };
+        }
         let (sizing, source) = self.picture();
         self.layout_of(self.playing_platform(), sizing, source)
     }
@@ -2858,6 +2905,15 @@ impl App {
             Platform::Ngp => self.state.shader_ngp,
             Platform::Tg16 => self.state.shader_tg16,
             Platform::Nds => self.state.shader_nds,
+        }
+    }
+
+    /// The shader drawn over the game: a DS game's only where its main
+    /// screen sits at a whole 2x.
+    pub fn drawn_shader(&self) -> Shader {
+        match self.playing_platform() {
+            Platform::Nds if !self.ds_view_shown().shaded() => Shader::Off,
+            _ => self.screen_shader(),
         }
     }
 

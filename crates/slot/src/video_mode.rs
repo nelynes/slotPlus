@@ -157,54 +157,175 @@ pub fn picture_for(
 /// Which of a DS game's screens are shown, kept per game.
 pub const DS_VIEW_FILE: &str = "Config/nds_view.txt";
 
-/// A DS game's view of its two screens. DSperate draws them stacked, 256x384,
-/// in the middle of the DS's 720x480 buffer, and each view is a window onto it:
-/// both screens filling the height at 1.25x, or one of them at 2x.
+/// One of the DS's two screens.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
-pub enum DsView {
+pub enum DsScreen {
     #[default]
-    Both,
     Top,
     Bottom,
 }
 
-impl DsView {
+impl DsScreen {
+    pub fn other(self) -> DsScreen {
+        match self {
+            DsScreen::Top => DsScreen::Bottom,
+            DsScreen::Bottom => DsScreen::Top,
+        }
+    }
+
+    /// Where the screen sits in the DS's 720x480 buffer, as a fraction of
+    /// it: DSperate draws the two stacked, 256x384, at 232, 48.
+    pub fn source_rect(self) -> [f32; 4] {
+        let y = match self {
+            DsScreen::Top => 48.0,
+            DsScreen::Bottom => 240.0,
+        };
+        [232.0 / 720.0, y / 480.0, 256.0 / 720.0, 192.0 / 480.0]
+    }
+}
+
+/// How a DS game's two screens are laid out over the 720x480 canvas.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum DsLayout {
+    /// Both, the main one above the other, filling the height at 1.25x.
+    #[default]
+    Stacked,
+    /// The main screen alone at 2x.
+    Single,
+    /// The main screen alone, as big as the canvas takes at 4:3: 2.5x.
+    Fill,
+    /// The main screen at 2x, the other small beside it.
+    Side,
+    /// The main screen filling the height, the other at 1x in its corner.
+    Corner,
+}
+
+impl DsLayout {
+    pub const ALL: [DsLayout; 5] = [
+        DsLayout::Stacked,
+        DsLayout::Single,
+        DsLayout::Fill,
+        DsLayout::Side,
+        DsLayout::Corner,
+    ];
+
     pub fn as_str(self) -> &'static str {
         match self {
-            DsView::Both => "both",
-            DsView::Top => "top",
-            DsView::Bottom => "bottom",
+            DsLayout::Stacked => "stacked",
+            DsLayout::Single => "single",
+            DsLayout::Fill => "fill",
+            DsLayout::Side => "side",
+            DsLayout::Corner => "corner",
         }
     }
 
+    /// Its place in `DsLayout::ALL`, which slot-ui's `DS_LAYOUTS` names.
+    pub fn index(self) -> usize {
+        DsLayout::ALL.iter().position(|l| *l == self).unwrap_or(0)
+    }
+
+    fn parse(s: &str) -> Option<DsLayout> {
+        DsLayout::ALL.into_iter().find(|l| l.as_str() == s)
+    }
+
+    /// The layout SELECT + L2 steps to.
+    pub fn next(self) -> DsLayout {
+        DsLayout::ALL[(self.index() + 1) % DsLayout::ALL.len()]
+    }
+}
+
+/// One screen drawn: the part of the buffer it is, and where on the 720x480
+/// canvas it goes, in pixels.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct DsPart {
+    pub screen: DsScreen,
+    pub src: [f32; 4],
+    pub dst: [f32; 4],
+}
+
+/// A DS game's view of its two screens: which is the main one, L2 swaps
+/// them, and how they are laid out, which SELECT + L2 steps through.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub struct DsView {
+    pub main: DsScreen,
+    pub layout: DsLayout,
+}
+
+impl DsView {
+    pub fn as_str(self) -> String {
+        let main = match self.main {
+            DsScreen::Top => "top",
+            DsScreen::Bottom => "bottom",
+        };
+        format!("{},{main}", self.layout.as_str())
+    }
+
+    /// Reads a saved view, the views before layouts among them: "both" was
+    /// both stacked, "top" and "bottom" one screen at 2x.
     pub fn parse(s: &str) -> Option<DsView> {
-        match s.trim().to_ascii_lowercase().as_str() {
-            "both" => Some(DsView::Both),
-            "top" => Some(DsView::Top),
-            "bottom" => Some(DsView::Bottom),
-            _ => None,
+        let s = s.trim().to_ascii_lowercase();
+        let view = |layout, main| Some(DsView { main, layout });
+        match s.as_str() {
+            "both" => return view(DsLayout::Stacked, DsScreen::Top),
+            "top" => return view(DsLayout::Single, DsScreen::Top),
+            "bottom" => return view(DsLayout::Single, DsScreen::Bottom),
+            _ => {}
+        }
+        let (layout, main) = s.split_once(',')?;
+        let main = match main {
+            "top" => DsScreen::Top,
+            "bottom" => DsScreen::Bottom,
+            _ => return None,
+        };
+        view(DsLayout::parse(layout)?, main)
+    }
+
+    pub fn swapped(self) -> DsView {
+        DsView {
+            main: self.main.other(),
+            ..self
         }
     }
 
-    /// The view L2 steps to: both, the top screen, the bottom screen, round.
-    pub fn next(self) -> DsView {
-        match self {
-            DsView::Both => DsView::Top,
-            DsView::Top => DsView::Bottom,
-            DsView::Bottom => DsView::Both,
+    pub fn next_layout(self) -> DsView {
+        DsView {
+            layout: self.layout.next(),
+            ..self
         }
     }
 
-    /// The part of the 720x480 buffer the view shows over the canvas.
-    pub fn source_rect(self) -> [f32; 4] {
-        match self {
-            // 576x384 of the buffer: the 256x384 pair lands at 1.25x, 320x480.
-            DsView::Both => [0.1, 0.1, 0.8, 0.8],
-            // 360x240 around the screen at 232..488 x 48..240: 2x, 512x384.
-            DsView::Top => [0.25, 0.05, 0.5, 0.5],
-            // 360x240 around the screen at 232..488 x 240..432.
-            DsView::Bottom => [0.25, 0.45, 0.5, 0.5],
+    /// The screens drawn: the main one, and the other where the layout shows
+    /// it too, drawn over the main one.
+    pub fn parts(self) -> (DsPart, Option<DsPart>) {
+        let part = |screen: DsScreen, dst| DsPart {
+            screen,
+            src: screen.source_rect(),
+            dst,
+        };
+        let (main, other) = (self.main, self.main.other());
+        match self.layout {
+            DsLayout::Stacked => (
+                part(main, [200.0, 0.0, 320.0, 240.0]),
+                Some(part(other, [200.0, 240.0, 320.0, 240.0])),
+            ),
+            DsLayout::Single => (part(main, [104.0, 48.0, 512.0, 384.0]), None),
+            DsLayout::Fill => (part(main, [40.0, 0.0, 640.0, 480.0]), None),
+            // 512 at 2x leaves 208 beside it: the other screen at 208x156.
+            DsLayout::Side => (
+                part(main, [0.0, 48.0, 512.0, 384.0]),
+                Some(part(other, [512.0, 48.0, 208.0, 156.0])),
+            ),
+            DsLayout::Corner => (
+                part(main, [40.0, 0.0, 640.0, 480.0]),
+                Some(part(other, [424.0, 288.0, 256.0, 192.0])),
+            ),
         }
+    }
+
+    /// Whether the main screen sits at a whole 2x, where a shader's cells
+    /// land evenly; at 1.25x and 2.5x they do not, and none is drawn.
+    pub fn shaded(self) -> bool {
+        matches!(self.layout, DsLayout::Single | DsLayout::Side)
     }
 }
 
@@ -216,5 +337,5 @@ pub fn ds_view_for(root: &Path, stem: &str) -> DsView {
 }
 
 pub fn write_ds_view(root: &Path, stem: &str, view: DsView) -> std::io::Result<()> {
-    ini::write(root, DS_VIEW_FILE, stem, view.as_str())
+    ini::write(root, DS_VIEW_FILE, stem, &view.as_str())
 }

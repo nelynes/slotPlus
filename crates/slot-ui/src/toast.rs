@@ -32,7 +32,18 @@ pub enum Toast {
     CardRepairFailed,
     Palette(GbColors),
     Duplicate(QuickRow),
+    /// A DS game's new layout, by its place in `DS_LAYOUTS`.
+    DsLayout(u8),
 }
+
+/// The names of a DS game's layouts, in the order SELECT + L2 steps them.
+pub const DS_LAYOUTS: [&str; 5] = [
+    "Both Screens",
+    "One Screen",
+    "Full Screen",
+    "Side by Side",
+    "Picture in Picture",
+];
 
 impl Toast {
     const FIXED: [Toast; 22] = [
@@ -65,6 +76,7 @@ impl Toast {
             .into_iter()
             .chain(GbColors::all().map(Toast::Palette))
             .chain(bound_rows().map(Toast::Duplicate))
+            .chain((0..DS_LAYOUTS.len() as u8).map(Toast::DsLayout))
             .collect()
     }
 
@@ -75,6 +87,12 @@ impl Toast {
                 Self::FIXED.len()
                     + GbColors::all().count()
                     + bound_rows().position(|r| r == row).unwrap_or(0)
+            }
+            Toast::DsLayout(i) => {
+                Self::FIXED.len()
+                    + GbColors::all().count()
+                    + bound_rows().count()
+                    + usize::from(i).min(DS_LAYOUTS.len() - 1)
             }
             fixed => Self::FIXED.iter().position(|t| *t == fixed).unwrap_or(0),
         }
@@ -147,6 +165,7 @@ impl Toast {
             Toast::CardRepairFailed => "Card repair failed",
             Toast::Palette(p) => p.label(),
             Toast::Duplicate(_) => "",
+            Toast::DsLayout(i) => DS_LAYOUTS[usize::from(i).min(DS_LAYOUTS.len() - 1)],
         }
     }
 }

@@ -590,7 +590,7 @@ impl Frontend {
     pub fn compose(&mut self, compositor: &mut Compositor) {
         compositor.set_blue_light(self.session.app().blue_light());
         compositor.set_picture(self.session.app().picture_rect());
-        compositor.set_screen_effect(match self.session.app().screen_shader() {
+        compositor.set_screen_effect(match self.session.app().drawn_shader() {
             slot_store::Shader::Off => ScreenEffect::None,
             slot_store::Shader::Lcd3x => ScreenEffect::Lcd3x,
             slot_store::Shader::Grid => ScreenEffect::Grid,
@@ -603,6 +603,7 @@ impl Frontend {
         compositor.set_screen_footer(self.session.app().screen_footer());
         compositor.set_game_source_rect(self.session.app().source_rect());
         compositor.set_game_layout(self.session.app().game_layout());
+        compositor.set_game_inset(self.session.app().game_inset());
         self.grab_link_shot(compositor);
         compositor.begin_frame();
         if self.draw_rebuild(compositor) {
