@@ -209,3 +209,29 @@ fn a_ds_game_offers_no_rewind() {
     assert!(hidden.contains(&slot_ui::QuickRow::Rewind));
     assert!(hidden.contains(&slot_ui::QuickRow::ScRewind));
 }
+
+#[test]
+fn a_ds_bezel_set_follows_the_layout() {
+    let (_d, mut a) = playing_ds();
+    let mut seen = Vec::new();
+    for _ in DsLayout::ALL {
+        seen.push(a.ds_bezel_file().unwrap());
+        a.next_ds_layout();
+    }
+    assert_eq!(
+        seen,
+        [
+            "both-screens.png",
+            "one-screen.png",
+            "full-screen.png",
+            "side-by-side.png",
+            "picture-in-picture.png"
+        ]
+    );
+    a.swap_ds_screens();
+    assert_eq!(
+        a.ds_bezel_file(),
+        Some("both-screens.png"),
+        "swapping the screens keeps the layout's bezel"
+    );
+}

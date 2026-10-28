@@ -88,10 +88,20 @@ struct QuickPalette {
     shown: &'static str,
 }
 
+/// What the game's bezel was drawn from: the platform, the pick, the bundled
+/// art, the size, and a DS bezel set's layout file.
+type ShownBezel = (
+    Console,
+    BezelPick,
+    Option<BezelArt>,
+    (u32, u32),
+    Option<&'static str>,
+);
+
 #[derive(Default)]
 struct BezelSync {
     tex: Option<TexId>,
-    image: Option<(Console, BezelPick, Option<BezelArt>, (u32, u32))>,
+    image: Option<ShownBezel>,
     labels: [String; 9],
     faces: [(Option<TexId>, Option<TexId>); 9],
 }
@@ -1324,7 +1334,7 @@ fn sync_game_bezel(app: &mut App, compositor: &mut Compositor, state: &mut Bezel
     let (w, h) = app.game_bezel_size();
     let last = state.image.as_ref().and_then(|image| image.2);
     let art = bezel_key(&pick, app.bezel_art(), last);
-    let shown = (platform, pick, art, (w, h));
+    let shown = (platform, pick, art, (w, h), app.ds_bezel_file());
     if state.image.as_ref() != Some(&shown) {
         let rgba = match &shown.1 {
             BezelPick::None | BezelPick::Ags102 => None,
@@ -1334,11 +1344,7 @@ fn sync_game_bezel(app: &mut App, compositor: &mut Compositor, state: &mut Bezel
             BezelPick::Bundled(name) => slot_ui::bundled_game_bezel_face(platform, name, w, h),
             BezelPick::File(name) => app
                 .root()
-                .map(|root| {
-                    root.join(crate::bezel::GAME_BEZELS)
-                        .join(platform.dir_name())
-                        .join(name)
-                })
+                .and_then(|root| crate::bezel::file(root, platform, name, shown.4))
                 .and_then(|path| game_bezel_face(&path, w, h)),
         };
         let tex = rgba.map(|rgba| match state.tex {

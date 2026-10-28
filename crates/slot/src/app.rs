@@ -2037,6 +2037,12 @@ impl App {
         self.playing_platform() == Platform::Nds
     }
 
+    /// The PNG a DS bezel set draws for the layout on screen, while a DS
+    /// game plays.
+    pub fn ds_bezel_file(&self) -> Option<&'static str> {
+        (self.playing_platform() == Platform::Nds).then(|| self.ds_view.layout.bezel_file())
+    }
+
     /// Swap which of a DS game's screens is the main one, L2's job.
     pub fn swap_ds_screens(&mut self) {
         self.ds_view = self.ds_view.swapped();

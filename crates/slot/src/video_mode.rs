@@ -219,6 +219,17 @@ impl DsLayout {
         }
     }
 
+    /// The PNG for this layout in a DS bezel set: a folder in `Bezels/NDS/`.
+    pub fn bezel_file(self) -> &'static str {
+        match self {
+            DsLayout::Stacked => "both-screens.png",
+            DsLayout::Single => "one-screen.png",
+            DsLayout::Fill => "full-screen.png",
+            DsLayout::Side => "side-by-side.png",
+            DsLayout::Corner => "picture-in-picture.png",
+        }
+    }
+
     /// Its place in `DsLayout::ALL`, which slot-ui's `DS_LAYOUTS` names.
     pub fn index(self) -> usize {
         DsLayout::ALL.iter().position(|l| *l == self).unwrap_or(0)
