@@ -169,7 +169,7 @@ def plugged(base):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('colour', nargs='?', default='black')
+    ap.add_argument('colour', nargs='?', default='silver')
     ap.add_argument('--out', default=str(ROOT / 'assets'))
     a = ap.parse_args()
     base = colour(a.colour, SHELLS)

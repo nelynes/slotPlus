@@ -438,7 +438,7 @@ pub fn bespoke_slot(platform: slot_store::Platform) -> Option<[&'static [u8]; 3]
                 load(SLOT_LYNX_PLUGGED_PNG, SLOT_W, SLOT_H, &P),
             ])
         }
-        // The black DS Lite.
+        // The silver DS Lite.
         Platform::Nds => {
             static B: OnceLock<Vec<u8>> = OnceLock::new();
             static F: OnceLock<Vec<u8>> = OnceLock::new();
@@ -456,7 +456,10 @@ pub fn bespoke_slot(platform: slot_store::Platform) -> Option<[&'static [u8]; 3]
 /// Whether a system's own cart slot is pale plastic, so the battery and clock
 /// printed over it take the light theme's ink whatever the theme.
 pub fn bespoke_slot_light(platform: slot_store::Platform) -> bool {
-    matches!(platform, slot_store::Platform::Ws)
+    matches!(
+        platform,
+        slot_store::Platform::Ws | slot_store::Platform::Nds
+    )
 }
 
 pub fn slot_back() -> &'static [u8] {
