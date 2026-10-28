@@ -131,7 +131,10 @@ fn the_wonderswan_has_a_pale_slot_of_its_own_and_the_game_boys_keep_slots() {
 fn the_game_gear_has_a_dark_slot_of_its_own() {
     use slot_ui::{bespoke_slot, bespoke_slot_light};
     assert!(bespoke_slot(Platform::Gg).is_some());
-    assert!(!bespoke_slot_light(Platform::Gg), "grey plastic keeps light ink");
+    assert!(
+        !bespoke_slot_light(Platform::Gg),
+        "grey plastic keeps light ink"
+    );
 }
 
 #[test]
@@ -145,7 +148,10 @@ fn the_neo_geo_pocket_has_a_dark_slot_of_its_own() {
 fn the_turbografx_has_the_turboexpresss_dark_slot() {
     use slot_ui::{bespoke_slot, bespoke_slot_light};
     assert!(bespoke_slot(Platform::Tg16).is_some());
-    assert!(!bespoke_slot_light(Platform::Tg16), "charcoal keeps light ink");
+    assert!(
+        !bespoke_slot_light(Platform::Tg16),
+        "charcoal keeps light ink"
+    );
 }
 
 #[test]

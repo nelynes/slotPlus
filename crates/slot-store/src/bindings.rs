@@ -247,7 +247,7 @@ impl GameButton {
         match platform {
             // The Lynx uses L1 and R1 for its Options, and the WonderSwan uses
             // X, Y, L1 and R1 for its second pad, so both keep every button.
-            Platform::Gba | Platform::Ws | Platform::Lynx => &GameButton::ALL,
+            Platform::Gba | Platform::Gbav | Platform::Ws | Platform::Lynx => &GameButton::ALL,
             // The Game Gear, NeoGeo Pocket and TurboGrafx-16 have no L or R, so
             // L1 and R1 stay slot's, to stretch the picture.
             Platform::Gb | Platform::Gbc | Platform::Gg | Platform::Ngp | Platform::Tg16 => {

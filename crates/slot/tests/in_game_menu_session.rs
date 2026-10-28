@@ -21,7 +21,6 @@ fn session_playing() -> (Session, TempDir, Millis) {
         &SlotState {
             cart: Some("Emerald".into()),
             clock_set: true,
-            utc_offset_min: 0,
             ..Default::default()
         },
     )
@@ -105,6 +104,33 @@ fn colour_correction_changed_behind_the_menu_redraws_the_paused_frame() {
         tap(&mut s, &mut now, btn);
     }
     assert_eq!(s.app().in_game_menu(), Some(QuickRow::ColourCorrection));
+    let shown = s.emu().map(|e| e.published_count()).expect("no core");
+    tap(&mut s, &mut now, Btn::Right);
+    let deadline = Instant::now() + BAIL;
+    while s.emu().map(|e| e.published_count()) == Some(shown) {
+        assert!(
+            Instant::now() < deadline,
+            "the paused frame was never redrawn"
+        );
+        step(&mut s, &mut now, &[]);
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    assert_eq!(s.observed_speed(), Some(Speed::Paused));
+}
+
+#[test]
+fn frame_blending_changed_behind_the_menu_redraws_the_paused_frame() {
+    let (mut s, _d, mut now) = session_playing();
+    assert!(
+        runs_at(&mut s, &mut now, Speed::Normal),
+        "the game never ran"
+    );
+    open_menu(&mut s, &mut now);
+    assert!(runs_at(&mut s, &mut now, Speed::Paused));
+    for btn in [Btn::Down, Btn::A, Btn::A, Btn::Down, Btn::Down] {
+        tap(&mut s, &mut now, btn);
+    }
+    assert_eq!(s.app().in_game_menu(), Some(QuickRow::Blending));
     let shown = s.emu().map(|e| e.published_count()).expect("no core");
     tap(&mut s, &mut now, Btn::Right);
     let deadline = Instant::now() + BAIL;

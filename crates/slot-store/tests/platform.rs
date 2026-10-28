@@ -5,7 +5,7 @@ fn every_platform_has_a_directory() {
     let names: Vec<&str> = Platform::ALL.iter().map(|p| p.dir_name()).collect();
     assert_eq!(
         names,
-        vec!["GBA", "GBC", "GB", "WS", "Lynx", "GG", "NGP", "TG16"]
+        vec!["GBA", "GBAV", "GBC", "GB", "WS", "Lynx", "GG", "NGP", "TG16"]
     );
 }
 
@@ -15,6 +15,7 @@ fn every_platform_is_a_shelf_of_its_own() {
         Platform::ALL,
         [
             Platform::Gba,
+            Platform::Gbav,
             Platform::Gbc,
             Platform::Gb,
             Platform::Ws,
@@ -49,6 +50,8 @@ fn each_platform_takes_only_its_own_extensions() {
     assert!(!Platform::Gg.accepts(std::path::Path::new("Tetris.gb")));
     assert!(!Platform::Gg.accepts(std::path::Path::new("Alex Kidd.sms")));
     assert!(!Platform::Gb.accepts(std::path::Path::new("Sonic Chaos.gg")));
+    assert!(Platform::Gbav.accepts(std::path::Path::new("Shrek.gba")));
+    assert!(!Platform::Gbav.accepts(std::path::Path::new("Tetris.gb")));
 }
 
 #[test]
@@ -66,6 +69,7 @@ fn a_game_gear_picture_is_the_size_of_a_game_boy_one() {
 fn only_wonderswan_and_turbografx_get_a_bigger_video_buffer() {
     for p in [
         Platform::Gba,
+        Platform::Gbav,
         Platform::Gb,
         Platform::Gbc,
         Platform::Lynx,
@@ -156,4 +160,13 @@ fn a_neogeo_pocket_picture_fits_the_shared_buffer_at_3x() {
     let (w, h) = Platform::Ngp.picture();
     assert!(w * 3 <= 720 && h * 3 <= 480, "160x152 at 3x is 480x456");
     assert!(!Platform::Ngp.turns());
+}
+
+#[test]
+fn gba_video_runs_on_gba_hardware() {
+    assert_eq!(Platform::Gbav.hardware(), Platform::Gba);
+    assert_eq!(Platform::Gbav.picture(), Platform::Gba.picture());
+    for p in [Platform::Gba, Platform::Gb, Platform::Gbc] {
+        assert_eq!(p.hardware(), p);
+    }
 }

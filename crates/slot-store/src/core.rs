@@ -75,8 +75,11 @@ impl Core {
 
     pub fn runs(self, platform: Platform) -> bool {
         match self {
-            Core::Mgba => matches!(platform, Platform::Gba | Platform::Gb | Platform::Gbc),
-            Core::Gpsp => platform == Platform::Gba,
+            Core::Mgba => matches!(
+                platform,
+                Platform::Gba | Platform::Gbav | Platform::Gb | Platform::Gbc
+            ),
+            Core::Gpsp => platform.hardware() == Platform::Gba,
             Core::Cygne => platform == Platform::Ws,
             Core::Lynx => platform == Platform::Lynx,
             Core::Gearsystem => platform == Platform::Gg,
@@ -87,7 +90,7 @@ impl Core {
 
     pub fn default_for(platform: Platform) -> Core {
         match platform {
-            Platform::Gba | Platform::Gb | Platform::Gbc => Core::Mgba,
+            Platform::Gba | Platform::Gb | Platform::Gbc | Platform::Gbav => Core::Mgba,
             Platform::Ws => Core::Cygne,
             Platform::Lynx => Core::Lynx,
             Platform::Gg => Core::Gearsystem,

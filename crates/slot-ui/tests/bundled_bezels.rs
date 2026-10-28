@@ -4,6 +4,7 @@ use slot_gfx::{OUT_H, OUT_W};
 use slot_store::Platform;
 use slot_ui::{
     bundled_game_bezel_face, bundled_game_bezels, default_game_bezel_face, has_default_game_bezel,
+    BezelArt,
 };
 
 fn at(rgba: &[u8], x: u32, y: u32) -> [u8; 4] {
@@ -14,7 +15,8 @@ fn at(rgba: &[u8], x: u32, y: u32) -> [u8; 4] {
 #[test]
 fn the_game_gear_has_a_black_bezel_with_a_green_power_light_over_its_screen() {
     assert!(has_default_game_bezel(Platform::Gg));
-    let face = default_game_bezel_face(Platform::Gg, OUT_W, OUT_H).expect("a Game Gear bezel");
+    let face = default_game_bezel_face(Platform::Gg, BezelArt::Default, OUT_W, OUT_H)
+        .expect("a Game Gear bezel");
     assert_eq!(face.len(), (OUT_W * OUT_H * 4) as usize);
     // The 3x picture, 480x432 from (120, 24), shows through.
     for (x, y) in [(360, 240), (130, 34), (590, 446)] {
@@ -41,7 +43,8 @@ fn the_game_gear_has_a_black_bezel_with_a_green_power_light_over_its_screen() {
 
 #[test]
 fn the_neogeo_pocket_bezel_leaves_its_whole_3x_screen_clear() {
-    let face = default_game_bezel_face(Platform::Ngp, OUT_W, OUT_H).expect("a NeoGeo Pocket bezel");
+    let face = default_game_bezel_face(Platform::Ngp, BezelArt::Default, OUT_W, OUT_H)
+        .expect("a NeoGeo Pocket bezel");
     // The 160x152 picture at 3x: 480x456 from (120, 12).
     for (x, y) in [(120, 12), (599, 12), (120, 467), (599, 467), (360, 240)] {
         assert_eq!(at(&face, x, y)[3], 0, "the window is covered at {x},{y}");
@@ -64,7 +67,7 @@ fn only_the_game_boys_the_game_gear_and_the_neogeo_pocket_have_a_bundled_bezel()
         );
         assert_eq!(has_default_game_bezel(platform), bundled, "{platform:?}");
         assert_eq!(
-            default_game_bezel_face(platform, OUT_W, OUT_H).is_some(),
+            default_game_bezel_face(platform, BezelArt::Default, OUT_W, OUT_H).is_some(),
             bundled,
             "{platform:?}"
         );
@@ -127,6 +130,20 @@ fn the_wide_turbografx_16_bezels_leave_a_320_wide_picture_clear() {
             (710, 470),
         ] {
             assert_eq!(at(&face, x, y)[3], 255, "{name}: see-through at {x},{y}");
+        }
+    }
+}
+
+#[test]
+fn the_game_gear_and_pocket_bezels_frame_every_one_of_slots_pictures_the_same() {
+    for platform in [Platform::Gg, Platform::Ngp] {
+        let default = default_game_bezel_face(platform, BezelArt::Default, OUT_W, OUT_H);
+        for kind in [BezelArt::Fit3x2, BezelArt::Integer4x3, BezelArt::Fit4x3] {
+            assert_eq!(
+                default_game_bezel_face(platform, kind, OUT_W, OUT_H),
+                default,
+                "{platform:?} {kind:?}"
+            );
         }
     }
 }

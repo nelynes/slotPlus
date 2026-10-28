@@ -11,11 +11,13 @@ pub enum Platform {
     Gg,
     Ngp,
     Tg16,
+    Gbav,
 }
 
 impl Platform {
-    pub const ALL: [Platform; 8] = [
+    pub const ALL: [Platform; 9] = [
         Platform::Gba,
+        Platform::Gbav,
         Platform::Gbc,
         Platform::Gb,
         Platform::Ws,
@@ -35,6 +37,7 @@ impl Platform {
             Platform::Gg => "Game Gear",
             Platform::Ngp => "NeoGeo Pocket",
             Platform::Tg16 => "TurboGrafx-16",
+            Platform::Gbav => "Game Boy Advance Video",
         }
     }
 
@@ -48,12 +51,20 @@ impl Platform {
             Platform::Gg => "GG",
             Platform::Ngp => "NGP",
             Platform::Tg16 => "TG16",
+            Platform::Gbav => "GBAV",
+        }
+    }
+
+    pub fn hardware(self) -> Platform {
+        match self {
+            Platform::Gbav => Platform::Gba,
+            p => p,
         }
     }
 
     pub fn extensions(self) -> &'static [&'static str] {
         match self {
-            Platform::Gba => &["gba"],
+            Platform::Gba | Platform::Gbav => &["gba"],
             Platform::Gb | Platform::Gbc => &["gb", "gbc"],
             Platform::Ws => &["ws", "wsc"],
             Platform::Lynx => &["lnx", "lyx"],
@@ -67,7 +78,7 @@ impl Platform {
 
     pub fn picture(self) -> (u32, u32) {
         match self {
-            Platform::Gba => (240, 160),
+            Platform::Gba | Platform::Gbav => (240, 160),
             Platform::Gb | Platform::Gbc | Platform::Gg => (160, 144),
             Platform::Ngp => (160, 152),
             // Most HuCard games draw 256x240; some switch to 320, 336 or 512
@@ -106,6 +117,7 @@ impl Platform {
     pub fn source_size(self) -> (u32, u32) {
         match self {
             Platform::Gba
+            | Platform::Gbav
             | Platform::Gb
             | Platform::Gbc
             | Platform::Lynx
