@@ -703,6 +703,7 @@ impl Worker {
         let mut served = 0u64;
         let mut ticked = false;
         let mut paced = 0u64;
+        let mut core_trace = CoreTrace::new();
         let mut scale = 0.0f64;
         let mut rate = TickRate::new(Instant::now(), 0);
         let mut stalled = false;
@@ -880,6 +881,7 @@ impl Worker {
                         }
                     }
                     let took = frame_began.elapsed();
+                    core_trace.frame(took);
                     if last {
                         drawn = took;
                     } else {
@@ -891,6 +893,7 @@ impl Worker {
                 }
                 let core_time = began.elapsed();
                 cost.measured(skipped, drawn);
+                core_trace.report_when_due();
                 if cable.is_some() {
                     cable_presents += 1;
                     cable_core += core_time;
@@ -1608,6 +1611,62 @@ fn pack_pointer(pointer: Option<Pointer>) -> u64 {
     pointer.map_or(0, |p| {
         1 << 33 | u64::from(p.pressed) << 32 | u64::from(p.x as u16) << 16 | u64::from(p.y as u16)
     })
+}
+
+/// With tracing on, how long the core takes over its frames, said every
+/// five seconds: its frame rate, its mean and slowest frame, and how many
+/// frames took longer than a 60 Hz frame has.
+struct CoreTrace {
+    since: Instant,
+    frames: u32,
+    total: Duration,
+    slowest: Duration,
+    over: u32,
+}
+
+impl CoreTrace {
+    const EVERY: Duration = Duration::from_secs(5);
+    const BUDGET: Duration = Duration::from_micros(16_667);
+
+    fn new() -> CoreTrace {
+        CoreTrace {
+            since: Instant::now(),
+            frames: 0,
+            total: Duration::ZERO,
+            slowest: Duration::ZERO,
+            over: 0,
+        }
+    }
+
+    fn frame(&mut self, took: Duration) {
+        if !crate::session::trace() {
+            return;
+        }
+        self.frames += 1;
+        self.total += took;
+        self.slowest = self.slowest.max(took);
+        self.over += u32::from(took > Self::BUDGET);
+    }
+
+    fn report_when_due(&mut self) {
+        let span = self.since.elapsed();
+        if !crate::session::trace() || span < Self::EVERY {
+            return;
+        }
+        if self.frames > 0 {
+            let ms = |d: Duration| d.as_secs_f64() * 1000.0;
+            eprintln!(
+                "slot: core: {} frames in {:.1} s ({:.1} fps), mean {:.1} ms, slowest {:.1} ms, {} over 16.7 ms",
+                self.frames,
+                span.as_secs_f64(),
+                f64::from(self.frames) / span.as_secs_f64(),
+                ms(self.total) / f64::from(self.frames),
+                ms(self.slowest),
+                self.over,
+            );
+        }
+        *self = CoreTrace::new();
+    }
 }
 
 fn unpack_pointer(word: u64) -> Option<Pointer> {
