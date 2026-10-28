@@ -28,6 +28,23 @@ sha256() {
 		cut -d' ' -f1
 }
 
+# Run one step of the build, its output kept in WORK/NAME.log. A failing step
+# prints the end of its log, and posts it as an error annotation when this runs
+# in GitHub Actions, where the job's own log is long and hard to search.
+step() {
+	name="$1"
+	shift
+	if ! "$@" >"$work/$name.log" 2>&1; then
+		echo "dsperate: $name failed; the end of its log:" >&2
+		tail -n 40 "$work/$name.log" >&2
+		if [ -n "${GITHUB_ACTIONS:-}" ]; then
+			printf '::error title=DSperate %s failed::%s\n' "$name" \
+				"$(tail -n 25 "$work/$name.log" | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
+		fi
+		exit 1
+	fi
+}
+
 stamp() {
 	echo "commit=$1"
 	echo "source=https://github.com/thwonp/dsperate-lr/archive/$1.tar.gz"
@@ -48,8 +65,8 @@ build() {
 
 	rm -rf "$work"
 	mkdir -p "$work"
-	tar -xzf "$lr_tarball" -C "$work"
-	tar -xzf "$ds_tarball" -C "$work"
+	step unpack-wrapper tar -xzf "$lr_tarball" -C "$work"
+	step unpack-dsperate tar -xzf "$ds_tarball" -C "$work"
 	for f in "$lr/CMakeLists.txt" "$ds/CMakeLists.txt"; do
 		if [ ! -f "$f" ]; then
 			echo "missing $f: the tarballs are not dsperate-lr-$lr_commit and DSperate-$ds_commit" >&2
@@ -63,21 +80,23 @@ build() {
 	# The wrapper's own fixes onto DSperate, then any of ours.
 	for p in "$lr"/patches/*.patch "$here"/*.patch; do
 		[ -e "$p" ] || continue
-		(cd "$lr/DSperate" && patch -p1 --forward --quiet < "$p")
+		step "patch-$(basename "$p" .patch)" patch -d "$lr/DSperate" -p1 --forward -i "$p"
 	done
 
-	cmake -S "$lr/DSperate" -B "$work/ds-build" \
+	echo "dsperate: $(c++ --version | head -1), $(cmake --version | head -1)"
+	step configure-dsperate cmake -S "$lr/DSperate" -B "$work/ds-build" \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_PROJECT_INCLUDE="$lr/cmake/dsperate-pic.cmake" \
 		-DDSPERATE_PGO=OFF -DDSPERATE_TUNE="$device_tune" \
 		-DDSPERATE_TESTS=OFF -DDSPERATE_HEADLESS=OFF -DDSPERATE_SDL=OFF \
 		-DDSPERATE_WAYLAND=OFF -DDSPERATE_VULKAN=OFF \
 		-DDSPERATE_CHEEVOS=OFF -DDSPERATE_NET=OFF
-	cmake --build "$work/ds-build" --target dsperate_core -j"$(getconf _NPROCESSORS_ONLN)"
+	step build-dsperate cmake --build "$work/ds-build" --target dsperate_core \
+		-j"$(getconf _NPROCESSORS_ONLN)"
 
-	cmake -S "$lr" -B "$work/lr-build" \
+	step configure-wrapper cmake -S "$lr" -B "$work/lr-build" \
 		-DCMAKE_BUILD_TYPE=Release -DDSPERATE_BUILD="$work/ds-build"
-	cmake --build "$work/lr-build" -j"$(getconf _NPROCESSORS_ONLN)"
+	step build-wrapper cmake --build "$work/lr-build" -j"$(getconf _NPROCESSORS_ONLN)"
 
 	mkdir -p "$(dirname "$out")"
 	strip --strip-unneeded -o "$out" "$work/lr-build/dsperate_libretro.so"
