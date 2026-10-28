@@ -534,10 +534,13 @@ tasks:
 
   dist:device:
     desc: Build the SD2 tree for an H700 device, OUT defaults to ./dist-device
-    deps: [core:device, core:gpsp, core:cygne, core:lynx, core:gearsystem, core:ngp, core:pce, core:dsperate, fsck:exfat, build:device, bench:device]
+    deps: [core:device, core:gpsp, core:cygne, core:lynx, core:gearsystem, core:ngp, core:pce, core:dsperate, fsck:exfat, build:device]
     vars:
       OUT: '{{.OUT | default "dist-device"}}'
     cmds:
+      # After build:device, not beside it: two cargo runs starting at once in a fresh box
+      # both install the pinned toolchain, and collide.
+      - task: bench:device
       - rm -rf {{.OUT}}
       - task: device:sh
         vars:
