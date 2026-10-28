@@ -65,6 +65,7 @@ pub use cart::{
 };
 pub use cart::{
     nds_label_panel, NDS_CART_H, NDS_CART_W, NDS_LABEL_H, NDS_LABEL_W, NDS_LABEL_X, NDS_LABEL_Y,
+    NDS_SEATED_W,
 };
 pub use cart::{
     ngp_label_panel, NGP_CART_H, NGP_CART_W, NGP_LABEL_H, NGP_LABEL_W, NGP_LABEL_X, NGP_LABEL_Y,

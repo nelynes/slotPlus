@@ -127,6 +127,16 @@ fn the_wonderswan_cart_is_wide_and_the_lynx_card_nearly_square() {
 }
 
 #[test]
+fn a_ds_card_seats_narrower_keeping_its_shape() {
+    let c = nds();
+    let (sw, sh) = seated_box(c.platform);
+    assert_eq!(sw, slot_ui::NDS_SEATED_W);
+    assert!(sw < 240, "a DS card is smaller than a GBA cart");
+    let (cw, ch) = cart_box(c.platform);
+    assert!((sh as f32 - ch as f32 * sw as f32 / cw as f32).abs() <= 1.0);
+}
+
+#[test]
 fn the_label_sits_inside_the_shell_and_is_the_size_the_cart_asks_art_for() {
     for (c, (lx, ly, lw, lh)) in [
         (ws(), (WS_LABEL_X, WS_LABEL_Y, WS_LABEL_W, WS_LABEL_H)),

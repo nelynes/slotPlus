@@ -20,18 +20,40 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw
 
-from strip import H, ROOT, W, colour, grain, mouth, near, open_mouth, rgb, to_image
+import strip
+from strip import H, ROOT, W, colour, grain, near, rgb, to_image
 
 SHELLS = {
     'black': (38, 38, 42),
     'silver': (172, 174, 178),
     'rose': (190, 166, 164),
 }
+# A DS card is far smaller than a GBA cart, so it seats narrower (slot-ui's
+# NDS seated width, 168) and the slot is Slot's mouth narrowed to match, a
+# little wider than the card.
+CARD_W = 168
+NARROW = (CARD_W + 14) / (240 + 14)
 # The scoop round the slot: a shallow dish a little wider than the mouth.
-SCOOP = (206, 514)
+SCOOP = (238, 482)
 # The hinge's knuckles at either end of the band.
 KNUCKLES = ((0, 70), (650, 720))
 CARD = (58, 59, 63)  # the game card's dark grey, as slot-ui's NDS_SHELL
+
+
+def mouth():
+    """Slot's mouth, narrowed about the middle to the DS card's width."""
+    m = strip.mouth()
+    xs = np.arange(W)
+    centre = (W - 1) / 2
+    src = np.clip(np.round(centre + (xs - centre) / NARROW).astype(int), 0, W - 1)
+    return m[:, src]
+
+
+def open_mouth(img):
+    """Keep the narrowed opening open whatever was drawn across it."""
+    out = np.array(img)
+    out[:, :, 3] = np.where(mouth(), 0, out[:, :, 3])
+    return Image.fromarray(out, 'RGBA')
 
 
 def gloss(light):
@@ -59,9 +81,9 @@ def back(base):
     # The slot the card slides into, narrower than the mouth as the card is,
     # with a guide on each side.
     cx = (left + right) // 2
-    d.rectangle([cx - 92, 3, cx + 92, 9], fill=(12, 12, 14))
-    d.line([cx - 92, 10, cx + 92, 10], fill=rgb(base, 0.9))
-    for x in (cx - 100, cx + 94):
+    d.rectangle([cx - 86, 3, cx + 86, 9], fill=(12, 12, 14))
+    d.line([cx - 86, 10, cx + 86, 10], fill=rgb(base, 0.9))
+    for x in (cx - 92, cx + 86):
         d.rectangle([x, 4, x + 6, 28], fill=rgb(base, 0.38))
     return img
 
@@ -113,7 +135,7 @@ def front(base):
         d.line([sx, 30, sx, 36], fill=rgb(base, 0.4), width=2)
 
     # The mark beside the slot: a little card with an arrow pressing it in.
-    mx, my = 528, 30
+    mx, my = 500, 30
     d.rounded_rectangle([mx, my, mx + 12, my + 13], radius=1, outline=groove, width=2)
     d.line([mx + 1, my + 14, mx + 13, my + 14], fill=lit)
     d.line([mx + 6, my - 9, mx + 6, my - 3], fill=groove, width=2)
@@ -129,14 +151,14 @@ def plugged(base):
     card = np.array(to_image(np.full((H, W), 1.0) * grain(22, 0.02), CARD)).astype(float)
     ys = np.arange(H)[:, None]
     xs = np.arange(W)[None, :]
-    cx = (233 + 486) // 2
-    # The card is narrower than the mouth: the slot's dark either side.
-    within = np.broadcast_to((np.abs(xs - cx) <= 88), (H, W))
+    cx = W // 2
+    # The card is a little narrower than the slot: dark either side.
+    within = np.broadcast_to((np.abs(xs - cx) <= CARD_W // 2), (H, W))
     # A bevel along the card's top edge, then its label below.
     card[:3] *= 1.35
     card[3:5] *= 0.8
-    card[14:, cx - 74:cx + 75, :3] = (210, 214, 220)
-    card[14:15, cx - 74:cx + 75, :3] *= 0.7
+    card[14:, cx - 67:cx + 68, :3] = (210, 214, 220)
+    card[14:15, cx - 67:cx + 68, :3] *= 0.7
     inner = m & within
     b[inner] = card[inner]
     b[:, :, 3] = 255

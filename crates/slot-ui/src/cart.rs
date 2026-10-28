@@ -326,11 +326,19 @@ fn spec(shape: Shape) -> Spec {
 pub const SEATED_W: u32 = 240;
 const SEATED_H: u32 = 141;
 const GB_SEATED_H: u32 = 259;
+/// tools/slot_art/dslite.py cuts its slot to this width.
+pub const NDS_SEATED_W: u32 = 168;
 
 pub fn seated_box(platform: Platform) -> (u32, u32) {
     match platform {
         Platform::Gba | Platform::Gbav => (SEATED_W, SEATED_H),
         Platform::Gb | Platform::Gbc => (SEATED_W, GB_SEATED_H),
+        // A DS card is far smaller than the others, so it seats narrower, in a
+        // DS Lite slot narrowed to match.
+        Platform::Nds => {
+            let (w, h) = mould_for(Platform::Nds).size();
+            (NDS_SEATED_W, (h * NDS_SEATED_W + w / 2) / w)
+        }
         // The others are drawn at the seated width already scaled, so their seated
         // height follows from their own aspect.
         other => {
