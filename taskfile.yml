@@ -28,6 +28,9 @@ vars:
     | (package(slot-retro) & (binary(options) | binary(netpacket) | binary(libretro)))
   NGP_COMMIT: a50d5ac288a81f2104ddf43195a4efdd15c72227
   PCE_COMMIT: 3f946f277aef3aa99a95551618bbcd1dd2bda0d9
+  # Nintendo DS: DSperate's libretro wrapper, and the DSperate commit it pins (v3.0.5)
+  DSPERATE_LR_COMMIT: 093d50fcbd10531273e0cc22a23c6644a26b9b71
+  DSPERATE_COMMIT: ddf2910e6d80220c6b22b4df61f0786ac9879cda
 
 tasks:
   default:
@@ -423,6 +426,44 @@ tasks:
       - cp vendor/pce_libretro.so.meta vendor/pce-src.meta
       - 'echo "built vendor/pce_libretro.so from vendor/pce-src.tar.gz @ {{.PCE_COMMIT}}"'
 
+  core:dsperate:
+    desc: >-
+        Build the aarch64 linux DSperate (Nintendo DS) libretro core from its two pinned source
+        archives, the wrapper and DSperate itself, which ship beside it as its GPL-3.0 corresponding
+        source
+    status:
+      - test -f vendor/dsperate_libretro.so
+      - test -f vendor/dsperate-src.tar.gz
+      - test -f vendor/dsperatecore-src.tar.gz
+      - test "$(cat vendor/dsperate-src.sha 2>/dev/null)" = "{{.DSPERATE_LR_COMMIT}}"
+      - test "$(cat vendor/dsperatecore-src.sha 2>/dev/null)" = "{{.DSPERATE_COMMIT}}"
+      - test "$(cat vendor/dsperate_libretro.so.meta 2>/dev/null)" = "$(sh cores/dsperate/build.sh stamp {{.DSPERATE_LR_COMMIT}} {{.DSPERATE_COMMIT}})"
+    cmds:
+      - |
+        set -euo pipefail
+        mkdir -p vendor
+        rm -f vendor/dsperate_libretro.so vendor/dsperate_libretro.so.meta \
+              vendor/dsperate-src.tar.gz vendor/dsperate-src.sha vendor/dsperate-src.meta \
+              vendor/dsperatecore-src.tar.gz vendor/dsperatecore-src.sha vendor/dsperatecore-src.meta
+        curl -fsSL -o vendor/dsperate-src.tar.gz \
+          "https://github.com/thwonp/dsperate-lr/archive/{{.DSPERATE_LR_COMMIT}}.tar.gz"
+        curl -fsSL -o vendor/dsperatecore-src.tar.gz \
+          "https://github.com/beebono/DSperate/archive/{{.DSPERATE_COMMIT}}.tar.gz"
+        tar -tzf vendor/dsperate-src.tar.gz | grep "^dsperate-lr-{{.DSPERATE_LR_COMMIT}}/CMakeLists.txt$" > /dev/null
+        tar -tzf vendor/dsperatecore-src.tar.gz | grep "^DSperate-{{.DSPERATE_COMMIT}}/CMakeLists.txt$" > /dev/null
+      - task: device:sh
+        vars:
+          CMD: >-
+            sh cores/dsperate/build.sh build {{.DSPERATE_LR_COMMIT}} {{.DSPERATE_COMMIT}}
+            vendor/dsperate-src.tar.gz vendor/dsperatecore-src.tar.gz
+            target-device/dsperate vendor/dsperate_libretro.so
+      - file vendor/dsperate_libretro.so | grep -q aarch64
+      - echo "{{.DSPERATE_LR_COMMIT}}" > vendor/dsperate-src.sha
+      - echo "{{.DSPERATE_COMMIT}}" > vendor/dsperatecore-src.sha
+      - cp vendor/dsperate_libretro.so.meta vendor/dsperate-src.meta
+      - cp vendor/dsperate_libretro.so.meta vendor/dsperatecore-src.meta
+      - 'echo "built vendor/dsperate_libretro.so from dsperate-lr @ {{.DSPERATE_LR_COMMIT}} and DSperate @ {{.DSPERATE_COMMIT}}"'
+
   core:gpsp:test:
     desc: Prove gpSP's Advance Wars session-flip patch still fixes what it was written for
     deps: [core:gpsp]
@@ -493,7 +534,7 @@ tasks:
 
   dist:device:
     desc: Build the SD2 tree for an H700 device, OUT defaults to ./dist-device
-    deps: [core:device, core:gpsp, core:cygne, core:lynx, core:gearsystem, core:ngp, core:pce, fsck:exfat, build:device]
+    deps: [core:device, core:gpsp, core:cygne, core:lynx, core:gearsystem, core:ngp, core:pce, core:dsperate, fsck:exfat, build:device, bench:device]
     vars:
       OUT: '{{.OUT | default "dist-device"}}'
     cmds:
@@ -511,6 +552,7 @@ tasks:
       - file vendor/gearsystem_libretro.so | grep -q aarch64
       - file vendor/ngp_libretro.so | grep -q aarch64
       - file vendor/pce_libretro.so | grep -q aarch64
+      - file vendor/dsperate_libretro.so | grep -q aarch64
       - cp vendor/mgba_libretro.so {{.OUT}}/System/
       - cp vendor/gpsp_libretro.so {{.OUT}}/System/
       - cp vendor/cygne_libretro.so {{.OUT}}/System/
@@ -518,6 +560,9 @@ tasks:
       - cp vendor/gearsystem_libretro.so {{.OUT}}/System/
       - cp vendor/ngp_libretro.so {{.OUT}}/System/
       - cp vendor/pce_libretro.so {{.OUT}}/System/
+      - cp vendor/dsperate_libretro.so {{.OUT}}/System/
+      # For the Nintendo DS speed test: launch_frontend.sh runs it on the games in Bench/.
+      - cp target-device/device/examples/core_bench {{.OUT}}/System/
       - cp vendor/fsck.exfat {{.OUT}}/System/
       - cp -r licenses {{.OUT}}/System/licenses
       - cp vendor/exfatprogs-{{.EXFATPROGS_VERSION}}.tar.gz {{.OUT}}/System/licenses/
@@ -562,6 +607,13 @@ tasks:
         sha="$(cat vendor/pce-src.sha)"
         cp vendor/pce-src.tar.gz "{{.OUT}}/System/licenses/pce-${sha}.tar.gz"
         cp vendor/pce-src.meta "{{.OUT}}/System/licenses/pce-${sha}.meta"
+      - |
+        set -euo pipefail
+        for name in dsperate dsperatecore; do
+          sha="$(cat vendor/${name}-src.sha)"
+          cp vendor/${name}-src.tar.gz "{{.OUT}}/System/licenses/${name}-${sha}.tar.gz"
+          cp vendor/${name}-src.meta "{{.OUT}}/System/licenses/${name}-${sha}.meta"
+        done
       - 'echo "device tree ready at {{.OUT}}, copy its contents to SD2"'
 
   deploy:device:
