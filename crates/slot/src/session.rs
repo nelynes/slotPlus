@@ -588,30 +588,32 @@ impl Session {
     }
 
     fn sync_speed(&self) {
+        let mut ds_running = false;
         if let Some(emu) = &self.emu {
             emu.set_fast_steps(u32::from(self.app.ff_speed()));
             emu.set_ff_sound(self.app.ff_sound());
-            emu.set_speed(
-                if self.inserting()
-                    || self.ejecting()
-                    || self.showing_polaroids()
-                    || self.dozing()
-                    || (self.held() && !self.app.link_active())
-                {
-                    Speed::Paused
-                } else if self.actually_fast_forwarding() {
-                    Speed::Fast
-                } else {
-                    Speed::Normal
-                },
-            );
+            let speed = if self.inserting()
+                || self.ejecting()
+                || self.showing_polaroids()
+                || self.dozing()
+                || (self.held() && !self.app.link_active())
+            {
+                Speed::Paused
+            } else if self.actually_fast_forwarding() {
+                Speed::Fast
+            } else {
+                Speed::Normal
+            };
+            emu.set_speed(speed);
             emu.set_rewinding(self.actually_rewinding());
             emu.set_turbo(self.app.turbo());
             emu.set_face_xy(self.app.core() == Core::Dsperate);
             emu.set_skip_slow(self.app.core() == Core::Dsperate);
             emu.set_pointer(self.app.pointer());
             emu.set_rewind_recording(self.app.records_rewind());
+            ds_running = self.app.core() == Core::Dsperate && speed != Speed::Paused;
         }
+        crate::cpu_governor::hold_full(ds_running);
     }
 
     fn no_core() -> bool {

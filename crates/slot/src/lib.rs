@@ -17,6 +17,7 @@ pub mod card_log;
 pub mod cart_faces;
 pub mod core;
 pub mod core_picker;
+pub mod cpu_governor;
 #[cfg(unix)]
 pub mod crash;
 pub mod hold_picker;
