@@ -60,11 +60,13 @@ stamp() {
 
 build() {
 	lr_commit="$1" ds_commit="$2" lr_tarball="$3" ds_tarball="$4" work="$5" out="$6"
-	lr="$work/dsperate-lr-$lr_commit"
-	ds="$work/DSperate-$ds_commit"
 
 	rm -rf "$work"
 	mkdir -p "$work"
+	# Absolute, as patch -d and the CMake trees move into the sources.
+	work="$(cd "$work" && pwd)"
+	lr="$work/dsperate-lr-$lr_commit"
+	ds="$work/DSperate-$ds_commit"
 	step unpack-wrapper tar -xzf "$lr_tarball" -C "$work"
 	step unpack-dsperate tar -xzf "$ds_tarball" -C "$work"
 	for f in "$lr/CMakeLists.txt" "$ds/CMakeLists.txt"; do
