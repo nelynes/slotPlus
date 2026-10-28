@@ -114,7 +114,8 @@ fn the_rows_run_in_the_order_the_user_chose() {
             "Atari Lynx",
             "Game Gear",
             "NeoGeo Pocket",
-            "TurboGrafx-16"
+            "TurboGrafx-16",
+            "Nintendo DS"
         ]
     );
     assert_eq!(
@@ -138,6 +139,11 @@ fn the_rows_run_in_the_order_the_user_chose() {
         ["Shader", "Bezel"]
     );
     assert_eq!(QuickRow::ScreenTg16.label(), "TurboGrafx-16");
+    assert_eq!(
+        QuickRow::SCREEN_NDS.map(QuickRow::label),
+        ["Shader", "Bezel"]
+    );
+    assert_eq!(QuickRow::ScreenNds.label(), "Nintendo DS");
     assert_eq!(
         QuickRow::SCREEN_GENERAL.map(QuickRow::label),
         ["Brightness", "Blue Light"]
@@ -211,6 +217,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::ScreenGg,
             QuickRow::ScreenNgp,
             QuickRow::ScreenTg16,
+            QuickRow::ScreenNds,
             QuickRow::General,
             QuickRow::PlayControls,
             QuickRow::Shortcuts,

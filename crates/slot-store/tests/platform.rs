@@ -5,7 +5,7 @@ fn every_platform_has_a_directory() {
     let names: Vec<&str> = Platform::ALL.iter().map(|p| p.dir_name()).collect();
     assert_eq!(
         names,
-        vec!["GBA", "GBAV", "GBC", "GB", "WS", "Lynx", "GG", "NGP", "TG16"]
+        vec!["GBA", "GBAV", "GBC", "GB", "WS", "Lynx", "GG", "NGP", "TG16", "NDS"]
     );
 }
 
@@ -22,7 +22,8 @@ fn every_platform_is_a_shelf_of_its_own() {
             Platform::Lynx,
             Platform::Gg,
             Platform::Ngp,
-            Platform::Tg16
+            Platform::Tg16,
+            Platform::Nds
         ]
     );
     for (i, p) in Platform::ALL.iter().enumerate() {
@@ -169,4 +170,20 @@ fn gba_video_runs_on_gba_hardware() {
     for p in [Platform::Gba, Platform::Gb, Platform::Gbc] {
         assert_eq!(p.hardware(), p);
     }
+}
+
+#[test]
+fn ds_games_take_nds_files_and_keep_both_screens_in_a_canvas_sized_buffer() {
+    assert!(Platform::Nds.accepts(std::path::Path::new("Mario Kart DS.nds")));
+    assert!(Platform::Nds.accepts(std::path::Path::new("Contra 4.NDS")));
+    assert!(!Platform::Nds.accepts(std::path::Path::new("Pokemon.gba")));
+    assert_eq!(Platform::Nds.name(), "Nintendo DS");
+    assert_eq!(Platform::Nds.dir_name(), "NDS");
+    assert_eq!(Platform::Nds.picture(), (256, 384), "both screens, stacked");
+    assert_eq!(Platform::Nds.source_size(), (720, 480), "the canvas at 1x");
+    assert!(!Platform::Nds.turns(), "taller than wide, but never turned");
+    assert_eq!(
+        slot_store::Core::default_for(Platform::Nds),
+        slot_store::Core::Dsperate
+    );
 }

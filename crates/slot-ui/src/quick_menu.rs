@@ -66,6 +66,9 @@ pub enum QuickRow {
     ScreenTg16,
     Tg16Shader,
     Tg16Bezel,
+    ScreenNds,
+    NdsShader,
+    NdsBezel,
     General,
     ShelfPrev,
     ShelfNext,
@@ -125,7 +128,7 @@ pub enum QuickRow {
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 111] = [
+    pub const ALL: [QuickRow; 114] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -181,6 +184,9 @@ impl QuickRow {
         QuickRow::ScreenTg16,
         QuickRow::Tg16Shader,
         QuickRow::Tg16Bezel,
+        QuickRow::ScreenNds,
+        QuickRow::NdsShader,
+        QuickRow::NdsBezel,
         QuickRow::General,
         QuickRow::ShelfPrev,
         QuickRow::ShelfNext,
@@ -302,7 +308,7 @@ impl QuickRow {
         QuickRow::ScRewind,
     ];
 
-    pub const SCREEN: [QuickRow; 9] = [
+    pub const SCREEN: [QuickRow; 10] = [
         QuickRow::ScreenGeneral,
         QuickRow::ScreenGba,
         QuickRow::ScreenGbc,
@@ -312,6 +318,7 @@ impl QuickRow {
         QuickRow::ScreenGg,
         QuickRow::ScreenNgp,
         QuickRow::ScreenTg16,
+        QuickRow::ScreenNds,
     ];
 
     pub const SCREEN_GENERAL: [QuickRow; 2] = [QuickRow::Brightness, QuickRow::BlueLight];
@@ -328,6 +335,7 @@ impl QuickRow {
     pub const SCREEN_NGP: [QuickRow; 2] = [QuickRow::NgpShader, QuickRow::NgpBezel];
 
     pub const SCREEN_TG16: [QuickRow; 2] = [QuickRow::Tg16Shader, QuickRow::Tg16Bezel];
+    pub const SCREEN_NDS: [QuickRow; 2] = [QuickRow::NdsShader, QuickRow::NdsBezel];
 
     pub const SCREEN_GBA: [QuickRow; 5] = [
         QuickRow::GbaShader,
@@ -409,7 +417,8 @@ impl QuickRow {
             | QuickRow::ScreenLynx
             | QuickRow::ScreenGg
             | QuickRow::ScreenNgp
-            | QuickRow::ScreenTg16 => &QuickRow::SCREEN,
+            | QuickRow::ScreenTg16
+            | QuickRow::ScreenNds => &QuickRow::SCREEN,
             QuickRow::Brightness | QuickRow::BlueLight => &QuickRow::SCREEN_GENERAL,
             QuickRow::PlayBrightness | QuickRow::PlayBlueLight => &QuickRow::PLAY_SCREEN,
             QuickRow::WsShader | QuickRow::WsBezel => &QuickRow::SCREEN_WS,
@@ -417,6 +426,7 @@ impl QuickRow {
             QuickRow::GgShader | QuickRow::GgBezel => &QuickRow::SCREEN_GG,
             QuickRow::NgpShader | QuickRow::NgpBezel => &QuickRow::SCREEN_NGP,
             QuickRow::Tg16Shader | QuickRow::Tg16Bezel => &QuickRow::SCREEN_TG16,
+            QuickRow::NdsShader | QuickRow::NdsBezel => &QuickRow::SCREEN_NDS,
             QuickRow::GbaShader
             | QuickRow::GbaColourCorrection
             | QuickRow::GbaBlending
@@ -490,6 +500,7 @@ impl QuickRow {
             QuickRow::GgShader => Some(QuickRow::ScreenGg),
             QuickRow::NgpShader => Some(QuickRow::ScreenNgp),
             QuickRow::Tg16Shader => Some(QuickRow::ScreenTg16),
+            QuickRow::NdsShader => Some(QuickRow::ScreenNds),
             QuickRow::FastForward => Some(QuickRow::Game),
             QuickRow::PlayScreen => Some(QuickRow::Settings),
             QuickRow::Shader => Some(QuickRow::PlayScreen),
@@ -543,6 +554,7 @@ impl QuickRow {
             QuickRow::ScreenGg => Some(QuickRow::SCREEN_GG[0]),
             QuickRow::ScreenNgp => Some(QuickRow::SCREEN_NGP[0]),
             QuickRow::ScreenTg16 => Some(QuickRow::SCREEN_TG16[0]),
+            QuickRow::ScreenNds => Some(QuickRow::SCREEN_NDS[0]),
             _ => None,
         }
     }
@@ -670,6 +682,9 @@ impl QuickRow {
             QuickRow::ScreenTg16 => "TurboGrafx-16",
             QuickRow::Tg16Shader => "Shader",
             QuickRow::Tg16Bezel => "Bezel",
+            QuickRow::ScreenNds => "Nintendo DS",
+            QuickRow::NdsShader => "Shader",
+            QuickRow::NdsBezel => "Bezel",
         }
     }
 
@@ -703,6 +718,7 @@ impl QuickRow {
                 | QuickRow::ScreenGg
                 | QuickRow::ScreenNgp
                 | QuickRow::ScreenTg16
+                | QuickRow::ScreenNds
                 | QuickRow::ScreenGeneral
         )
     }
@@ -1468,7 +1484,7 @@ pub struct QuickMenu<'a> {
     pub gbc_bezel: Option<[(TexId, u32, u32); 2]>,
     /// The WonderSwan, Lynx, Game Gear, NeoGeo Pocket and TurboGrafx-16 Bezel
     /// rows' values, in that order.
-    pub extra_bezels: [Option<[(TexId, u32, u32); 2]>; 5],
+    pub extra_bezels: [Option<[(TexId, u32, u32); 2]>; 6],
     pub bezel: Option<[(TexId, u32, u32); 2]>,
     pub bound: Option<&'a [Option<FacePair>]>,
     pub description: Option<(TexId, u32, u32)>,
@@ -1545,6 +1561,7 @@ impl QuickMenu<'_> {
                 QuickRow::GgBezel => self.extra_bezels[2].map(|c| c[lit as usize]),
                 QuickRow::NgpBezel => self.extra_bezels[3].map(|c| c[lit as usize]),
                 QuickRow::Tg16Bezel => self.extra_bezels[4].map(|c| c[lit as usize]),
+                QuickRow::NdsBezel => self.extra_bezels[5].map(|c| c[lit as usize]),
                 QuickRow::Bezel => self.bezel.map(|c| c[lit as usize]),
                 _ if row.binds() => self
                     .bound

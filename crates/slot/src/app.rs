@@ -31,7 +31,8 @@ use crate::link_screen::LinkSprites;
 use crate::link_start::{link_port, LinkFail, LinkProgress, LinkStarter, LinkStep};
 use crate::loading_mark::LoadingMark;
 use crate::persist::{self, Snapshot};
-use crate::video_mode::{self, VideoMode};
+use crate::stylus::Stylus;
+use crate::video_mode::{self, DsView, VideoMode};
 use slot_store::{
     read_carousel, read_controls, read_shortcuts, write_carousel, write_controls, write_shortcuts,
     Binding, CarouselKeys, Controls, Device, GameButton, Modifier, ShortcutKeys, LID_OFF_MIN,
@@ -404,6 +405,11 @@ pub struct App {
     platform: Platform,
     named_core: bool,
     video_mode: VideoMode,
+    /// A DS game's view of its two screens.
+    ds_view: DsView,
+    /// The DS stylus while R2 is held, and where it was last left.
+    stylus: Option<Stylus>,
+    stylus_at: (f32, f32),
     portrait: bool,
     /// The size of the frame the core last drew.
     shown: (u32, u32),
@@ -420,7 +426,7 @@ pub struct App {
     quick_clock_faces: Option<[(TexId, u32, u32); 2]>,
     quick_wallpaper_faces: Option<[(TexId, u32, u32); 2]>,
     quick_palette_faces: Option<[(TexId, u32, u32); 2]>,
-    quick_bezel_faces: [Option<[(TexId, u32, u32); 2]>; 8],
+    quick_bezel_faces: [Option<[(TexId, u32, u32); 2]>; 9],
     game_bezel: Option<TexId>,
     in_game_menu: Option<QuickRow>,
     /// 0 while the pause footer is off the bottom, 1 when it sits in the carousel's place.
@@ -627,6 +633,9 @@ impl App {
             platform: Platform::default(),
             named_core: false,
             video_mode: VideoMode::default(),
+            ds_view: DsView::default(),
+            stylus: None,
+            stylus_at: (crate::stylus::SCREEN_W / 2.0, crate::stylus::SCREEN_H / 2.0),
             portrait: false,
             shown: (0, 0),
             link: None,
@@ -642,7 +651,7 @@ impl App {
             quick_clock_faces: None,
             quick_wallpaper_faces: None,
             quick_palette_faces: None,
-            quick_bezel_faces: [None; 8],
+            quick_bezel_faces: [None; 9],
             game_bezel: None,
             in_game_menu: None,
             footer: 0.0,
@@ -1045,7 +1054,12 @@ impl App {
         // bezel is None, the SP frame on a 4:3 panel, or a png of the card's own.
         if matches!(
             platform,
-            Platform::Ws | Platform::Lynx | Platform::Gg | Platform::Ngp | Platform::Tg16
+            Platform::Ws
+                | Platform::Lynx
+                | Platform::Gg
+                | Platform::Ngp
+                | Platform::Tg16
+                | Platform::Nds
         ) {
             hidden.push(QuickRow::ColourCorrection);
         }
@@ -1189,7 +1203,9 @@ impl App {
             (QuickRow::Shader, Platform::Ngp) => QuickRow::NgpShader,
             (QuickRow::Bezel, Platform::Ngp) => QuickRow::NgpBezel,
             (QuickRow::Shader, Platform::Tg16) => QuickRow::Tg16Shader,
+            (QuickRow::Shader, Platform::Nds) => QuickRow::NdsShader,
             (QuickRow::Bezel, Platform::Tg16) => QuickRow::Tg16Bezel,
+            (QuickRow::Bezel, Platform::Nds) => QuickRow::NdsBezel,
             (QuickRow::Scale, Platform::Gba) => QuickRow::GbaScale,
             (QuickRow::Scale, Platform::Gb) => QuickRow::GbScale,
             (QuickRow::Scale, Platform::Gbc) => QuickRow::GbcScale,
@@ -1248,6 +1264,7 @@ impl App {
             QuickRow::GgShader => Some(shader_value(self.state.shader_gg)),
             QuickRow::NgpShader => Some(shader_value(self.state.shader_ngp)),
             QuickRow::Tg16Shader => Some(shader_value(self.state.shader_tg16)),
+            QuickRow::NdsShader => Some(shader_value(self.state.shader_nds)),
             QuickRow::Rumble => Some(QuickValue::flag(self.state.rumble)),
             QuickRow::LeftStick => Some(QuickValue::flag(self.state.left_stick_dpad)),
             QuickRow::AutoLoad => Some(QuickValue::flag(self.state.auto_load)),
@@ -1310,11 +1327,13 @@ impl App {
             | QuickRow::GgBezel
             | QuickRow::NgpBezel
             | QuickRow::Tg16Bezel
+            | QuickRow::NdsBezel
             | QuickRow::ScreenWs
             | QuickRow::ScreenLynx
             | QuickRow::ScreenGg
             | QuickRow::ScreenNgp
             | QuickRow::ScreenTg16
+            | QuickRow::ScreenNds
             | QuickRow::Bezel
             | QuickRow::General
             | QuickRow::ShelfPrev
@@ -1414,6 +1433,7 @@ impl App {
             Platform::Gg => &mut self.state.bezel_gg,
             Platform::Ngp => &mut self.state.bezel_ngp,
             Platform::Tg16 => &mut self.state.bezel_tg16,
+            Platform::Nds => &mut self.state.bezel_nds,
         }
     }
 
@@ -1427,6 +1447,7 @@ impl App {
             Platform::Gg => &self.state.bezel_gg,
             Platform::Ngp => &self.state.bezel_ngp,
             Platform::Tg16 => &self.state.bezel_tg16,
+            Platform::Nds => &self.state.bezel_nds,
         };
         match self.bezel_choices(platform).contains(pick) {
             true => pick.clone(),
@@ -1970,9 +1991,121 @@ impl App {
         self.video_mode = mode;
     }
 
+    /// A DS game's view of its screens, as it was last left.
+    pub fn set_ds_view(&mut self, view: DsView) {
+        self.ds_view = view;
+    }
+
+    pub fn ds_view(&self) -> DsView {
+        self.ds_view
+    }
+
+    /// The view drawn: while the stylus is out, the bottom screen it touches
+    /// is shown even if the game was on the top one alone.
+    fn ds_view_shown(&self) -> DsView {
+        match (self.ds_view, self.stylus.is_some()) {
+            (DsView::Top, true) => DsView::Bottom,
+            (view, _) => view,
+        }
+    }
+
+    /// Step a DS game to its next view, L2's job, and remember it for the game.
+    pub fn next_ds_view(&mut self) {
+        self.ds_view = self.ds_view.next();
+        let (Some(root), Phase::Playing { cart }) = (self.root.clone(), &self.phase) else {
+            return;
+        };
+        let written = video_mode::write_ds_view(&root, cart, self.ds_view);
+        if let Err(e) = &written {
+            eprintln!("slot: video: could not write nds_view.txt: {e}");
+        }
+        self.card_writes.wrote("nds_view.txt", &written);
+    }
+
+    /// Take out the DS stylus (R2 down) or put it away (R2 up).
+    pub fn stylus_out(&mut self, out: bool) {
+        match (out, self.stylus) {
+            (true, None) => self.stylus = Some(Stylus::at(self.stylus_at)),
+            (false, Some(s)) => {
+                self.stylus_at = (s.x, s.y);
+                self.stylus = None;
+            }
+            _ => {}
+        }
+    }
+
+    /// Whether the stylus, being out, takes the button from the game.
+    pub fn stylus_takes(&self, btn: Btn) -> bool {
+        self.stylus.is_some() && Stylus::takes(btn)
+    }
+
+    pub fn stylus_press(&mut self, btn: Btn, down: bool) {
+        if let Some(s) = &mut self.stylus {
+            s.press(btn, down);
+        }
+    }
+
+    /// What the DS core's touch screen reads: the stylus, or nothing.
+    pub fn pointer(&self) -> Option<slot_retro::Pointer> {
+        self.stylus.map(|s| s.pointer())
+    }
+
+    /// The stylus moves with the D-pad, and goes away with the DS controls,
+    /// when a menu opens over the game or it ends.
+    fn tick_stylus(&mut self, dt: f32) {
+        if !self.ds_controls() {
+            self.stylus_out(false);
+        }
+        if let Some(s) = &mut self.stylus {
+            s.tick(dt);
+        }
+    }
+
+    /// The stylus's cursor over the bottom screen: a cross, and a dot in its
+    /// middle while it touches.
+    fn draw_stylus(&self, out: &mut Vec<Draw>) {
+        let Some(s) = self.stylus else {
+            return;
+        };
+        // The bottom screen sits at 232, 240 in the DS's 720x480 buffer, and
+        // the view's window of that buffer is stretched over the canvas.
+        let [rx, ry, rw, rh] = self.ds_view_shown().source_rect();
+        let x = ((232.0 + s.x) / 720.0 - rx) / rw * OUT_W as f32;
+        let y = ((240.0 + s.y) / 480.0 - ry) / rh * OUT_H as f32;
+        let (arm, thick) = (11.0, 3.0);
+        let bar = |out: &mut Vec<Draw>, w: f32, h: f32, pad: f32, colour: [f32; 4]| {
+            out.push(Draw::Rect {
+                x: x - w / 2.0 - pad,
+                y: y - h / 2.0 - pad,
+                w: w + pad * 2.0,
+                h: h + pad * 2.0,
+                colour,
+            });
+        };
+        let (dark, light) = ([0.0, 0.0, 0.0, 0.8], [1.0, 1.0, 1.0, 1.0]);
+        for (pad, colour) in [(1.5, dark), (0.0, light)] {
+            bar(out, arm * 2.0, thick, pad, colour);
+            bar(out, thick, arm * 2.0, pad, colour);
+        }
+        if s.touching {
+            bar(out, 7.0, 7.0, 1.5, dark);
+            bar(out, 7.0, 7.0, 0.0, [1.0, 0.85, 0.2, 1.0]);
+        }
+    }
+
+    /// Whether the DS's own controls are live: a DS game is playing, shown,
+    /// and no menu is over it.
+    pub fn ds_controls(&self) -> bool {
+        self.playing_platform() == Platform::Nds
+            && matches!(self.phase, Phase::Playing { .. })
+            && self.in_game_menu.is_none()
+            && self.game_visible()
+    }
+
     pub fn source_rect(&self) -> [f32; 4] {
         match self.playing_platform().hardware() {
             Platform::Gba | Platform::Gb | Platform::Gbc => self.picture().1,
+            Platform::Nds => self.ds_view_shown().source_rect(),
             _ => video_mode::source_rect_shown(
                 self.platform,
                 self.video_mode,
@@ -2536,8 +2669,11 @@ impl App {
         self.state.turbo
     }
 
+    /// Whether rewind is recorded. Not for a DS game: its states are about
+    /// 6 MB, and taking one as often as rewind does costs the 3D games the
+    /// time they have to spare on the H700.
     pub fn records_rewind(&self) -> bool {
-        self.state.rewind
+        self.state.rewind && self.playing_platform() != Platform::Nds
     }
 
     pub fn picture_rect(&self) -> [f32; 4] {
@@ -2721,6 +2857,7 @@ impl App {
             Platform::Gg => self.state.shader_gg,
             Platform::Ngp => self.state.shader_ngp,
             Platform::Tg16 => self.state.shader_tg16,
+            Platform::Nds => self.state.shader_nds,
         }
     }
 
@@ -2731,9 +2868,11 @@ impl App {
     /// A WonderSwan game is in the slot, so the In-Game controls page names
     /// the turbo rows after the X and Y buttons, which it uses for more than
     /// turbo.
+    /// Whether the game's X and Y are buttons of its own, not Turbo A and B:
+    /// a WonderSwan's, or a DS's.
     pub fn ws_buttons(&self) -> bool {
         self.seated_cart()
-            .is_some_and(|c| c.platform == Platform::Ws)
+            .is_some_and(|c| matches!(c.platform, Platform::Ws | Platform::Nds))
     }
 
     pub fn playing_platform(&self) -> Platform {
@@ -2746,7 +2885,12 @@ impl App {
             Platform::Gb => self.state.colour_correction_gb,
             Platform::Gbc => self.state.colour_correction_gbc,
             // None of these cores has colour correction.
-            Platform::Ws | Platform::Lynx | Platform::Gg | Platform::Ngp | Platform::Tg16 => false,
+            Platform::Ws
+            | Platform::Lynx
+            | Platform::Gg
+            | Platform::Ngp
+            | Platform::Tg16
+            | Platform::Nds => false,
         }
     }
 
@@ -3270,6 +3414,7 @@ impl App {
             | QuickRow::ScreenGg
             | QuickRow::ScreenNgp
             | QuickRow::ScreenTg16
+            | QuickRow::ScreenNds
             | QuickRow::ScreenLynx
             | QuickRow::ScreenGb
             | QuickRow::Shortcuts
@@ -3303,6 +3448,7 @@ impl App {
             | QuickRow::GgShader
             | QuickRow::NgpShader
             | QuickRow::Tg16Shader
+            | QuickRow::NdsShader
             | QuickRow::GbPalette
             | QuickRow::Rumble
             | QuickRow::LeftStick
@@ -3332,6 +3478,7 @@ impl App {
             | QuickRow::GgBezel
             | QuickRow::NgpBezel
             | QuickRow::Tg16Bezel
+            | QuickRow::NdsBezel
             | QuickRow::GbaScale
             | QuickRow::GbScale
             | QuickRow::GbcScale
@@ -3443,7 +3590,8 @@ impl App {
         | QuickRow::LynxBezel
         | QuickRow::GgBezel
         | QuickRow::NgpBezel
-        | QuickRow::Tg16Bezel = row
+        | QuickRow::Tg16Bezel
+        | QuickRow::NdsBezel = row
         {
             let platform = match row {
                 QuickRow::GbaBezel => Platform::Gba,
@@ -3453,6 +3601,7 @@ impl App {
                 QuickRow::GgBezel => Platform::Gg,
                 QuickRow::NgpBezel => Platform::Ngp,
                 QuickRow::Tg16Bezel => Platform::Tg16,
+                QuickRow::NdsBezel => Platform::Nds,
                 _ => Platform::Gbc,
             };
             self.cycle_bezel(platform, right);
@@ -3574,6 +3723,13 @@ impl App {
                 }
                 s.shader_tg16 = to;
             }
+            QuickRow::NdsShader => {
+                let to = s.shader_nds.step(&Shader::NDS, right);
+                if to == s.shader_nds {
+                    return;
+                }
+                s.shader_nds = to;
+            }
             QuickRow::Rumble => s.rumble = !s.rumble,
             QuickRow::LeftStick => s.left_stick_dpad = !s.left_stick_dpad,
             QuickRow::AutoLoad => s.auto_load = !s.auto_load,
@@ -3631,11 +3787,13 @@ impl App {
             | QuickRow::GgBezel
             | QuickRow::NgpBezel
             | QuickRow::Tg16Bezel
+            | QuickRow::NdsBezel
             | QuickRow::ScreenWs
             | QuickRow::ScreenLynx
             | QuickRow::ScreenGg
             | QuickRow::ScreenNgp
             | QuickRow::ScreenTg16
+            | QuickRow::ScreenNds
             | QuickRow::GbaScale
             | QuickRow::GbScale
             | QuickRow::GbcScale
@@ -3703,6 +3861,7 @@ impl App {
             Platform::Gg => (&mut self.state.shader_gg, &Shader::GG[..]),
             Platform::Ngp => (&mut self.state.shader_ngp, &Shader::NGP[..]),
             Platform::Tg16 => (&mut self.state.shader_tg16, &Shader::TG16[..]),
+            Platform::Nds => (&mut self.state.shader_nds, &Shader::NDS[..]),
         };
         *shader = shader.step(choices, right);
         let said = match *shader {
@@ -3756,9 +3915,12 @@ impl App {
                 Platform::Gba | Platform::Gbav => QuickRow::GbaColourCorrection,
                 Platform::Gb => QuickRow::GbColourCorrection,
                 Platform::Gbc => QuickRow::GbcColourCorrection,
-                Platform::Ws | Platform::Lynx | Platform::Gg | Platform::Ngp | Platform::Tg16 => {
-                    return true
-                }
+                Platform::Ws
+                | Platform::Lynx
+                | Platform::Gg
+                | Platform::Ngp
+                | Platform::Tg16
+                | Platform::Nds => return true,
             };
             self.change_setting(row, true);
             let said = match self.colour_correction() {
@@ -3929,6 +4091,7 @@ impl App {
 
     pub fn update(&mut self, dt: f32) {
         self.clock += dt as f64 * 1000.0;
+        self.tick_stylus(dt);
         if self.name_pending && self.shelf_platform.face.is_some() {
             self.name_pending = false;
             self.shelf_named = Some(self.now());
@@ -4677,6 +4840,7 @@ impl App {
                     Platform::Gg,
                     Platform::Ngp,
                     Platform::Tg16,
+                    Platform::Nds,
                 ]
                 .map(|p| self.quick_bezel_faces[bezel_slot(p)]),
                 bezel: None,
@@ -4772,7 +4936,10 @@ impl App {
                 self.draw_background(out);
                 self.chrome(cart, 0.0, out);
             }
-            Phase::Playing { .. } => self.push_game(out),
+            Phase::Playing { .. } => {
+                self.push_game(out);
+                self.draw_stylus(out);
+            }
             Phase::Polaroids { .. } if self.shot_viewer.is_some() => {
                 if let Some(v) = &self.shot_viewer {
                     v.draw(
@@ -4838,7 +5005,7 @@ impl App {
                 gba_bezel: None,
                 gb_bezel: None,
                 gbc_bezel: None,
-                extra_bezels: [None; 5],
+                extra_bezels: [None; 6],
                 bezel: self.quick_bezel_faces[bezel_slot(self.playing_platform())],
                 over_game: true,
                 footer_legends: false,
@@ -7087,5 +7254,6 @@ fn bezel_slot(platform: Platform) -> usize {
         Platform::Gg => 5,
         Platform::Ngp => 6,
         Platform::Tg16 => 7,
+        Platform::Nds => 8,
     }
 }

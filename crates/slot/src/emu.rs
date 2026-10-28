@@ -6,7 +6,7 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use crate::cable::{self, Cable};
-use slot_retro::{ButtonMask, Link, LinkChannel, RetroCore, Rumble, NETPACKET_RELIABLE};
+use slot_retro::{ButtonMask, Link, LinkChannel, Pointer, RetroCore, Rumble, NETPACKET_RELIABLE};
 
 use crate::audio::Ring;
 use crate::drc::{drc_ratio, drc_target};
@@ -188,6 +188,11 @@ struct Shared {
     rewind: AtomicBool,
     rewind_fill: AtomicU8,
     turbo: AtomicBool,
+    /// The core takes X and Y as buttons of its own (the DS), so turbo leaves
+    /// them be.
+    face_xy: AtomicBool,
+    /// The touch screen's pointer, packed by `pack_pointer`; 0 is none.
+    pointer: AtomicU64,
     recording: AtomicBool,
     stop: AtomicBool,
     volume: AtomicU8,
@@ -264,6 +269,8 @@ impl EmuHandle {
             rewind: AtomicBool::new(false),
             rewind_fill: AtomicU8::new(0),
             turbo: AtomicBool::new(true),
+            face_xy: AtomicBool::new(false),
+            pointer: AtomicU64::new(0),
             recording: AtomicBool::new(true),
             stop: AtomicBool::new(false),
             volume: AtomicU8::new(100),
@@ -461,6 +468,17 @@ impl EmuHandle {
 
     pub fn set_turbo(&self, on: bool) {
         self.shared.turbo.store(on, Ordering::Relaxed);
+    }
+
+    pub fn set_face_xy(&self, on: bool) {
+        self.shared.face_xy.store(on, Ordering::Relaxed);
+    }
+
+    /// Where the stylus points, for a core with a touch screen.
+    pub fn set_pointer(&self, pointer: Option<Pointer>) {
+        self.shared
+            .pointer
+            .store(pack_pointer(pointer), Ordering::Relaxed);
     }
 
     pub fn set_rewind_recording(&self, on: bool) {
@@ -806,9 +824,12 @@ impl Worker {
                     // fast forward trims to the time it has.
                     let last = ran >= ceiling
                         || (speed != Speed::Normal && cost.last(began.elapsed(), budget));
-                    let input = match self.shared.turbo.load(Ordering::Relaxed) {
-                        true => input.turbo(turbo_frame),
-                        false => input.without_turbo(),
+                    let input = if self.shared.face_xy.load(Ordering::Relaxed) {
+                        input
+                    } else if self.shared.turbo.load(Ordering::Relaxed) {
+                        input.turbo(turbo_frame)
+                    } else {
+                        input.without_turbo()
                     };
                     turbo_frame = turbo_frame.wrapping_add(1);
                     core.set_frame_skip(!last);
@@ -851,7 +872,12 @@ impl Worker {
                                 }
                             }
                         }
-                        None => core.run_frame(input),
+                        None => {
+                            core.set_pointer(unpack_pointer(
+                                self.shared.pointer.load(Ordering::Relaxed),
+                            ));
+                            core.run_frame(input)
+                        }
                     }
                     let took = frame_began.elapsed();
                     if last {
@@ -1573,5 +1599,45 @@ mod tests {
         assert_eq!(link.take_inbound().as_deref(), Some(&b"one"[..]));
         assert_eq!(link.take_inbound().as_deref(), Some(&b"two"[..]));
         assert_eq!(link.take_inbound(), None);
+    }
+}
+
+/// A pointer in one word for the emulator thread: bit 33 says there is one,
+/// bit 32 that it is pressed, and the low 32 bits hold x and y.
+fn pack_pointer(pointer: Option<Pointer>) -> u64 {
+    pointer.map_or(0, |p| {
+        1 << 33 | u64::from(p.pressed) << 32 | u64::from(p.x as u16) << 16 | u64::from(p.y as u16)
+    })
+}
+
+fn unpack_pointer(word: u64) -> Option<Pointer> {
+    (word & 1 << 33 != 0).then_some(Pointer {
+        x: (word >> 16) as u16 as i16,
+        y: word as u16 as i16,
+        pressed: word & 1 << 32 != 0,
+    })
+}
+
+#[cfg(test)]
+mod pointer_word {
+    use super::*;
+
+    #[test]
+    fn a_pointer_survives_the_word_it_is_packed_into() {
+        assert_eq!(unpack_pointer(pack_pointer(None)), None);
+        for p in [
+            Pointer {
+                x: -0x7fff,
+                y: 0x7fff,
+                pressed: true,
+            },
+            Pointer {
+                x: 12,
+                y: -3,
+                pressed: false,
+            },
+        ] {
+            assert_eq!(unpack_pointer(pack_pointer(Some(p))), Some(p));
+        }
     }
 }

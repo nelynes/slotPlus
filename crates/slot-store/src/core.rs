@@ -15,10 +15,11 @@ pub enum Core {
     Gearsystem,
     Ngp,
     Pce,
+    Dsperate,
 }
 
 impl Core {
-    pub const ALL: [Core; 7] = [
+    pub const ALL: [Core; 8] = [
         Core::Mgba,
         Core::Gpsp,
         Core::Cygne,
@@ -26,6 +27,7 @@ impl Core {
         Core::Gearsystem,
         Core::Ngp,
         Core::Pce,
+        Core::Dsperate,
     ];
 
     pub fn as_str(&self) -> &'static str {
@@ -37,6 +39,7 @@ impl Core {
             Core::Gearsystem => "gearsystem",
             Core::Ngp => "ngp",
             Core::Pce => "pce",
+            Core::Dsperate => "dsperate",
         }
     }
 
@@ -57,6 +60,7 @@ impl Core {
             Core::Gearsystem => "Gearsystem",
             Core::Ngp => "Beetle NeoPop",
             Core::Pce => "Beetle PCE Fast",
+            Core::Dsperate => "DSperate",
         }
     }
 
@@ -69,6 +73,7 @@ impl Core {
             "gearsystem" => Some(Core::Gearsystem),
             "ngp" => Some(Core::Ngp),
             "pce" => Some(Core::Pce),
+            "dsperate" => Some(Core::Dsperate),
             _ => None,
         }
     }
@@ -85,6 +90,7 @@ impl Core {
             Core::Gearsystem => platform == Platform::Gg,
             Core::Ngp => platform == Platform::Ngp,
             Core::Pce => platform == Platform::Tg16,
+            Core::Dsperate => platform == Platform::Nds,
         }
     }
 
@@ -96,6 +102,7 @@ impl Core {
             Platform::Gg => Core::Gearsystem,
             Platform::Ngp => Core::Ngp,
             Platform::Tg16 => Core::Pce,
+            Platform::Nds => Core::Dsperate,
         }
     }
 }

@@ -338,6 +338,7 @@ pub struct SlotState {
     pub shader_gg: Shader,
     pub shader_ngp: Shader,
     pub shader_tg16: Shader,
+    pub shader_nds: Shader,
     pub auto_load: bool,
     pub eject_save: bool,
     pub turbo: bool,
@@ -362,6 +363,7 @@ pub struct SlotState {
     pub bezel_gg: BezelPick,
     pub bezel_ngp: BezelPick,
     pub bezel_tg16: BezelPick,
+    pub bezel_nds: BezelPick,
     pub scale_gba: Scale,
     pub scale_gb: Scale,
     pub scale_gbc: Scale,
@@ -459,6 +461,8 @@ impl Shader {
     pub const NGP: [Shader; 4] = Shader::WS;
     /// The TurboExpress's colour LCD picks from the same list as the Lynx's.
     pub const TG16: [Shader; 4] = Shader::GBA;
+    /// The DS's two screens pick from the GBA's list, as the TurboExpress does.
+    pub const NDS: [Shader; 4] = Shader::GBA;
 
     pub fn name(self) -> &'static str {
         match self {
@@ -523,6 +527,7 @@ impl Default for SlotState {
             shader_gg: Shader::Simpletex,
             shader_ngp: Shader::Simpletex,
             shader_tg16: Shader::Grid,
+            shader_nds: Shader::Off,
             auto_load: true,
             eject_save: true,
             turbo: true,
@@ -545,6 +550,7 @@ impl Default for SlotState {
             bezel_gg: BezelPick::None,
             bezel_ngp: BezelPick::None,
             bezel_tg16: BezelPick::None,
+            bezel_nds: BezelPick::None,
             scale_gba: Scale::Fit,
             scale_gb: Scale::SpFrame,
             scale_gbc: Scale::SpFrame,
@@ -646,6 +652,7 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     text.push_str(&format!("shader_gg={}\n", s.shader_gg.name()));
     text.push_str(&format!("shader_ngp={}\n", s.shader_ngp.name()));
     text.push_str(&format!("shader_tg16={}\n", s.shader_tg16.name()));
+    text.push_str(&format!("shader_nds={}\n", s.shader_nds.name()));
     text.push_str(&format!("wallpaper_tint={}\n", s.wallpaper_tint.key()));
     text.push_str(&format!("show_recents={}\n", s.show_recents as u8));
     text.push_str(&format!("show_titles={}\n", s.show_titles as u8));
@@ -663,6 +670,7 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     text.push_str(&format!("bezel_gg={}\n", s.bezel_gg.key()));
     text.push_str(&format!("bezel_ngp={}\n", s.bezel_ngp.key()));
     text.push_str(&format!("bezel_tg16={}\n", s.bezel_tg16.key()));
+    text.push_str(&format!("bezel_nds={}\n", s.bezel_nds.key()));
     text.push_str(&format!("scale_gba={}\n", s.scale_gba.name()));
     text.push_str(&format!("scale_gb={}\n", s.scale_gb.name()));
     text.push_str(&format!("scale_gbc={}\n", s.scale_gbc.name()));
@@ -713,6 +721,7 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut shader_gg = None;
     let mut shader_ngp = None;
     let mut shader_tg16 = None;
+    let mut shader_nds = None;
     let mut auto_load = None;
     let mut eject_save = None;
     let mut turbo = None;
@@ -735,6 +744,7 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut bezel_gg = None;
     let mut bezel_ngp = None;
     let mut bezel_tg16 = None;
+    let mut bezel_nds = None;
     let mut scale_gba = None;
     let mut scale_gb = None;
     let mut scale_gbc = None;
@@ -792,6 +802,7 @@ fn parse(text: &str) -> Option<SlotState> {
             "bezel_gg" => bezel_gg = Some(BezelPick::parse(value)),
             "bezel_ngp" => bezel_ngp = Some(BezelPick::parse(value)),
             "bezel_tg16" => bezel_tg16 = Some(BezelPick::parse(value)),
+            "bezel_nds" => bezel_nds = Some(BezelPick::parse(value)),
             "scale_gba" => scale_gba = Scale::parse(value),
             "scale_gb" => scale_gb = Scale::parse(value),
             "scale_gbc" => scale_gbc = Scale::parse(value),
@@ -810,6 +821,7 @@ fn parse(text: &str) -> Option<SlotState> {
             "shader_tg16" => {
                 shader_tg16 = Shader::parse(value).filter(|s| Shader::TG16.contains(s))
             }
+            "shader_nds" => shader_nds = Shader::parse(value).filter(|s| Shader::NDS.contains(s)),
             "shader_lynx" => {
                 shader_lynx = Shader::parse(value).filter(|s| Shader::LYNX.contains(s))
             }
@@ -862,6 +874,7 @@ fn parse(text: &str) -> Option<SlotState> {
             .or(shader_gb.filter(|s| Shader::NGP.contains(s)))
             .unwrap_or(fallback.shader_ngp),
         shader_tg16: shader_tg16.unwrap_or(fallback.shader_tg16),
+        shader_nds: shader_nds.unwrap_or(fallback.shader_nds),
         auto_load: auto_load.unwrap_or(fallback.auto_load),
         eject_save: eject_save.unwrap_or(fallback.eject_save),
         turbo: turbo.unwrap_or(fallback.turbo),
@@ -884,6 +897,7 @@ fn parse(text: &str) -> Option<SlotState> {
         bezel_gg: bezel_gg.unwrap_or(fallback.bezel_gg),
         bezel_ngp: bezel_ngp.unwrap_or(fallback.bezel_ngp),
         bezel_tg16: bezel_tg16.unwrap_or(fallback.bezel_tg16),
+        bezel_nds: bezel_nds.unwrap_or(fallback.bezel_nds),
         scale_gba: scale_gba.unwrap_or(fallback.scale_gba),
         scale_gb: scale_gb.unwrap_or(fallback.scale_gb),
         scale_gbc: scale_gbc.unwrap_or(fallback.scale_gbc),

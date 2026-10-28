@@ -225,6 +225,10 @@ impl Session {
                     continue;
                 }
             }
+            if self.ds_takes(ev) {
+                self.gestures.observe(ev);
+                continue;
+            }
             actions.extend(self.gestures.feed(ev, now));
         }
         actions.extend(self.gestures.tick(now));
@@ -235,6 +239,41 @@ impl Session {
             self.act(action);
         }
         self.sync_pad();
+    }
+
+    /// A DS game's own controls, ahead of slot's: L2 steps through its views
+    /// and R2 holds the stylus out, which the D-pad moves and A touches. They
+    /// are taken from slot's L2 and R2 shortcuts (rewind and fast forward) in
+    /// a DS game. Letting go of a stylus button still reaches the game, so
+    /// nothing it held when the stylus came out stays down.
+    fn ds_takes(&mut self, ev: RawEvent) -> bool {
+        if !self.app.ds_controls() {
+            return false;
+        }
+        match ev {
+            RawEvent::Down(Btn::L2) => {
+                self.app.next_ds_view();
+                true
+            }
+            RawEvent::Up(Btn::L2) => true,
+            RawEvent::Down(Btn::R2) => {
+                self.app.stylus_out(true);
+                true
+            }
+            RawEvent::Up(Btn::R2) => {
+                self.app.stylus_out(false);
+                true
+            }
+            RawEvent::Down(b) if self.app.stylus_takes(b) => {
+                self.app.stylus_press(b, true);
+                true
+            }
+            RawEvent::Up(b) if self.app.stylus_takes(b) => {
+                self.app.stylus_press(b, false);
+                false
+            }
+            _ => false,
+        }
     }
 
     fn sync_pad(&mut self) {
@@ -563,6 +602,8 @@ impl Session {
             );
             emu.set_rewinding(self.actually_rewinding());
             emu.set_turbo(self.app.turbo());
+            emu.set_face_xy(self.app.core() == Core::Dsperate);
+            emu.set_pointer(self.app.pointer());
             emu.set_rewind_recording(self.app.records_rewind());
         }
     }
@@ -621,6 +662,8 @@ impl Session {
         self.app.set_platform(platform);
         self.app
             .set_video_mode(crate::video_mode::video_mode_for(&self.root, stem));
+        self.app
+            .set_ds_view(crate::video_mode::ds_view_for(&self.root, stem));
         self.app.set_link_loaded(serial);
         let root = self.root.clone();
         let stem = stem.to_owned();

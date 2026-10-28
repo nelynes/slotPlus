@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use libloading::Library;
 
-use crate::core::{AvInfo, ButtonMask, CoreError, RetroCore, GBA_H, GBA_W};
+use crate::core::{AvInfo, ButtonMask, CoreError, Pointer, RetroCore, GBA_H, GBA_W};
 use crate::ffi::*;
 use crate::link::Link;
 use crate::rumble::Rumble;
@@ -53,6 +53,8 @@ enum PixelFormat {
 }
 
 struct Host {
+    /// The touch screen's pointer, for a core that has one.
+    pointer: Option<Pointer>,
     video: Vec<u8>,
     video_w: u32,
     video_h: u32,
@@ -534,6 +536,18 @@ unsafe extern "C" fn audio_batch(data: *const i16, frames: usize) -> usize {
 unsafe extern "C" fn input_poll() {}
 
 unsafe extern "C" fn input_state(port: c_uint, device: c_uint, _index: c_uint, id: c_uint) -> i16 {
+    if device == DEVICE_POINTER {
+        return with_host(|h| match (port, h.pointer) {
+            (0, Some(p)) => match id {
+                POINTER_X => p.x,
+                POINTER_Y => p.y,
+                POINTER_PRESSED => p.pressed as i16,
+                _ => 0,
+            },
+            _ => 0,
+        })
+        .unwrap_or(0);
+    }
     if device != DEVICE_JOYPAD {
         return 0;
     }
@@ -662,6 +676,7 @@ impl LibretroCore {
             format: PixelFormat::Xrgb8888,
             audio: Vec::new(),
             inputs: [0; 2],
+            pointer: None,
             system_dir: cdir(system_dir)?,
             save_dir: cdir(save_dir)?,
             rumble: Rumble::default(),
@@ -750,6 +765,10 @@ impl Drop for LibretroCore {
 impl RetroCore for LibretroCore {
     fn set_option(&mut self, key: &str, value: &str) {
         LibretroCore::set_option(self, key, value);
+    }
+
+    fn set_pointer(&mut self, pointer: Option<Pointer>) {
+        self.host.pointer = pointer;
     }
 
     fn load(&mut self, rom: &Path) -> Result<(), CoreError> {
@@ -922,6 +941,7 @@ mod tests {
             format: PixelFormat::Xrgb8888,
             audio: Vec::new(),
             inputs: [0; 2],
+            pointer: None,
             system_dir: CString::new(".").unwrap(),
             save_dir: CString::new(".").unwrap(),
             rumble: Rumble::default(),
@@ -1774,6 +1794,27 @@ mod tests {
         let mask = |port| unsafe { input_state(port, DEVICE_JOYPAD, 0, JOYPAD_MASK) } as u16;
         assert_eq!(mask(0), ButtonMask::A);
         assert_eq!(mask(1), ButtonMask::B | ButtonMask::START);
+    }
+
+    #[test]
+    fn the_pointer_answers_on_port_1_only_and_only_once_it_is_set() {
+        let mut host = host_with(HashMap::new(), false);
+        let _active = Active::bind(&mut host);
+        let ask = |port, id| unsafe { input_state(port, DEVICE_POINTER, 0, id) };
+        assert_eq!(ask(0, POINTER_PRESSED), 0, "no pointer yet");
+        unsafe {
+            with_host(|h| {
+                h.pointer = Some(Pointer {
+                    x: -1200,
+                    y: 3000,
+                    pressed: true,
+                })
+            });
+        }
+        assert_eq!(ask(0, POINTER_X), -1200);
+        assert_eq!(ask(0, POINTER_Y), 3000);
+        assert_eq!(ask(0, POINTER_PRESSED), 1);
+        assert_eq!(ask(1, POINTER_PRESSED), 0, "the second port has none");
     }
 
     #[test]

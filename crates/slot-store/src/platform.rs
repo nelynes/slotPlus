@@ -12,10 +12,11 @@ pub enum Platform {
     Ngp,
     Tg16,
     Gbav,
+    Nds,
 }
 
 impl Platform {
-    pub const ALL: [Platform; 9] = [
+    pub const ALL: [Platform; 10] = [
         Platform::Gba,
         Platform::Gbav,
         Platform::Gbc,
@@ -25,6 +26,7 @@ impl Platform {
         Platform::Gg,
         Platform::Ngp,
         Platform::Tg16,
+        Platform::Nds,
     ];
 
     pub fn name(self) -> &'static str {
@@ -37,6 +39,7 @@ impl Platform {
             Platform::Gg => "Game Gear",
             Platform::Ngp => "NeoGeo Pocket",
             Platform::Tg16 => "TurboGrafx-16",
+            Platform::Nds => "Nintendo DS",
             Platform::Gbav => "Game Boy Advance Video",
         }
     }
@@ -51,6 +54,7 @@ impl Platform {
             Platform::Gg => "GG",
             Platform::Ngp => "NGP",
             Platform::Tg16 => "TG16",
+            Platform::Nds => "NDS",
             Platform::Gbav => "GBAV",
         }
     }
@@ -73,6 +77,7 @@ impl Platform {
             Platform::Ngp => &["ngp", "ngc", "ngpc"],
             // TurboGrafx-16 and PC Engine HuCards, as the TurboExpress played.
             Platform::Tg16 => &["pce"],
+            Platform::Nds => &["nds"],
         }
     }
 
@@ -84,6 +89,8 @@ impl Platform {
             // Most HuCard games draw 256x240; some switch to 320, 336 or 512
             // wide, and the frame's own size is used when it does.
             Platform::Tg16 => (256, 240),
+            // Both screens, stacked, as DSperate draws them.
+            Platform::Nds => (256, 384),
             Platform::Ws => (224, 144),
             Platform::Lynx => (160, 102),
         }
@@ -126,6 +133,9 @@ impl Platform {
             Platform::Ws => (360, 240),
             // Room for a 512-wide high resolution picture, and 240 lines.
             Platform::Tg16 => (720, 240),
+            // The canvas at 1x: the two screens, 256x384 stacked, sit in the
+            // middle, and each view of them is a window onto this buffer.
+            Platform::Nds => (720, 480),
         }
     }
 

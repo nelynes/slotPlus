@@ -223,9 +223,12 @@ fn both_cores_are_told_about_colour_correction_in_their_own_words() {
         let theirs = match which {
             Core::Mgba => "gpsp_color_correction",
             Core::Gpsp => "mgba_color_correction",
-            Core::Cygne | Core::Lynx | Core::Gearsystem | Core::Ngp | Core::Pce => {
-                "mgba_color_correction"
-            }
+            Core::Cygne
+            | Core::Lynx
+            | Core::Gearsystem
+            | Core::Ngp
+            | Core::Pce
+            | Core::Dsperate => "mgba_color_correction",
         };
         assert_eq!(
             core.option(theirs),

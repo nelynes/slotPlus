@@ -215,6 +215,8 @@ pub fn mould_for(platform: Platform) -> Mould {
         Platform::Gg => Mould::Gg,
         Platform::Ngp => Mould::Ngp,
         Platform::Tg16 => Mould::Tg16,
+        // Until the DS game card is drawn, its games are on the GBA's mould.
+        Platform::Nds => Mould::Gba,
     }
 }
 
@@ -226,7 +228,8 @@ pub fn gb_shell_of(cart: &Cart) -> Option<GbShell> {
         | Platform::Lynx
         | Platform::Gg
         | Platform::Ngp
-        | Platform::Tg16 => None,
+        | Platform::Tg16
+        | Platform::Nds => None,
         Platform::Gb | Platform::Gbc => Some(match cart.shell.map(|c| c.outline) {
             Some(Outline::Notched) => GbShell::Notched,
             Some(Outline::Rounded) => GbShell::Rounded,

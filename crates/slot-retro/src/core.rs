@@ -199,8 +199,20 @@ impl From<std::io::Error> for CoreError {
     }
 }
 
+/// Where a touch screen is being pointed at, as libretro's pointer gives it:
+/// -0x7fff to 0x7fff across and down the core's whole frame.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub struct Pointer {
+    pub x: i16,
+    pub y: i16,
+    pub pressed: bool,
+}
+
 pub trait RetroCore: Send {
     fn load(&mut self, rom: &Path) -> Result<(), CoreError>;
+    /// The pointer for the next frames, or none at all. Only a core with a
+    /// touch screen reads it.
+    fn set_pointer(&mut self, _pointer: Option<Pointer>) {}
     fn run_frame(&mut self, input: ButtonMask);
     fn run_frame_linked(&mut self, p1: ButtonMask, _p2: ButtonMask) {
         self.run_frame(p1);

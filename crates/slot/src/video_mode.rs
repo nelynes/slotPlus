@@ -153,3 +153,68 @@ pub fn picture_for(
         (VideoMode::Stretch, _, Stretch::FullScreen) => (Sizing::Panel, crop),
     }
 }
+
+/// Which of a DS game's screens are shown, kept per game.
+pub const DS_VIEW_FILE: &str = "Config/nds_view.txt";
+
+/// A DS game's view of its two screens. DSperate draws them stacked, 256x384,
+/// in the middle of the DS's 720x480 buffer, and each view is a window onto it:
+/// both screens filling the height at 1.25x, or one of them at 2x.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum DsView {
+    #[default]
+    Both,
+    Top,
+    Bottom,
+}
+
+impl DsView {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            DsView::Both => "both",
+            DsView::Top => "top",
+            DsView::Bottom => "bottom",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<DsView> {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "both" => Some(DsView::Both),
+            "top" => Some(DsView::Top),
+            "bottom" => Some(DsView::Bottom),
+            _ => None,
+        }
+    }
+
+    /// The view L2 steps to: both, the top screen, the bottom screen, round.
+    pub fn next(self) -> DsView {
+        match self {
+            DsView::Both => DsView::Top,
+            DsView::Top => DsView::Bottom,
+            DsView::Bottom => DsView::Both,
+        }
+    }
+
+    /// The part of the 720x480 buffer the view shows over the canvas.
+    pub fn source_rect(self) -> [f32; 4] {
+        match self {
+            // 576x384 of the buffer: the 256x384 pair lands at 1.25x, 320x480.
+            DsView::Both => [0.1, 0.1, 0.8, 0.8],
+            // 360x240 around the screen at 232..488 x 48..240: 2x, 512x384.
+            DsView::Top => [0.25, 0.05, 0.5, 0.5],
+            // 360x240 around the screen at 232..488 x 240..432.
+            DsView::Bottom => [0.25, 0.45, 0.5, 0.5],
+        }
+    }
+}
+
+pub fn ds_view_for(root: &Path, stem: &str) -> DsView {
+    ini::value(root, DS_VIEW_FILE, stem)
+        .as_deref()
+        .and_then(DsView::parse)
+        .unwrap_or_default()
+}
+
+pub fn write_ds_view(root: &Path, stem: &str, view: DsView) -> std::io::Result<()> {
+    ini::write(root, DS_VIEW_FILE, stem, view.as_str())
+}

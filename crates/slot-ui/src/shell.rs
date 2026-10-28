@@ -65,6 +65,9 @@ pub const NGP_SHELL: Shell = shell([0x24, 0x25, 0x29], Finish::Solid);
 /// A TurboGrafx-16 HuCard: white card stock.
 pub const TG16_SHELL: Shell = shell([0xe8, 0xe8, 0xe4], Finish::Solid);
 
+/// A Nintendo DS game card: dark grey plastic.
+pub const NDS_SHELL: Shell = shell([0x3a, 0x3b, 0x3f], Finish::Solid);
+
 pub const DUAL_MODE_SHELL: Shell = shell([0x33, 0x30, 0x31], Finish::Solid);
 
 pub const GB_CLEAR_SHELL: Shell = shell([0x7c, 0x7a, 0x8a], Finish::Translucent);
@@ -109,6 +112,7 @@ pub fn shell_for(cart: &Cart) -> Shell {
         Platform::Gg => GG_SHELL,
         Platform::Ngp => NGP_SHELL,
         Platform::Tg16 => TG16_SHELL,
+        Platform::Nds => NDS_SHELL,
         Platform::Gb | Platform::Gbc => gb_shell_for(&cart.rom),
     }
 }
