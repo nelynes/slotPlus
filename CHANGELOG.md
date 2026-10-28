@@ -1,8 +1,12 @@
 # Changelog
 
-## [Unreleased]
+## [1.10.0-plus2.3](https://github.com/nelynes/slotPlus/releases/tag/v1.10.0-plus2.3)
 
-slotPlus brought up to Slot 1.10.0: screenshots, Scale and Frame Blending on each Screen page, a Game Boy Stretch setting, a clock set by city with daylight saving, and a Game Boy Advance Video shelf (`Games/GBAV`). See Slot's notes below. On slotPlus's own systems:
+slotPlus brought up to Slot 1.10.0: screenshots, Scale and Frame Blending on each Screen page, a Game Boy Stretch setting, a clock set by city with daylight saving, and a Game Boy Advance Video shelf (`Games/GBAV`). See [Slot's 1.10.0 notes](https://github.com/BrandonKowalski/slot/releases/tag/v1.10.0).
+
+To upgrade, replace the `System` folder on your card with the one from the zip.
+
+On slotPlus's own systems:
 
 - The WonderSwan and Lynx (and in slotPlusUltra, the Game Gear, NeoGeo Pocket and TurboGrafx-16) keep their picture as before: Scale, Stretch and Frame Blending are the Game Boy family's, and are left out of those systems' in-game menus.
 - A new default wallpaper, with new stickers, in slotPlus and in slotPlusUltra.
