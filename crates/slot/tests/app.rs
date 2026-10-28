@@ -151,6 +151,7 @@ fn the_game_does_not_draw_during_the_insert() {
 #[test]
 fn the_reveal_waits_for_the_power_on_to_finish() {
     let d = common::tmp_root_with_carts(&["Emerald"]);
+    common::clocked(d.path());
     let mut a = App::boot(d.path());
     a.apply(Action::Insert);
     a.on_core_ready();
@@ -189,7 +190,6 @@ fn a_resumed_cart_makes_no_sound() {
         &SlotState {
             cart: Some("Emerald".into()),
             clock_set: true,
-            utc_offset_min: 0,
             ..Default::default()
         },
     )
@@ -492,11 +492,7 @@ fn the_switch_changes_the_name_on_the_band_and_says_nothing() {
         assert_eq!(a.toast(), None, "{btn:?} put a banner up over the carts");
     }
     a.update(5.0);
-    assert_eq!(
-        a.shelf_platform_name(),
-        Some("Game Boy"),
-        "the name faded"
-    );
+    assert_eq!(a.shelf_platform_name(), Some("Game Boy"), "the name faded");
 }
 
 #[test]
@@ -2211,6 +2207,56 @@ fn a_letter_jump_shows_the_letter_in_the_slot_and_fades_like_the_shelf_name() {
     assert!(
         slot_text_alpha(&a, face) > 0.0,
         "jumping to the letter already printed did not show it again"
+    );
+}
+
+#[test]
+fn a_jumped_to_letter_is_set_at_the_titles_size_on_its_baseline() {
+    let mut a = app_with_carts(&["Alpha", "Bravo"]);
+    let face = slot_ui::TexId::from_raw(77);
+    a.apply(Action::GbaDown(Btn::Down));
+    a.apply(Action::GbaUp(Btn::Down));
+    a.set_shelf_platform_face(face, 20);
+    a.update(1.0 / 60.0);
+    a.update(0.5);
+    let mut out = Vec::new();
+    a.draw(&mut out);
+    let Some((y, h)) = out.iter().find_map(|d| match *d {
+        Draw::Tex { tex, y, h, .. } if tex == face => Some((y, h)),
+        _ => None,
+    }) else {
+        panic!("the letter never showed");
+    };
+    assert_eq!(h, slot_ui::TITLE_LINE_H as f32);
+    assert_eq!(
+        y + h,
+        slot_ui::slot_name_y() + slot_ui::HINT_H as f32,
+        "the letter left the title's baseline"
+    );
+}
+
+#[test]
+fn the_shelf_name_is_set_at_the_letters_size_on_its_baseline() {
+    let mut a = app_with_platforms(&[(Platform::Gba, "Emerald"), (Platform::Gb, "Tetris")]);
+    let face = slot_ui::TexId::from_raw(77);
+    tap(&mut a, Btn::R1);
+    assert_eq!(a.slot_text().as_deref(), Some("Game Boy"));
+    a.set_shelf_platform_face(face, 120);
+    a.update(1.0 / 60.0);
+    a.update(0.5);
+    let mut out = Vec::new();
+    a.draw(&mut out);
+    let Some((y, h)) = out.iter().find_map(|d| match *d {
+        Draw::Tex { tex, y, h, .. } if tex == face => Some((y, h)),
+        _ => None,
+    }) else {
+        panic!("the shelf name never showed");
+    };
+    assert_eq!(h, slot_ui::TITLE_LINE_H as f32);
+    assert_eq!(
+        y + h,
+        slot_ui::slot_name_y() + slot_ui::HINT_H as f32,
+        "the shelf name left the title's baseline"
     );
 }
 

@@ -3,7 +3,7 @@ use slot_store::Platform;
 #[test]
 fn every_platform_has_a_directory() {
     let names: Vec<&str> = Platform::ALL.iter().map(|p| p.dir_name()).collect();
-    assert_eq!(names, vec!["GBA", "GBC", "GB", "WS", "Lynx"]);
+    assert_eq!(names, vec!["GBA", "GBAV", "GBC", "GB", "WS", "Lynx"]);
 }
 
 #[test]
@@ -12,6 +12,7 @@ fn every_platform_is_a_shelf_of_its_own() {
         Platform::ALL,
         [
             Platform::Gba,
+            Platform::Gbav,
             Platform::Gbc,
             Platform::Gb,
             Platform::Ws,
@@ -38,11 +39,19 @@ fn each_platform_takes_only_its_own_extensions() {
     assert!(Platform::Lynx.accepts(std::path::Path::new("Klax.LYX")));
     assert!(!Platform::Lynx.accepts(std::path::Path::new("Tetris.gb")));
     assert!(!Platform::Ws.accepts(std::path::Path::new("Klax.lnx")));
+    assert!(Platform::Gbav.accepts(std::path::Path::new("Shrek.gba")));
+    assert!(!Platform::Gbav.accepts(std::path::Path::new("Tetris.gb")));
 }
 
 #[test]
 fn only_wonderswan_gets_a_bigger_video_buffer() {
-    for p in [Platform::Gba, Platform::Gb, Platform::Gbc, Platform::Lynx] {
+    for p in [
+        Platform::Gba,
+        Platform::Gbav,
+        Platform::Gb,
+        Platform::Gbc,
+        Platform::Lynx,
+    ] {
         assert_eq!(p.source_size(), (240, 160), "{p:?} must keep its buffer");
     }
     let (w, h) = Platform::Ws.source_size();
@@ -77,4 +86,13 @@ fn a_rom_that_is_too_small_or_missing_is_not_vertical() {
     let tiny = ws_rom(d.path(), "Tiny.ws", 1024, 0x01);
     assert!(!slot_store::ws_vertical(&tiny));
     assert!(!slot_store::ws_vertical(&d.path().join("Missing.ws")));
+}
+
+#[test]
+fn gba_video_runs_on_gba_hardware() {
+    assert_eq!(Platform::Gbav.hardware(), Platform::Gba);
+    assert_eq!(Platform::Gbav.picture(), Platform::Gba.picture());
+    for p in [Platform::Gba, Platform::Gb, Platform::Gbc] {
+        assert_eq!(p.hardware(), p);
+    }
 }

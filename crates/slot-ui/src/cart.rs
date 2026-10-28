@@ -143,7 +143,7 @@ pub fn mould_of(cart: &Cart) -> Mould {
 /// Game Boy platform's carts take the notched pak's size either way.
 pub fn mould_for(platform: Platform) -> Mould {
     match platform {
-        Platform::Gba => Mould::Gba,
+        Platform::Gba | Platform::Gbav => Mould::Gba,
         Platform::Gb | Platform::Gbc => Mould::Notched,
         Platform::Ws => Mould::Ws,
         Platform::Lynx => Mould::Lynx,
@@ -152,7 +152,7 @@ pub fn mould_for(platform: Platform) -> Mould {
 
 pub fn gb_shell_of(cart: &Cart) -> Option<GbShell> {
     match cart.platform {
-        Platform::Gba | Platform::Ws | Platform::Lynx => None,
+        Platform::Gba | Platform::Gbav | Platform::Ws | Platform::Lynx => None,
         Platform::Gb | Platform::Gbc => Some(match cart.shell.map(|c| c.outline) {
             Some(Outline::Notched) => GbShell::Notched,
             Some(Outline::Rounded) => GbShell::Rounded,
@@ -230,7 +230,7 @@ const GB_SEATED_H: u32 = 259;
 
 pub fn seated_box(platform: Platform) -> (u32, u32) {
     match platform {
-        Platform::Gba => (SEATED_W, SEATED_H),
+        Platform::Gba | Platform::Gbav => (SEATED_W, SEATED_H),
         Platform::Gb | Platform::Gbc => (SEATED_W, GB_SEATED_H),
         // The others are drawn at the seated width already scaled, so their seated
         // height follows from their own aspect.

@@ -7,8 +7,8 @@ use common::{
 use slot::app::{App, Phase};
 use slot_input::{Action, Btn};
 use slot_store::{
-    read_slot_state, write_slot_state, Appearance, BezelPick, GbColors, GbPalette, Platform,
-    Shader, SlotState, WallpaperPick,
+    read_slot_state, write_slot_state, Appearance, BezelPick, Blending, GbColors, GbPalette,
+    Platform, Scale, Shader, SlotState, Stretch, WallpaperPick, Zone,
 };
 use slot_ui::{
     Draw, Icon, QuickMenuFaces, QuickRow, QuickValue, TexId, HINT_EDGE, MENU_PAD, MOUTH_H, OUT_H,
@@ -37,6 +37,10 @@ fn on_carousel_with(state: SlotState) -> (TempDir, App, Clock) {
 
 fn on_carousel() -> (TempDir, App, Clock) {
     on_carousel_with(SlotState::default())
+}
+
+fn new_york() -> Zone {
+    Zone::parse("America/New_York").expect("New York is on the list")
 }
 
 fn press(a: &mut App, btn: Btn) {
@@ -391,8 +395,11 @@ fn screen_opens_a_page_of_its_own_and_b_comes_back_to_it() {
     assert_eq!(a.quick_menu(), Some(QuickRow::GbShader));
     for want in [
         QuickRow::GbColourCorrection,
+        QuickRow::GbBlending,
         QuickRow::GbPalette,
         QuickRow::GbBezel,
+        QuickRow::GbScale,
+        QuickRow::GbStretch,
         QuickRow::GbShader,
     ] {
         press(&mut a, Btn::Down);
@@ -408,6 +415,44 @@ fn screen_opens_a_page_of_its_own_and_b_comes_back_to_it() {
     assert_eq!(a.quick_menu(), Some(QuickRow::Screen));
     press(&mut a, Btn::B);
     assert_eq!(a.quick_menu(), None);
+}
+
+#[test]
+fn each_systems_frame_blending_steps_off_mix_lcd_ghosting_wraps_and_saves_alone() {
+    let saved = |d: &TempDir| {
+        let s = read_slot_state(d.path());
+        (s.blending_gba, s.blending_gb, s.blending_gbc)
+    };
+    for row in [
+        QuickRow::GbaBlending,
+        QuickRow::GbBlending,
+        QuickRow::GbcBlending,
+    ] {
+        let (d, mut a, _) = on_carousel();
+        open_at(&mut a, row);
+        assert_eq!(
+            a.quick_value(row),
+            Some(QuickValue::Off),
+            "{row:?} did not open on the default, which is off"
+        );
+        for (btn, want, shown) in [
+            (Btn::Right, Blending::Mix, QuickValue::Mix),
+            (Btn::Right, Blending::Ghosting, QuickValue::Ghosting),
+            (Btn::Right, Blending::Off, QuickValue::Off),
+            (Btn::Left, Blending::Ghosting, QuickValue::Ghosting),
+            (Btn::Left, Blending::Mix, QuickValue::Mix),
+        ] {
+            press(&mut a, btn);
+            let off = Blending::Off;
+            let alone = match row {
+                QuickRow::GbaBlending => (want, off, off),
+                QuickRow::GbBlending => (off, want, off),
+                _ => (off, off, want),
+            };
+            assert_eq!(saved(&d), alone, "{row:?} {btn:?}");
+            assert_eq!(a.quick_value(row), Some(shown), "{row:?} {btn:?}");
+        }
+    }
 }
 
 #[test]
@@ -547,13 +592,13 @@ fn the_about_footer_puts_restart_on_the_right() {
 #[test]
 fn a_on_date_and_time_opens_the_clock_at_the_time_it_already_has() {
     let (_d, mut a, _) = on_carousel_with(SlotState {
-        utc_offset_min: -300,
+        zone: new_york(),
         ..SlotState::default()
     });
     open_at(&mut a, QuickRow::DateTime);
     press(&mut a, Btn::A);
     let picker = a.picker().expect("A on Date & Time did not open the clock");
-    assert_eq!(picker.offset_min(), -300, "the offset started over");
+    assert_eq!(picker.zone(), new_york(), "the city started over");
     assert_eq!(
         picker.secs(),
         CLOCK_IS_SET - CLOCK_IS_SET % 60,
@@ -562,20 +607,20 @@ fn a_on_date_and_time_opens_the_clock_at_the_time_it_already_has() {
 }
 
 #[test]
-fn confirming_the_clock_from_the_menu_sets_it_and_comes_back_to_the_menu() {
+fn b_on_the_clock_from_the_menu_saves_it_and_comes_back_to_the_menu() {
     let (d, mut a, clock) = on_carousel_with(SlotState {
-        utc_offset_min: -300,
+        zone: new_york(),
         ..SlotState::default()
     });
     open_at(&mut a, QuickRow::DateTime);
     press(&mut a, Btn::A);
-    press(&mut a, Btn::Up);
-    for _ in 0..5 {
-        press(&mut a, Btn::Right);
-    }
     press(&mut a, Btn::Down);
-    let changed = a.picker().expect("not on the clock").secs() - (CLOCK_IS_SET - CLOCK_IS_SET % 60);
+    press(&mut a, Btn::Down);
     press(&mut a, Btn::A);
+    press(&mut a, Btn::Down);
+    press(&mut a, Btn::A);
+    let changed = a.picker().expect("not on the clock").secs() - (CLOCK_IS_SET - CLOCK_IS_SET % 60);
+    press(&mut a, Btn::B);
     assert_eq!(a.quick_menu(), Some(QuickRow::DateTime), "{:?}", a.phase());
     assert_eq!(
         clock.get(),
@@ -583,43 +628,22 @@ fn confirming_the_clock_from_the_menu_sets_it_and_comes_back_to_the_menu() {
         "the platform clock was not set"
     );
     let s = read_slot_state(d.path());
-    assert_eq!(s.utc_offset_min, -330, "the offset was not saved");
+    assert_eq!(s.zone, new_york().east(), "the city was not saved");
     assert!(s.clock_set);
 }
 
 #[test]
-fn b_on_the_clock_from_the_menu_comes_back_without_changing_anything() {
-    let (d, mut a, clock) = on_carousel_with(SlotState {
-        utc_offset_min: -300,
-        ..SlotState::default()
-    });
-    open_at(&mut a, QuickRow::DateTime);
-    press(&mut a, Btn::A);
-    press(&mut a, Btn::Up);
-    for _ in 0..5 {
-        press(&mut a, Btn::Right);
-    }
-    press(&mut a, Btn::Down);
-    press(&mut a, Btn::B);
-    assert_eq!(a.quick_menu(), Some(QuickRow::DateTime), "{:?}", a.phase());
-    assert_eq!(clock.get(), CLOCK_IS_SET, "B set the clock");
-    assert_eq!(
-        read_slot_state(d.path()).utc_offset_min,
-        -300,
-        "B saved the offset"
-    );
-}
-
-#[test]
-fn the_first_boot_clock_still_has_no_way_back() {
+fn b_on_the_first_boot_clock_saves_it_and_goes_on() {
     let d = tmp_root_with_carts(&["Emerald", "Fusion"]);
     let (mut a, _) = app_booting_with_clock(d.path());
     press(&mut a, Btn::B);
-    a.apply(Action::QuickMenu);
     assert!(
-        matches!(a.phase(), Phase::SetClock { .. }),
-        "left the first boot clock: {:?}",
-        a.phase()
+        !matches!(a.phase(), Phase::SetClock { .. }),
+        "B did not leave the first boot clock"
+    );
+    assert!(
+        read_slot_state(d.path()).clock_set,
+        "B did not save the clock"
     );
 }
 
@@ -673,7 +697,6 @@ fn fake_faces(a: &mut App) {
         values: (0..QuickValue::ALL.len())
             .map(|i| [(id(2000 + i), 60, 40), (id(2100 + i), 60, 40)])
             .collect(),
-        carets: [(id(300), 10, 40), (id(301), 10, 40)],
         legend: [
             (id(400), 70),
             (id(401), 110),
@@ -697,6 +720,17 @@ fn fake_faces(a: &mut App) {
         descriptions: [(id(410), 300, 44), (id(411), 340, 44)],
     });
     a.set_quick_clock_faces((id(500), 150, 40), (id(501), 150, 40));
+    a.set_clock_legend_faces(
+        [[
+            (id(420), 80),
+            (id(421), 110),
+            (id(422), 90),
+            (id(423), 100),
+            (id(424), 100),
+            (id(425), 80),
+        ]; 2],
+    );
+    a.set_clock_title_face((id(430), 260, 40));
 }
 
 fn label(row: QuickRow, lit: bool) -> usize {
@@ -838,15 +872,11 @@ fn the_legend_says_change_on_a_value_row_and_open_on_a_row_that_opens() {
 }
 
 #[test]
-fn the_arrows_stand_only_around_the_selected_rows_value() {
+fn only_the_selected_rows_value_is_lit() {
     let (_d, mut a, _) = on_carousel();
     fake_faces(&mut a);
     open_at(&mut a, QuickRow::FastForward);
     let out = frame(&a);
-    assert!(
-        drawn(&out, 300) && drawn(&out, 301),
-        "no arrows on Fast Forward"
-    );
     assert!(
         drawn(&out, value(QuickValue::Speed6, true)),
         "6× is not lit"
@@ -873,10 +903,6 @@ fn the_arrows_stand_only_around_the_selected_rows_value() {
     press(&mut a, Btn::Down);
     assert_eq!(a.quick_menu(), Some(QuickRow::DateTime));
     let out = frame(&a);
-    assert!(
-        !drawn(&out, 300) && !drawn(&out, 301),
-        "arrows on a row that opens"
-    );
     assert!(drawn(&out, 501), "the date and time in hand is not lit");
 }
 
@@ -925,40 +951,69 @@ fn labels_leave_room_for_the_pointer_and_values_end_thirty_two_pixels_in() {
     }
     let [x, _, w, _] = placed(&out, value(QuickValue::On, false)).expect("rumble's value");
     assert_eq!(x + w - MENU_PAD as f32, right, "an unselected value");
-    let [x, _, w, _] = placed(&out, 301).expect("the right arrow");
-    assert_eq!(x + w, right, "the arrow around the selected value");
+    let [x, _, w, _] = placed(&out, value(QuickValue::Speed6, true)).expect("the selected value");
+    assert_eq!(x + w - MENU_PAD as f32, right, "the selected value");
 }
 
 #[test]
-fn only_the_clock_from_the_menu_offers_b_back() {
-    let (_d, mut a, _) = on_carousel();
-    fake_faces(&mut a);
-    a.set_clock_faces(TexId::from_raw(600), TexId::from_raw(601));
-    a.set_clock_back_face((TexId::from_raw(602), 40));
-    open_at(&mut a, QuickRow::DateTime);
-    press(&mut a, Btn::A);
-    let out = frame(&a);
-    assert!(drawn(&out, 601), "the clock lost its own key");
-    assert!(
-        drawn(&out, 602),
-        "the clock from the menu does not offer B BACK"
-    );
-
+fn only_the_first_boot_clock_says_set_the_clock() {
     let d = tmp_root_with_carts(&["Emerald", "Fusion"]);
     let (mut first, _) = app_booting_with_clock(d.path());
     fake_faces(&mut first);
-    first.set_clock_faces(TexId::from_raw(600), TexId::from_raw(601));
-    first.set_clock_back_face((TexId::from_raw(602), 40));
-    let out = frame(&first);
-    assert!(drawn(&out, 601), "the first boot clock lost its key");
     assert!(
-        !drawn(&out, 602),
-        "the first boot clock offers a way back it does not have"
+        drawn(&frame(&first), 430),
+        "first boot has no SET THE CLOCK"
+    );
+
+    let (_d, mut a, _) = on_carousel();
+    fake_faces(&mut a);
+    open_at(&mut a, QuickRow::DateTime);
+    press(&mut a, Btn::A);
+    assert!(
+        a.picker().is_some() && !drawn(&frame(&a), 430),
+        "the clock from the menu says SET THE CLOCK"
     );
 }
 
 #[test]
-fn brightness_steps_from_one_to_nine_and_never_to_zero() {
+fn the_clock_offers_b_back_and_never_a_set() {
+    let (_d, mut a, _) = on_carousel();
+    fake_faces(&mut a);
+    open_at(&mut a, QuickRow::DateTime);
+    press(&mut a, Btn::A);
+    let d = tmp_root_with_carts(&["Emerald", "Fusion"]);
+    let (mut first, _) = app_booting_with_clock(d.path());
+    fake_faces(&mut first);
+    for (way, app, back) in [("the menu", &mut a, 400), ("first boot", &mut first, 425)] {
+        let out = frame(app);
+        assert!(drawn(&out, 423), "{way}: the date does not offer A CHANGE");
+        assert!(!drawn(&out, 402), "{way}: the date still says A OPEN");
+        assert!(drawn(&out, back), "{way}: no B BACK or B DONE");
+        assert!(
+            back == 400 || !drawn(&out, 400),
+            "{way}: says B BACK where B saves and goes on"
+        );
+        press(app, Btn::Down);
+        press(app, Btn::Down);
+        let out = frame(app);
+        assert!(drawn(&out, 402), "{way}: the city lost A OPEN");
+        press(app, Btn::A);
+        let out = frame(app);
+        assert!(
+            drawn(&out, 424),
+            "{way}: the city list does not offer A SELECT"
+        );
+        assert!(!drawn(&out, 420), "{way}: the city list still says A DONE");
+        press(app, Btn::B);
+        assert!(!drawn(&out, 405), "{way}: the city still offers A SET");
+        press(app, Btn::Down);
+        let out = frame(app);
+        assert!(drawn(&out, 401), "{way}: the 12/24 row lost CHANGE");
+    }
+}
+
+#[test]
+fn brightness_steps_from_zero_to_nine() {
     let (d, mut a, _) = on_carousel_with(SlotState {
         brightness: 3,
         ..SlotState::default()
@@ -968,7 +1023,12 @@ fn brightness_steps_from_one_to_nine_and_never_to_zero() {
         a.quick_value(QuickRow::Brightness),
         Some(QuickValue::Level3)
     );
-    for (btn, want) in [(Btn::Left, 2), (Btn::Left, 1), (Btn::Left, 1)] {
+    for (btn, want) in [
+        (Btn::Left, 2),
+        (Btn::Left, 1),
+        (Btn::Left, 0),
+        (Btn::Left, 0),
+    ] {
         press(&mut a, btn);
         assert_eq!(a.brightness(), want, "{btn:?}");
     }
@@ -978,22 +1038,6 @@ fn brightness_steps_from_one_to_nine_and_never_to_zero() {
     assert_eq!(a.brightness(), 9);
     a.flush_state();
     assert_eq!(read_slot_state(d.path()).brightness, 9);
-
-    let (_d, mut a, _) = on_carousel_with(SlotState {
-        brightness: 1,
-        ..SlotState::default()
-    });
-    a.apply(Action::BrightnessDown);
-    assert_eq!(a.brightness(), 0);
-    open_at(&mut a, QuickRow::Brightness);
-    assert_eq!(
-        a.quick_value(QuickRow::Brightness),
-        Some(QuickValue::Level0)
-    );
-    press(&mut a, Btn::Left);
-    assert_eq!(a.brightness(), 0, "Left at 0 moved the backlight");
-    press(&mut a, Btn::Right);
-    assert_eq!(a.brightness(), 1);
 }
 
 #[test]
@@ -1022,8 +1066,11 @@ fn the_game_boy_page_steps_the_palette_from_auto() {
         [
             QuickRow::GbShader,
             QuickRow::GbColourCorrection,
+            QuickRow::GbBlending,
             QuickRow::GbPalette,
             QuickRow::GbBezel,
+            QuickRow::GbScale,
+            QuickRow::GbStretch,
         ]
     );
     open_at(&mut a, QuickRow::GbPalette);
@@ -1047,7 +1094,7 @@ fn the_game_boy_page_steps_the_palette_from_auto() {
 }
 
 #[test]
-fn no_row_in_hand_runs_its_arrows_into_its_label() {
+fn no_row_in_hand_runs_its_value_into_its_label() {
     let (_d, mut a) = on_own_wallpaper(slot_store::WallpaperTint::Off);
     let id = TexId::from_raw;
     a.set_quick_menu_faces(QuickMenuFaces {
@@ -1078,10 +1125,6 @@ fn no_row_in_hand_runs_its_arrows_into_its_label() {
                 [(id(2000 + i), w, 40), (id(2100 + i), w, 40)]
             })
             .collect(),
-        carets: [false, true].map(|right| {
-            let f = slot_ui::quick_caret_face(right);
-            (id(300 + right as usize), f.w, f.h)
-        }),
         legend: [
             (id(400), 70),
             (id(401), 110),
@@ -1119,11 +1162,15 @@ fn no_row_in_hand_runs_its_arrows_into_its_label() {
             let out = frame(&a);
             let [lx, _, lw, _] = placed(&out, 1100 + row.index()).expect("the lit label");
             let label_ends = lx + lw - MENU_PAD as f32;
-            if let Some([cx, ..]) = placed(&out, 300) {
+            let lit_value = QuickValue::ALL
+                .iter()
+                .enumerate()
+                .find_map(|(i, _)| placed(&out, 2100 + i));
+            if let Some([vx, ..]) = lit_value {
                 assert!(
-                    cx - label_ends >= 16.0,
-                    "{row:?} in hand puts its arrow {} px from its label",
-                    cx - label_ends
+                    vx + MENU_PAD as f32 - label_ends >= 16.0,
+                    "{row:?} in hand puts its value {} px from its label",
+                    vx + MENU_PAD as f32 - label_ends
                 );
             }
             while a.quick_menu().is_some() {
@@ -1311,7 +1358,7 @@ fn a_wide_panel_offers_gb_and_gbc_frames_from_none_through_the_card() {
     );
     assert_eq!(a.resolved_bezel(Platform::Gb), BezelPick::None);
     press(&mut a, Btn::Down);
-    assert_eq!(a.quick_menu(), Some(QuickRow::GbcShader));
+    assert_eq!(a.quick_menu(), Some(QuickRow::GbcScale));
     assert!(!a.sp_frame());
 }
 
@@ -1349,7 +1396,10 @@ fn gba_frames_from_the_card_show_only_on_a_four_by_three_panel() {
     std::fs::write(d.path().join("Bezels/GBA/Classic.png"), b"png").unwrap();
     assert!(a.bezel_files(Platform::Gba).is_empty());
     a.set_panel((640, 480));
-    assert_eq!(a.bezel_files(Platform::Gba), vec!["Classic.png".to_string()]);
+    assert_eq!(
+        a.bezel_files(Platform::Gba),
+        vec!["Classic.png".to_string()]
+    );
     open_at(&mut a, QuickRow::GbaBezel);
     press(&mut a, Btn::Right);
     assert_eq!(
@@ -1464,4 +1514,84 @@ fn lid_power_off_steps_through_its_minutes_wraps_and_saves() {
     }
     press(&mut a, Btn::Left);
     assert_eq!(a.lid_off_min(), 1);
+}
+
+#[test]
+fn scale_rows_offer_only_choices_that_differ() {
+    let (_d, mut a, _) = on_carousel();
+    a.set_panel((720, 480));
+    assert_eq!(a.scale_choices(Platform::Gba), [Scale::Fit]);
+    assert_eq!(a.scale_choices(Platform::Gb), [Scale::Integer, Scale::Fit]);
+    assert_eq!(
+        a.stretch_choices(Platform::Gb),
+        [Stretch::Classic, Stretch::FullScreen]
+    );
+    let hidden = a.hidden_rows();
+    assert!(hidden.contains(&QuickRow::GbaScale));
+    assert!(!hidden.contains(&QuickRow::GbScale));
+    assert!(!hidden.contains(&QuickRow::GbStretch));
+    a.set_panel((640, 480));
+    assert_eq!(
+        a.scale_choices(Platform::Gba),
+        [Scale::Fit, Scale::Integer, Scale::FullScreen]
+    );
+    assert_eq!(
+        a.scale_choices(Platform::Gb),
+        [Scale::SpFrame, Scale::Integer, Scale::Fit]
+    );
+    assert!(!a.hidden_rows().contains(&QuickRow::GbaScale));
+}
+
+#[test]
+fn a_saved_scale_this_panel_lacks_shows_as_its_equal_and_is_kept() {
+    let (d, mut a, _) = on_carousel();
+    a.set_panel((720, 480));
+    assert_eq!(a.resolved_scale(Platform::Gb), Scale::Integer);
+    assert_eq!(a.quick_value(QuickRow::GbScale), Some(QuickValue::Integer));
+    open_at(&mut a, QuickRow::GbStretch);
+    press(&mut a, Btn::Right);
+    assert_eq!(read_slot_state(d.path()).scale_gb, Scale::SpFrame);
+    a.set_panel((640, 480));
+    assert_eq!(a.resolved_scale(Platform::Gb), Scale::SpFrame);
+    assert_eq!(a.quick_value(QuickRow::GbScale), Some(QuickValue::SpFrame));
+}
+
+#[test]
+fn cycling_stretch_saves_and_applies() {
+    let (d, mut a, _) = on_carousel();
+    a.set_panel((640, 480));
+    open_at(&mut a, QuickRow::GbStretch);
+    assert_eq!(a.quick_menu(), Some(QuickRow::GbStretch));
+    assert_eq!(
+        a.quick_value(QuickRow::GbStretch),
+        Some(QuickValue::Classic)
+    );
+    press(&mut a, Btn::Right);
+    assert_eq!(read_slot_state(d.path()).stretch_gb, Stretch::FullScreen);
+    assert_eq!(
+        a.quick_value(QuickRow::GbStretch),
+        Some(QuickValue::FullScreen)
+    );
+    a.set_platform(Platform::Gb);
+    a.set_video_mode(slot::video_mode::VideoMode::Stretch);
+    assert!(a.game_layout().panel);
+    press(&mut a, Btn::Right);
+    assert_eq!(read_slot_state(d.path()).stretch_gb, Stretch::Classic);
+}
+
+#[test]
+fn fit_is_offered_on_both_panels() {
+    let (_d, mut a, _) = on_carousel();
+    a.set_panel((720, 480));
+    assert_eq!(a.scale_choices(Platform::Gb), [Scale::Integer, Scale::Fit]);
+    assert!(!a.hidden_rows().contains(&QuickRow::GbScale));
+    a.set_panel((640, 480));
+    assert_eq!(
+        a.scale_choices(Platform::Gbc),
+        [Scale::SpFrame, Scale::Integer, Scale::Fit]
+    );
+    assert_eq!(
+        a.scale_choices(Platform::Gba),
+        [Scale::Fit, Scale::Integer, Scale::FullScreen]
+    );
 }

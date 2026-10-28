@@ -8,11 +8,13 @@ pub enum Platform {
     Gbc,
     Ws,
     Lynx,
+    Gbav,
 }
 
 impl Platform {
-    pub const ALL: [Platform; 5] = [
+    pub const ALL: [Platform; 6] = [
         Platform::Gba,
+        Platform::Gbav,
         Platform::Gbc,
         Platform::Gb,
         Platform::Ws,
@@ -26,6 +28,7 @@ impl Platform {
             Platform::Gbc => "Game Boy Color",
             Platform::Ws => "WonderSwan",
             Platform::Lynx => "Atari Lynx",
+            Platform::Gbav => "Game Boy Advance Video",
         }
     }
 
@@ -36,12 +39,20 @@ impl Platform {
             Platform::Gbc => "GBC",
             Platform::Ws => "WS",
             Platform::Lynx => "Lynx",
+            Platform::Gbav => "GBAV",
+        }
+    }
+
+    pub fn hardware(self) -> Platform {
+        match self {
+            Platform::Gbav => Platform::Gba,
+            p => p,
         }
     }
 
     pub fn extensions(self) -> &'static [&'static str] {
         match self {
-            Platform::Gba => &["gba"],
+            Platform::Gba | Platform::Gbav => &["gba"],
             Platform::Gb | Platform::Gbc => &["gb", "gbc"],
             Platform::Ws => &["ws", "wsc"],
             Platform::Lynx => &["lnx", "lyx"],
@@ -50,7 +61,7 @@ impl Platform {
 
     pub fn picture(self) -> (u32, u32) {
         match self {
-            Platform::Gba => (240, 160),
+            Platform::Gba | Platform::Gbav => (240, 160),
             Platform::Gb | Platform::Gbc => (160, 144),
             Platform::Ws => (224, 144),
             Platform::Lynx => (160, 102),
@@ -81,7 +92,9 @@ impl Platform {
     /// vertical frame, so it gets 360x240 (the canvas at 2x).
     pub fn source_size(self) -> (u32, u32) {
         match self {
-            Platform::Gba | Platform::Gb | Platform::Gbc | Platform::Lynx => (240, 160),
+            Platform::Gba | Platform::Gbav | Platform::Gb | Platform::Gbc | Platform::Lynx => {
+                (240, 160)
+            }
             Platform::Ws => (360, 240),
         }
     }

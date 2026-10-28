@@ -247,7 +247,7 @@ impl GameButton {
         match platform {
             // The Lynx uses L1 and R1 for its Options, and the WonderSwan uses
             // X, Y, L1 and R1 for its second pad, so both keep every button.
-            Platform::Gba | Platform::Ws | Platform::Lynx => &GameButton::ALL,
+            Platform::Gba | Platform::Gbav | Platform::Ws | Platform::Lynx => &GameButton::ALL,
             Platform::Gb | Platform::Gbc => &GameButton::GAME_BOY,
         }
     }

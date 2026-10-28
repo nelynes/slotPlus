@@ -2,8 +2,9 @@ mod common;
 
 use common::tmp_root;
 use slot_store::{
-    atomic_write, read_slot_state, sweep_temps, write_slot_state, Appearance, BezelPick, GbPalette,
-    Platform, Recent, Shader, SlotState, WallpaperPick, WallpaperTint, FF_SPEEDS, FF_SPEED_DEFAULT,
+    atomic_write, read_slot_state, sweep_temps, write_slot_state, Appearance, BezelPick, Blending,
+    GbPalette, Platform, Recent, Scale, Shader, SlotState, Stretch, WallpaperPick, WallpaperTint,
+    Zone, FF_SPEEDS, FF_SPEED_DEFAULT,
 };
 use tempfile::tempdir;
 
@@ -96,7 +97,6 @@ fn slot_state_round_trips_including_a_stem_with_an_equals_sign() {
         volume: 71,
         muted: true,
         clock_set: true,
-        utc_offset_min: 0,
         ..SlotState::default()
     };
     write_slot_state(d.path(), &s).unwrap();
@@ -141,7 +141,7 @@ fn a_first_boot_is_neither_dark_nor_silent() {
 }
 
 #[test]
-fn slot_state_round_trips_a_negative_utc_offset() {
+fn slot_state_round_trips_a_zone_west_of_utc() {
     let d = tmp_root();
     let s = SlotState {
         cart: None,
@@ -150,11 +150,11 @@ fn slot_state_round_trips_a_negative_utc_offset() {
         volume: 60,
         muted: false,
         clock_set: true,
-        utc_offset_min: -450,
+        zone: Zone::parse("America/St_Johns").unwrap(),
         ..SlotState::default()
     };
     write_slot_state(d.path(), &s).unwrap();
-    assert_eq!(read_slot_state(d.path()).utc_offset_min, -450);
+    assert_eq!(read_slot_state(d.path()).zone, s.zone);
 }
 
 #[test]
@@ -179,7 +179,12 @@ fn a_line_the_reader_does_not_know_is_skipped() {
             s.volume,
             s.muted,
             s.clock_set,
-            s.utc_offset_min
+            s.zone.offset_min(
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs() as i64
+            )
         ),
         (3, 1, 40, true, true, -300)
     );
@@ -223,7 +228,14 @@ fn a_card_from_before_the_settings_keeps_all_its_values() {
             muted: true,
             muted_hp: true,
             clock_set: true,
-            utc_offset_min: -300,
+            zone: Zone::for_offset(
+                -300,
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs() as i64
+            ),
+            clock_24h: true,
             rumble: true,
             ff_speed: FF_SPEED_DEFAULT,
             ff_sound: false,
@@ -254,6 +266,14 @@ fn a_card_from_before_the_settings_keeps_all_its_values() {
             bezel_gbc: BezelPick::Ags102,
             bezel_ws: BezelPick::None,
             bezel_lynx: BezelPick::None,
+            scale_gba: Scale::Fit,
+            scale_gb: Scale::SpFrame,
+            scale_gbc: Scale::SpFrame,
+            stretch_gb: Stretch::Classic,
+            stretch_gbc: Stretch::Classic,
+            blending_gba: Blending::Off,
+            blending_gb: Blending::Off,
+            blending_gbc: Blending::Off,
             recents: Vec::new(),
             favorites: Vec::new(),
             shelf: None,
@@ -290,6 +310,8 @@ fn the_quick_menu_settings_round_trip_as_their_own_lines() {
         bezel_gba: BezelPick::None,
         bezel_gb: BezelPick::Default,
         bezel_gbc: BezelPick::File("Pocket.png".into()),
+        blending_gba: Blending::Ghosting,
+        blending_gb: Blending::Mix,
         shelf: Some("gba".into()),
         shelf_cart: Some(Recent {
             platform: Platform::Gba,
@@ -325,6 +347,9 @@ fn the_quick_menu_settings_round_trip_as_their_own_lines() {
         "shader_lynx=dot",
         "bezel_ws=Swan.png",
         "bezel_lynx=none",
+        "blending_gba=ghosting",
+        "blending_gb=mix",
+        "blending_gbc=off",
         "shelf=gba",
         "shelf_cart=gba/Drill Dozer",
     ] {
@@ -656,4 +681,75 @@ fn lid_power_off_minutes_round_trip_and_drop_a_value_the_menu_does_not_offer() {
         .replace("lid_off_min=30", "lid_off_min=7");
     std::fs::write(&path, text).unwrap();
     assert_eq!(read_slot_state(d.path()).lid_off_min, None);
+}
+
+#[test]
+fn scale_and_stretch_round_trip_and_fall_back() {
+    let d = tmp_root();
+    let s = SlotState {
+        scale_gba: Scale::FullScreen,
+        scale_gb: Scale::Integer,
+        scale_gbc: Scale::Fit,
+        stretch_gb: Stretch::FullScreen,
+        stretch_gbc: Stretch::Classic,
+        ..SlotState::default()
+    };
+    write_slot_state(d.path(), &s).unwrap();
+    assert_eq!(read_slot_state(d.path()), s);
+    let path = d.path().join("Config/slot.state");
+    let text = std::fs::read_to_string(&path).unwrap();
+    for line in [
+        "scale_gba=full-screen",
+        "scale_gb=integer",
+        "scale_gbc=fit",
+        "stretch_gb=full-screen",
+        "stretch_gbc=classic",
+    ] {
+        assert!(text.lines().any(|l| l == line), "{line} missing");
+    }
+    let broken = text
+        .replace("scale_gb=integer", "scale_gb=huge")
+        .replace("stretch_gb=full-screen", "stretch_gb=");
+    std::fs::write(&path, broken).unwrap();
+    let back = read_slot_state(d.path());
+    assert_eq!(
+        (back.scale_gb, back.stretch_gb, back.scale_gba),
+        (Scale::SpFrame, Stretch::Classic, Scale::FullScreen)
+    );
+    assert_eq!(Scale::SpFrame.name(), "sp-frame");
+    assert_eq!(Scale::parse("sp-frame"), Some(Scale::SpFrame));
+    assert_eq!(Scale::parse("default"), None);
+}
+
+#[test]
+fn a_frame_blending_the_rows_do_not_offer_reads_as_off() {
+    let d = tmp_root();
+    let s = SlotState {
+        clock_set: true,
+        blending_gba: Blending::Mix,
+        blending_gb: Blending::Mix,
+        blending_gbc: Blending::Ghosting,
+        ..SlotState::default()
+    };
+    write_slot_state(d.path(), &s).unwrap();
+    let path = d.path().join("Config/slot.state");
+    let text = std::fs::read_to_string(&path).unwrap();
+    std::fs::write(
+        &path,
+        text.replace("blending_gba=mix", "blending_gba=lcd_ghosting_fast")
+            .replace("blending_gb=mix", "blending_gb=9"),
+    )
+    .unwrap();
+    let read = read_slot_state(d.path());
+    assert_eq!(read.blending_gba, Blending::Off);
+    assert_eq!(read.blending_gb, Blending::Off);
+    assert_eq!(
+        read.blending_gbc,
+        Blending::Ghosting,
+        "a good line was thrown away with the bad ones"
+    );
+    assert!(
+        read.clock_set,
+        "the rest of the card was thrown away with it"
+    );
 }
