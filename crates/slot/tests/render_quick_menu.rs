@@ -9,7 +9,7 @@ use slot::frontend::Frontend;
 use slot_gfx::{Compositor, HeadlessSurface, OUT_H, OUT_W};
 use slot_input::{Btn, InputSource, Millis, RawEvent};
 use slot_power::SimPlatform;
-use slot_ui::{quick_row_top, quick_row_top_at, quick_scroll, QuickRow, QUICK_VISIBLE};
+use slot_ui::{quick_row_top, quick_row_top_at, quick_scroll, QuickRow, MOUTH_H, QUICK_VISIBLE};
 
 struct Script(VecDeque<Vec<RawEvent>>);
 
@@ -197,11 +197,11 @@ fn the_quick_menu_renders_full_screen() {
         .take(QUICK_VISIBLE)
     {
         let top = quick_row_top_at(row, QuickRow::Theme, hidden) as usize;
-        let first = *inked(&px, 56..360, top)
+        let first = *inked(&px, 40..360, top)
             .first()
             .unwrap_or_else(|| panic!("{row:?} has no label"));
         assert!(
-            (64..=68).contains(&first),
+            (53..=57).contains(&first),
             "{row:?}'s label starts at x {first}"
         );
     }
@@ -210,9 +210,12 @@ fn the_quick_menu_renders_full_screen() {
     }
     tap(&mut f, &mut input, Btn::A);
     let px = composed(&mut f, &mut c, "clock");
+    let strip = (OUT_H as f32 - MOUTH_H) as usize..OUT_H as usize;
     assert!(
-        (200..270).any(|x| at(&px, x, 298) == [0xf6, 0xf4, 0xef]),
-        "the clock from the menu does not offer B BACK"
+        strip
+            .flat_map(|y| (0..130).map(move |x| (x, y)))
+            .any(|(x, y)| at(&px, x, y).iter().all(|&c| c > 0xd0)),
+        "the clock from the menu does not offer B BACK in the footer"
     );
 }
 
@@ -250,14 +253,14 @@ fn every_fast_forward_speed_sits_on_the_rows_right_edge_and_clears_the_label() {
         );
         assert!(
             inked(&px, 350..370, top).is_empty(),
-            "{name} and its arrows reach the middle of the row"
+            "{name} reaches the middle of the row"
         );
-        let label = inked(&px, 56..350, top);
+        let label = inked(&px, 40..350, top);
         let first = *label
             .first()
             .unwrap_or_else(|| panic!("{name}: the Fast Forward row has no label"));
         assert!(
-            (64..=68).contains(&first),
+            (53..=57).contains(&first),
             "the label moved to x {first} to make room for {name}"
         );
         tap(&mut f, &mut input, Btn::Right);
@@ -298,10 +301,10 @@ fn the_game_boy_page_shows_the_palette_by_name() {
         if row != QuickRow::GbPalette {
             assert!(pointer(&px, top).is_none(), "a pointer at {row:?} as well");
         }
-        let label = inked(&px, 56..360, top);
+        let label = inked(&px, 40..360, top);
         let first = *label.first().expect("a row with no label");
         assert!(
-            (64..=68).contains(&first),
+            (53..=57).contains(&first),
             "{row:?}'s label starts at x {first}"
         );
         if row.opens() {
@@ -402,10 +405,10 @@ fn the_general_screen_page_renders() {
     );
     for row in QuickRow::SCREEN_GENERAL {
         let top = quick_row_top(row, &[]) as usize;
-        let label = inked(&px, 56..360, top);
+        let label = inked(&px, 40..360, top);
         let first = *label.first().expect("a row with no label");
         assert!(
-            (64..=68).contains(&first),
+            (53..=57).contains(&first),
             "{row:?}'s label starts at x {first}"
         );
         let value = inked(&px, 360..OUT_W as usize, top);
@@ -529,7 +532,7 @@ fn the_left_stick_row_keeps_its_label_clear_of_its_value() {
     assert_eq!(f.app().quick_menu(), Some(QuickRow::LeftStick));
     let top = quick_row_top(QuickRow::LeftStick, &hidden) as usize;
     let px = composed(&mut f, &mut c, "left-stick");
-    let ink = inked(&px, 56..OUT_W as usize, top);
+    let ink = inked(&px, 40..OUT_W as usize, top);
     assert!(!ink.is_empty(), "the Left Stick row drew nothing");
     let gap = ink.windows(2).map(|w| w[1] - w[0]).max().unwrap_or(0);
     assert!(

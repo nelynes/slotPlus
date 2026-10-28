@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use slot_retro::{LibretroCore, MockCore, RetroCore};
-use slot_store::{Core, GbColors, Platform};
+use slot_store::{Blending, Core, GbColors, Platform};
 
 use crate::root;
 
@@ -37,17 +37,21 @@ pub struct Opened {
     pub named: bool,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn open_core(
     root: &Path,
     core: Core,
     platform: Platform,
     serial: &str,
     colour: bool,
+    blending: Blending,
     palette: Option<GbColors>,
     link: Option<u8>,
 ) -> Opened {
     let paths = candidates(root, core);
-    match open_named(root, core, platform, serial, colour, palette, link, &paths) {
+    match open_named(
+        root, core, platform, serial, colour, blending, palette, link, &paths,
+    ) {
         Some(core) => Opened { core, named: true },
         None => {
             report_missing(core, &paths);
@@ -78,7 +82,18 @@ pub fn open_core_for_palette(
     palette: Option<GbColors>,
     paths: &[PathBuf],
 ) -> Box<dyn RetroCore> {
-    open_named(root, core, platform, serial, colour, palette, None, paths).unwrap_or_else(|| {
+    open_named(
+        root,
+        core,
+        platform,
+        serial,
+        colour,
+        Blending::Off,
+        palette,
+        None,
+        paths,
+    )
+    .unwrap_or_else(|| {
         report_missing(core, paths);
         Box::new(MockCore::new())
     })
@@ -91,6 +106,7 @@ fn open_named(
     platform: Platform,
     serial: &str,
     colour: bool,
+    blending: Blending,
     palette: Option<GbColors>,
     link: Option<u8>,
     paths: &[PathBuf],
@@ -112,6 +128,7 @@ fn open_named(
                     colour,
                     palette,
                 );
+                apply_blending(&mut opened, core, blending);
                 if let Some(player) = link {
                     apply_link_options(&mut opened, core, player);
                 }
@@ -142,7 +159,7 @@ pub fn palette_for(
     link: Option<u8>,
 ) -> Option<GbColors> {
     // Only a Game Boy game takes a palette: slotPlus's other systems aren't GBA either.
-    (link.is_none() && matches!(platform, Platform::Gb | Platform::Gbc) && dmg_only(rom))
+    (link.is_none() && matches!(platform.hardware(), Platform::Gb | Platform::Gbc) && dmg_only(rom))
         .then_some(chosen)
 }
 
@@ -187,6 +204,42 @@ pub fn colour_option(
             "gpsp_color_correction",
             if on { "enabled" } else { "disabled" },
         )),
+    }
+}
+
+pub fn game_boy_player(platform: Platform, rom: &Path) -> bool {
+    platform == Platform::Gba
+        && !slot_store::header_code(rom).is_some_and(|code| code.starts_with('M'))
+}
+
+pub fn apply_game_boy_player(
+    core: &mut dyn RetroCore,
+    which: Core,
+    platform: Platform,
+    rom: &Path,
+) {
+    if which == Core::Mgba {
+        let on = game_boy_player(platform, rom);
+        core.set_option("mgba_force_gbp", if on { "ON" } else { "OFF" });
+    }
+}
+
+/// The core option that sets frame blending, for the cores that have one.
+/// slotPlus's other cores have none.
+pub fn blend_option(which: Core, blending: Blending) -> Option<(&'static str, &'static str)> {
+    Some(match (which, blending.on(which)) {
+        (Core::Mgba, Blending::Off) => ("mgba_interframe_blending", "OFF"),
+        (Core::Mgba, Blending::Mix) => ("mgba_interframe_blending", "mix"),
+        (Core::Mgba, Blending::Ghosting) => ("mgba_interframe_blending", "lcd_ghosting"),
+        (Core::Gpsp, Blending::Off) => ("gpsp_frame_mixing", "disabled"),
+        (Core::Gpsp, Blending::Mix | Blending::Ghosting) => ("gpsp_frame_mixing", "enabled"),
+        _ => return None,
+    })
+}
+
+pub fn apply_blending(core: &mut LibretroCore, which: Core, blending: Blending) {
+    if let Some((key, value)) = blend_option(which, blending) {
+        core.set_option(key, value);
     }
 }
 
@@ -309,7 +362,6 @@ pub fn apply_core_options(
     }
     if which == Core::Mgba {
         core.set_option("mgba_sgb_borders", "OFF");
-        core.set_option("mgba_force_gbp", "ON");
         match palette {
             Some(p) => {
                 core.set_option("mgba_gb_model", "Game Boy");
@@ -458,6 +510,13 @@ mod tests {
     }
 
     #[test]
+    fn slotplus_s_other_cores_have_no_frame_blending() {
+        for which in [Core::Cygne, Core::Lynx] {
+            assert_eq!(blend_option(which, Blending::Mix), None, "{which:?}");
+        }
+    }
+
+    #[test]
     fn each_core_prefixes_its_option_keys_the_way_its_source_does() {
         assert_eq!(option_prefix(Core::Mgba), "mgba");
         assert_eq!(option_prefix(Core::Gpsp), "gpsp");
@@ -471,6 +530,40 @@ mod tests {
         // beetle-pce-fast's keys start pce_fast_, not the core's own name.
         assert_eq!(option_prefix(Core::Pce), "pce_fast");
         assert!(has_frameskip(Core::Pce));
+    }
+
+    #[test]
+    fn each_core_spells_frame_blending_its_own_way() {
+        for (which, blending, want) in [
+            (
+                Core::Mgba,
+                Blending::Off,
+                ("mgba_interframe_blending", "OFF"),
+            ),
+            (
+                Core::Mgba,
+                Blending::Mix,
+                ("mgba_interframe_blending", "mix"),
+            ),
+            (
+                Core::Mgba,
+                Blending::Ghosting,
+                ("mgba_interframe_blending", "lcd_ghosting"),
+            ),
+            (Core::Gpsp, Blending::Off, ("gpsp_frame_mixing", "disabled")),
+            (Core::Gpsp, Blending::Mix, ("gpsp_frame_mixing", "enabled")),
+            (
+                Core::Gpsp,
+                Blending::Ghosting,
+                ("gpsp_frame_mixing", "enabled"),
+            ),
+        ] {
+            assert_eq!(
+                blend_option(which, blending),
+                Some(want),
+                "{which:?} {blending:?}"
+            );
+        }
     }
 
     #[test]

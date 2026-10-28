@@ -1,6 +1,6 @@
-use slot_store::{parse_stamp, FF_SPEEDS};
+use slot_store::{parse_stamp, Zone, FF_SPEEDS};
 use slot_ui::{
-    date_time_text, quick_caret_face, quick_label_face, quick_value_face, ClockPicker, QuickRow,
+    date_time_text, quick_label_face, quick_value_face, ClockPicker, ClockRow, QuickRow,
     QuickValue, UndoFace, MENU_PAD,
 };
 
@@ -144,15 +144,36 @@ fn the_rows_run_in_the_order_the_user_chose() {
     );
     assert_eq!(
         QuickRow::SCREEN_GBA.map(QuickRow::label),
-        ["Shader", "Color Correction", "Bezel"]
+        [
+            "Shader",
+            "Color Correction",
+            "Frame Blending",
+            "Bezel",
+            "Scale"
+        ]
     );
     assert_eq!(
         QuickRow::SCREEN_GBC.map(QuickRow::label),
-        ["Shader", "Color Correction", "Bezel"]
+        [
+            "Shader",
+            "Color Correction",
+            "Frame Blending",
+            "Bezel",
+            "Scale",
+            "Stretch"
+        ]
     );
     assert_eq!(
         QuickRow::SCREEN_GB.map(QuickRow::label),
-        ["Shader", "Color Correction", "Palette", "Bezel"]
+        [
+            "Shader",
+            "Color Correction",
+            "Frame Blending",
+            "Palette",
+            "Bezel",
+            "Scale",
+            "Stretch"
+        ]
     );
     assert_eq!(
         QuickRow::GAME.map(QuickRow::label),
@@ -282,6 +303,13 @@ fn the_values_read_as_the_menu_prints_them() {
             "9",
             "Default",
             "Bespoke",
+            "SP Frame",
+            "Integer",
+            "Fit",
+            "Classic",
+            "Full Screen",
+            "Mix",
+            "LCD Ghosting",
         ]
     );
     assert_eq!(QuickValue::flag(true), QuickValue::On);
@@ -289,23 +317,26 @@ fn the_values_read_as_the_menu_prints_them() {
 }
 
 #[test]
-fn the_date_and_time_read_as_a_month_a_day_and_the_carousels_24_hour_clock() {
-    let at = |stamp: &str| date_time_text(parse_stamp(stamp).expect("a stamp"));
-    assert_eq!(at("2026-09-15_16-35-00"), "SEP 15 16:35");
-    assert_eq!(at("2027-01-05_04-07-59"), "JAN 5 04:07");
+fn the_date_and_time_read_as_a_month_a_day_and_the_carousels_clock() {
+    let at = |stamp: &str, h24| date_time_text(parse_stamp(stamp).expect("a stamp"), h24);
+    assert_eq!(at("2026-09-15_16-35-00", true), "SEP 15 16:35");
+    assert_eq!(at("2027-01-05_04-07-59", true), "JAN 5 04:07");
+    assert_eq!(at("2026-09-15_16-35-00", false), "SEP 15 4:35 PM");
 }
 
 #[test]
-fn a_picker_for_a_set_clock_starts_at_the_local_time_and_its_offset() {
+fn a_picker_for_a_set_clock_starts_at_the_local_time_in_its_city() {
     let utc = parse_stamp("2026-09-15_21-35-42").expect("a stamp");
-    let p = ClockPicker::local(utc, -300);
-    assert_eq!(p.offset_min(), -300);
+    let ny = Zone::parse("America/New_York").expect("New York");
+    let p = ClockPicker::new(utc, ny, true);
+    assert_eq!(p.zone(), ny);
     assert_eq!(
         p.secs(),
         utc - 42,
         "the picker does not show the minute it was opened in"
     );
-    assert!(p.text().starts_with("2026-09-15 16:35"), "{}", p.text());
+    assert_eq!(p.value_text(ClockRow::Date), "SEP 15 2026");
+    assert_eq!(p.value_text(ClockRow::Time), "17:35");
 }
 
 #[test]
@@ -323,30 +354,9 @@ fn a_value_is_grey_until_its_row_is_in_hand() {
 }
 
 #[test]
-fn the_arrows_are_faces_the_height_of_a_value() {
-    for right in [false, true] {
-        let caret = quick_caret_face(right);
-        assert!(
-            caret.w > 0 && caret.rgba.chunks(4).any(|p| p[3] > 0),
-            "an empty arrow"
-        );
-        assert_eq!(caret.h, quick_value_face("On", true).h);
-    }
-}
-
-#[test]
-fn the_two_carets_point_different_ways() {
-    assert_ne!(
-        slot_ui::quick_caret_face(false).rgba,
-        slot_ui::quick_caret_face(true).rgba,
-        "a caret glyph is missing from the symbols font"
-    );
-}
-
-#[test]
 fn the_pointer_is_a_crisp_pixel_arrow_in_the_menus_ink() {
     let p = slot_ui::quick_pointer_face();
-    assert_eq!(p.w, 32);
+    assert_eq!(p.w, 18);
     let opaque: Vec<&[u8]> = p.rgba.chunks(4).filter(|c| c[3] > 0).collect();
     assert!(!opaque.is_empty(), "an empty pointer");
     assert!(
@@ -403,8 +413,11 @@ fn the_in_game_pages_hold_their_rows_in_order() {
         [
             QuickRow::Shader,
             QuickRow::Bezel,
+            QuickRow::Scale,
+            QuickRow::Stretch,
             QuickRow::Palette,
             QuickRow::ColourCorrection,
+            QuickRow::Blending,
             QuickRow::PlayBrightness,
             QuickRow::PlayBlueLight
         ]
@@ -468,13 +481,16 @@ fn in_game_rows_read_as_the_menu_shows_them() {
 }
 
 #[test]
-fn a_hidden_palette_and_bezel_leave_four_screen_rows() {
+fn a_hidden_palette_and_bezel_leave_seven_screen_rows() {
     let hidden = [QuickRow::Palette, QuickRow::Bezel];
     assert_eq!(
         QuickRow::Shader.shown(&hidden),
         vec![
             QuickRow::Shader,
+            QuickRow::Scale,
+            QuickRow::Stretch,
             QuickRow::ColourCorrection,
+            QuickRow::Blending,
             QuickRow::PlayBrightness,
             QuickRow::PlayBlueLight
         ]
@@ -485,38 +501,36 @@ fn a_hidden_palette_and_bezel_leave_four_screen_rows() {
 #[test]
 fn the_in_game_screen_panel_shows_three_rows_and_scrolls_the_rest() {
     assert_eq!(slot_ui::quick_window(QuickRow::Shader, &[]), (0, 3));
-    assert_eq!(slot_ui::quick_window(QuickRow::Palette, &[]), (1, 3));
-    assert_eq!(
-        slot_ui::quick_window(QuickRow::ColourCorrection, &[]),
-        (2, 3)
-    );
-    assert_eq!(slot_ui::quick_window(QuickRow::PlayBlueLight, &[]), (3, 3));
+    assert_eq!(slot_ui::quick_window(QuickRow::Bezel, &[]), (0, 3));
+    assert_eq!(slot_ui::quick_window(QuickRow::Scale, &[]), (1, 3));
+    assert_eq!(slot_ui::quick_window(QuickRow::Stretch, &[]), (2, 3));
+    assert_eq!(slot_ui::quick_window(QuickRow::PlayBlueLight, &[]), (6, 3));
     let hidden = [QuickRow::Palette, QuickRow::Bezel];
     assert_eq!(
         slot_ui::quick_window(QuickRow::PlayBlueLight, &hidden),
-        (1, 3)
+        (4, 3)
     );
 }
 
 #[test]
 fn a_scroll_bar_shows_only_on_a_page_with_rows_out_of_sight() {
-    let top = slot_ui::quick_scroll(QuickRow::Shader, &[]).expect("six rows in three");
+    let top = slot_ui::quick_scroll(QuickRow::Shader, &[]).expect("nine rows in three");
     assert!(
         (top.thumb_y - top.y).abs() < 0.5,
         "the thumb is not at the top"
     );
     assert!(
-        (top.thumb_h - top.h / 6.0).abs() < 0.5,
-        "the thumb is not one row of six"
+        (top.thumb_h - top.h / 9.0).abs() < 0.5,
+        "the thumb is not one row of nine"
     );
-    let end = slot_ui::quick_scroll(QuickRow::PlayBlueLight, &[]).expect("six rows in three");
+    let end = slot_ui::quick_scroll(QuickRow::PlayBlueLight, &[]).expect("nine rows in three");
     assert!(
         (end.thumb_y + end.thumb_h - (end.y + end.h)).abs() < 0.5,
         "the thumb is not at the bottom"
     );
     assert!(
         slot_ui::quick_scroll(QuickRow::Shader, &[QuickRow::Palette, QuickRow::Bezel]).is_some(),
-        "four rows in three still scroll"
+        "seven rows in three still scroll"
     );
     assert_eq!(slot_ui::quick_scroll(QuickRow::Rumble, &[]), None);
     assert!(slot_ui::quick_scroll(QuickRow::GameUp, &[]).is_some());

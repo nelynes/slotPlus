@@ -103,7 +103,7 @@ pub fn shell_for(cart: &Cart) -> Shell {
         return shell(choice.colour, finish);
     }
     match cart.platform {
-        Platform::Gba => gba_shell_for(&gba_code(cart)),
+        Platform::Gba | Platform::Gbav => gba_shell_for(&gba_code(cart)),
         Platform::Ws => ws_shell_for(&cart.rom),
         Platform::Lynx => LYNX_SHELL,
         Platform::Gg => GG_SHELL,

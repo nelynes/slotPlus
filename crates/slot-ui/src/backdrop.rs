@@ -9,6 +9,13 @@ use crate::art;
 const DEFAULT_PNG: &[u8] = include_bytes!("../../../assets/background_default.png");
 const BEZEL_GB_PNG: &[u8] = include_bytes!("../../../assets/bezel_gb.png");
 const BEZEL_GBC_PNG: &[u8] = include_bytes!("../../../assets/bezel_gbc.png");
+const BEZEL_GB_FIT_3X2_PNG: &[u8] = include_bytes!("../../../assets/bezel_gb_fit_3x2.png");
+const BEZEL_GBC_FIT_3X2_PNG: &[u8] = include_bytes!("../../../assets/bezel_gbc_fit_3x2.png");
+const BEZEL_GB_INTEGER_4X3_PNG: &[u8] = include_bytes!("../../../assets/bezel_gb_integer_4x3.png");
+const BEZEL_GBC_INTEGER_4X3_PNG: &[u8] =
+    include_bytes!("../../../assets/bezel_gbc_integer_4x3.png");
+const BEZEL_GB_FIT_4X3_PNG: &[u8] = include_bytes!("../../../assets/bezel_gb_fit_4x3.png");
+const BEZEL_GBC_FIT_4X3_PNG: &[u8] = include_bytes!("../../../assets/bezel_gbc_fit_4x3.png");
 // slotPlus's own: the Game Gear's drawn by `assets/src/bezels.py`, the
 // NeoGeo Pocket's made by hand.
 const BEZEL_GG_PNG: &[u8] = include_bytes!("../../../assets/bezel_gg.png");
@@ -37,18 +44,41 @@ pub fn game_bezel_face(path: &Path, w: u32, h: u32) -> Option<Vec<u8>> {
     panel_bezel(&src, (sw, sh), (w, h), false)
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum BezelArt {
+    Default,
+    Fit3x2,
+    Integer4x3,
+    Fit4x3,
+}
+
 /// The bezel bundled for a platform, for the platforms that have one, sized to a `w` x `h` panel
-/// the way Slot sizes the Game Boy's.
-pub fn default_game_bezel_face(platform: Platform, w: u32, h: u32) -> Option<Vec<u8>> {
-    let png = match platform {
-        Platform::Gb => BEZEL_GB_PNG,
-        Platform::Gbc => BEZEL_GBC_PNG,
-        Platform::Gg => BEZEL_GG_PNG,
-        Platform::Ngp => BEZEL_NGP_PNG,
+/// the way Slot sizes the Game Boy's. The Game Boy and Game Boy Color have one for each of Slot's
+/// pictures; slotPlus's Game Gear and NeoGeo Pocket have one, framed as Slot's default.
+pub fn default_game_bezel_face(
+    platform: Platform,
+    kind: BezelArt,
+    w: u32,
+    h: u32,
+) -> Option<Vec<u8>> {
+    let (png, kind) = match (platform, kind) {
+        (Platform::Gb, BezelArt::Default) => (BEZEL_GB_PNG, kind),
+        (Platform::Gbc, BezelArt::Default) => (BEZEL_GBC_PNG, kind),
+        (Platform::Gb, BezelArt::Fit3x2) => (BEZEL_GB_FIT_3X2_PNG, kind),
+        (Platform::Gbc, BezelArt::Fit3x2) => (BEZEL_GBC_FIT_3X2_PNG, kind),
+        (Platform::Gb, BezelArt::Integer4x3) => (BEZEL_GB_INTEGER_4X3_PNG, kind),
+        (Platform::Gbc, BezelArt::Integer4x3) => (BEZEL_GBC_INTEGER_4X3_PNG, kind),
+        (Platform::Gb, BezelArt::Fit4x3) => (BEZEL_GB_FIT_4X3_PNG, kind),
+        (Platform::Gbc, BezelArt::Fit4x3) => (BEZEL_GBC_FIT_4X3_PNG, kind),
+        (Platform::Gg, _) => (BEZEL_GG_PNG, BezelArt::Default),
+        (Platform::Ngp, _) => (BEZEL_NGP_PNG, BezelArt::Default),
         _ => return None,
     };
     let (src, sw, sh) = art::decode_png_bytes(png)?;
-    panel_bezel(&src, (sw, sh), (w, h), true)
+    match kind {
+        BezelArt::Default => panel_bezel(&src, (sw, sh), (w, h), true),
+        _ => art::cover_rgba(&src, sw, sh, w, h),
+    }
 }
 
 const BEZEL_GRAIN_ROWS: usize = 10;

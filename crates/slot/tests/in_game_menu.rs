@@ -3,8 +3,10 @@ mod common;
 use common::{app_playing_in, tmp_root_with_carts};
 use slot::app::{App, Phase};
 use slot_input::{Action, Btn};
-use slot_store::{Platform, Shader, StateRing};
-use slot_ui::{Draw, QuickMenuFaces, QuickRow, TexId, HINT_EDGE, MOUTH_H, OUT_H, OUT_W};
+use slot_store::{Blending, Core, Platform, Shader, StateRing};
+use slot_ui::{
+    Draw, QuickMenuFaces, QuickRow, QuickValue, TexId, HINT_EDGE, MOUTH_H, OUT_H, OUT_W,
+};
 use tempfile::TempDir;
 
 fn playing() -> (TempDir, App) {
@@ -98,12 +100,31 @@ fn screen_shows_the_palette_only_when_palettes_are_live() {
     ];
     assert_eq!(
         a.in_game_hidden(),
-        [&[QuickRow::Palette, QuickRow::Bezel, QuickRow::LeftStick][..], &empty].concat()
+        [
+            &[
+                QuickRow::Palette,
+                QuickRow::Bezel,
+                QuickRow::Scale,
+                QuickRow::Stretch,
+                QuickRow::LeftStick
+            ][..],
+            &empty
+        ]
+        .concat()
     );
     a.set_palette_live(true);
     assert_eq!(
         a.in_game_hidden(),
-        [&[QuickRow::Bezel, QuickRow::LeftStick][..], &empty].concat()
+        [
+            &[
+                QuickRow::Bezel,
+                QuickRow::Scale,
+                QuickRow::Stretch,
+                QuickRow::LeftStick
+            ][..],
+            &empty
+        ]
+        .concat()
     );
 }
 
@@ -129,6 +150,62 @@ fn colour_correction_toggles_the_running_platform_and_asks_the_core() {
     press(&mut a, Btn::Right);
     assert_eq!(a.colour_correction(), !before);
     assert_eq!(a.take_colour_correction(), Some(!before));
+}
+
+#[test]
+fn frame_blending_steps_the_running_platform_and_asks_the_core() {
+    let (_d, mut a) = playing();
+    go_to(&mut a, QuickRow::Blending);
+    assert_eq!(a.quick_value(QuickRow::Blending), Some(QuickValue::Off));
+    for want in [Blending::Mix, Blending::Ghosting, Blending::Off] {
+        press(&mut a, Btn::Right);
+        assert_eq!(a.blending_for(Platform::Gba), want);
+        assert_eq!(a.take_blending(), Some(want));
+        assert_eq!(
+            a.quick_value(QuickRow::Blending),
+            a.quick_value(QuickRow::GbaBlending)
+        );
+    }
+}
+
+#[test]
+fn on_gpsp_frame_blending_offers_off_and_mix_and_never_lcd_ghosting() {
+    let (_d, mut a) = playing();
+    a.set_core(Core::Gpsp);
+    go_to(&mut a, QuickRow::Blending);
+    let mut seen = Vec::new();
+    for btn in [Btn::Right, Btn::Right, Btn::Right, Btn::Left, Btn::Left] {
+        press(&mut a, btn);
+        seen.push(a.quick_value(QuickRow::Blending).expect("no value"));
+        assert_ne!(a.take_blending(), Some(Blending::Ghosting));
+    }
+    assert_eq!(
+        seen,
+        [
+            QuickValue::Mix,
+            QuickValue::Off,
+            QuickValue::Mix,
+            QuickValue::Off,
+            QuickValue::Mix
+        ]
+    );
+}
+
+#[test]
+fn an_lcd_ghosting_chosen_for_gba_reads_as_mix_on_gpsp() {
+    let (_d, mut a) = playing();
+    go_to(&mut a, QuickRow::Blending);
+    press(&mut a, Btn::Right);
+    press(&mut a, Btn::Right);
+    assert_eq!(a.blending_for(Platform::Gba), Blending::Ghosting);
+    a.set_core(Core::Gpsp);
+    assert_eq!(a.quick_value(QuickRow::Blending), Some(QuickValue::Mix));
+    assert_eq!(a.blending_in_play(), Blending::Mix);
+    assert_eq!(
+        a.quick_value(QuickRow::GbaBlending),
+        Some(QuickValue::Ghosting),
+        "the console's own setting was changed just by playing on gpSP"
+    );
 }
 
 #[test]
@@ -158,7 +235,7 @@ fn the_in_game_screen_page_ends_with_brightness_and_blue_light() {
     assert_eq!(a.brightness(), before + 1);
     assert_eq!(
         backlight.load(std::sync::atomic::Ordering::Relaxed),
-        before + 1,
+        before + 2,
         "the row moved the number and not the backlight"
     );
     press(&mut a, Btn::Down);
@@ -557,7 +634,6 @@ fn menu_faces(a: &mut App) {
         ],
         pointer: (id(700), 16, 40),
         values: Vec::new(),
-        carets: [(id(300), 10, 40), (id(301), 10, 40)],
         legend: [
             (id(400), 70),
             (id(401), 110),
@@ -841,4 +917,39 @@ fn a_refused_double_tap_in_the_menu_with_no_states_stays_on_a_shown_row() {
     a.apply(Action::Polaroids);
     assert!(matches!(a.phase(), Phase::Playing { .. }));
     cursor_on_a_shown_row(&a);
+}
+
+#[test]
+fn a_wonderswan_game_has_no_scale_stretch_or_blending_to_set() {
+    let d = tmp_root_with_carts(&["Emerald"]);
+    let ws = d.path().join("Games/WS");
+    std::fs::create_dir_all(&ws).unwrap();
+    std::fs::write(ws.join("Swan.ws"), vec![0u8; 0x10000]).unwrap();
+    slot_store::write_slot_state(
+        d.path(),
+        &slot_store::SlotState {
+            cart: Some("Swan".into()),
+            cart_platform: Some(Platform::Ws),
+            clock_set: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let mut a = App::boot(d.path());
+    // As the session does once it has loaded the WonderSwan core.
+    a.set_core(slot_store::Core::Cygne);
+    a.on_core_ready();
+    for _ in 0..120 {
+        a.update(1.0 / 60.0);
+    }
+    assert_eq!(a.playing_platform(), Platform::Ws);
+    let hidden = a.in_game_hidden();
+    for row in [QuickRow::Scale, QuickRow::Stretch, QuickRow::Blending] {
+        assert!(hidden.contains(&row), "{row:?} is hidden");
+    }
+    let (_d, a) = playing();
+    assert!(
+        !a.in_game_hidden().contains(&QuickRow::Blending),
+        "a GBA game keeps Blending"
+    );
 }

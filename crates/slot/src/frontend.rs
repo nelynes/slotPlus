@@ -3,21 +3,21 @@ use std::time::{Duration, Instant};
 use slot_gfx::{Compositor, Draw, ScreenEffect, TexId, OUT_H, OUT_W};
 
 const PAPER: &[u8] = include_bytes!("../assets/paper.png");
+use crate::shot_loader::{ShotLoader, Want};
 use slot_input::{InputSource, Millis};
 use slot_power::{Platform, Power};
 use slot_store::{format_stamp, BezelPick, Platform as Console};
-use crate::shot_loader::{ShotLoader, Want};
 use slot_ui::{
     badge_face, bezel_face, cart_shadow, chip_face, chip_shadow_face, core_button_legends,
     date_time_text, default_game_bezel_face, delete_legends, footer_ink, game_bezel_face,
-    gb_cart_shadow, hhmm, hint_face, icon_face, link_button_legends, menu_detail_face, menu_face,
-    photo_face, prompt_legends, quick_caret_face, quick_description_face, quick_label_face,
-    quick_legend_faces, quick_pointer_face, quick_value_face, quick_warning_value_face,
-    rebuild_count_face, rebuild_title_face, repair_legends, set_clock_hint_face, slot_back,
-    slot_back_light, slot_front, slot_front_light, socket_face, sticker_face, title_face,
-    toast_face, wallpaper_face, word_ink, CartFace, GbShell, Icon, LinkBadge, PowerChoice,
-    QuickMenuFaces, QuickRow, QuickValue, RebuildScreen, StickerFields, Toast, UndoFace, ALERT_PX,
-    BOLT_PX, HUD_ICON_PX, HUD_INK, LEGEND,
+    gb_cart_shadow, hint_face, icon_face, link_button_legends, menu_detail_face, menu_face,
+    photo_face, prompt_legends, quick_description_face, quick_label_face, quick_legend_faces,
+    quick_pointer_face, quick_value_face, quick_warning_value_face, rebuild_count_face,
+    rebuild_title_face, repair_legends, slot_back, slot_back_light, slot_front, slot_front_light,
+    socket_face, sticker_face, time_text, title_face, toast_face, wallpaper_face, word_ink,
+    BezelArt, CartFace, GbShell, Icon, LinkBadge, PowerChoice, QuickMenuFaces, QuickRow,
+    QuickValue, RebuildScreen, StickerFields, Toast, UndoFace, ALERT_PX, BOLT_PX, HUD_ICON_PX,
+    HUD_INK, LEGEND,
 };
 
 use crate::app::{App, LinkRow, Phase};
@@ -91,7 +91,7 @@ struct QuickPalette {
 #[derive(Default)]
 struct BezelSync {
     tex: Option<TexId>,
-    image: Option<(Console, BezelPick, (u32, u32))>,
+    image: Option<(Console, BezelPick, Option<BezelArt>, (u32, u32))>,
     labels: [String; 8],
     faces: [(Option<TexId>, Option<TexId>); 8],
 }
@@ -113,10 +113,9 @@ struct AboutFace {
 
 #[derive(Default)]
 struct Clocks {
-    line: Option<TexId>,
-    hint: Option<TexId>,
+    faces: Vec<[[Option<TexId>; 2]; 2]>,
     shelf: Option<TexId>,
-    picked: Option<String>,
+    picked: Option<slot_ui::ClockPicker>,
     shown: String,
     battery: String,
     battery_tex: Option<TexId>,
@@ -270,13 +269,22 @@ impl Frontend {
             .collect();
         self.session.app_mut().set_shot_hint_faces(shot_hints);
         let tick = slot_ui::tick_cap_face();
-        let tick = (compositor.create_texture(tick.w, tick.h, &tick.rgba), tick.w, tick.h);
+        let tick = (
+            compositor.create_texture(tick.w, tick.h, &tick.rgba),
+            tick.w,
+            tick.h,
+        );
         self.session.app_mut().set_shot_tick_face(tick);
-        let hint = set_clock_hint_face();
-        self.clocks.hint = Some(compositor.create_texture(hint.w, hint.h, &hint.rgba));
-        let back = hint_face("B", "Back");
-        let tex = compositor.create_texture(back.w, back.h, &back.rgba);
-        self.session.app_mut().set_clock_back_face((tex, back.w));
+        let clock_legends = [false, true].map(|light| {
+            slot_ui::clock_legend_faces(footer_ink(light))
+                .map(|f| (compositor.create_texture(f.w, f.h, &f.rgba), f.w))
+        });
+        self.session.app_mut().set_clock_legend_faces(clock_legends);
+        let title = menu_face("Set the clock");
+        let tex = compositor.create_texture(title.w, title.h, &title.rgba);
+        self.session
+            .app_mut()
+            .set_clock_title_face((tex, title.w, title.h));
         let star = slot_ui::star_face(slot_ui::STAR_SCALE, slot_ui::STAR_INK);
         let id = compositor.create_texture_nearest(star.w, star.h, &star.rgba);
         self.session.app_mut().set_star_face(id, star.w, star.h);
@@ -454,7 +462,6 @@ impl Frontend {
             .into_iter()
             .map(|v| v.map(&mut up))
             .collect();
-        let carets = faces.quick_carets.map(&mut up);
         let descriptions = faces.descriptions.map(&mut up);
         let mut pack_legend = |faces: [UndoFace; 8]| {
             faces.map(|f| {
@@ -503,7 +510,6 @@ impl Frontend {
             ws_turbo_labels,
             pointer,
             values,
-            carets,
             legend,
             legend_light,
             descriptions,
@@ -596,6 +602,7 @@ impl Frontend {
         compositor.set_screen_power(self.session.app().screen_power());
         compositor.set_screen_footer(self.session.app().screen_footer());
         compositor.set_game_source_rect(self.session.app().source_rect());
+        compositor.set_game_layout(self.session.app().game_layout());
         self.grab_link_shot(compositor);
         compositor.begin_frame();
         if self.draw_rebuild(compositor) {
@@ -830,6 +837,7 @@ impl Frontend {
     }
 
     pub fn restart(&mut self) {
+        self.session.close_audio();
         self.session.restart();
     }
 
@@ -842,6 +850,7 @@ impl Frontend {
     }
 
     pub fn poweroff(&mut self) {
+        self.session.close_audio();
         self.session.poweroff();
     }
 
@@ -884,7 +893,6 @@ struct UiFaces {
     ws_turbo_labels: [[UndoFace; 2]; 2],
     quick_pointer: UndoFace,
     quick_values: Vec<[UndoFace; 2]>,
-    quick_carets: [UndoFace; 2],
     quick_legend: [UndoFace; 8],
     quick_legend_light: [UndoFace; 8],
     descriptions: [UndoFace; 2],
@@ -939,7 +947,6 @@ impl UiFaces {
                 .iter()
                 .map(|v| [false, true].map(|lit| quick_value_face(v.text(), lit)))
                 .collect(),
-            quick_carets: [false, true].map(quick_caret_face),
             quick_legend: quick_legend_faces(footer_ink(false)),
             quick_legend_light: quick_legend_faces(footer_ink(true)),
             descriptions: [
@@ -1155,7 +1162,9 @@ fn sync_gallery(app: &mut App, compositor: &mut Compositor, state: &mut Switcher
     }
     for l in loader.poll() {
         match l.want {
-            Want::Thumb if state.window.contains(&l.path) && !state.thumbs.contains_key(&l.path) => {
+            Want::Thumb
+                if state.window.contains(&l.path) && !state.thumbs.contains_key(&l.path) =>
+            {
                 let id = match state.spare.pop() {
                     Some(id) => {
                         compositor.update_texture(id, l.w, l.h, &l.rgba);
@@ -1190,7 +1199,10 @@ fn sync_gallery(app: &mut App, compositor: &mut Compositor, state: &mut Switcher
                 app.set_shot_face(Some((id, l.w, l.h)));
                 state.full_pending = None;
                 if let Some(at) = state.full_asked.take() {
-                    eprintln!("slot: gallery: full shot in {} ms", at.elapsed().as_millis());
+                    eprintln!(
+                        "slot: gallery: full shot in {} ms",
+                        at.elapsed().as_millis()
+                    );
                 }
             }
             _ => {}
@@ -1224,15 +1236,33 @@ fn sync_clock(app: &mut App, compositor: &mut Compositor, clocks: &mut Clocks) {
         clocks.shown.clear();
         clocks.battery.clear();
     }
-    let picked = app.picker().map(|p| p.text());
+    let picked = app.picker().cloned();
     if picked != clocks.picked {
-        clocks.picked = picked;
-        if let (Some(face), Some(hint)) = (app.picker().map(|p| p.face()), clocks.hint) {
-            let line = upload(compositor, &mut clocks.line, face);
-            app.set_clock_faces(line, hint);
+        if let Some(set) = picked.as_ref().map(|p| p.faces()) {
+            let rows = set.rows.len();
+            if clocks.faces.len() < rows {
+                clocks.faces.resize(rows, [[None; 2]; 2]);
+            }
+            let rows = set
+                .rows
+                .into_iter()
+                .zip(clocks.faces.iter_mut())
+                .map(|([[ld, ll], [vd, vl]], [[sld, sll], [svd, svl]])| {
+                    let mut put = |f: slot_ui::UndoFace, id: &mut Option<TexId>| {
+                        let (w, h) = (f.w, f.h);
+                        (upload(compositor, id, f), w, h)
+                    };
+                    [[put(ld, sld), put(ll, sll)], [put(vd, svd), put(vl, svl)]]
+                })
+                .collect();
+            app.set_clock_faces(slot_ui::ClockFaces {
+                rows,
+                caret: set.caret,
+            });
         }
+        clocks.picked = picked;
     }
-    let shown = hhmm(app.wall_secs());
+    let shown = time_text(app.wall_secs(), app.clock_24h());
     if shown != clocks.shown {
         let face = word_ink(&shown, clocks.ink);
         clocks.shown = shown;
@@ -1246,7 +1276,7 @@ fn sync_clock(app: &mut App, compositor: &mut Compositor, clocks: &mut Clocks) {
         if platform_shown.is_empty() {
             app.clear_shelf_platform();
         } else {
-            let face = word_ink(&platform_shown, [0xff, 0xff, 0xff]);
+            let face = slot_ui::title_line_face(&platform_shown);
             let w = face.w;
             let id = upload(compositor, &mut clocks.platform_tex, face);
             app.set_shelf_platform_face(id, w);
@@ -1279,15 +1309,26 @@ fn sync_clock(app: &mut App, compositor: &mut Compositor, clocks: &mut Clocks) {
     }
 }
 
+fn bezel_key(pick: &BezelPick, art: Option<BezelArt>, last: Option<BezelArt>) -> Option<BezelArt> {
+    match pick {
+        BezelPick::Default => art.or(last),
+        _ => None,
+    }
+}
+
 fn sync_game_bezel(app: &mut App, compositor: &mut Compositor, state: &mut BezelSync) {
     let platform = app.playing_platform();
     let pick = app.resolved_bezel(platform);
     let (w, h) = app.game_bezel_size();
-    let shown = (platform, pick, (w, h));
+    let last = state.image.as_ref().and_then(|image| image.2);
+    let art = bezel_key(&pick, app.bezel_art(), last);
+    let shown = (platform, pick, art, (w, h));
     if state.image.as_ref() != Some(&shown) {
         let rgba = match &shown.1 {
             BezelPick::None | BezelPick::Ags102 => None,
-            BezelPick::Default => default_game_bezel_face(platform, w, h),
+            BezelPick::Default => shown
+                .2
+                .and_then(|kind| default_game_bezel_face(platform, kind, w, h)),
             BezelPick::Bundled(name) => slot_ui::bundled_game_bezel_face(platform, name, w, h),
             BezelPick::File(name) => app
                 .root()
@@ -1396,7 +1437,7 @@ fn sync_quick_clock(app: &mut App, compositor: &mut Compositor, state: &mut Quic
     if app.quick_menu().is_none() {
         return;
     }
-    let text = date_time_text(app.wall_secs());
+    let text = date_time_text(app.wall_secs(), app.clock_24h());
     if text == state.shown {
         return;
     }
@@ -1544,6 +1585,30 @@ fn note_frame_shape(w: u32, h: u32, shown: (u32, u32)) {
             shown.0,
             shown.1,
             if shown.1 > shown.0 { " (tall)" } else { "" }
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn toggling_stretch_does_not_change_the_bezel_key() {
+        let card = BezelPick::File("Pocket.png".into());
+        assert_eq!(bezel_key(&card, Some(BezelArt::Default), None), None);
+        assert_eq!(bezel_key(&card, None, None), None);
+        assert_eq!(
+            bezel_key(&BezelPick::Default, None, Some(BezelArt::Default)),
+            Some(BezelArt::Default)
+        );
+        assert_eq!(
+            bezel_key(
+                &BezelPick::Default,
+                Some(BezelArt::Fit3x2),
+                Some(BezelArt::Default)
+            ),
+            Some(BezelArt::Fit3x2)
         );
     }
 }

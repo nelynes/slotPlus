@@ -10,6 +10,8 @@ pub const SRC_H: u32 = OUT_H / SCALE;
 
 pub const WHOLE_TEXTURE: [f32; 4] = [0.0, 0.0, 1.0, 1.0];
 
+const FULL: [f32; 4] = [0.0, 0.0, OUT_W as f32, OUT_H as f32];
+
 pub struct GamePass {
     prog: gl::types::GLuint,
     game: gl::types::GLuint,
@@ -34,6 +36,7 @@ pub struct GamePass {
     /// Pixels kept for the carousel footer. The picture scales in the space above them.
     bottom: f32,
     src: [f32; 4],
+    layout: [f32; 4],
 }
 
 impl GamePass {
@@ -92,6 +95,7 @@ impl GamePass {
             fills: false,
             bottom: 0.0,
             src: WHOLE_TEXTURE,
+            layout: FULL,
         })
     }
 
@@ -104,15 +108,15 @@ impl GamePass {
     }
 
     pub fn frame(&self) -> (f32, f32, f32, f32) {
-        self.placed()
-    }
-
-    fn placed(&self) -> (f32, f32, f32, f32) {
         let foot = self.bottom;
         match self.fills {
             true => (0.0, 0.0, OUT_W as f32, OUT_H as f32 - foot),
             false => screen_rect_above(self.power, foot),
         }
+    }
+
+    pub fn set_layout(&mut self, rect: [f32; 4]) {
+        self.layout = rect;
     }
 
     pub fn set_fills_frame(&mut self, on: bool) {
@@ -194,18 +198,20 @@ impl GamePass {
 
     pub fn draw(&self, quad: &Quad) {
         let src = match self.effect {
-            ScreenEffect::Grid => whole_scale_source(self.src, self.fbo_scale, self.src_size),
+            ScreenEffect::Grid if self.layout == FULL => {
+                whole_scale_source(self.src, self.fbo_scale, self.src_size)
+            }
             _ => self.src,
         };
-        self.draw_source(self.game, quad, src);
+        self.draw_source(self.game, quad, src, self.layout);
     }
 
     pub fn draw_still(&self, tex: gl::types::GLuint, quad: &Quad) {
-        self.draw_source(tex, quad, WHOLE_TEXTURE);
+        self.draw_source(tex, quad, self.src, self.layout);
     }
 
-    fn draw_source(&self, tex: gl::types::GLuint, quad: &Quad, src: [f32; 4]) {
-        let (x, y, w, h) = self.placed();
+    fn draw_source(&self, tex: gl::types::GLuint, quad: &Quad, src: [f32; 4], layout: [f32; 4]) {
+        let (x, y, w, h) = placed_in(self.frame(), layout);
         let bright = if self.fills {
             1.0
         } else {
@@ -240,6 +246,13 @@ impl GamePass {
         }
         quad.draw();
     }
+}
+
+fn placed_in(frame: (f32, f32, f32, f32), layout: [f32; 4]) -> (f32, f32, f32, f32) {
+    let (x, y, w, h) = frame;
+    let [lx, ly, lw, lh] = layout;
+    let (sx, sy) = (lw / OUT_W as f32, lh / OUT_H as f32);
+    (lx + x * sx, ly + y * sy, w * sx, h * sy)
 }
 
 fn whole_scale_source(src: [f32; 4], fbo: [f32; 2], size: (u32, u32)) -> [f32; 4] {

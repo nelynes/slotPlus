@@ -33,6 +33,7 @@ pub struct Compositor {
     game_bezel: Option<TexId>,
     sp_frame: bool,
     fills_panel: bool,
+    game_panel: bool,
     turn: Option<Turn>,
     captured: Option<(u32, u32, Vec<u8>)>,
 }
@@ -84,6 +85,7 @@ impl Compositor {
                 game_bezel: None,
                 sp_frame: true,
                 fills_panel: false,
+                game_panel: false,
                 turn: None,
                 captured: None,
             })
@@ -193,6 +195,11 @@ impl Compositor {
     /// at the panel's own size, instead of in its 3:2 window.
     pub fn set_game_fills_panel(&mut self, on: bool) {
         self.fills_panel = on;
+    }
+
+    pub fn set_game_layout(&mut self, layout: crate::GameLayout) {
+        self.game_panel = layout.panel;
+        self.game.set_layout(layout.rect);
     }
 
     fn draw_game_bezel(&mut self) {
@@ -459,11 +466,15 @@ impl Compositor {
         if !self.native() {
             return draw(self);
         }
-        // A stretched game on a 4:3 panel fills the whole panel; anything else sits in the 3:2
-        // window Slot lays out from the panel size.
-        let (x, top, w, h) = match self.fills_panel {
-            true => (0, 0, self.size.0 as i32, self.size.1 as i32),
-            false => crate::bezel::game_rect(self.window, self.sp_frame),
+        // A stretched game on a 4:3 panel fills the whole panel (slotPlus's),
+        // and so does a picture Slot lays out over the panel; anything else
+        // sits in the 3:2 window Slot lays out from the panel size.
+        let (x, top, w, h) = if self.fills_panel {
+            (0, 0, self.size.0 as i32, self.size.1 as i32)
+        } else if self.game_panel {
+            (0, 0, self.window.0 as i32, self.window.1 as i32)
+        } else {
+            crate::bezel::game_rect(self.window, self.sp_frame)
         };
         self.game
             .set_fbo_scale(w as f32 / OUT_W as f32, h as f32 / OUT_H as f32);
