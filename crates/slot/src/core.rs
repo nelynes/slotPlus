@@ -516,7 +516,10 @@ mod tests {
         assert!(!has_frameskip(Core::Lynx));
         assert!(!has_frameskip(Core::Gearsystem));
         assert!(!has_frameskip(Core::Ngp));
-        assert!(has_frameskip(Core::Dsperate), "our wrapper patch gives it one");
+        assert!(
+            has_frameskip(Core::Dsperate),
+            "our wrapper patch gives it one"
+        );
         assert_eq!(option_prefix(Core::Dsperate), "dsperate");
     }
 

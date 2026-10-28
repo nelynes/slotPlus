@@ -191,6 +191,10 @@ struct Shared {
     /// The core takes X and Y as buttons of its own (the DS), so turbo leaves
     /// them be.
     face_xy: AtomicBool,
+    /// The core skips drawing the frame after one that ran slow (the DS):
+    /// slot runs a frame a present, so a slow one only makes the present
+    /// late, and the core is never otherwise told it is behind.
+    skip_slow: AtomicBool,
     /// The touch screen's pointer, packed by `pack_pointer`; 0 is none.
     pointer: AtomicU64,
     recording: AtomicBool,
@@ -270,6 +274,7 @@ impl EmuHandle {
             rewind_fill: AtomicU8::new(0),
             turbo: AtomicBool::new(true),
             face_xy: AtomicBool::new(false),
+            skip_slow: AtomicBool::new(false),
             pointer: AtomicU64::new(0),
             recording: AtomicBool::new(true),
             stop: AtomicBool::new(false),
@@ -472,6 +477,10 @@ impl EmuHandle {
 
     pub fn set_face_xy(&self, on: bool) {
         self.shared.face_xy.store(on, Ordering::Relaxed);
+    }
+
+    pub fn set_skip_slow(&self, on: bool) {
+        self.shared.skip_slow.store(on, Ordering::Relaxed);
     }
 
     /// Where the stylus points, for a core with a touch screen.
@@ -704,6 +713,11 @@ impl Worker {
         let mut ticked = false;
         let mut paced = 0u64;
         let mut core_trace = CoreTrace::new();
+        // The last frame's time, and whether the core was asked to skip after
+        // it: DSperate decides a frame ahead, so the frame after an ask is the
+        // one it does not draw.
+        let mut last_took = Duration::ZERO;
+        let mut asked = false;
         let mut scale = 0.0f64;
         let mut rate = TickRate::new(Instant::now(), 0);
         let mut stalled = false;
@@ -833,7 +847,13 @@ impl Worker {
                         input.without_turbo()
                     };
                     turbo_frame = turbo_frame.wrapping_add(1);
-                    core.set_frame_skip(!last);
+                    let ask = !last
+                        || (speed == Speed::Normal
+                            && self.shared.skip_slow.load(Ordering::Relaxed)
+                            && last_took > SLOW_FRAME);
+                    core.set_frame_skip(ask);
+                    let after_ask = asked;
+                    asked = ask;
                     let frame_began = Instant::now();
                     match cable.as_mut() {
                         Some(c) => {
@@ -881,7 +901,8 @@ impl Worker {
                         }
                     }
                     let took = frame_began.elapsed();
-                    core_trace.frame(took);
+                    last_took = took;
+                    core_trace.frame(took, after_ask);
                     if last {
                         drawn = took;
                     } else {
@@ -1622,6 +1643,28 @@ struct CoreTrace {
     total: Duration,
     slowest: Duration,
     over: u32,
+    /// Frames run after the core was asked to skip, and their time.
+    skipped: u32,
+    skipped_total: Duration,
+}
+
+/// A frame slower than this leaves too little of a 60 Hz present for the
+/// rest of it, so a core that skips when slow skips the next one.
+const SLOW_FRAME: Duration = Duration::from_millis(15);
+
+/// The CPU's clock now and at most, in MHz, for the trace.
+fn cpu_mhz() -> Option<(u32, u32)> {
+    let read = |f: &str| {
+        std::fs::read_to_string(format!("/sys/devices/system/cpu/cpu0/cpufreq/{f}"))
+            .ok()?
+            .trim()
+            .parse::<u32>()
+            .ok()
+    };
+    Some((
+        read("scaling_cur_freq")? / 1000,
+        read("scaling_max_freq")? / 1000,
+    ))
 }
 
 impl CoreTrace {
@@ -1635,14 +1678,20 @@ impl CoreTrace {
             total: Duration::ZERO,
             slowest: Duration::ZERO,
             over: 0,
+            skipped: 0,
+            skipped_total: Duration::ZERO,
         }
     }
 
-    fn frame(&mut self, took: Duration) {
+    fn frame(&mut self, took: Duration, skipped: bool) {
         if !crate::session::trace() {
             return;
         }
         self.frames += 1;
+        if skipped {
+            self.skipped += 1;
+            self.skipped_total += took;
+        }
         self.total += took;
         self.slowest = self.slowest.max(took);
         self.over += u32::from(took > Self::BUDGET);
@@ -1655,14 +1704,25 @@ impl CoreTrace {
         }
         if self.frames > 0 {
             let ms = |d: Duration| d.as_secs_f64() * 1000.0;
+            let drawn = self.frames - self.skipped;
+            let mean = |total: Duration, n: u32| match n {
+                0 => "-".to_string(),
+                n => format!("{:.1}", ms(total) / f64::from(n)),
+            };
+            let cpu =
+                cpu_mhz().map_or(String::new(), |(now, max)| format!(", cpu {now}/{max} MHz"));
             eprintln!(
-                "slot: core: {} frames in {:.1} s ({:.1} fps), mean {:.1} ms, slowest {:.1} ms, {} over 16.7 ms",
+                "slot: core: {} frames in {:.1} s ({:.1} fps), mean {:.1} ms, slowest {:.1} ms, {} over 16.7 ms; {} skipped at {} ms, {} drawn at {} ms{cpu}",
                 self.frames,
                 span.as_secs_f64(),
                 f64::from(self.frames) / span.as_secs_f64(),
                 ms(self.total) / f64::from(self.frames),
                 ms(self.slowest),
                 self.over,
+                self.skipped,
+                mean(self.skipped_total, self.skipped),
+                drawn,
+                mean(self.total - self.skipped_total, drawn),
             );
         }
         *self = CoreTrace::new();

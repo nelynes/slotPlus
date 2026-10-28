@@ -608,6 +608,7 @@ impl Session {
             emu.set_rewinding(self.actually_rewinding());
             emu.set_turbo(self.app.turbo());
             emu.set_face_xy(self.app.core() == Core::Dsperate);
+            emu.set_skip_slow(self.app.core() == Core::Dsperate);
             emu.set_pointer(self.app.pointer());
             emu.set_rewind_recording(self.app.records_rewind());
         }
