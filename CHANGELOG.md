@@ -2,7 +2,7 @@
 
 ## [1.10.0-plus2.3](https://github.com/nelynes/slotPlus/releases/tag/v1.10.0-plus2.3)
 
-slotPlus brought up to Slot 1.10.0: screenshots, Scale and Frame Blending on each Screen page, a Game Boy Stretch setting, a clock set by city with daylight saving, and a Game Boy Advance Video shelf (`Games/GBAV`). See Slot's notes below.
+slotPlus brought up to Slot 1.10.0: screenshots, Scale and Frame Blending on each Screen page, a Game Boy Stretch setting, a clock set by city with daylight saving, and a Game Boy Advance Video shelf (`Games/GBAV`). See [Slot's 1.10.0 notes](https://github.com/BrandonKowalski/slot/releases/tag/v1.10.0).
 
 To upgrade, replace the `System` folder on your card with the one from the zip.
 
