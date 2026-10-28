@@ -80,9 +80,15 @@ build() {
 	mv "$ds" "$lr/DSperate"
 
 	# The wrapper's own fixes onto DSperate, then any of ours.
+	# The wrapper's own patches go onto DSperate, and so do ours, bar the
+	# ones named wrapper-*, which go onto the wrapper itself.
 	for p in "$lr"/patches/*.patch "$here"/*.patch; do
 		[ -e "$p" ] || continue
-		step "patch-$(basename "$p" .patch)" patch -d "$lr/DSperate" -p1 --forward -i "$p"
+		case "$(basename "$p")" in
+		wrapper-*) into="$lr" ;;
+		*) into="$lr/DSperate" ;;
+		esac
+		step "patch-$(basename "$p" .patch)" patch -d "$into" -p1 --forward -i "$p"
 	done
 
 	echo "dsperate: $(c++ --version | head -1), $(cmake --version | head -1)"

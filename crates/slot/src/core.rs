@@ -269,12 +269,10 @@ pub fn option_prefix(which: Core) -> &'static str {
 
 /// Whether the core has a `<prefix>_frameskip` option to set. Beetle Lynx
 /// Gearsystem and Beetle NeoPop do not: they are cheap to run and have no
-/// frameskip setting. DSperate's libretro core has only its recompiler to set.
+/// frameskip setting. DSperate's is our patch onto its libretro wrapper
+/// (cores/dsperate/wrapper-0001-frameskip.patch).
 fn has_frameskip(which: Core) -> bool {
-    !matches!(
-        which,
-        Core::Lynx | Core::Gearsystem | Core::Ngp | Core::Dsperate
-    )
+    !matches!(which, Core::Lynx | Core::Gearsystem | Core::Ngp)
 }
 
 /// Whether the core writes its own save file rather than handing Slot its
@@ -518,6 +516,8 @@ mod tests {
         assert!(!has_frameskip(Core::Lynx));
         assert!(!has_frameskip(Core::Gearsystem));
         assert!(!has_frameskip(Core::Ngp));
+        assert!(has_frameskip(Core::Dsperate), "our wrapper patch gives it one");
+        assert_eq!(option_prefix(Core::Dsperate), "dsperate");
     }
 
     #[test]

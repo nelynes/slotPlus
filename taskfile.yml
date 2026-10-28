@@ -617,6 +617,10 @@ tasks:
           cp vendor/${name}-src.tar.gz "{{.OUT}}/System/licenses/${name}-${sha}.tar.gz"
           cp vendor/${name}-src.meta "{{.OUT}}/System/licenses/${name}-${sha}.meta"
         done
+        for p in cores/dsperate/*.patch; do
+          [ -e "$p" ] || continue
+          cp "$p" "{{.OUT}}/System/licenses/dsperate-$(basename "$p")"
+        done
       - 'echo "device tree ready at {{.OUT}}, copy its contents to SD2"'
 
   deploy:device:
