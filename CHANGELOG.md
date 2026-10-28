@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.10.0-plus2.4](https://github.com/nelynes/slotPlus/releases/tag/v1.10.0-plus2.4)
+
+To upgrade, replace the `System` folder on your card with the one from the zip.
+
+- **Nintendo DS, in slotPlusUltra.** Put `.nds` games in `Games/NDS/`. They play on DSperate, at full speed on the RG SP, and no BIOS is needed.
+- **Screen layouts:** L2 swaps the main screen, and SELECT + L2 steps through Both Screens, One Screen, Full Screen, Side by Side and Picture in Picture. Each game remembers its own.
+- **A stylus:** hold R2 and the D-pad moves a cursor over the bottom screen, and A touches.
+- **The DS game card** has its own cart on the shelf, and with Cart Slot set to Bespoke the slot is the back of a silver DS Lite.
+- In heavy 3D scenes, DS games skip drawing the odd frame rather than slow down, and the CPU runs at full clock while one plays. DS games have no rewind, since their states are about 6 MB each.
+
+See the [systems guide](SYSTEMS.md#nintendo-ds) for the controls, layouts and label art size.
+
 ## [1.10.0-plus2.3](https://github.com/nelynes/slotPlus/releases/tag/v1.10.0-plus2.3)
 
 slotPlus brought up to Slot 1.10.0: screenshots, Scale and Frame Blending on each Screen page, a Game Boy Stretch setting, a clock set by city with daylight saving, and a Game Boy Advance Video shelf (`Games/GBAV`). See [Slot's 1.10.0 notes](https://github.com/BrandonKowalski/slot/releases/tag/v1.10.0).
