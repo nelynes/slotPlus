@@ -538,9 +538,6 @@ tasks:
     vars:
       OUT: '{{.OUT | default "dist-device"}}'
     cmds:
-      # After build:device, not beside it: two cargo runs starting at once in a fresh box
-      # both install the pinned toolchain, and collide.
-      - task: bench:device
       - rm -rf {{.OUT}}
       - task: device:sh
         vars:
@@ -564,8 +561,6 @@ tasks:
       - cp vendor/ngp_libretro.so {{.OUT}}/System/
       - cp vendor/pce_libretro.so {{.OUT}}/System/
       - cp vendor/dsperate_libretro.so {{.OUT}}/System/
-      # For the Nintendo DS speed test: launch_frontend.sh runs it on the games in Bench/.
-      - cp target-device/device/examples/core_bench {{.OUT}}/System/
       - cp vendor/fsck.exfat {{.OUT}}/System/
       - cp -r licenses {{.OUT}}/System/licenses
       - cp vendor/exfatprogs-{{.EXFATPROGS_VERSION}}.tar.gz {{.OUT}}/System/licenses/

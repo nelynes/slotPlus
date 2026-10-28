@@ -41,38 +41,6 @@ done
 
 [ -f "$RUN/slotlink.session" ] && sh "$SYS/slotlink.sh" link down > /dev/null 2>&1
 
-# Nintendo DS speed test. DS games put in Bench/ are timed once with DSperate,
-# before slot starts, into Bench/results.txt: each runs from boot with no input
-# (a long warm-up gets past the intros), then the frames are timed, then its
-# save state is weighed. Delete results.txt to time them again. A game that
-# hangs is given up on after ten minutes.
-BENCH="$SD/Bench"
-if ls "$BENCH"/*.nds > /dev/null 2>&1 && [ ! -f "$BENCH/results.txt" ] \
-	&& [ -f "$SYS/core_bench" ] && [ -f "$SYS/dsperate_libretro.so" ]; then
-	log "bench $BENCH"
-	limit=""
-	command -v timeout > /dev/null 2>&1 && limit="timeout 600"
-	bench() {
-		game="$1"
-		shift
-		$limit /lib/ld-linux-aarch64.so.1 "$SYS/core_bench" "$SYS/dsperate_libretro.so" \
-			"$game" --system "$SD/BIOS" "$@"
-	}
-	{
-		echo "DSperate speed test, $(date '+%F %T')"
-		grep -m1 -i "^hardware" /proc/cpuinfo
-		echo "Needs 16.7 ms/frame or less (60 frames/s) for full speed."
-		for rom in "$BENCH"/*.nds; do
-			echo
-			echo "== $(basename "$rom")"
-			bench "$rom" --warmup 1200 --frames 600 --repeats 2 2>&1 | sed '1d'
-			bench "$rom" --warmup 1200 --frames 120 --serialize 2>&1 | head -1
-		done
-	} > "$BENCH/results.txt.part" 2>&1
-	mv -f "$BENCH/results.txt.part" "$BENCH/results.txt"
-	log "bench done"
-fi
-
 [ -f "$LOGS/slot.log" ] && mv -f "$LOGS/slot.log" "$LOGS/slot.log.1"
 
 # An empty Config/trace on the card turns on slot's timing log: every five
