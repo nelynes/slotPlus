@@ -100,7 +100,9 @@ jobs:
     name: release
     needs: build
     if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
+    # Pinned: on the Ubuntu 26 image ubuntu-latest moved to in October 2026,
+    # the notes for v1.10.0-plus2.3 came out empty.
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
@@ -120,15 +122,31 @@ jobs:
         run: |
           set -eu
           tag="$GITHUB_REF_NAME"
-          ultra_commit="$(cat ultra-commit.txt)"
+          for f in CHANGELOG.md slot-plus.zip slot-plusultra.zip; do
+            test -s "$f" || { echo "::error::$f is missing or empty"; exit 1; }
+          done
           # The release's own notes are its entry in the changelog, from its
           # heading to the next one, followed by how to install.
-          awk -v head="## [${tag#v}]" '
-            index($0, head) == 1 { found = 1; next }
-            found && /^## / { exit }
-            found { print }
-          ' CHANGELOG.md | sed -e '/./,$!d' > notes.md
-          test -s notes.md
+          python3 - "${tag#v}" <<'PY'
+          import sys
+          head = "## [" + sys.argv[1] + "]"
+          lines = open("CHANGELOG.md", encoding="utf-8").read().splitlines()
+          start = next((i for i, l in enumerate(lines) if l.startswith(head)), None)
+          if start is None:
+              print(f"::error::CHANGELOG.md has no entry headed {head}")
+              sys.exit(1)
+          body = []
+          for l in lines[start + 1:]:
+              if l.startswith("## "):
+                  break
+              body.append(l)
+          notes = "\n".join(body).strip()
+          if not notes:
+              print(f"::error::the CHANGELOG.md entry {head} is empty")
+              sys.exit(1)
+          open("notes.md", "w", encoding="utf-8").write(notes + "\n")
+          print(f"notes: {len(notes.splitlines())} lines from {head}")
+          PY
           cat >> notes.md <<NOTES
 
           **Fresh install:** pick the version you prefer, unzip, and move all contents into the Slot card.
