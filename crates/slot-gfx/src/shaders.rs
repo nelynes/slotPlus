@@ -63,7 +63,29 @@ uniform vec2 u_origin;
 uniform vec4 u_rect;
 uniform vec2 u_fbo;
 uniform vec4 u_pic;
+uniform float u_sharp;
 varying vec2 v_uv;
+// Sharp bilinear: at a scale that is not whole, each texel is drawn flat
+// and only its edge, one output pixel wide, is blended with its neighbour,
+// so every texel comes out the same size. The four taps stay inside the
+// part of the frame being drawn, so a DS screen never takes a row from the
+// screen next to it in the buffer.
+vec3 sharp_sample(vec2 uv) {
+    vec2 scale = max(u_rect.zw * u_fbo / (u_uv.zw * u_src), vec2(1.0));
+    vec2 t = uv * u_src;
+    vec2 d = fract(t) - 0.5;
+    vec2 r = 0.5 - 0.5 / scale;
+    vec2 p = floor(t) + (d - clamp(d, -r, r)) * scale;
+    vec2 i = floor(p);
+    vec2 w = p - i;
+    vec2 lo = u_uv.xy * u_src + 0.5;
+    vec2 hi = (u_uv.xy + u_uv.zw) * u_src - 0.5;
+    vec2 a = clamp(i + 0.5, lo, hi) / u_src;
+    vec2 b = clamp(i + 1.5, lo, hi) / u_src;
+    vec3 top = mix(texture2D(u_game, a).rgb, texture2D(u_game, vec2(b.x, a.y)).rgb, w.x);
+    vec3 bottom = mix(texture2D(u_game, vec2(a.x, b.y)).rgb, texture2D(u_game, b).rgb, w.x);
+    return mix(top, bottom, w.y);
+}
 const vec3 offsets = vec3(3.141592654) * vec3(1.0 / 2.0, 1.0 / 2.0 - 2.0 / 3.0, 1.0 / 2.0 - 4.0 / 3.0);
 const vec3 luma_coeff = vec3(0.2126, 0.7152, 0.0722);
 vec2 grid_band(vec2 x) {
@@ -87,7 +109,7 @@ float darkness_at(vec2 at) {
 void main() {
     vec2 uv = u_uv.xy + v_uv * u_uv.zw;
     vec2 f = fract(uv * u_src);
-    vec3 c = texture2D(u_game, uv).rgb;
+    vec3 c = u_sharp > 0.5 ? sharp_sample(uv) : texture2D(u_game, uv).rgb;
     bool inside = all(greaterThanEqual(uv, u_pic.xy)) && all(lessThan(uv, u_pic.zw));
     if (!inside) {
     } else if (u_mode > 4.5) {

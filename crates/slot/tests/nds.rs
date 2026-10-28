@@ -68,8 +68,9 @@ fn a_ds_game_starts_on_both_screens_and_l2_swaps_which_is_on_top() {
 }
 
 #[test]
-fn select_l2_steps_through_the_layouts_and_shaders_show_only_at_2x() {
+fn select_l2_steps_through_the_layouts_and_shaders_show_from_2x() {
     let (d, mut a) = playing_ds_with(Shader::Lcd3x);
+    assert!(a.game_sharp(), "a DS game is drawn sharp bilinear");
     let mut seen = Vec::new();
     for _ in 0..DsLayout::ALL.len() {
         let (main, other) = a.ds_parts();
@@ -94,7 +95,7 @@ fn select_l2_steps_through_the_layouts_and_shaders_show_only_at_2x() {
                 plain
             ),
             (DsLayout::Single, [104.0, 48.0, 512.0, 384.0], None, lcd),
-            (DsLayout::Fill, [40.0, 0.0, 640.0, 480.0], None, plain),
+            (DsLayout::Fill, [40.0, 0.0, 640.0, 480.0], None, lcd),
             (
                 DsLayout::Side,
                 [0.0, 48.0, 512.0, 384.0],
@@ -105,7 +106,7 @@ fn select_l2_steps_through_the_layouts_and_shaders_show_only_at_2x() {
                 DsLayout::Corner,
                 [40.0, 0.0, 640.0, 480.0],
                 Some([424.0, 288.0, 256.0, 192.0]),
-                plain
+                lcd
             ),
         ]
     );

@@ -322,10 +322,11 @@ impl DsView {
         }
     }
 
-    /// Whether the main screen sits at a whole 2x, where a shader's cells
-    /// land evenly; at 1.25x and 2.5x they do not, and none is drawn.
+    /// Whether the main screen is drawn big enough for a shader: from 2x.
+    /// Both stacked, at 1.25x, has no room for its cells, and the other
+    /// screen, drawn over the main one, is always plain.
     pub fn shaded(self) -> bool {
-        matches!(self.layout, DsLayout::Single | DsLayout::Side)
+        self.layout != DsLayout::Stacked
     }
 }
 

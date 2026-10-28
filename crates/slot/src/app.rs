@@ -2031,6 +2031,12 @@ impl App {
         self.ds_parts().1.map(|p| (p.src, p.dst))
     }
 
+    /// Whether the game is drawn sharp bilinear: a DS game, whose layouts
+    /// put its screens at 1.25x and 2.5x as well as 2x.
+    pub fn game_sharp(&self) -> bool {
+        self.playing_platform() == Platform::Nds
+    }
+
     /// Swap which of a DS game's screens is the main one, L2's job.
     pub fn swap_ds_screens(&mut self) {
         self.ds_view = self.ds_view.swapped();
@@ -2908,8 +2914,8 @@ impl App {
         }
     }
 
-    /// The shader drawn over the game: a DS game's only where its main
-    /// screen sits at a whole 2x.
+    /// The shader drawn over the game: a DS game's wherever its main screen
+    /// is drawn big enough for it, from 2x.
     pub fn drawn_shader(&self) -> Shader {
         match self.playing_platform() {
             Platform::Nds if !self.ds_view_shown().shaded() => Shader::Off,

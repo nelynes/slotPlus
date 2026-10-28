@@ -205,6 +205,10 @@ impl Compositor {
 
     /// A second part of the game's frame to draw over the first, plain: the
     /// part of the frame, and where on the canvas, in its pixels.
+    pub fn set_game_sharp(&mut self, on: bool) {
+        self.game.set_sharp(on);
+    }
+
     pub fn set_game_inset(&mut self, inset: Option<([f32; 4], [f32; 4])>) {
         self.inset = inset;
     }

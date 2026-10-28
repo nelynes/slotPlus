@@ -604,6 +604,7 @@ impl Frontend {
         compositor.set_game_source_rect(self.session.app().source_rect());
         compositor.set_game_layout(self.session.app().game_layout());
         compositor.set_game_inset(self.session.app().game_inset());
+        compositor.set_game_sharp(self.session.app().game_sharp());
         self.grab_link_shot(compositor);
         compositor.begin_frame();
         if self.draw_rebuild(compositor) {

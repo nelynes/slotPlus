@@ -37,6 +37,8 @@ pub struct GamePass {
     bottom: f32,
     src: [f32; 4],
     layout: [f32; 4],
+    u_sharp: gl::types::GLint,
+    sharp: bool,
 }
 
 impl GamePass {
@@ -51,7 +53,7 @@ impl GamePass {
             crate::gl::gray_format(),
             Some(&[255]),
         );
-        let (u_rect, u_bright, u_uv, u_mode, u_paper_size, u_pic, u_fbo, u_origin, u_src);
+        let (u_rect, u_bright, u_uv, u_mode, u_paper_size, u_pic, u_fbo, u_origin, u_src, u_sharp);
         unsafe {
             gl::UseProgram(prog);
             gl::Uniform1i(crate::gl::uniform_location(prog, "u_game"), 0);
@@ -71,6 +73,8 @@ impl GamePass {
             u_fbo = crate::gl::uniform_location(prog, "u_fbo");
             u_pic = crate::gl::uniform_location(prog, "u_pic");
             u_origin = crate::gl::uniform_location(prog, "u_origin");
+            u_sharp = crate::gl::uniform_location(prog, "u_sharp");
+            gl::Uniform1f(u_sharp, 0.0);
         }
         Ok(GamePass {
             prog,
@@ -96,6 +100,8 @@ impl GamePass {
             bottom: 0.0,
             src: WHOLE_TEXTURE,
             layout: FULL,
+            u_sharp,
+            sharp: false,
         })
     }
 
@@ -133,6 +139,12 @@ impl GamePass {
 
     pub fn set_origin(&mut self, x: f32, y: f32) {
         self.origin = [x, y];
+    }
+
+    /// Draw the game sharp bilinear instead of nearest, so a picture at a
+    /// scale that is not whole keeps its pixels the same size.
+    pub fn set_sharp(&mut self, on: bool) {
+        self.sharp = on;
     }
 
     pub fn set_effect(&mut self, effect: ScreenEffect) {
@@ -242,6 +254,7 @@ impl GamePass {
             gl::Uniform4f(self.u_uv, src[0], src[1], src[2], src[3]);
             gl::Uniform1f(self.u_bright, bright);
             gl::Uniform1f(self.u_mode, effect.mode());
+            gl::Uniform1f(self.u_sharp, if self.sharp { 1.0 } else { 0.0 });
             gl::Uniform1f(self.u_paper_size, self.paper_size);
             gl::Uniform2f(self.u_fbo, self.fbo_scale[0], self.fbo_scale[1]);
             gl::Uniform2f(self.u_origin, self.origin[0], self.origin[1]);
