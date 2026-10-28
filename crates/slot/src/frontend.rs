@@ -36,6 +36,8 @@ const ALERT_INK: [u8; 3] = [0xf0, 0xb4, 0x3c];
 
 pub struct Frontend {
     session: Session,
+    recorder: Option<crate::screen_recorder::ScreenRecorder>,
+    recorder_tried: bool,
     start: Instant,
     last: Instant,
     draws: Vec<Draw>,
@@ -186,6 +188,8 @@ impl Frontend {
             start: now,
             last: now,
             draws: Vec::new(),
+            recorder: None,
+            recorder_tried: false,
             polaroid_texes: Vec::new(),
             title_tex: None,
             faces: FaceBuilder::spawn(),
@@ -703,6 +707,20 @@ impl Frontend {
         compositor.draw_list(&self.draws);
         if let Some((w, h, rgba)) = compositor.take_capture() {
             self.session.app_mut().shot_taken(w, h, rgba);
+        }
+        if self.recorder.is_none() && !self.recorder_tried {
+            self.recorder_tried = true;
+            self.recorder = self
+                .session
+                .app()
+                .root()
+                .and_then(crate::screen_recorder::ScreenRecorder::for_card);
+        }
+        if let Some(rec) = self.recorder.as_mut() {
+            if rec.wants() {
+                let (w, h) = compositor.frame_size();
+                rec.keep(w, h, compositor.read_frame());
+            }
         }
     }
 

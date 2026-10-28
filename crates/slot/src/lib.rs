@@ -21,6 +21,7 @@ pub mod cpu_governor;
 #[cfg(unix)]
 pub mod crash;
 pub mod hold_picker;
+pub mod screen_recorder;
 #[cfg(not(unix))]
 pub mod crash {
     pub fn install() {}
