@@ -48,12 +48,14 @@ pub(crate) fn extra_mask(mould: bitmaps::Mould) -> &'static [u8] {
     static GG: OnceLock<Vec<u8>> = OnceLock::new();
     static NGP: OnceLock<Vec<u8>> = OnceLock::new();
     static TG16: OnceLock<Vec<u8>> = OnceLock::new();
+    static NDS: OnceLock<Vec<u8>> = OnceLock::new();
     let lock = match mould {
         bitmaps::Mould::Ws => &WS,
         bitmaps::Mould::Lynx => &LYNX,
         bitmaps::Mould::Gg => &GG,
         bitmaps::Mould::Ngp => &NGP,
         bitmaps::Mould::Tg16 => &TG16,
+        bitmaps::Mould::Nds => &NDS,
         other => panic!("{other:?} is not a slotPlus mould"),
     };
     lock.get_or_init(|| {

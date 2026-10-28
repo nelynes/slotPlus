@@ -64,6 +64,9 @@ pub use cart::{
     LYNX_LABEL_Y, WS_CART_H, WS_CART_W, WS_LABEL_H, WS_LABEL_W, WS_LABEL_X, WS_LABEL_Y,
 };
 pub use cart::{
+    nds_label_panel, NDS_CART_H, NDS_CART_W, NDS_LABEL_H, NDS_LABEL_W, NDS_LABEL_X, NDS_LABEL_Y,
+};
+pub use cart::{
     ngp_label_panel, NGP_CART_H, NGP_CART_W, NGP_LABEL_H, NGP_LABEL_W, NGP_LABEL_X, NGP_LABEL_Y,
 };
 pub use cart::{

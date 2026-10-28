@@ -16,7 +16,7 @@ For each mould it writes, into the repository's `assets/`:
     <mould>_board.png     the board a clear cart shows
     <mould>_decal.png     drawn over the shell untinted (contacts, PCB)
 
-usage: python3 assets/src/carts.py [ws|lynx|gg|ngp|tg16 ...]
+usage: python3 assets/src/carts.py [ws|lynx|gg|ngp|tg16|nds ...]
 """
 
 import os
@@ -571,12 +571,64 @@ def turbochip():
     rgba_colour(decal, dalpha).save(os.path.join(ASSETS, "tg16_decal.png"))
 
 
+# --------------------------------------------------------------------------
+# Nintendo DS game card: a small card a touch taller than it is wide,
+# 33 x 35 mm, one bottom corner cut off so it only goes in one way round.
+# The label sits in a shallow recess over most of the face, and a little
+# arrow pressed into the foot shows which way it goes in. The contacts are
+# on the back, so there is no decal.
+
+NDS_LABEL_R = 4  # the label's corner radius, as slot-ui rounds the art
+
+
+def ds_card():
+    w, h = 288, 304
+    c = Canvas(w, h)
+    cut = w * 0.075
+    r = 8
+    # The outline: a rounded card with its bottom left corner cut away.
+    outline = c.layer()
+    d = ImageDraw.Draw(outline)
+    d.rounded_rectangle([0, 0, w * S - 1, h * S - 1], radius=r * S, fill=255)
+    d.polygon([(0, (h - cut) * S), (cut * S, h * S), (-S, h * S + S), (-S, (h - cut) * S)],
+              fill=0)
+    body = f(outline)
+
+    lx0, ly0 = round(w * 0.10), round(h * 0.045)
+    lx1, ly1 = round(w * 0.90), round(h * 0.87)
+    well = f(c.rrect(c.layer(), lx0, ly0, lx1, ly1, NDS_LABEL_R))
+    rim_band = f(c.rrect(c.layer(), w * 0.075, h * 0.025, w * 0.925, h * 0.89, 7))
+
+    arrow = f(c.poly(c.layer(), [(w * 0.465, h * 0.915), (w * 0.535, h * 0.915),
+                                 (w * 0.5, h * 0.965)]))
+
+    height = bevel(body, 3.5) * 2.4
+    # The label's recess has a soft raised lip round it, then drops to the
+    # well; the arrow is pressed into the foot.
+    height += soft(rim_band, 0.8) * 0.8
+    height -= soft(well, 0.6) * 1.6
+    height += soft(arrow, 0.6) * 2.4
+    occl = soft(well, 1.8) * 6 + soft(arrow, 0.7) * 8
+    neutral = shade(height, body, well, seed=71, occlusion=occl, smooth=soft(arrow, 0.4))
+    rgba(neutral, body).save(os.path.join(ASSETS, "nds_neutral.png"))
+    rgba(clear_from(neutral, body, 72), body).save(os.path.join(ASSETS, "nds_clear.png"))
+    rgba(np.full_like(body, 255.0) * body, body).save(os.path.join(ASSETS, "nds_cart.png"))
+    interior(c, body, 73, [(w * 0.5, h * 0.5, 7)]).save(os.path.join(ASSETS, "nds_interior.png"))
+
+    board_region = c.rrect(c.layer(), 8, 8, w - 8, h - 8, 5)
+    board = pcb(c, board_region, 74, [(w * 0.22, h * 0.28, w * 0.62, h * 0.62)])
+    board, balpha = fingers(c, w * 0.1, w * 0.9, 6, h * 0.05, 17, board,
+                            f(board_region))
+    rgba_colour(board, balpha).save(os.path.join(ASSETS, "nds_board.png"))
+
+
 MOULDS = {
     "ws": wonderswan,
     "lynx": lynx,
     "gg": gamegear,
     "ngp": neogeo_pocket,
     "tg16": turbochip,
+    "nds": ds_card,
 }
 
 if __name__ == "__main__":

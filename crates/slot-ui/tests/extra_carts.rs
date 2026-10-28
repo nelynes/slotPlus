@@ -57,6 +57,10 @@ fn tg16() -> Cart {
     cart(Platform::Tg16, "Bonk's Adventure")
 }
 
+fn nds() -> Cart {
+    cart(Platform::Nds, "Mario Kart DS")
+}
+
 fn at(face: &slot_ui::CartFace, x: u32, y: u32) -> [u8; 4] {
     let i = ((y * face.w + x) * 4) as usize;
     [
@@ -81,12 +85,21 @@ fn each_cart_has_its_own_mould() {
     assert_eq!(mould_for(Platform::Ngp), Mould::Ngp);
     assert_eq!(mould_of(&tg16()), Mould::Tg16);
     assert_eq!(mould_for(Platform::Tg16), Mould::Tg16);
+    assert_eq!(mould_of(&nds()), Mould::Nds);
+    assert_eq!(mould_for(Platform::Nds), Mould::Nds);
     assert_eq!(mould_for(Platform::Ws), Mould::Ws);
     assert_eq!(mould_for(Platform::Lynx), Mould::Lynx);
     assert_eq!(mould_for(Platform::Gba), Mould::Gba);
     assert_eq!(
         Mould::EXTRA,
-        [Mould::Ws, Mould::Lynx, Mould::Gg, Mould::Ngp, Mould::Tg16]
+        [
+            Mould::Ws,
+            Mould::Lynx,
+            Mould::Gg,
+            Mould::Ngp,
+            Mould::Tg16,
+            Mould::Nds
+        ]
     );
     for (i, m) in Mould::ALL.iter().enumerate() {
         assert_eq!(m.index(), i);
