@@ -160,3 +160,10 @@ fn the_lynx_has_a_dark_slot_of_its_own() {
     assert!(bespoke_slot(Platform::Lynx).is_some());
     assert!(!bespoke_slot_light(Platform::Lynx), "grey keeps light ink");
 }
+
+#[test]
+fn the_ds_has_the_black_ds_lite_s_slot() {
+    use slot_ui::{bespoke_slot, bespoke_slot_light};
+    assert!(bespoke_slot(Platform::Nds).is_some());
+    assert!(!bespoke_slot_light(Platform::Nds));
+}

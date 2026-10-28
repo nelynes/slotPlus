@@ -126,6 +126,9 @@ const SLOT_NGP_PLUGGED_PNG: &[u8] = include_bytes!("../../../assets/slot_ngp_plu
 const SLOT_TG16_BACK_PNG: &[u8] = include_bytes!("../../../assets/slot_tg16_back.png");
 const SLOT_TG16_FRONT_PNG: &[u8] = include_bytes!("../../../assets/slot_tg16_front.png");
 const SLOT_TG16_PLUGGED_PNG: &[u8] = include_bytes!("../../../assets/slot_tg16_plugged.png");
+const SLOT_NDS_BACK_PNG: &[u8] = include_bytes!("../../../assets/slot_nds_back.png");
+const SLOT_NDS_FRONT_PNG: &[u8] = include_bytes!("../../../assets/slot_nds_front.png");
+const SLOT_NDS_PLUGGED_PNG: &[u8] = include_bytes!("../../../assets/slot_nds_plugged.png");
 const SLOT_LYNX_BACK_PNG: &[u8] = include_bytes!("../../../assets/slot_lynx_back.png");
 const SLOT_LYNX_FRONT_PNG: &[u8] = include_bytes!("../../../assets/slot_lynx_front.png");
 const SLOT_LYNX_PLUGGED_PNG: &[u8] = include_bytes!("../../../assets/slot_lynx_plugged.png");
@@ -433,6 +436,17 @@ pub fn bespoke_slot(platform: slot_store::Platform) -> Option<[&'static [u8]; 3]
                 load(SLOT_LYNX_BACK_PNG, SLOT_W, SLOT_H, &B),
                 load(SLOT_LYNX_FRONT_PNG, SLOT_W, SLOT_H, &F),
                 load(SLOT_LYNX_PLUGGED_PNG, SLOT_W, SLOT_H, &P),
+            ])
+        }
+        // The black DS Lite.
+        Platform::Nds => {
+            static B: OnceLock<Vec<u8>> = OnceLock::new();
+            static F: OnceLock<Vec<u8>> = OnceLock::new();
+            static P: OnceLock<Vec<u8>> = OnceLock::new();
+            Some([
+                load(SLOT_NDS_BACK_PNG, SLOT_W, SLOT_H, &B),
+                load(SLOT_NDS_FRONT_PNG, SLOT_W, SLOT_H, &F),
+                load(SLOT_NDS_PLUGGED_PNG, SLOT_W, SLOT_H, &P),
             ])
         }
         _ => None,
