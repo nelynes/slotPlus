@@ -35,8 +35,9 @@ CARD_W = 168
 NARROW = (CARD_W + 14) / (240 + 14)
 # The scoop round the slot: a shallow dish a little wider than the mouth.
 SCOOP = (238, 482)
-# The hinge's knuckles at either end of the band.
-KNUCKLES = ((0, 70), (650, 720))
+# The hinge's knuckles at either end of the band, kept to the very ends
+# so the battery and clock printed over the band stay clear of them.
+KNUCKLES = ((0, 18), (702, 720))
 CARD = (58, 59, 63)  # the game card's dark grey, as slot-ui's NDS_SHELL
 
 
@@ -125,7 +126,7 @@ def front(base):
     groove, lit = rgb(base, 0.5), rgb(base, 1.25)
 
     # The two square screw recesses on the band, each with its screw.
-    for sx in (142, 578):
+    for sx in (170, 550):
         d.rounded_rectangle([sx - 11, 22, sx + 11, 44], radius=3, fill=rgb(base, 0.72))
         d.line([sx - 10, 44, sx + 10, 44], fill=lit)
         d.line([sx + 11, 23, sx + 11, 43], fill=lit)
@@ -135,7 +136,7 @@ def front(base):
         d.line([sx, 30, sx, 36], fill=rgb(base, 0.4), width=2)
 
     # The mark beside the slot: a little card with an arrow pressing it in.
-    mx, my = 500, 30
+    mx, my = 498, 30
     d.rounded_rectangle([mx, my, mx + 12, my + 13], radius=1, outline=groove, width=2)
     d.line([mx + 1, my + 14, mx + 13, my + 14], fill=lit)
     d.line([mx + 6, my - 9, mx + 6, my - 3], fill=groove, width=2)
