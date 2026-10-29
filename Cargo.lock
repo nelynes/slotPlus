@@ -2277,6 +2277,7 @@ dependencies = [
  "libloading",
  "lz4_flex",
  "png 0.17.16",
+ "slot-achievements",
  "slot-gfx",
  "slot-input",
  "slot-power",

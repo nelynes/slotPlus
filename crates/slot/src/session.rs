@@ -20,6 +20,7 @@ use crate::persist;
 use crate::prefetch::Prefetch;
 
 pub struct Session {
+    achievements: slot_achievements::Service,
     root: PathBuf,
     app: App,
     emu: Option<EmuHandle>,
@@ -53,6 +54,7 @@ impl Session {
 
     pub fn boot_with(root: PathBuf, sink: Box<dyn AudioSink>) -> Self {
         let mut session = Session {
+            achievements: slot_achievements::Service::start(root.clone()),
             app: App::boot(&root),
             root,
             emu: None,
@@ -125,6 +127,26 @@ impl Session {
 
     pub fn app(&self) -> &App {
         &self.app
+    }
+
+    pub fn take_achievement_notice(&self) -> Option<slot_achievements::Notice> {
+        self.achievements.take_notice()
+    }
+
+    pub fn achievement_flush_ready(&self) -> bool {
+        self.achievements.flush_ready()
+    }
+
+    pub fn achievement_sync_progress(&self) -> Option<u8> {
+        self.achievements.sync_progress()
+    }
+
+    pub fn achievement_sync_pending(&self) -> bool {
+        self.achievements.sync_pending()
+    }
+
+    pub fn achievement_sync_status(&self) -> slot_achievements::SyncStatus {
+        self.achievements.sync_status()
     }
 
     pub fn app_mut(&mut self) -> &mut App {
@@ -334,6 +356,10 @@ impl Session {
 
     pub fn update(&mut self, dt: f32) {
         self.bridge_link(|app| app.update(dt));
+        // Background preparation only runs while the shelf sits idle, so it never competes
+        // with booting, opening a game or playing one for the card.
+        let idle = self.opening.is_none() && matches!(self.app.phase(), Phase::Shelf);
+        self.achievements.set_busy(!idle);
         self.sink.hold_open(self.app.headphones());
         if let Some(emu) = &self.emu {
             emu.set_volume(self.app.output_volume());
@@ -645,8 +671,16 @@ impl Session {
         let sav = self.app.card_read("save", loaded.sav);
         let resume = self.app.card_read("resume", loaded.resume);
         let (sav_unread, resume_unread) = (sav.is_none(), resume.is_none());
+        // Tracked only for the Game Boy family, and never over a link cable.
+        let tracked = matches!(loaded.platform, Platform::Gb | Platform::Gbc | Platform::Gba)
+            && loaded.player.is_none();
+        let core = if tracked {
+            self.achievements.wrap(loaded.opened.core)
+        } else {
+            loaded.opened.core
+        };
         let (core, rom, sav, resume) = (
-            loaded.opened.core,
+            core,
             loaded.rom,
             sav.flatten(),
             resume.flatten(),
