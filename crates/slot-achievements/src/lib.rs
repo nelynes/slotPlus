@@ -296,6 +296,7 @@ struct Playing {
     warned_gap: bool,
 }
 
+#[allow(clippy::too_many_arguments)]
 fn run(
     root: PathBuf,
     enabled: Arc<AtomicBool>,

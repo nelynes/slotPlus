@@ -91,6 +91,7 @@ pub enum QuickRow {
     ScFastForwardToggle,
     ScRewind,
     LidOff,
+    HomeWifi,
     Controls,
     ControlsShelf,
     ControlsInGame,
@@ -117,7 +118,7 @@ pub enum QuickRow {
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 103] = [
+    pub const ALL: [QuickRow; 104] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -198,6 +199,7 @@ impl QuickRow {
         QuickRow::ScFastForwardToggle,
         QuickRow::ScRewind,
         QuickRow::LidOff,
+        QuickRow::HomeWifi,
         QuickRow::Controls,
         QuickRow::ControlsShelf,
         QuickRow::ControlsInGame,
@@ -231,7 +233,7 @@ impl QuickRow {
         QuickRow::About,
     ];
 
-    pub const GENERAL: [QuickRow; 8] = [
+    pub const GENERAL: [QuickRow; 9] = [
         QuickRow::Theme,
         QuickRow::Wallpaper,
         QuickRow::WallpaperTint,
@@ -240,6 +242,7 @@ impl QuickRow {
         QuickRow::CartSlot,
         QuickRow::LidOff,
         QuickRow::DateTime,
+        QuickRow::HomeWifi,
     ];
 
     pub const CONTROL_PAGES: [QuickRow; 3] = [
@@ -419,7 +422,8 @@ impl QuickRow {
             | QuickRow::Recents
             | QuickRow::ShowTitles
             | QuickRow::CartSlot
-            | QuickRow::LidOff => &QuickRow::GENERAL,
+            | QuickRow::LidOff
+            | QuickRow::HomeWifi => &QuickRow::GENERAL,
             QuickRow::ControlsShelf | QuickRow::Shortcuts | QuickRow::ControlsInGame => {
                 &QuickRow::CONTROL_PAGES
             }
@@ -564,6 +568,7 @@ impl QuickRow {
             QuickRow::ExitGame => "Exit Game",
             QuickRow::General => "General",
             QuickRow::LidOff => "Lid Power Off",
+            QuickRow::HomeWifi => "Home Wi-Fi",
             QuickRow::Controls => "Controls",
             QuickRow::ControlsShelf => "Shelf",
             QuickRow::ControlsInGame => "In-Game",

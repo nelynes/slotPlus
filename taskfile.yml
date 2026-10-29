@@ -385,8 +385,9 @@ tasks:
         vars:
           CMD: >-
             cargo build --profile device --target-dir target-device
-            -p slot --no-default-features --features device
+            -p slot -p slot-services --no-default-features --features slot/device
       - file target-device/device/slot | grep -q aarch64
+      - file target-device/device/slot-services | grep -q aarch64
       - 'echo "built target-device/device/slot"'
 
   bench:device:
@@ -412,6 +413,8 @@ tasks:
           CMD: ./target-device/device/slot --init-root {{.OUT}}
       - cp target-device/device/slot {{.OUT}}/System/slot
       - cp -R card/System/* {{.OUT}}/System/
+      - cp target-device/device/slot-services {{.OUT}}/System/
+      - cp network/wifi.toml.example crates/slot-achievements/retroachievements.toml.example {{.OUT}}/Config/
       - for d in Bezels Labels Wallpapers; do cp card/$d/README.txt {{.OUT}}/$d/; done
       - file vendor/mgba_libretro.so | grep -q aarch64
       - file vendor/gpsp_libretro.so | grep -q aarch64

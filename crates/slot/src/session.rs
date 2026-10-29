@@ -672,19 +672,16 @@ impl Session {
         let resume = self.app.card_read("resume", loaded.resume);
         let (sav_unread, resume_unread) = (sav.is_none(), resume.is_none());
         // Tracked only for the Game Boy family, and never over a link cable.
-        let tracked = matches!(loaded.platform, Platform::Gb | Platform::Gbc | Platform::Gba)
-            && loaded.player.is_none();
+        let tracked = matches!(
+            loaded.platform,
+            Platform::Gb | Platform::Gbc | Platform::Gba
+        ) && loaded.player.is_none();
         let core = if tracked {
             self.achievements.wrap(loaded.opened.core)
         } else {
             loaded.opened.core
         };
-        let (core, rom, sav, resume) = (
-            core,
-            loaded.rom,
-            sav.flatten(),
-            resume.flatten(),
-        );
+        let (core, rom, sav, resume) = (core, loaded.rom, sav.flatten(), resume.flatten());
         let emu = match loaded.player.filter(|_| loaded.platform == Platform::Gba) {
             Some(p) => EmuHandle::spawn_linked(core, rom, ring, sav, resume, p),
             None => EmuHandle::spawn(core, rom, ring, sav, resume),

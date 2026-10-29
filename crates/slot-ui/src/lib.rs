@@ -63,7 +63,7 @@ pub use clock::{
     ClockScreen, Part,
 };
 pub use draw::{Canvas, Draw, TexId, OUT_H, OUT_W};
-pub use footer::{draw_corners, draw_footer, Printed, FOOTER_Y};
+pub use footer::{draw_corners, draw_footer, draw_home_wifi, Printed, FOOTER_Y};
 pub use hud::{
     badge_at, ff_badge, footer_ink, FfState, Hud, HudKind, LinkBadge, Millis, ALARM_BAND_H,
     HUD_ICON_PX, HUD_INK, HUD_MS, LINK_HOST_INK, LINK_JOIN_INK, PLATE_H,

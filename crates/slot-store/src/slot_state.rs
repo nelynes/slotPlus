@@ -620,7 +620,10 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     text.push_str(&format!("show_recents={}\n", s.show_recents as u8));
     text.push_str(&format!("show_titles={}\n", s.show_titles as u8));
     text.push_str(&format!("bespoke_slot={}\n", s.bespoke_slot as u8));
-    text.push_str(&format!("home_wifi_enabled={}\n", s.home_wifi_enabled as u8));
+    text.push_str(&format!(
+        "home_wifi_enabled={}\n",
+        s.home_wifi_enabled as u8
+    ));
     text.push_str(&format!("left_stick_dpad={}\n", s.left_stick_dpad as u8));
     text.push_str(&format!("auto_load={}\n", s.auto_load as u8));
     if let Some(min) = s.lid_off_min {

@@ -95,3 +95,8 @@ pub fn draw_gauge(
         });
     }
 }
+
+/// The width the footer's bolt, gauge and percentage take.
+pub(crate) fn cluster_width(percent: Printed) -> f32 {
+    BOLT_W + BOLT_GAP + GAUGE_W + NUB_W + GAP + percent.w as f32
+}

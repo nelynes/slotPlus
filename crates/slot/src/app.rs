@@ -431,6 +431,8 @@ pub struct App {
     battery_percent: slot_ui::Printed,
     bolt: Option<TexId>,
     hud_bolt: Option<TexId>,
+    /// The Home Wi-Fi mark in each theme's ink, dark first.
+    wifi: Option<[TexId; 2]>,
     slot_faces: Option<(TexId, TexId)>,
     /// The systems with a cart slot of their own: back, front and plugged.
     /// Each system's own cart slot, and whether its plastic is pale.
@@ -543,6 +545,7 @@ impl App {
         let card_writes = state_writer.card_writes();
         App {
             radio: radio_jobs(),
+            wifi: None,
             state_writer,
             shot_writer: crate::shot_writer::ShotWriter::spawn(card_writes.clone()),
             shot_wanted: false,
@@ -711,6 +714,8 @@ impl App {
         app.controls = read_controls(root);
         app.restock_recents();
         app.restock_favorites();
+        // Starts nothing while Home Wi-Fi is Off.
+        app.radio.ask(RadioJob::Home(app.state.home_wifi_enabled));
         if let Some((at, i)) = app.remembered_seat() {
             app.shelf_at = at;
             app.shelves[at].1.select(i);
@@ -1252,6 +1257,7 @@ impl App {
                 WallpaperTint::Medium => QuickValue::Medium,
                 WallpaperTint::High => QuickValue::High,
             }),
+            QuickRow::HomeWifi => Some(QuickValue::flag(self.state.home_wifi_enabled)),
             QuickRow::LidOff => QuickValue::LID_OFF
                 .into_iter()
                 .find(|v| v.minutes() == Some(self.lid_off_min())),
@@ -1677,6 +1683,22 @@ impl App {
 
     pub fn set_bolt_face(&mut self, bolt: TexId) {
         self.bolt = Some(bolt);
+    }
+
+    pub fn set_wifi_faces(&mut self, faces: [TexId; 2]) {
+        self.wifi = Some(faces);
+    }
+
+    /// The home network is joined, for anything that needs the internet.
+    pub fn home_connected(&self) -> bool {
+        self.state.home_wifi_enabled && self.radio.home_connected()
+    }
+
+    fn draw_home_wifi(&self, out: &mut Vec<Draw>) {
+        if self.home_connected() {
+            let face = self.wifi.map(|f| f[usize::from(self.band_light())]);
+            slot_ui::draw_home_wifi(self.battery, self.battery_percent, face, out);
+        }
     }
 
     pub fn set_hud_bolt_face(&mut self, bolt: TexId) {
@@ -3312,6 +3334,7 @@ impl App {
             | QuickRow::ScFastForward
             | QuickRow::ScFastForwardToggle
             | QuickRow::ScRewind
+            | QuickRow::HomeWifi
             | QuickRow::LidOff => {}
         }
     }
@@ -3409,6 +3432,12 @@ impl App {
         }
         if row == QuickRow::CartSlot {
             self.state.bespoke_slot = !self.state.bespoke_slot;
+            self.persist();
+            return;
+        }
+        if row == QuickRow::HomeWifi {
+            self.state.home_wifi_enabled = !self.state.home_wifi_enabled;
+            self.radio.ask(RadioJob::Home(self.state.home_wifi_enabled));
             self.persist();
             return;
         }
@@ -3586,6 +3615,7 @@ impl App {
             | QuickRow::Controls
             | QuickRow::ControlsShelf
             | QuickRow::ControlsInGame
+            | QuickRow::HomeWifi
             | QuickRow::LidOff => return,
         }
         self.persist();
@@ -4583,6 +4613,7 @@ impl App {
                     footer_ink(self.band_light()),
                     out,
                 );
+                self.draw_home_wifi(out);
             }
             Phase::About => {
                 slot_ui::draw_menu_ground(self.canvas(), self.menu_ground(), out);
@@ -4808,6 +4839,7 @@ impl App {
             footer_ink(self.band_light()),
             out,
         );
+        self.draw_home_wifi(out);
         shift_down(&mut out[start..], self.menu_footer_offset());
     }
 

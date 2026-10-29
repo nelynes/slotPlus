@@ -355,6 +355,11 @@ impl Frontend {
             compositor.create_texture(light_bolt.w, light_bolt.h, &light_bolt.rgba),
         ];
         self.session.app_mut().set_bolt_faces(bolt);
+        let wifi = [false, true].map(|light| {
+            let face = icon_face(Icon::Wifi, 18.0, footer_ink(light));
+            compositor.create_texture(face.w, face.h, &face.rgba)
+        });
+        self.session.app_mut().set_wifi_faces(wifi);
         self.look = Some(ShelfLook {
             slot,
             plugged,
