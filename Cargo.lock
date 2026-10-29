@@ -2272,6 +2272,7 @@ name = "slot"
 version = "0.1.0"
 dependencies = [
  "cpal",
+ "fontdue",
  "gilrs",
  "libc",
  "libloading",

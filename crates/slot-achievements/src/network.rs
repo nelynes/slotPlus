@@ -323,7 +323,7 @@ pub(crate) fn run(
                         let cache = dir.join(format!("{}.json", game.hash));
                         if let Ok((data, ids)) = storage::read::<(Game, BTreeSet<u32>)>(&cache) {
                             if data.supported_console() {
-                                badges.enqueue(&data);
+                                badges.enqueue_first(&data);
                                 let _ = prepared.send(Prepared {
                                     generation: game.generation,
                                     hash: game.hash.clone(),
@@ -470,7 +470,7 @@ pub(crate) fn run(
                         status
                             .cached
                             .fetch_add(1, std::sync::atomic::Ordering::AcqRel);
-                        badges.enqueue(&data);
+                        badges.enqueue_first(&data);
                         ping(&mut http, auth, &status, game, &data)?;
                         let _ = prepared.send(Prepared {
                             generation: game.generation,
@@ -521,7 +521,7 @@ pub(crate) fn run(
                     let _ = notices.send(Notice::status(0, "Offline achievement cache ready"));
                 }
             }
-            if settled {
+            if settled || badges.urgent() {
                 badges.step(&mut http);
             }
             deferred_error.map_or(Ok(()), Err)

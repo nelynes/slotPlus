@@ -9,10 +9,21 @@ use slot_ui::{text, CartFace, SyncIndicator};
 use crate::app::Phase;
 use crate::session::Session;
 
-const WIDTH: u32 = 360;
-const HEIGHT: u32 = 44;
+// slotPlus: drawn like Slot's own HUD plate: a dark translucent band, the label face in
+// capitals with Slot's tracking, the title on one line and the description under it.
+const WIDTH: u32 = 460;
+const HEIGHT: u32 = 56;
 const DURATION: Duration = Duration::from_millis(1800);
-const BADGE_PX: u32 = 32;
+const BADGE_PX: u32 = 40;
+const PAD: u32 = 8;
+const TEXT_X: u32 = PAD + BADGE_PX + 12;
+const TEXT_W: u32 = WIDTH - TEXT_X - 14;
+const TITLE_PX: f32 = 16.0;
+const DETAIL_PX: f32 = 12.0;
+/// Slot's HUD plate, black at 72%.
+const PLATE: [u8; 4] = [0, 0, 0, 184];
+const TITLE_INK: [u8; 3] = slot_ui::HUD_INK;
+const DETAIL_INK: [u8; 3] = [0xb4, 0xb1, 0xae];
 
 pub(crate) struct Notifications {
     requests: Sender<Request>,
@@ -250,7 +261,7 @@ fn draw_banner(canvas: Canvas, tex: TexId, badge: TexId, elapsed: f32, draws: &m
     let scale = 1.0 + 0.12 * (std::f32::consts::PI * pop).sin();
     let size = BADGE_PX as f32 * scale;
     draws.push(Draw::Tex {
-        x: x + 8.0 + (BADGE_PX as f32 - size) / 2.0,
+        x: x + PAD as f32 + (BADGE_PX as f32 - size) / 2.0,
         y: y + (HEIGHT as f32 - size) / 2.0,
         w: size,
         h: size,
@@ -264,16 +275,30 @@ fn badge_face(notice: &Notice) -> CartFace {
         .badge
         .as_deref()
         .and_then(slot_achievements::load_badge)
+        .filter(|i| i.width > 0 && i.height > 0)
     else {
         return slot_ui::achievement_icon_face(BADGE_PX);
     };
+    // Badges are 64 px; each output pixel averages the source pixels it covers.
     let mut rgba = vec![0; (BADGE_PX * BADGE_PX * 4) as usize];
     for y in 0..BADGE_PX {
+        let (y0, y1) = span(y, image.height);
         for x in 0..BADGE_PX {
-            let src = (((y * image.height / BADGE_PX) * image.width + x * image.width / BADGE_PX)
-                * 4) as usize;
+            let (x0, x1) = span(x, image.width);
+            let mut sum = [0u32; 4];
+            for sy in y0..y1 {
+                for sx in x0..x1 {
+                    let at = ((sy * image.width + sx) * 4) as usize;
+                    for (c, total) in sum.iter_mut().enumerate() {
+                        *total += image.rgba[at + c] as u32;
+                    }
+                }
+            }
+            let n = ((y1 - y0) * (x1 - x0)).max(1);
             let dst = ((y * BADGE_PX + x) * 4) as usize;
-            rgba[dst..dst + 4].copy_from_slice(&image.rgba[src..src + 4]);
+            for (c, total) in sum.iter().enumerate() {
+                rgba[dst + c] = (total / n) as u8;
+            }
         }
     }
     CartFace {
@@ -283,34 +308,131 @@ fn badge_face(notice: &Notice) -> CartFace {
     }
 }
 
+/// The source rows (or columns) under output pixel `i` of `BADGE_PX`.
+fn span(i: u32, size: u32) -> (u32, u32) {
+    let a = i * size / BADGE_PX;
+    let b = ((i + 1) * size).div_ceil(BADGE_PX).min(size);
+    (a, b.max(a + 1).min(size))
+}
+
+/// "Title (+5)" as the service words it: the name and its points.
+fn split_points(title: &str) -> (&str, &str) {
+    match title.rfind(" (+") {
+        Some(at) if title.ends_with(')') => (&title[..at], &title[at..]),
+        _ => (title, ""),
+    }
+}
+
+fn tracking(px: f32) -> f32 {
+    (px * 0.10).round()
+}
+
+/// `text` in capitals on one line no wider than `max_w`, cut short with "..." when it runs
+/// over. `keep` (the points) always stays whole at the end.
+fn one_line(font: &fontdue::Font, text: &str, keep: &str, px: f32, max_w: f32) -> String {
+    let t = tracking(px);
+    let text = text
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_uppercase();
+    let whole = format!("{text}{keep}");
+    if text::line_width(font, &whole, px, t) <= max_w {
+        return whole;
+    }
+    let mut chars: Vec<char> = text.chars().collect();
+    while !chars.is_empty() {
+        chars.pop();
+        let cut: String = chars.iter().collect();
+        let line = format!("{}...{keep}", cut.trim_end());
+        if text::line_width(font, &line, px, t) <= max_w {
+            return line;
+        }
+    }
+    keep.trim_start().to_string()
+}
+
+/// Draw `line` left-aligned at `x` with its baseline at `baseline`.
+#[allow(clippy::too_many_arguments)]
+fn print(
+    rgba: &mut [u8],
+    w: u32,
+    h: u32,
+    font: &fontdue::Font,
+    line: &str,
+    px: f32,
+    x: f32,
+    baseline: f32,
+    ink: [u8; 3],
+) {
+    let t = tracking(px);
+    let mut pen = x;
+    for ch in line.chars() {
+        let (m, cov) = font.rasterize(ch, px);
+        let gx = (pen + m.xmin as f32).round() as i32;
+        let gy = (baseline - (m.height as f32 + m.ymin as f32)).round() as i32;
+        for row in 0..m.height {
+            for col in 0..m.width {
+                let (dx, dy) = (gx + col as i32, gy + row as i32);
+                if dx < 0 || dy < 0 || dx >= w as i32 || dy >= h as i32 {
+                    continue;
+                }
+                let a = cov[row * m.width + col] as u32;
+                if a == 0 {
+                    continue;
+                }
+                let at = ((dy as u32 * w + dx as u32) * 4) as usize;
+                for c in 0..3 {
+                    let under = rgba[at + c] as u32;
+                    rgba[at + c] = ((ink[c] as u32 * a + under * (255 - a)) / 255) as u8;
+                }
+                let under = rgba[at + 3] as u32;
+                rgba[at + 3] = (a + under * (255 - a) / 255).min(255) as u8;
+            }
+        }
+        pen += m.advance_width + t;
+    }
+}
+
 fn face(notice: &Notice) -> CartFace {
     let mut rgba = vec![0; (WIDTH * HEIGHT * 4) as usize];
     for pixel in rgba.chunks_exact_mut(4) {
-        pixel.copy_from_slice(&[18, 18, 18, 235]);
+        pixel.copy_from_slice(&PLATE);
     }
     if let Some(font) = text::label_font() {
-        const TEXT_X: u32 = 48;
-        const TEXT_W: u32 = WIDTH - TEXT_X - 12;
-        let mut title_rgba = vec![0; (TEXT_W * HEIGHT * 4) as usize];
-        for pixel in title_rgba.chunks_exact_mut(4) {
-            pixel.copy_from_slice(&[18, 18, 18, 235]);
-        }
-        let title: String = notice.title.chars().take(180).collect();
-        let layout = text::fit_box(
+        let (name, points) = split_points(&notice.title);
+        let title = one_line(font, name, points, TITLE_PX, TEXT_W as f32);
+        let detail = one_line(font, &notice.detail, "", DETAIL_PX, TEXT_W as f32);
+        let ascent = |px| {
+            font.horizontal_line_metrics(px)
+                .map_or(px * 0.8, |m| m.ascent)
+        };
+        // Cap heights only: the label face is all capitals, so no descenders to allow for.
+        let (title_cap, detail_cap) = (ascent(TITLE_PX) * 0.72, ascent(DETAIL_PX) * 0.72);
+        let gap = 7.0;
+        let block = if detail.is_empty() {
+            title_cap
+        } else {
+            title_cap + gap + detail_cap
+        };
+        let top = (HEIGHT as f32 - block) / 2.0;
+        let x = TEXT_X as f32;
+        print(
+            &mut rgba,
+            WIDTH,
+            HEIGHT,
             font,
             &title,
-            TEXT_W as f32,
-            (HEIGHT - 8) as f32,
-            2,
-            16.0,
-            12.0,
+            TITLE_PX,
+            x,
+            top + title_cap,
+            TITLE_INK,
         );
-        text::draw_centred(&mut title_rgba, TEXT_W, HEIGHT, &layout, [245, 245, 245]);
-        for y in 0..HEIGHT as usize {
-            let dst = (y * WIDTH as usize + TEXT_X as usize) * 4;
-            let src = y * TEXT_W as usize * 4;
-            rgba[dst..dst + TEXT_W as usize * 4]
-                .copy_from_slice(&title_rgba[src..src + TEXT_W as usize * 4]);
+        if !detail.is_empty() {
+            let baseline = top + title_cap + gap + detail_cap;
+            print(
+                &mut rgba, WIDTH, HEIGHT, font, &detail, DETAIL_PX, x, baseline, DETAIL_INK,
+            );
         }
     }
     CartFace {

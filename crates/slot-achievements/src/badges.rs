@@ -74,6 +74,8 @@ pub(crate) struct Queue {
     names: BTreeSet<String>,
     known: BTreeSet<String>,
     pending: VecDeque<String>,
+    // slotPlus: the game in play's badges, fetched even while slot is busy.
+    urgent: BTreeSet<String>,
     retry: Instant,
     pub waiting: bool,
 }
@@ -85,6 +87,7 @@ impl Queue {
             names: BTreeSet::new(),
             known: BTreeSet::new(),
             pending: VecDeque::new(),
+            urgent: BTreeSet::new(),
             retry: Instant::now(),
             waiting: false,
         };
@@ -106,6 +109,35 @@ impl Queue {
                 self.pending.push_back(achievement.badge.clone());
             }
         }
+    }
+
+    /// The game in play: its badges go first, and are fetched without waiting for the shelf
+    /// to settle, so an unlock shows its own badge rather than the trophy.
+    pub fn enqueue_first(&mut self, game: &Game) {
+        self.urgent.clear();
+        for achievement in &game.achievements {
+            if achievement.flags != 3 {
+                continue;
+            }
+            let Some(path) = path(&self.dir, &achievement.badge) else {
+                continue;
+            };
+            self.known.insert(achievement.badge.clone());
+            if load_badge(&path).is_some() {
+                continue;
+            }
+            self.names.insert(achievement.badge.clone());
+            self.pending.retain(|n| *n != achievement.badge);
+            self.pending.push_front(achievement.badge.clone());
+            self.urgent.insert(achievement.badge.clone());
+        }
+    }
+
+    /// The next badge to fetch belongs to the game in play.
+    pub fn urgent(&self) -> bool {
+        self.pending
+            .front()
+            .is_some_and(|n| self.urgent.contains(n))
     }
 
     pub fn scan(&mut self) {
@@ -156,6 +188,7 @@ impl Queue {
         };
         if result.is_ok() {
             self.names.remove(&name);
+            self.urgent.remove(&name);
             if self.pending.is_empty() {
                 self.waiting = false;
             }
