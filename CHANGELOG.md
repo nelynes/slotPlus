@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.11.0-plus2.4](https://github.com/nelynes/slotPlus/releases/tag/v1.11.0-plus2.4)
+
+slotPlus brought up to Slot 1.11.0: a 1.5x fast forward speed, a Fast Forward Toggle shortcut, no more buzz in headphones after the sound stops, and the CPU left at its full fixed speed again. See [Slot's 1.11.0 notes](https://github.com/BrandonKowalski/slot/releases/tag/v1.11.0).
+
+To upgrade, replace the `System` folder on your card with the one from the zip.
+
+- Fast Forward Toggle is handy in slotPlusUltra's DS games, where R2, the Fast Forward shortcut's own button, is the stylus: bind the toggle to a button combo on the Shortcuts page.
+
 ## [1.10.0-plus2.4](https://github.com/nelynes/slotPlus/releases/tag/v1.10.0-plus2.4)
 
 To upgrade, replace the `System` folder on your card with the one from the zip.
@@ -45,6 +53,13 @@ To upgrade, replace the `System` folder on your card with the one from the zip.
 - Fast Forward can be turned off, save states are smaller, and holding Up or Down on the shelf to jump a letter at a time no longer empties it.
 - The shelves follow Slot's new order: Game Boy Advance, Game Boy Color, Game Boy, then WonderSwan and Atari Lynx (and the Game Gear, NeoGeo Pocket and TurboGrafx-16 in slotPlusUltra).
 - Card repair no longer hangs on a badly damaged card, and the BaseOS startup sound plays again.
+
+## [1.11.0](https://github.com/BrandonKowalski/slot/releases/tag/v1.11.0)
+
+- Headphones no longer buzz a few seconds after the sound stops. slot keeps the audio device open while headphones are in. ([#163](https://github.com/BrandonKowalski/slot/issues/163))
+- slot leaves the CPU at its full fixed speed again, as it did in 1.9.0. `schedutil` will have to be revisited. ([#162](https://github.com/BrandonKowalski/slot/issues/162))
+- Fast Forward Toggle is a new shortcut. One press turns fast-forward on and the next turns it off. It's unbound by default. ([#164](https://github.com/BrandonKowalski/slot/issues/164))
+- Fast Forward has a 1.5x speed, for games where 2x is too fast. ([#161](https://github.com/BrandonKowalski/slot/issues/161))
 
 ## [1.10.0](https://github.com/BrandonKowalski/slot/releases/tag/v1.10.0)
 

@@ -88,6 +88,7 @@ pub enum QuickRow {
     ScShaderNext,
     ScShaderBack,
     ScFastForward,
+    ScFastForwardToggle,
     ScRewind,
     LidOff,
     Controls,
@@ -116,7 +117,7 @@ pub enum QuickRow {
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 102] = [
+    pub const ALL: [QuickRow; 103] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -194,6 +195,7 @@ impl QuickRow {
         QuickRow::ScShaderNext,
         QuickRow::ScShaderBack,
         QuickRow::ScFastForward,
+        QuickRow::ScFastForwardToggle,
         QuickRow::ScRewind,
         QuickRow::LidOff,
         QuickRow::Controls,
@@ -267,7 +269,7 @@ impl QuickRow {
         QuickRow::GameTurboB,
     ];
 
-    pub const SHORTCUTS: [QuickRow; 14] = [
+    pub const SHORTCUTS: [QuickRow; 15] = [
         QuickRow::ScSave,
         QuickRow::ScLoad,
         QuickRow::ScScreenshot,
@@ -281,6 +283,7 @@ impl QuickRow {
         QuickRow::ScShaderNext,
         QuickRow::ScShaderBack,
         QuickRow::ScFastForward,
+        QuickRow::ScFastForwardToggle,
         QuickRow::ScRewind,
     ];
 
@@ -591,6 +594,7 @@ impl QuickRow {
             | QuickRow::ScShaderNext
             | QuickRow::ScShaderBack
             | QuickRow::ScFastForward
+            | QuickRow::ScFastForwardToggle
             | QuickRow::ScRewind => self.shortcut().map_or("", Shortcut::label),
             QuickRow::ShelfPrev | QuickRow::ShelfNext | QuickRow::ShelfFavorite => {
                 self.carousel_action().map_or("", CarouselAction::label)
@@ -688,6 +692,7 @@ impl QuickRow {
             QuickRow::ScShaderNext => Shortcut::ShaderNext,
             QuickRow::ScShaderBack => Shortcut::ShaderBack,
             QuickRow::ScFastForward => Shortcut::FastForward,
+            QuickRow::ScFastForwardToggle => Shortcut::FastForwardToggle,
             QuickRow::ScRewind => Shortcut::Rewind,
             _ => return None,
         })
@@ -721,6 +726,7 @@ impl QuickRow {
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum QuickValue {
+    Speed1_5,
     Speed2,
     Speed3,
     Speed4,
@@ -767,7 +773,8 @@ pub enum QuickValue {
 }
 
 impl QuickValue {
-    pub const ALL: [QuickValue; 43] = [
+    pub const ALL: [QuickValue; 44] = [
+        QuickValue::Speed1_5,
         QuickValue::Speed2,
         QuickValue::Speed3,
         QuickValue::Speed4,
@@ -841,6 +848,7 @@ impl QuickValue {
 
     pub fn text(self) -> &'static str {
         match self {
+            QuickValue::Speed1_5 => "1.5×",
             QuickValue::Speed2 => "2×",
             QuickValue::Speed3 => "3×",
             QuickValue::Speed4 => "4×",
@@ -891,13 +899,14 @@ impl QuickValue {
         QuickValue::LEVELS[usize::from(n).min(QuickValue::LEVELS.len() - 1)]
     }
 
-    pub fn speed(frames: u8) -> Option<QuickValue> {
-        match frames {
+    pub fn speed(quarters: u8) -> Option<QuickValue> {
+        match quarters {
             0 => Some(QuickValue::Off),
-            2 => Some(QuickValue::Speed2),
-            3 => Some(QuickValue::Speed3),
-            4 => Some(QuickValue::Speed4),
-            6 => Some(QuickValue::Speed6),
+            6 => Some(QuickValue::Speed1_5),
+            8 => Some(QuickValue::Speed2),
+            12 => Some(QuickValue::Speed3),
+            16 => Some(QuickValue::Speed4),
+            24 => Some(QuickValue::Speed6),
             _ => None,
         }
     }

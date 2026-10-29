@@ -132,6 +132,7 @@ impl Alsa {
 
 pub struct AlsaSink {
     ring: Arc<Ring>,
+    held: Arc<AtomicBool>,
     device: Option<Device>,
 }
 
@@ -144,6 +145,7 @@ impl AlsaSink {
     pub fn new() -> Self {
         AlsaSink {
             ring: Arc::new(Ring::new(0)),
+            held: Arc::new(AtomicBool::new(false)),
             device: None,
         }
     }
@@ -167,13 +169,14 @@ impl AudioSink for AlsaSink {
         let ring = self.ring.clone();
         let stop = Arc::new(AtomicBool::new(false));
         let flag = stop.clone();
+        let held = self.held.clone();
         let (ready_tx, ready_rx) = mpsc::channel();
         let join = std::thread::Builder::new()
             .name("slot-audio".into())
             .spawn(move || match play(&ring, sample_rate) {
                 Ok(mut device) => {
                     let _ = ready_tx.send(Ok(()));
-                    device.run(&ring, &flag);
+                    device.run(&ring, &flag, &held);
                 }
                 Err(e) => {
                     let _ = ready_tx.send(Err(e));
@@ -206,6 +209,10 @@ impl AudioSink for AlsaSink {
             let _ = d.join.join();
         }
     }
+
+    fn hold_open(&self, held: bool) {
+        self.held.store(held, Ordering::Relaxed);
+    }
 }
 
 struct Playback {
@@ -227,7 +234,7 @@ fn play(ring: &Arc<Ring>, sample_rate: u32) -> Result<Playback, AudioError> {
 }
 
 impl Playback {
-    fn run(&mut self, ring: &Ring, stop: &AtomicBool) {
+    fn run(&mut self, ring: &Ring, stop: &AtomicBool, held: &AtomicBool) {
         let mut buf = vec![0i16; PERIOD_FRAMES * CHANNELS as usize];
         let span = Duration::from_secs_f64(PERIOD_FRAMES as f64 / self.rate as f64);
         let mut silence = Silence::quiet(RELEASE_AFTER);
@@ -236,7 +243,7 @@ impl Playback {
             ring.fill(&mut buf);
             let hold = silence.hear(&buf, span);
             match (self.pcm, hold) {
-                (Some(_), false) => {
+                (Some(_), false) if !held.load(Ordering::Relaxed) => {
                     self.release();
                     eprintln!("slot: audio released after silence");
                 }
