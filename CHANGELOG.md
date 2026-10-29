@@ -11,7 +11,7 @@ To upgrade, replace the `System` folder on your card with the one from the zip.
 - **DS Lite bezels** for every layout, bundled and on by default. Your own can be one PNG, or a folder with a PNG for each layout.
 - In heavy 3D scenes, DS games skip drawing the odd frame rather than slow down, and the CPU runs at full clock while one plays. DS games have no rewind, since their states are about 6 MB each.
 
-See the [systems guide](SYSTEMS.md#nintendo-ds) for the controls, layouts and label art size.
+See the [systems guide](https://github.com/nelynes/slotPlus/blob/main/SYSTEMS.md#nintendo-ds) for the controls, layouts and label art size.
 
 ## [1.10.0-plus2.3](https://github.com/nelynes/slotPlus/releases/tag/v1.10.0-plus2.3)
 
