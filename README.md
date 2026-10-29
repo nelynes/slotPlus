@@ -83,7 +83,7 @@ Release notes can be found in the [changelog](CHANGELOG.md).
 </p>
 
 <p align="center">
-<img src=".github/resources/screenshots/ds-shelf.gif" width="48%" alt="slotPlusUltra: moving from the TurboGrafx-16 shelf to the Nintendo DS shelf, scrolling its game cards, and putting Mario Kart DS into the silver DS Lite's card slot">
+<img src=".github/resources/screenshots/ds-layouts.gif" width="48%" alt="slotPlusUltra on the RG SP: scrolling the Nintendo DS shelf, putting Mario Kart DS in and resuming mid-race, swapping the screens with L2, then stepping through Full Screen, Side by Side, Picture in Picture, Both Screens and One Screen with SELECT and L2">
 <img src=".github/resources/screenshots/cart-slot.gif" width="48%" alt="slotPlusUltra: setting Cart Slot to Bespoke in Settings, then scrolling every shelf: the Game Boy shelves keep Slot's slot, and the WonderSwan, Lynx, Game Gear, NeoGeo Pocket and TurboGrafx-16 shelves each show the back of their own handheld">
 </p>
 

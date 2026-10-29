@@ -8,6 +8,7 @@ To upgrade, replace the `System` folder on your card with the one from the zip.
 - **Screen layouts:** L2 swaps the main screen, and SELECT + L2 steps through Both Screens, One Screen, Full Screen, Side by Side and Picture in Picture. Each game remembers its own.
 - **A stylus:** hold R2 and the D-pad moves a cursor over the bottom screen, and A touches.
 - **The DS game card** has its own cart on the shelf, and with Cart Slot set to Bespoke the slot is the back of a silver DS Lite.
+- **DS Lite bezels** for every layout, bundled and on by default. Your own can be one PNG, or a folder with a PNG for each layout.
 - In heavy 3D scenes, DS games skip drawing the odd frame rather than slow down, and the CPU runs at full clock while one plays. DS games have no rewind, since their states are about 6 MB each.
 
 See the [systems guide](SYSTEMS.md#nintendo-ds) for the controls, layouts and label art size.
