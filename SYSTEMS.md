@@ -2,10 +2,11 @@
 
 Everything slotPlus adds on top of Slot's Game Boy Advance, Game Boy and Game Boy Color, one system at a time: where the games go, how big label art should be, what the Screen menu offers, how saves work, and the controls.
 
-slotPlus comes in two versions. **slotPlus** (`slot-plus.zip`) adds the WonderSwan and Atari Lynx. **slotPlusUltra** (`slot-plusultra.zip`) adds those two plus the TurboGrafx-16, NeoGeo Pocket and Game Gear. Each system below says which version has it.
+slotPlus comes in two versions. **slotPlus** (`slot-plus.zip`) adds the WonderSwan and Atari Lynx. **slotPlusUltra** (`slot-plusultra.zip`) adds those two plus the Nintendo DS, TurboGrafx-16, NeoGeo Pocket and Game Gear. Each system below says which version has it.
 
 For the Game Boy systems, and everything else Slot does, see the [Slot user guide](https://slot-cfw.fyi). For playing on a TV over HDMI, see [Playing on a TV](README.md#playing-on-a-tv) in the README.
 
+- [Nintendo DS](#nintendo-ds)
 - [TurboGrafx-16 / TurboExpress](#turbografx-16--turboexpress)
 - [NeoGeo Pocket / NeoGeo Pocket Color](#neogeo-pocket--neogeo-pocket-color)
 - [Sega Game Gear](#sega-game-gear)
@@ -19,9 +20,59 @@ For the Game Boy systems, and everything else Slot does, see the [Slot user guid
 - **Controls:** the In-Game controls page in Settings covers every system, so any button can be moved. The tables below show where each one starts.
 - **Screen menu:** each system has its own page under Screen, with its own Shader and Bezel, beside General for Brightness and Blue Light. SELECT + B / A in a game steps through that system's shaders.
 - **Bezels:** your own PNGs go in `Bezels/<folder>/`, the size of the screen with the screen area transparent: 720x480, or 640x480 on a 4:3 handheld such as the RG 35XXSP, where it shows pixel for pixel and the SP frame is offered too. A bezel shows at actual size, not when the picture is stretched.
-- **Stretch:** on the TurboGrafx-16, Game Gear and NeoGeo Pocket, L1 stretches the picture to fill the screen and R1 gives back actual size. On the Lynx and WonderSwan, L1 and R1 are the game's own buttons, so a game is set to stretch with a line in `Config/video_mode.txt` (`Game Name (USA) = stretch`). Each game remembers its choice. In slotPlusUltra, on a 4:3 handheld the stretched picture fills the whole panel.
+- **Stretch:** on the TurboGrafx-16, Game Gear and NeoGeo Pocket, L1 stretches the picture to fill the screen and R1 gives back actual size. On the Lynx and WonderSwan, L1 and R1 are the game's own buttons, so a game is set to stretch with a line in `Config/video_mode.txt` (`Game Name (USA) = stretch`). Each game remembers its choice. In slotPlusUltra, on a 4:3 handheld the stretched picture fills the whole panel. The Nintendo DS has screen layouts instead (see below).
 - **Cart shells:** each system's carts have a default shell colour. Set `Config/cart_shell.txt` to give a single game a different one.
 - **Save states and resume** work as they do for every other system.
+
+---
+
+## Nintendo DS
+
+| | |
+|---|---|
+| **Version** | slotPlusUltra only |
+| **Games** | `.nds` in `Games/NDS/`. |
+| **BIOS** | Not needed: DSperate boots games straight in with its own built-in BIOS. If you have your own dumps, `bios7.bin`, `bios9.bin` and `firmware.bin` in `BIOS/` are used instead. |
+| **Core** | DSperate, with its recompiler on. |
+| **Label art** | `Labels/NDS/`, about 230x250 px (0.92:1), the upright shape of a DS card's label. Without art, the card shows the game's name. |
+| **Picture** | The two 256x192 screens, in the layout you pick (see below). |
+| **Shaders** | Off, LCD3x, Grid, Dot. A shader shows where the main screen is drawn at 2x or more. Both Screens, at 1.25x, and the small second screen are drawn plain. |
+| **Bezel** | DS Lite, bundled and the default: a bezel for each layout, by nelynes. Or your own in `Bezels/NDS/`: a single 720x480 PNG drawn over every layout, or a bezel set, a folder with one PNG for each layout (`both-screens.png`, `one-screen.png`, `full-screen.png`, `side-by-side.png`, `picture-in-picture.png`) that follows the layout as you change it. A layout with no PNG in the set draws no bezel. |
+| **Cart** | The DS game card: a small dark card with one bottom corner cut off, the label in a shallow recess and an arrow at the foot. It goes into the slot narrower than the other carts. With Cart Slot set to Bespoke, the slot is the back of a silver DS Lite. |
+| **Saves** | `Saves/NDS/<game name>.sav`. Save states and the resume state work as usual. There is no rewind for DS games, since their states are about 6 MB each. |
+| **Speed** | Full speed on the RG SP. In the heaviest 3D scenes, such as Mario Kart DS's races, it skips drawing the odd frame so the game itself keeps full speed, and the CPU is held at full clock while a DS game plays. |
+
+### Screen layouts
+
+**L2** swaps which screen is the main one. **SELECT + L2** steps through the layouts, and a message names each one:
+
+| Layout | Shows |
+|---|---|
+| Both Screens | Both, the main one on top, at 1.25x to fill the height. Where each game starts. |
+| One Screen | The main screen alone at 2x. |
+| Full Screen | The main screen alone at 2.5x, as big as it goes at 4:3 without stretching. |
+| Side by Side | The main screen at 2x, with the other one small beside it. |
+| Picture in Picture | The main screen at full size, with the other one at 1x in its bottom right corner. |
+
+Each game remembers its main screen and layout, in `Config/nds_view.txt`.
+
+### The stylus
+
+The RG SP has no touch screen, so the DS's stylus is drawn as a cursor. **Hold R2** and the D-pad moves it over the bottom screen, slowly at first and faster as you hold; **A** touches. Let go of R2 and the D-pad and A are the game's again. While the stylus is out, the bottom screen is the main one in any layout but Both Screens, and the cursor stays where you left it for next time.
+
+### Controls
+
+| Press        | Does                                                |
+|--------------|-----------------------------------------------------|
+| D-pad        | D-pad                                               |
+| A / B / X / Y | A / B / X / Y                                      |
+| L1 / R1      | L / R                                               |
+| Start / Select | Start / Select                                    |
+| L2           | Swap the main screen                                |
+| SELECT + L2  | Next layout                                         |
+| Hold R2      | The stylus: the D-pad moves it, A touches           |
+
+In DS games, L2 and R2 are taken by the layouts and the stylus, so the Fast Forward shortcut, which starts on R2, can be moved to another button on the Shortcuts page. X and Y are the DS's own buttons, not turbo.
 
 ---
 

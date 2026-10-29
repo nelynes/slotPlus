@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>slot+</title>
-<meta name="description" content="slotPlus: Slot's bespoke, Game Boy-centric frontend for the Anbernic RG SP, plus WonderSwan, Atari Lynx, Game Gear, NeoGeo Pocket, TurboGrafx-16 and HDMI out.">
+<meta name="description" content="slotPlus: Slot's bespoke, Game Boy-centric frontend for the Anbernic RG SP, plus WonderSwan, Atari Lynx, Game Gear, NeoGeo Pocket, TurboGrafx-16, Nintendo DS and HDMI out.">
 <meta property="og:title" content="slot+">
 <meta property="og:description" content="Slot's bespoke, Game Boy-centric frontend for the Anbernic RG SP, plus more handhelds and HDMI out.">
 <meta property="og:type" content="website">
@@ -51,7 +51,7 @@
     </div>
     <ul class="editions" aria-label="The two versions">
       <li class="edition plus-ed"><span class="ed-name">Plus</span><span class="ed-sys">WonderSwan, WonderSwan Color, Atari Lynx</span></li>
-      <li class="edition ultra-ed"><span class="ed-name">Ultra</span><span class="ed-sys">All of Plus, and Game Gear, NeoGeo Pocket, TurboGrafx-16</span></li>
+      <li class="edition ultra-ed"><span class="ed-name">Ultra</span><span class="ed-sys">All of Plus, and Game Gear, NeoGeo Pocket, TurboGrafx-16, Nintendo DS</span></li>
     </ul>
     <p class="sub">Both keep everything Slot does for Game Boy, Game Boy Color and Game Boy Advance. <a href="https://github.com/nelynes/slotPlus/releases/latest">All releases</a></p>
   </div>
@@ -118,6 +118,7 @@
             <li>Sega Game Gear</li>
             <li>NeoGeo Pocket and NeoGeo Pocket Color</li>
             <li>TurboGrafx-16 HuCards</li>
+            <li>Nintendo DS</li>
           </ul>
           <a class="btn ultra" href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-plusultra.zip">Download <code>slot-plusultra.zip</code></a>
         </div>
@@ -224,7 +225,7 @@
           <p>slotPlus creates the new systems' folders under <code>Games</code>, <code>Labels</code>, <code>Saves</code>, <code>States</code> and <code>Bezels</code>. Fill <code>Games/</code> and the new shelves appear.</p>
         </li>
       </ol>
-      <p class="install-note"><strong>Switching between Plus and Ultra</strong> works the same way: replace <code>System/</code> with the other version's. Going from Ultra back to Plus leaves the Game Gear, NeoGeo Pocket and TurboGrafx-16 games and saves on the card, just without their shelves.</p>
+      <p class="install-note"><strong>Switching between Plus and Ultra</strong> works the same way: replace <code>System/</code> with the other version's. Going from Ultra back to Plus leaves the Game Gear, NeoGeo Pocket, TurboGrafx-16 and DS games and saves on the card, just without their shelves.</p>
     </div>
 
     <div class="subpanel" id="install-update" role="tabpanel" aria-labelledby="t-install-update" hidden>
@@ -293,7 +294,7 @@
       <li class="step" id="shelves" data-clip="main.mp4">
         <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
         <h3>More Shelves</h3>
-        <p><kbd>L1</kbd> and <kbd>R1</kbd> switch shelves, just like slot.<br>Plus adds WonderSwan and Atari Lynx.<br>Ultra adds Game Gear, NeoGeo Pocket and TurboGrafx-16.</p>
+        <p><kbd>L1</kbd> and <kbd>R1</kbd> switch shelves, just like slot.<br>Plus adds WonderSwan and Atari Lynx.<br>Ultra adds Game Gear, NeoGeo Pocket, TurboGrafx-16 and Nintendo DS.</p>
       </li>
       <li class="step" id="carts" data-still="carts.webp">
         <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
@@ -303,12 +304,17 @@
       <li class="step" id="cartslot" data-clip="cartslot.mp4">
         <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
         <h3>A Cart Slot for Every System</h3>
-        <p>Set Settings &gt; General &gt; Cart Slot to Bespoke and the slot on each shelf becomes the back of that system's handheld.<br>Plus has a pearl WonderSwan and a Lynx II. Ultra adds a Game Gear, a carbon NeoGeo Pocket Color and a TurboExpress.<br>The Game Boy shelves keep slot's own.</p>
+        <p>Set Settings &gt; General &gt; Cart Slot to Bespoke and the slot on each shelf becomes the back of that system's handheld.<br>Plus has a pearl WonderSwan and a Lynx II. Ultra adds a Game Gear, a carbon NeoGeo Pocket Color, a TurboExpress and a silver DS Lite.<br>The Game Boy shelves keep slot's own.</p>
       </li>
       <li class="step" id="hucard" data-clip="hucard.mp4">
         <p class="badges"><span class="badge ultra">Ultra</span></p>
         <h3>HuCards Go In Contacts First</h3>
         <p>A HuCard turns end over end before it slides into the slot.<br>It turns back upright when you eject it.</p>
+      </li>
+      <li class="step" id="nds" data-clip="ds.mp4">
+        <p class="badges"><span class="badge ultra">Ultra</span></p>
+        <h3>Two Screens and a Stylus</h3>
+        <p>DS games play on DSperate, at full speed.<br><kbd>L2</kbd> swaps the main screen, and <kbd>SELECT</kbd> + <kbd>L2</kbd> steps through Both Screens, One Screen, Full Screen, Side by Side and Picture in Picture.<br>Hold <kbd>R2</kbd> and the D-pad moves a stylus over the bottom screen, and <kbd>A</kbd> touches.</p>
       </li>
       <li class="step" id="turned" data-clip="turned.mp4">
         <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
@@ -323,7 +329,7 @@
       <li class="step" id="screen" data-clip="screen.mp4">
         <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
         <h3>Shaders and Bezels for Each System</h3>
-        <p>Each system has its own page under Screen, with its own Shader and Bezel.<br><kbd>SELECT</kbd> + <kbd>B</kbd> / <kbd>A</kbd> steps through that system's shaders.<br>Ultra bundles bezels for the Game Gear, NeoGeo Pocket and TurboGrafx-16.</p>
+        <p>Each system has its own page under Screen, with its own Shader and Bezel.<br><kbd>SELECT</kbd> + <kbd>B</kbd> / <kbd>A</kbd> steps through that system's shaders.<br>Ultra bundles bezels for the Game Gear, NeoGeo Pocket, TurboGrafx-16 and Nintendo DS.</p>
       </li>
       <li class="step" id="transparency" data-clip="transparency.mp4">
         <p class="badges"><span class="badge extras">Every version</span></p>
@@ -338,7 +344,7 @@
   </ol>
   <div class="stepper">
     <button class="step-nav" type="button" id="step-prev" aria-label="Previous step">&#8592;</button>
-    <p class="step-count" aria-live="polite"><span id="step-at">1</span> of <span id="step-of">9</span></p>
+    <p class="step-count" aria-live="polite"><span id="step-at">1</span> of <span id="step-of">10</span></p>
     <button class="step-nav" type="button" id="step-next" aria-label="Next step">&#8594;</button>
   </div>
   <p class="guide-more"><a class="btn ghost" href="https://slot-cfw.fyi/#guide">slot's guide</a> <span>Carousel, save states, rewind, link cable and the rest.</span></p>
@@ -355,6 +361,7 @@
       <button class="subtab" role="tab" id="t-sys-gg" aria-controls="sys-gg" aria-selected="false" tabindex="-1">Game Gear</button>
       <button class="subtab" role="tab" id="t-sys-ngp" aria-controls="sys-ngp" aria-selected="false" tabindex="-1">NeoGeo Pocket</button>
       <button class="subtab" role="tab" id="t-sys-tg16" aria-controls="sys-tg16" aria-selected="false" tabindex="-1">TurboGrafx-16</button>
+      <button class="subtab" role="tab" id="t-sys-nds" aria-controls="sys-nds" aria-selected="false" tabindex="-1">Nintendo DS</button>
     </nav>
 
     <div class="subpanel" id="sys-shared" role="tabpanel" aria-labelledby="t-sys-shared">
@@ -365,7 +372,7 @@
         <div class="key"><dt>Controls</dt><dd>The In-Game controls page in Settings covers every system, so any of the buttons below can be moved. The tables show where they start.</dd></div>
         <div class="key"><dt>Screen menu</dt><dd>Each system has its own page under Screen, with its own Shader and Bezel, beside General for Brightness and Blue Light. <kbd>SELECT</kbd> + <kbd>B</kbd> / <kbd>A</kbd> in a game steps through that system's shaders.</dd></div>
         <div class="key"><dt>Your own bezels</dt><dd>PNGs in <code>Bezels/&lt;folder&gt;/</code> the size of the screen, with the screen area transparent: 720x480, or 640x480 on a 4:3 handheld such as the RG 35XXSP, where it shows pixel for pixel and the SP frame is offered too. A bezel shows at actual size, not when the picture is stretched.</dd></div>
-        <div class="key"><dt>Stretch</dt><dd>Game Gear, NeoGeo Pocket and TurboGrafx-16: <kbd>L1</kbd> stretches, <kbd>R1</kbd> gives back actual size. Lynx and WonderSwan use L1 and R1 as game buttons, so a game is set to stretch in <code>Config/video_mode.txt</code>, as <code>Game Name (USA) = stretch</code>. Each game remembers its choice.</dd></div>
+        <div class="key"><dt>Stretch</dt><dd>Game Gear, NeoGeo Pocket and TurboGrafx-16: <kbd>L1</kbd> stretches, <kbd>R1</kbd> gives back actual size. Lynx and WonderSwan use L1 and R1 as game buttons, so a game is set to stretch in <code>Config/video_mode.txt</code>, as <code>Game Name (USA) = stretch</code>. Each game remembers its choice. The Nintendo DS has screen layouts instead.</dd></div>
         <div class="key"><dt>Cart shells</dt><dd>Each system's carts have a default shell. <code>Config/cart_shell.txt</code> gives a single game its own.</dd></div>
         <div class="key"><dt>States and resume</dt><dd>Save states and the resume state work as they do for every other system.</dd></div>
       </dl>
@@ -513,6 +520,41 @@
         <div class="key"><dt>Hold <kbd>Y</kbd> / <kbd>X</kbd></dt><dd>Turbo II / turbo I</dd></div>
       </dl>
     </div>
+    <div class="subpanel" id="sys-nds" role="tabpanel" aria-labelledby="t-sys-nds" hidden>
+      <p class="badges"><span class="badge ultra">Ultra</span></p>
+      <dl class="keys">
+        <div class="key"><dt>Games</dt><dd><code>.nds</code> in <code>Games/NDS/</code></dd></div>
+        <div class="key"><dt>BIOS</dt><dd>Not needed: DSperate boots games straight in. Your own <code>bios7.bin</code>, <code>bios9.bin</code> and <code>firmware.bin</code> in <code>BIOS/</code> are used if they're there.</dd></div>
+        <div class="key"><dt>Core</dt><dd>DSperate, with its recompiler on</dd></div>
+        <div class="key"><dt>Label art</dt><dd><code>Labels/NDS/</code>, about 230x250 px (0.92:1), the upright shape of a DS card's label. Without art, the card shows the game's name.</dd></div>
+        <div class="key"><dt>Picture</dt><dd>The two 256x192 screens, in the layout you pick</dd></div>
+        <div class="key"><dt>Shaders</dt><dd>Off, LCD3x, Grid, Dot, shown wherever the main screen is drawn at 2x or more. Both Screens and the small second screen are drawn plain.</dd></div>
+        <div class="key"><dt>Bezel</dt><dd>DS Lite, bundled and the default, with a bezel for each layout. Or your own in <code>Bezels/NDS/</code>: one PNG drawn over every layout, or a bezel set, a folder with a PNG for each layout (<code>both-screens.png</code>, <code>one-screen.png</code>, <code>full-screen.png</code>, <code>side-by-side.png</code>, <code>picture-in-picture.png</code>) that follows the layout as you change it.</dd></div>
+        <div class="key"><dt>Cart</dt><dd>The DS game card, which goes into the slot narrower than the other carts. With Cart Slot on Bespoke, the slot is the back of a silver DS Lite.</dd></div>
+        <div class="key"><dt>Saves</dt><dd><code>Saves/NDS/</code>. No rewind for DS games: their states are about 6 MB each.</dd></div>
+        <div class="key"><dt>Speed</dt><dd>Full speed on the RG SP. In the heaviest 3D scenes it skips drawing the odd frame so the game keeps full speed, and the CPU runs at full clock while a DS game plays.</dd></div>
+      </dl>
+      <h3>Screen layouts</h3>
+      <p class="note"><kbd>L2</kbd> swaps the main screen. <kbd>SELECT</kbd> + <kbd>L2</kbd> steps through the layouts, and each game remembers its own.</p>
+      <dl class="keys">
+        <div class="key"><dt>Both Screens</dt><dd>Both, the main one on top, at 1.25x. Where each game starts.</dd></div>
+        <div class="key"><dt>One Screen</dt><dd>The main screen alone at 2x</dd></div>
+        <div class="key"><dt>Full Screen</dt><dd>The main screen alone at 2.5x, as big as it goes at 4:3</dd></div>
+        <div class="key"><dt>Side by Side</dt><dd>The main screen at 2x, the other one small beside it</dd></div>
+        <div class="key"><dt>Picture in Picture</dt><dd>The main screen at full size, the other at 1x in its corner</dd></div>
+      </dl>
+      <h3>Controls</h3>
+      <dl class="keys">
+        <div class="key"><dt><kbd>D-pad</kbd></dt><dd>D-pad</dd></div>
+        <div class="key"><dt><kbd>A</kbd> <kbd>B</kbd> <kbd>X</kbd> <kbd>Y</kbd></dt><dd>A, B, X, Y</dd></div>
+        <div class="key"><dt><kbd>L1</kbd> / <kbd>R1</kbd></dt><dd>L / R</dd></div>
+        <div class="key"><dt><kbd>START</kbd> / <kbd>SELECT</kbd></dt><dd>Start / Select</dd></div>
+        <div class="key"><dt><kbd>L2</kbd></dt><dd>Swap the main screen</dd></div>
+        <div class="key"><dt><kbd>SELECT</kbd> + <kbd>L2</kbd></dt><dd>Next layout</dd></div>
+        <div class="key"><dt>Hold <kbd>R2</kbd></dt><dd>The stylus: the D-pad moves it over the bottom screen, <kbd>A</kbd> touches. While it's out, the bottom screen is the main one.</dd></div>
+      </dl>
+      <p class="note">L2 and R2 are the DS's here, so the Fast Forward shortcut, which starts on R2, can be moved on the Shortcuts page.</p>
+    </div>
   </div>
 </section>
 
@@ -524,7 +566,7 @@
     <h3>Design</h3>
     <dl class="keys">
       <div class="key"><dt>Skeuomorphic UI</dt><dd><a href="https://github.com/MarkusMaribu">Markus</a>, whose look the new carts follow</dd></div>
-      <div class="key"><dt>TG16 and PCE bezels</dt><dd><a href="https://github.com/nelynes">nelynes</a></dd></div>
+      <div class="key"><dt>TG16, PCE and DS Lite bezels</dt><dd><a href="https://github.com/nelynes">nelynes</a></dd></div>
       <div class="key"><dt>RG35XXSP bezel</dt><dd>"Perfect GBA SP" by <a href="https://github.com/mugwomp93/Knulli_Customization">mugwomp93</a>, from <a href="https://github.com/chrizzo-hb/knulli-bezels">knulli-bezels</a>, under CC BY-SA 4.0</dd></div>
     </dl>
 
@@ -537,6 +579,7 @@
       <div class="key"><dt>Game Gear</dt><dd><a href="https://github.com/drhelius/Gearsystem">Gearsystem</a> by Ignacio Sanchez</dd></div>
       <div class="key"><dt>NeoGeo Pocket</dt><dd><a href="https://github.com/libretro/beetle-ngp-libretro">Beetle NeoPop</a>, from Mednafen</dd></div>
       <div class="key"><dt>TurboGrafx-16</dt><dd><a href="https://github.com/libretro/beetle-pce-fast-libretro">Beetle PCE Fast</a>, from Mednafen</dd></div>
+      <div class="key"><dt>Nintendo DS</dt><dd><a href="https://github.com/beebono/DSperate">DSperate</a> by beebono, through <a href="https://github.com/thwonp/dsperate-lr">dsperate-lr</a> by thwonp</dd></div>
       <div class="key"><dt>Underlying OS</dt><dd><a href="https://github.com/pvaibhav/BaseOS">BaseOS</a> by <a href="https://github.com/pvaibhav">Prashant Vaibhav</a></dd></div>
     </dl>
     <p class="note">Every core's licence, the patches slotPlus makes and its source are in <code>System/licenses/</code> in each download.</p>
@@ -561,7 +604,7 @@
       <p>slotPlus's additions, code, cart art, and the site were put together by <a href="https://github.com/nelynes">nelynes</a> and Claude, but always reviewed and tested before committing. Claude helped to troubleshoot bugs, and fill my knowledge gap of Rust.</p>
     </div>
 
-    <p class="credits-fine">Game Boy is a trademark of Nintendo. WonderSwan is a trademark of Bandai. Lynx is a trademark of Atari. Game Gear is a trademark of Sega. NeoGeo Pocket is a trademark of SNK. TurboGrafx-16, PC Engine, TurboExpress and HuCard are trademarks of their respective owners. slotPlus is not affiliated with any of them.</p>
+    <p class="credits-fine">Game Boy and Nintendo DS are trademarks of Nintendo. WonderSwan is a trademark of Bandai. Lynx is a trademark of Atari. Game Gear is a trademark of Sega. NeoGeo Pocket is a trademark of SNK. TurboGrafx-16, PC Engine, TurboExpress and HuCard are trademarks of their respective owners. slotPlus is not affiliated with any of them.</p>
   </div>
 </section>
 
