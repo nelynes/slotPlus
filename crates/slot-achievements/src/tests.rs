@@ -598,6 +598,7 @@ fn dropped_frames_and_rewinds_reset_partial_hit_counts() {
             hash: "hash".into(),
             runtime,
             achievements: [(7, a)].into(),
+            encore: Default::default(),
             previous: None,
             warned_gap: false,
         });
@@ -720,6 +721,7 @@ fn unsaved_unlocks_retry_with_the_original_time_after_storage_recovers() {
         hash: "hash".into(),
         runtime,
         achievements: [(7, a)].into(),
+        encore: Default::default(),
         previous: None,
         warned_gap: false,
     });
@@ -1109,5 +1111,33 @@ fn a_gentle_hash_matches_the_plain_one() {
     assert_eq!(
         library::content_hash_gently(&rom, &Idle).unwrap(),
         library::content_hash(&rom).unwrap()
+    );
+}
+
+#[test]
+fn an_encore_unlock_is_shown_but_never_recorded_again() {
+    let root = tempfile::tempdir().unwrap();
+    let store = Arc::new(Mutex::new(Store::open(root.path(), "Player").unwrap()));
+    let mut runtime = runtime::Runtime::new().unwrap();
+    let a = achievement("0xH000000=1");
+    runtime.activate(a.id, &a.definition);
+    let mut playing = Some(Playing {
+        generation: 1,
+        hash: "hash".into(),
+        runtime,
+        achievements: [(7, a)].into(),
+        encore: [7].into(),
+        previous: None,
+        warned_gap: false,
+    });
+    let (notices, received) = mpsc::channel();
+    let mut unsaved = BTreeMap::new();
+    evaluate(frame(1, 0, 0), &mut playing, &store, &notices, &mut unsaved);
+    evaluate(frame(2, 0, 1), &mut playing, &store, &notices, &mut unsaved);
+    assert!(received.try_iter().any(|n| n.kind == NoticeKind::Earned));
+    assert!(unsaved.is_empty());
+    assert!(
+        store.lock().unwrap().unlocks.is_empty(),
+        "an encore unlock was recorded"
     );
 }

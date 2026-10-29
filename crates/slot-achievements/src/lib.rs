@@ -292,6 +292,8 @@ struct Playing {
     hash: String,
     runtime: runtime::Runtime,
     achievements: BTreeMap<u32, storage::Achievement>,
+    /// Encore: active again though already unlocked, so earning one is shown, not recorded.
+    encore: std::collections::BTreeSet<u32>,
     previous: Option<(u64, u64)>,
     warned_gap: bool,
 }
@@ -327,6 +329,7 @@ fn run(
         let _ = notices.send(Notice::status(0, "Achievements need an account"));
         return;
     }
+    let encore = config.encore;
     let store = match Store::open(&root, &config.username) {
         Ok(store) => Arc::new(Mutex::new(store)),
         Err(error) => {
@@ -442,13 +445,19 @@ fn run(
                 game.runtime.activate_presence(&prepared.game.presence);
                 let store = store.lock().unwrap();
                 let mut updated = BTreeMap::new();
+                let mut again = std::collections::BTreeSet::new();
                 for achievement in prepared.game.achievements {
-                    if achievement.flags != 3
-                        || prepared.unlocked.contains(&achievement.id)
-                        || store.unlocks.contains_key(&achievement.id)
-                        || unsaved.contains_key(&achievement.id)
-                    {
+                    if achievement.flags != 3 {
                         continue;
+                    }
+                    let done = prepared.unlocked.contains(&achievement.id)
+                        || store.unlocks.contains_key(&achievement.id)
+                        || unsaved.contains_key(&achievement.id);
+                    if done && !encore {
+                        continue;
+                    }
+                    if done {
+                        again.insert(achievement.id);
                     }
                     let unchanged = game
                         .achievements
@@ -470,6 +479,7 @@ fn run(
                     game.runtime.deactivate(*id);
                 }
                 game.achievements = updated;
+                game.encore = again;
                 continue;
             }
             let Some(mut runtime) = runtime::Runtime::new() else {
@@ -478,13 +488,19 @@ fn run(
             runtime.activate_presence(&prepared.game.presence);
             let store = store.lock().unwrap();
             let mut achievements = BTreeMap::new();
+            let mut again = std::collections::BTreeSet::new();
             let mut unsupported = 0;
             for achievement in prepared.game.achievements {
-                if achievement.flags != 3
-                    || prepared.unlocked.contains(&achievement.id)
-                    || store.unlocks.contains_key(&achievement.id)
-                {
+                if achievement.flags != 3 {
                     continue;
+                }
+                let done = prepared.unlocked.contains(&achievement.id)
+                    || store.unlocks.contains_key(&achievement.id);
+                if done && !encore {
+                    continue;
+                }
+                if done {
+                    again.insert(achievement.id);
                 }
                 if runtime.activate(achievement.id, &achievement.definition) {
                     achievements.insert(achievement.id, achievement);
@@ -497,7 +513,8 @@ fn run(
             let title = if prepared.game.id == 0 {
                 "No achievements for this ROM".into()
             } else {
-                format!("Achievements ready ({state}, softcore)")
+                let encore = if encore { ", encore" } else { "" };
+                format!("Achievements ready ({state}, softcore{encore})")
             };
             let detail = if unsupported == 0 {
                 prepared.game.title
@@ -516,6 +533,7 @@ fn run(
                 hash: prepared.hash,
                 runtime,
                 achievements,
+                encore: again,
                 previous: None,
                 warned_gap: false,
             });
@@ -587,6 +605,12 @@ fn evaluate(
                         detail: achievement.description.clone(),
                         kind: NoticeKind::Earned,
                     };
+                    if game.encore.remove(&id) {
+                        // Encore: already on the account, so shown and nothing more.
+                        let _ = notices.send(notice);
+                        game.runtime.deactivate(id);
+                        continue;
+                    }
                     match store.lock().unwrap().record(unlock.clone()) {
                         Ok(true) => {
                             let _ = notices.send(notice);

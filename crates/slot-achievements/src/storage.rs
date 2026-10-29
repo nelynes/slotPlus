@@ -10,6 +10,9 @@ pub(crate) struct Config {
     pub username: String,
     pub token: String,
     pub password: String,
+    /// slotPlus: Encore. Achievements already unlocked go off again, banner and chime, but
+    /// are never sent to RetroAchievements a second time.
+    pub encore: bool,
 }
 
 impl Config {
