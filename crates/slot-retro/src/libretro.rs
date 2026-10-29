@@ -11,6 +11,7 @@ use crate::core::{AvInfo, ButtonMask, CoreError, RetroCore, GBA_H, GBA_W};
 use crate::ffi::*;
 use crate::link::Link;
 use crate::rumble::Rumble;
+use crate::{AchievementMemory, ACHIEVEMENT_RAM_SIZE};
 
 const VIDEO_BYTES: usize = (GBA_W * GBA_H * 4) as usize;
 
@@ -77,6 +78,8 @@ struct Host {
     options: std::collections::HashMap<String, std::ffi::CString>,
     options_dirty: bool,
     declared: std::collections::HashMap<String, Vec<String>>,
+    /// The core's memory map (SET_MEMORY_MAPS), for RetroAchievements.
+    memory: Vec<MemoryDescriptor>,
 }
 
 thread_local! {
@@ -243,6 +246,25 @@ unsafe extern "C" fn environment(cmd: c_uint, data: *mut c_void) -> bool {
             }
             (*(data as *mut LogCallback)).log = log_noop as *const c_void;
             true
+        }
+        SET_MEMORY_MAPS => {
+            if data.is_null() {
+                return false;
+            }
+            let map = &*(data as *const MemoryMap);
+            if map.num_descriptors > 1024 || (map.num_descriptors > 0 && map.descriptors.is_null())
+            {
+                return false;
+            }
+            with_host(|h| {
+                h.memory = if map.num_descriptors == 0 {
+                    Vec::new()
+                } else {
+                    std::slice::from_raw_parts(map.descriptors, map.num_descriptors as usize)
+                        .to_vec()
+                };
+            })
+            .is_some()
         }
         SET_AUDIO_BUFFER_STATUS_CALLBACK => {
             if data.is_null() {
@@ -673,6 +695,7 @@ impl LibretroCore {
             options: std::collections::HashMap::new(),
             options_dirty: false,
             declared: std::collections::HashMap::new(),
+            memory: Vec::new(),
         });
         unsafe {
             let _a = Active::bind(&mut host);
@@ -703,9 +726,12 @@ impl LibretroCore {
         if !self.loaded {
             return;
         }
-        let _a = Active::bind(&mut self.host);
-        unsafe { (self.api.unload_game)() };
+        {
+            let _a = Active::bind(&mut self.host);
+            unsafe { (self.api.unload_game)() };
+        }
         self.loaded = false;
+        self.host.memory.clear();
     }
 
     fn serialize_at(&mut self, size: usize) -> Option<Vec<u8>> {
@@ -748,6 +774,74 @@ impl Drop for LibretroCore {
 }
 
 impl RetroCore for LibretroCore {
+    fn achievement_memory(&self, ram: &mut [u8]) -> AchievementMemory {
+        let mut valid = AchievementMemory::default();
+        if !self.loaded || ram.len() < ACHIEVEMENT_RAM_SIZE {
+            return valid;
+        }
+        let game_boy = self.host.memory.iter().any(|d| d.start == 0xc000);
+        // rcheevos consoleinfo.c: GB/GBC use native addresses plus fixed banks;
+        // GBA uses IWRAM, EWRAM, then SRAM. Echo RAM aliases the fixed WRAM banks.
+        // From Prashant Vaibhav's slot fork (pvaibhav/slot), GPL-3.0.
+        let regions: &[(usize, usize, usize)] = if game_boy {
+            &[
+                (0x0000, 0x0000, 0x4000),
+                (0x4000, 0x4000, 0x4000),
+                (0x8000, 0x8000, 0x2000),
+                (0xa000, 0xa000, 0x2000),
+                (0xc000, 0xc000, 0x1000),
+                (0xd000, 0xd000, 0x1000),
+                (0xc000, 0xe000, 0x1000),
+                (0xd000, 0xf000, 0x0e00),
+                (0xfe00, 0xfe00, 0x00a0),
+                (0xff00, 0xff00, 0x0080),
+                (0xff80, 0xff80, 0x007f),
+                (0xffff, 0xffff, 0x0001),
+                (0x10000, 0x10000, 0x6000),
+                (0x16000, 0x16000, 0x1e000),
+            ]
+        } else {
+            &[
+                (0x03000000, 0, 0x8000),
+                (0x02000000, 0x8000, 0x40000),
+                (0x0e000000, 0x48000, 0x10000),
+            ]
+        };
+        for &(physical, offset, size) in regions {
+            if let Some(d) =
+                self.host.memory.iter().find(|d| {
+                    d.start == physical && d.disconnect == 0 && !d.ptr.is_null() && d.len > 0
+                })
+            {
+                let n = d.len.min(size);
+                // The core owns the descriptors' memory until unload and no core function
+                // runs concurrently. `offset` is the libretro offset from ptr to the region.
+                unsafe {
+                    std::ptr::copy_nonoverlapping(
+                        (d.ptr as *const u8).add(d.offset),
+                        ram[offset..].as_mut_ptr(),
+                        n,
+                    );
+                }
+                valid.push(offset..offset + n);
+            } else if !game_boy && physical == 0x0e000000 {
+                let p = unsafe { (self.api.get_memory_data)(MEMORY_SAVE_RAM) };
+                let n = unsafe { (self.api.get_memory_size)(MEMORY_SAVE_RAM) }.min(size);
+                if !p.is_null() && n > 0 {
+                    unsafe {
+                        std::ptr::copy_nonoverlapping(
+                            p as *const u8,
+                            ram[offset..].as_mut_ptr(),
+                            n,
+                        );
+                    }
+                    valid.push(offset..offset + n);
+                }
+            }
+        }
+        valid
+    }
+
     fn set_option(&mut self, key: &str, value: &str) {
         LibretroCore::set_option(self, key, value);
     }
@@ -933,6 +1027,7 @@ mod tests {
             options,
             options_dirty,
             declared: HashMap::new(),
+            memory: Vec::new(),
         })
     }
 

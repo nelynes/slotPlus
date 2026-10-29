@@ -207,6 +207,12 @@ pub trait RetroCore: Send {
     }
     fn set_option(&mut self, _key: &str, _value: &str) {}
     fn set_frame_skip(&mut self, _skip: bool) {}
+    /// Copies memory into a buffer of ACHIEVEMENT_RAM_SIZE, indexed by RetroAchievements
+    /// addresses, and returns the valid spans; absent memory is never treated as zero RAM.
+    /// Called only on the emulator thread, between frames.
+    fn achievement_memory(&self, _ram: &mut [u8]) -> crate::AchievementMemory {
+        crate::AchievementMemory::default()
+    }
     fn video_xrgb8888(&self) -> &[u8];
     /// Width and height of the buffer `video_xrgb8888` returns.
     fn video_size(&self) -> (u32, u32) {

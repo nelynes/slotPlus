@@ -339,6 +339,8 @@ pub struct SlotState {
     /// Each system with a cart slot of its own shows it on its shelf, in place
     /// of Slot's.
     pub bespoke_slot: bool,
+    /// Home Wi-Fi: join the networks in Config/wifi.toml (slot-services does it).
+    pub home_wifi_enabled: bool,
     pub left_stick_dpad: bool,
     pub lid_off_min: Option<u8>,
     pub bezel_gba: BezelPick,
@@ -508,6 +510,7 @@ impl Default for SlotState {
             show_recents: false,
             show_titles: false,
             bespoke_slot: false,
+            home_wifi_enabled: false,
             left_stick_dpad: true,
             lid_off_min: None,
             bezel_gba: BezelPick::Ags102,
@@ -617,6 +620,7 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     text.push_str(&format!("show_recents={}\n", s.show_recents as u8));
     text.push_str(&format!("show_titles={}\n", s.show_titles as u8));
     text.push_str(&format!("bespoke_slot={}\n", s.bespoke_slot as u8));
+    text.push_str(&format!("home_wifi_enabled={}\n", s.home_wifi_enabled as u8));
     text.push_str(&format!("left_stick_dpad={}\n", s.left_stick_dpad as u8));
     text.push_str(&format!("auto_load={}\n", s.auto_load as u8));
     if let Some(min) = s.lid_off_min {
@@ -686,6 +690,7 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut show_recents = None;
     let mut show_titles = None;
     let mut bespoke_slot = None;
+    let mut home_wifi_enabled = None;
     let mut left_stick_dpad = None;
     let mut lid_off_min = None;
     let mut bezel_gba = None;
@@ -740,6 +745,7 @@ fn parse(text: &str) -> Option<SlotState> {
             "show_recents" => show_recents = flag(value),
             "show_titles" => show_titles = flag(value),
             "bespoke_slot" => bespoke_slot = flag(value),
+            "home_wifi_enabled" => home_wifi_enabled = flag(value),
             "left_stick_dpad" => left_stick_dpad = flag(value),
             "lid_off_min" => lid_off_min = value.parse().ok().filter(|m| LID_OFF_MIN.contains(m)),
             "bezel_gba" => bezel_gba = Some(BezelPick::parse(value)),
@@ -814,6 +820,7 @@ fn parse(text: &str) -> Option<SlotState> {
         show_recents: show_recents.unwrap_or(fallback.show_recents),
         show_titles: show_titles.unwrap_or(fallback.show_titles),
         bespoke_slot: bespoke_slot.unwrap_or(fallback.bespoke_slot),
+        home_wifi_enabled: home_wifi_enabled.unwrap_or(fallback.home_wifi_enabled),
         left_stick_dpad: left_stick_dpad.unwrap_or(fallback.left_stick_dpad),
         lid_off_min,
         bezel_gba: bezel_gba.unwrap_or(fallback.bezel_gba),

@@ -1,0 +1,9 @@
+# Copy to Config/retroachievements.toml, fill in your account, then restart slot.
+# Needs Home Wi-Fi: see Config/wifi.toml.example.
+enabled = true
+username = ""
+password = ""
+
+# After a successful login, slot remembers its token; you may remove password.
+# Or supply an emulator login token (not a Web API key):
+# token = ""
