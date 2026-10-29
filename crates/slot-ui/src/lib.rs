@@ -33,9 +33,9 @@ mod toast;
 
 pub use art::decode as decode_png;
 pub use backdrop::{
-    bezel_face, blur_background, bundled_game_bezel_face, bundled_game_bezels, default_background,
-    default_game_bezel_face, draw_backdrop, draw_ground, game_bezel_face, has_default_game_bezel,
-    wallpaper_face, BezelArt,
+    bezel_face, blur_background, bundled_game_bezel_face, bundled_game_bezel_face_in,
+    bundled_game_bezels, default_background, default_game_bezel_face, draw_backdrop, draw_ground,
+    game_bezel_face, has_default_game_bezel, wallpaper_face, BezelArt, DS_LITE_BEZEL,
 };
 pub use barcode::{code39, CODE39_NARROW, CODE39_WIDE};
 pub use battery::{draw_gauge, BOLT_PX, GAUGE_H, GAUGE_W, WALL};

@@ -1341,7 +1341,9 @@ fn sync_game_bezel(app: &mut App, compositor: &mut Compositor, state: &mut Bezel
             BezelPick::Default => shown
                 .2
                 .and_then(|kind| default_game_bezel_face(platform, kind, w, h)),
-            BezelPick::Bundled(name) => slot_ui::bundled_game_bezel_face(platform, name, w, h),
+            BezelPick::Bundled(name) => {
+                slot_ui::bundled_game_bezel_face_in(platform, name, shown.4, w, h)
+            }
             BezelPick::File(name) => app
                 .root()
                 .and_then(|root| crate::bezel::file(root, platform, name, shown.4))

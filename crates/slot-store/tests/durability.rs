@@ -273,7 +273,7 @@ fn a_card_from_before_the_settings_keeps_all_its_values() {
             bezel_gg: BezelPick::None,
             bezel_ngp: BezelPick::None,
             bezel_tg16: BezelPick::None,
-            bezel_nds: BezelPick::None,
+            bezel_nds: BezelPick::Bundled("DS Lite".into()),
             scale_gba: Scale::Fit,
             scale_gb: Scale::SpFrame,
             scale_gbc: Scale::SpFrame,

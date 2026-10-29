@@ -24,6 +24,31 @@ const BEZEL_NGP_PNG: &[u8] = include_bytes!("../../../assets/bezel_ngp.png");
 // Engine's own white case, each with a Wide one for games that draw 320
 // wide, whose picture spans 640 of the screen.
 const BEZEL_TG16_PNG: &[u8] = include_bytes!("../../../assets/bezel_tg16.png");
+// The DS Lite set, by nelynes: one bezel for each of the DS's screen layouts.
+const BEZEL_NDS_LITE: [(&str, &[u8]); 5] = [
+    (
+        "both-screens.png",
+        include_bytes!("../../../assets/bezel_nds_lite_both_screens.png"),
+    ),
+    (
+        "one-screen.png",
+        include_bytes!("../../../assets/bezel_nds_lite_one_screen.png"),
+    ),
+    (
+        "full-screen.png",
+        include_bytes!("../../../assets/bezel_nds_lite_full_screen.png"),
+    ),
+    (
+        "side-by-side.png",
+        include_bytes!("../../../assets/bezel_nds_lite_side_by_side.png"),
+    ),
+    (
+        "picture-in-picture.png",
+        include_bytes!("../../../assets/bezel_nds_lite_picture_in_picture.png"),
+    ),
+];
+/// The name the DS Lite set is offered under, and the DS's default bezel.
+pub const DS_LITE_BEZEL: &str = "DS Lite";
 const BEZEL_TG16_WIDE_PNG: &[u8] = include_bytes!("../../../assets/bezel_tg16_wide.png");
 const BEZEL_PCE_PNG: &[u8] = include_bytes!("../../../assets/bezel_pce.png");
 const BEZEL_PCE_WIDE_PNG: &[u8] = include_bytes!("../../../assets/bezel_pce_wide.png");
@@ -127,6 +152,7 @@ fn named_game_bezels(platform: Platform) -> &'static [(&'static str, &'static [u
             ("PCE", BEZEL_PCE_PNG),
             ("PCE Wide", BEZEL_PCE_WIDE_PNG),
         ],
+        Platform::Nds => &[(DS_LITE_BEZEL, BEZEL_NDS_LITE[0].1)],
         _ => &[],
     }
 }
@@ -141,6 +167,24 @@ pub fn bundled_game_bezels(platform: Platform) -> Vec<&'static str> {
 
 /// A bezel bundled for a platform under a name of its own.
 pub fn bundled_game_bezel_face(platform: Platform, name: &str, w: u32, h: u32) -> Option<Vec<u8>> {
+    bundled_game_bezel_face_in(platform, name, None, w, h)
+}
+
+/// A bundled bezel's face, and for a DS bezel set the one for the layout on
+/// screen (`layout`, the set's PNG name for it).
+pub fn bundled_game_bezel_face_in(
+    platform: Platform,
+    name: &str,
+    layout: Option<&str>,
+    w: u32,
+    h: u32,
+) -> Option<Vec<u8>> {
+    if platform == Platform::Nds && name == DS_LITE_BEZEL {
+        let layout = layout?;
+        let (_, png) = BEZEL_NDS_LITE.iter().find(|(f, _)| *f == layout)?;
+        let (src, sw, sh) = art::decode_png_bytes(png)?;
+        return panel_bezel(&src, (sw, sh), (w, h), false);
+    }
     let (_, png) = named_game_bezels(platform)
         .iter()
         .find(|(n, _)| *n == name)?;

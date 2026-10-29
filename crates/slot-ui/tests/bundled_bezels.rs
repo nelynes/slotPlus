@@ -100,11 +100,11 @@ fn the_turbografx_16_bundles_tg16_and_pce_bezels_round_its_2x_picture() {
 }
 
 #[test]
-fn only_the_turbografx_16_has_bezels_bundled_under_their_own_names() {
+fn only_the_turbografx_16_and_the_ds_have_bezels_bundled_under_their_own_names() {
     for platform in Platform::ALL {
         assert_eq!(
             bundled_game_bezels(platform).is_empty(),
-            platform != Platform::Tg16,
+            !matches!(platform, Platform::Tg16 | Platform::Nds),
             "{platform:?}"
         );
     }
@@ -146,4 +146,31 @@ fn the_game_gear_and_pocket_bezels_frame_every_one_of_slots_pictures_the_same() 
             );
         }
     }
+}
+
+#[test]
+fn the_ds_lite_set_draws_each_layout_with_its_screens_clear() {
+    use slot_ui::bundled_game_bezel_face_in;
+    assert_eq!(bundled_game_bezels(Platform::Nds), ["DS Lite"]);
+    let at = |f: &[u8], x: u32, y: u32| f[((y * OUT_W + x) * 4 + 3) as usize];
+    for (layout, clear, solid) in [
+        ("both-screens.png", (360, 120), (100, 240)),
+        ("one-screen.png", (360, 240), (50, 240)),
+        ("full-screen.png", (360, 240), (20, 240)),
+        ("side-by-side.png", (256, 240), (600, 400)),
+        ("picture-in-picture.png", (500, 400), (20, 240)),
+    ] {
+        let face = bundled_game_bezel_face_in(Platform::Nds, "DS Lite", Some(layout), OUT_W, OUT_H)
+            .unwrap_or_else(|| panic!("{layout}"));
+        assert_eq!(at(&face, clear.0, clear.1), 0, "{layout}: screen covered");
+        assert_eq!(
+            at(&face, solid.0, solid.1),
+            255,
+            "{layout}: bezel see-through"
+        );
+    }
+    assert!(
+        bundled_game_bezel_face_in(Platform::Nds, "DS Lite", None, OUT_W, OUT_H).is_none(),
+        "no layout, no face"
+    );
 }

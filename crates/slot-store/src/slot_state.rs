@@ -550,7 +550,8 @@ impl Default for SlotState {
             bezel_gg: BezelPick::None,
             bezel_ngp: BezelPick::None,
             bezel_tg16: BezelPick::None,
-            bezel_nds: BezelPick::None,
+            // nelynes's DS Lite set, bundled in slot-ui (slot_ui::DS_LITE_BEZEL).
+            bezel_nds: BezelPick::Bundled(String::from("DS Lite")),
             scale_gba: Scale::Fit,
             scale_gb: Scale::SpFrame,
             scale_gbc: Scale::SpFrame,
