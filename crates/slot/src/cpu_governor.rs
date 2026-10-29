@@ -1,40 +1,70 @@
-//! The CPU's frequency governor. The launch script sets schedutil, which
-//! lets the H700 clock down when it is idle; a DS game runs so close to its
-//! frame budget that schedutil's dips mid-race cost frames, so while one
-//! plays the CPU is held at full speed, and handed back after.
+//! The CPU's frequency governor while a DS game plays. Slot leaves the
+//! governor at the kernel's default, which on the H700 holds the CPU at its
+//! full fixed speed; a DS game runs so close to its frame budget that any
+//! governor clocking down mid-race costs frames, so while one plays every
+//! policy is set to performance, and each is handed back to the governor it
+//! had before, whatever that was.
 
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
 
 const POLICIES: &str = "/sys/devices/system/cpu/cpufreq";
 const FULL: &str = "performance";
-const NORMAL: &str = "schedutil";
 
 static HELD: AtomicBool = AtomicBool::new(false);
+/// Each policy's governor from before it was held, to give back.
+static BEFORE: Mutex<Vec<(std::path::PathBuf, String)>> = Mutex::new(Vec::new());
 
-/// Hold the CPU at full speed, or hand it back to schedutil. Only on the
-/// handheld (slot is run from the card, which sets SLOT_ROOT), and only when
-/// that changes, so it is cheap to call every frame.
+/// Hold the CPU at full speed, or give each policy back its own governor.
+/// Only on the handheld (slot is run from the card, which sets SLOT_ROOT),
+/// and only when that changes, so it is cheap to call every frame.
 pub fn hold_full(on: bool) {
     if HELD.swap(on, Ordering::Relaxed) == on || std::env::var_os("SLOT_ROOT").is_none() {
         return;
     }
-    set(Path::new(POLICIES), if on { FULL } else { NORMAL });
+    let mut before = BEFORE.lock().unwrap_or_else(|e| e.into_inner());
+    match on {
+        true => *before = hold(Path::new(POLICIES)),
+        false => give_back(&std::mem::take(&mut *before)),
+    }
 }
 
-fn set(policies: &Path, governor: &str) {
+/// Set every policy to performance; what each was set to before.
+fn hold(policies: &Path) -> Vec<(std::path::PathBuf, String)> {
     let Ok(dirs) = std::fs::read_dir(policies) else {
-        return;
+        return Vec::new();
     };
+    let mut was = Vec::new();
     for dir in dirs.flatten() {
         let name = dir.file_name();
         if !name.to_string_lossy().starts_with("policy") {
             continue;
         }
         let file = dir.path().join("scaling_governor");
-        match std::fs::write(&file, governor) {
-            Ok(()) => eprintln!("slot: cpu: {} {governor}", name.to_string_lossy()),
-            Err(e) => eprintln!("slot: cpu: {governor} refused by {}: {e}", file.display()),
+        let Ok(old) = std::fs::read_to_string(&file) else {
+            continue;
+        };
+        let old = old.trim().to_string();
+        if old == FULL {
+            continue;
+        }
+        match std::fs::write(&file, FULL) {
+            Ok(()) => {
+                eprintln!("slot: cpu: {} {FULL} (was {old})", name.to_string_lossy());
+                was.push((file, old));
+            }
+            Err(e) => eprintln!("slot: cpu: {FULL} refused by {}: {e}", file.display()),
+        }
+    }
+    was
+}
+
+fn give_back(was: &[(std::path::PathBuf, String)]) {
+    for (file, old) in was {
+        match std::fs::write(file, old) {
+            Ok(()) => eprintln!("slot: cpu: {} back to {old}", file.display()),
+            Err(e) => eprintln!("slot: cpu: {old} refused by {}: {e}", file.display()),
         }
     }
 }
@@ -44,17 +74,29 @@ mod tests {
     use super::*;
 
     #[test]
-    fn every_policy_is_set_and_nothing_else() {
+    fn each_policy_goes_to_performance_and_back_to_its_own_governor() {
         let d = tempfile::tempdir().unwrap();
-        for p in ["policy0", "policy4", "boost"] {
+        for (p, gov) in [
+            ("policy0", "schedutil"),
+            ("policy4", "performance"),
+            ("boost", "x"),
+        ] {
             std::fs::create_dir(d.path().join(p)).unwrap();
-            std::fs::write(d.path().join(p).join("scaling_governor"), "schedutil").unwrap();
+            std::fs::write(d.path().join(p).join("scaling_governor"), gov).unwrap();
         }
-        set(d.path(), FULL);
         let read =
             |p: &str| std::fs::read_to_string(d.path().join(p).join("scaling_governor")).unwrap();
+        let was = hold(d.path());
         assert_eq!(read("policy0"), "performance");
         assert_eq!(read("policy4"), "performance");
-        assert_eq!(read("boost"), "schedutil");
+        assert_eq!(read("boost"), "x", "not a policy");
+        assert_eq!(
+            was.len(),
+            1,
+            "a policy already at performance is left alone"
+        );
+        give_back(&was);
+        assert_eq!(read("policy0"), "schedutil", "back to what it had");
+        assert_eq!(read("policy4"), "performance", "never touched");
     }
 }
