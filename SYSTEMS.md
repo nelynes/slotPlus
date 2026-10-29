@@ -72,7 +72,7 @@ The RG SP has no touch screen, so the DS's stylus is drawn as a cursor. **Hold R
 | SELECT + L2  | Next layout                                         |
 | Hold R2      | The stylus: the D-pad moves it, A touches           |
 
-In DS games, L2 and R2 are taken by the layouts and the stylus, so the Fast Forward shortcut, which starts on R2, can be moved to another button on the Shortcuts page. X and Y are the DS's own buttons, not turbo.
+In DS games, L2 and R2 are taken by the layouts and the stylus, so for fast forward, bind the Fast Forward Toggle shortcut (one press on, the next off) or move Fast Forward to another button on the Shortcuts page. X and Y are the DS's own buttons, not turbo.
 
 ---
 
