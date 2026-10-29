@@ -433,6 +433,7 @@ pub struct App {
     hud_bolt: Option<TexId>,
     /// The Home Wi-Fi mark in each theme's ink, dark first.
     wifi: Option<[TexId; 2]>,
+    achievement_sync: Option<slot_ui::SyncIndicator>,
     slot_faces: Option<(TexId, TexId)>,
     /// The systems with a cart slot of their own: back, front and plugged.
     /// Each system's own cart slot, and whether its plastic is pale.
@@ -546,6 +547,7 @@ impl App {
         App {
             radio: radio_jobs(),
             wifi: None,
+            achievement_sync: None,
             state_writer,
             shot_writer: crate::shot_writer::ShotWriter::spawn(card_writes.clone()),
             shot_wanted: false,
@@ -1683,6 +1685,10 @@ impl App {
 
     pub fn set_bolt_face(&mut self, bolt: TexId) {
         self.bolt = Some(bolt);
+    }
+
+    pub fn set_achievement_sync(&mut self, icon: Option<slot_ui::SyncIndicator>) {
+        self.achievement_sync = icon;
     }
 
     pub fn set_wifi_faces(&mut self, faces: [TexId; 2]) {
@@ -4613,6 +4619,9 @@ impl App {
                     footer_ink(self.band_light()),
                     out,
                 );
+                if let Some(icon) = self.achievement_sync {
+                    slot_ui::draw_footer_sync(self.canvas(), self.shelf_clock, icon, out);
+                }
                 self.draw_home_wifi(out);
             }
             Phase::About => {

@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Groundwork for an experimental feature, not yet ready for general use.
+
 ## [1.11.0-plus2.4](https://github.com/nelynes/slotPlus/releases/tag/v1.11.0-plus2.4)
 
 slotPlus brought up to Slot 1.11.0: a 1.5x fast forward speed, a Fast Forward Toggle shortcut, no more buzz in headphones after the sound stops, and the CPU left at its full fixed speed again. See [Slot's 1.11.0 notes](https://github.com/BrandonKowalski/slot/releases/tag/v1.11.0).

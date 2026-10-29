@@ -35,6 +35,7 @@ const DOZE_TIMEOUT: Duration = Duration::from_secs(180);
 const ALERT_INK: [u8; 3] = [0xf0, 0xb4, 0x3c];
 
 pub struct Frontend {
+    achievements: crate::achievement_ui::Notifications,
     session: Session,
     start: Instant,
     last: Instant,
@@ -172,6 +173,7 @@ impl Frontend {
             .app_mut()
             .set_power(Power::new(platform, DOZE_TIMEOUT));
         Frontend {
+            achievements: crate::achievement_ui::Notifications::new(),
             session,
             start: now,
             last: now,
@@ -690,7 +692,9 @@ impl Frontend {
             &mut self.switcher,
         );
         self.draws.clear();
+        self.achievements.update(&mut self.session, compositor);
         self.session.app().draw(&mut self.draws);
+        self.achievements.draw(&self.session, &mut self.draws);
         compositor.draw_list(&self.draws);
         if let Some((w, h, rgba)) = compositor.take_capture() {
             self.session.app_mut().shot_taken(w, h, rgba);
@@ -832,11 +836,11 @@ impl Frontend {
     }
 
     pub fn powering_off(&self) -> bool {
-        self.session.app().ready_to_power_off()
+        self.session.app().ready_to_power_off() && self.session.achievement_flush_ready()
     }
 
     pub fn restarting(&self) -> bool {
-        self.session.app().ready_to_restart()
+        self.session.app().ready_to_restart() && self.session.achievement_flush_ready()
     }
 
     pub fn restart(&mut self) {
@@ -845,7 +849,7 @@ impl Frontend {
     }
 
     pub fn repairing(&self) -> bool {
-        self.session.app().ready_to_repair()
+        self.session.app().ready_to_repair() && self.session.achievement_flush_ready()
     }
 
     pub fn repair(&mut self) {
@@ -872,6 +876,10 @@ impl Frontend {
         self.session.app_mut().flush_resume();
         self.session.app_mut().settle_saves();
         self.session.app_mut().clear_loading_mark();
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+        while !self.session.achievement_flush_ready() && std::time::Instant::now() < deadline {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
     }
 }
 

@@ -63,12 +63,17 @@ pub use clock::{
     ClockScreen, Part,
 };
 pub use draw::{Canvas, Draw, TexId, OUT_H, OUT_W};
-pub use footer::{draw_corners, draw_footer, draw_home_wifi, Printed, FOOTER_Y};
+pub use footer::{
+    draw_corners, draw_footer, draw_footer_sync, draw_home_wifi, sync_icon_face, Printed,
+    SyncIndicator, FOOTER_Y, SYNC_PX,
+};
 pub use hud::{
     badge_at, ff_badge, footer_ink, FfState, Hud, HudKind, LinkBadge, Millis, ALARM_BAND_H,
     HUD_ICON_PX, HUD_INK, HUD_MS, LINK_HOST_INK, LINK_JOIN_INK, PLATE_H,
 };
-pub use icon::{badge_face, icon_box, icon_face, star_face, warm_fonts, Badge, Icon};
+pub use icon::{
+    achievement_icon_face, badge_face, icon_box, icon_face, star_face, warm_fonts, Badge, Icon,
+};
 pub use link_art::{
     link_art, LinkArt, ADAPTER_BASE_X, ADAPTER_BASE_Y, ADAPTER_H, ADAPTER_W, ARCS, ARROW_H,
     ARROW_LEFT_X, ARROW_RIGHT_X, ARROW_W, ARROW_Y, CLICKS_H, CLICKS_W, CLICKS_X, CLICKS_Y, PLUG_H,

@@ -5,6 +5,7 @@ macro_rules! eprintln {
     }};
 }
 
+mod achievement_ui;
 pub mod app;
 pub mod audio;
 pub mod baseos;

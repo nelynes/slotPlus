@@ -5,6 +5,7 @@ use crate::battery::{draw_gauge, GAUGE_H};
 use crate::hud::{HUD_INK, PLATE_H};
 use crate::plate::HINT_H;
 use crate::slot_chrome::MOUTH_H;
+use crate::CartFace;
 
 pub const FOOTER_Y: f32 = OUT_H as f32 - MOUTH_H + (MOUTH_H - HINT_H as f32) / 2.0;
 const FOOTER_MARGIN: f32 = 24.0;
@@ -105,4 +106,76 @@ pub fn draw_home_wifi(
         tex,
         alpha: 1.0,
     });
+}
+
+// slotPlus: the sync mark beside the clock, from Prashant Vaibhav's fork of Slot.
+pub const SYNC_PX: u32 = 18;
+const SYNC_GAP: f32 = 14.0;
+
+/// Two small circular arrows, rasterised once by the achievement UI worker.
+pub fn sync_icon_face(light: bool) -> CartFace {
+    let [r, g, b] = crate::footer_ink(light);
+    let svg = format!(
+        r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <g fill="none" stroke="#{r:02x}{g:02x}{b:02x}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 10a7.2 7.2 0 0 1 12.2-3.2L20 10M20 5v5h-5"/>
+        <path d="M19 14a7.2 7.2 0 0 1-12.2 3.2L4 14M4 19v-5h5"/>
+      </g>
+    </svg>"##
+    );
+    CartFace {
+        rgba: crate::art::render_svg(&svg, SYNC_PX, SYNC_PX)
+            .unwrap_or_else(|| vec![0; (SYNC_PX * SYNC_PX * 4) as usize]),
+        w: SYNC_PX,
+        h: SYNC_PX,
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct SyncIndicator {
+    pub face: TexId,
+    pub turn: f32,
+    pub alpha: f32,
+    pub attention: bool,
+    pub progress: Option<TexId>,
+}
+
+/// Shares the clock's baseline and preserves a gap even at the widest clock label.
+pub fn draw_footer_sync(canvas: Canvas, clock: Printed, icon: SyncIndicator, out: &mut Vec<Draw>) {
+    let right = canvas.w - FOOTER_MARGIN - clock.w as f32 - SYNC_GAP;
+    let x = right - SYNC_PX as f32 - if icon.progress.is_some() { 42.0 } else { 0.0 };
+    if let Some(tex) = icon.progress {
+        out.push(Draw::Tex {
+            x: right - 36.0,
+            y: FOOTER_Y,
+            w: 36.0,
+            h: HINT_H as f32,
+            tex,
+            alpha: 0.75,
+        });
+    }
+    let y = FOOTER_Y + (HINT_H as f32 - SYNC_PX as f32) / 2.0;
+    out.push(Draw::Turned {
+        x,
+        y,
+        w: SYNC_PX as f32,
+        h: SYNC_PX as f32,
+        tex: icon.face,
+        alpha: icon.alpha,
+        turn: icon.turn,
+    });
+    if icon.attention {
+        out.push(Draw::Rect {
+            x: x + SYNC_PX as f32 - 2.0,
+            y: y + SYNC_PX as f32 - 2.0,
+            w: 3.0,
+            h: 3.0,
+            colour: [
+                0xf0 as f32 / 255.0,
+                0xb4 as f32 / 255.0,
+                0x3c as f32 / 255.0,
+                1.0,
+            ],
+        });
+    }
 }

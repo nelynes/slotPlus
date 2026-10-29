@@ -21,6 +21,7 @@ use crate::prefetch::Prefetch;
 
 pub struct Session {
     achievements: slot_achievements::Service,
+    home_connected: bool,
     root: PathBuf,
     app: App,
     emu: Option<EmuHandle>,
@@ -55,6 +56,7 @@ impl Session {
     pub fn boot_with(root: PathBuf, sink: Box<dyn AudioSink>) -> Self {
         let mut session = Session {
             achievements: slot_achievements::Service::start(root.clone()),
+            home_connected: false,
             app: App::boot(&root),
             root,
             emu: None,
@@ -99,6 +101,15 @@ impl Session {
 
     pub fn audio_queued(&self) -> usize {
         self.sink.ring().queued_frames()
+    }
+
+    /// A clip prepared off-thread, mixed at the current volume when it reaches the screen.
+    pub(crate) fn mix_sfx(&mut self, mut samples: Vec<i16>) {
+        if samples.is_empty() {
+            return;
+        }
+        crate::audio::volume::apply(&mut samples, self.app.output_volume());
+        self.sink.ring().mix(&samples);
     }
 
     pub fn audio_ring(&self) -> std::sync::Arc<Ring> {
@@ -360,6 +371,11 @@ impl Session {
         // with booting, opening a game or playing one for the card.
         let idle = self.opening.is_none() && matches!(self.app.phase(), Phase::Shelf);
         self.achievements.set_busy(!idle);
+        let connected = self.app.home_connected();
+        if connected && !self.home_connected {
+            self.achievements.network_available();
+        }
+        self.home_connected = connected;
         self.sink.hold_open(self.app.headphones());
         if let Some(emu) = &self.emu {
             emu.set_volume(self.app.output_volume());
