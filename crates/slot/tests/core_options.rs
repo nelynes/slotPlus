@@ -378,8 +378,10 @@ fn every_frame_blending_slot_sets_is_one_the_core_declares() {
                 &core,
                 &format!("{} blending={blending:?}", which.as_str()),
             );
-            let (key, value) =
-                slot::core::blend_option(which, blending).expect("mGBA and gpSP blend");
+            // Only mGBA and gpSP blend; slotPlus's other cores have no option for it.
+            let Some((key, value)) = slot::core::blend_option(which, blending) else {
+                continue;
+            };
             assert!(
                 core.options().iter().any(|(k, v)| k == key && v == value),
                 "{} was never told {key}={value} for {blending:?}",
@@ -474,6 +476,10 @@ fn a_frame_blending_change_reaches_a_running_core_without_a_reload() {
     for which in Core::ALL {
         if !dylib_for(which).exists() {
             eprintln!("no {} dylib on this host, skipping", which.as_str());
+            continue;
+        }
+        // Only mGBA and gpSP blend; slotPlus's other cores have no option for it.
+        if slot::core::blend_option(which, Blending::Mix).is_none() {
             continue;
         }
         let plain = frames_with_mix_set_at(which, None);
