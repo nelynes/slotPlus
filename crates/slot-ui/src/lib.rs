@@ -99,7 +99,7 @@ pub use shelf::{foot_y, repeat_gap, rest_y, Shelf, REPEAT_DELAY_MS, STAR_INK, ST
 pub use shell::{
     gb_plastics, gb_table_shells, gba_plastics, gba_shell_for,
     lookup_order_is_exact_then_family_then_default, shell_for, shell_presets, table_keys, Finish,
-    Shell, DEFAULT_SHELL, DMG_SHELL, DUAL_MODE_SHELL, GB_CLEAR_SHELL,
+    Shell, DEFAULT_SHELL, DMG_SHELL, DUAL_MODE_SHELL, FAMICOM_MINI_SHELL, GB_CLEAR_SHELL,
 };
 pub use shot_viewer::{
     grid_cell, grid_rows_shown, thumbnail, ShotMode, ShotViewer, GRID_COLS, GRID_GAP, MAX_ZOOM,
