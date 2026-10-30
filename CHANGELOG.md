@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- Two-tone carts. The Japanese Famicom Mini GBA carts now have their red front and muted white back; the white shows when the cart opens to pick a core. Any game can be given a two-tone shell in `Config/cart_shell.txt` or Cart Studio+.
 - Groundwork for an experimental feature, not yet ready for general use.
 
 ## [1.11.0-plus2.4](https://github.com/nelynes/slotPlus/releases/tag/v1.11.0-plus2.4)

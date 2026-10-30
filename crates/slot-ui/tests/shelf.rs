@@ -1049,6 +1049,7 @@ fn a_clear_pak_draws_its_interior_then_the_board_then_the_plastic() {
             outline: Outline::Notched,
             colour: [0xff; 3],
             finish: ShellFinish::Clear,
+            back: None,
         }),
         title: "PAK".into(),
     }]);

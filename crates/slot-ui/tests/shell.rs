@@ -340,7 +340,7 @@ fn the_presets_are_the_tables_plastics_each_once() {
     let presets = shell_presets();
     assert_eq!(
         presets.len(),
-        25,
+        26,
         "a table row the presets name has gone missing"
     );
     let mut names: Vec<_> = presets.iter().map(|(n, _)| *n).collect();
@@ -350,6 +350,7 @@ fn the_presets_are_the_tables_plastics_each_once() {
     let find = |n: &str| presets.iter().find(|(name, _)| *name == n).unwrap().1;
     assert_eq!(find("Game Boy grey"), DMG_SHELL);
     assert_eq!(find("Pokémon Emerald"), gba_shell_for("BPEE"));
+    assert_eq!(find("Famicom Mini red and white"), gba_shell_for("FSMJ"));
 }
 
 fn greenish(face: &slot_ui::CartFace) -> usize {
@@ -598,4 +599,28 @@ fn a_clear_gba_cart_has_a_game_coloured_interior_under_its_board() {
         differ > 10_000,
         "the pak's interior is not coloured: {differ} px"
     );
+}
+
+// slotPlus: two-tone carts.
+
+#[test]
+fn a_famicom_mini_cart_is_red_in_front_and_white_behind() {
+    let s = gba_shell_for("FSMJ");
+    assert_eq!(s, slot_ui::FAMICOM_MINI_SHELL);
+    assert_ne!(s.colour, s.back_colour());
+    // Only the Japanese series: the Classic NES carts elsewhere kept the usual shell.
+    assert_eq!(gba_shell_for("FSME").back, None);
+    assert_eq!(gba_shell_for("AXVE").back, None);
+}
+
+#[test]
+fn an_opened_two_tone_cart_shows_its_back_colour_inside() {
+    use slot_ui::cart_interior;
+    let (_a, red) = chosen("GBA", 0, "BPEE", Some("auto 8e1b2b solid"));
+    let (_b, two) = chosen("GBA", 0, "BPEE", Some("auto 8e1b2b solid e2dbc8"));
+    let (_c, white) = chosen("GBA", 0, "BPEE", Some("auto e2dbc8 solid"));
+    // The front is the front colour; the inside of the back half is the back colour.
+    assert_eq!(cart_face(&two).rgba, cart_face(&red).rgba);
+    assert_eq!(cart_interior(&two).rgba, cart_interior(&white).rgba);
+    assert_ne!(cart_interior(&two).rgba, cart_interior(&red).rgba);
 }

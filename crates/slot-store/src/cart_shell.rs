@@ -24,6 +24,16 @@ pub struct ShellChoice {
     pub outline: Outline,
     pub colour: [u8; 3],
     pub finish: ShellFinish,
+    /// slotPlus: a two-tone cart's back half, when it is not `colour` (a Famicom Mini cart's
+    /// cream back behind its red front). Written as a fourth word.
+    pub back: Option<[u8; 3]>,
+}
+
+fn hex_colour(hex: &str) -> Option<[u8; 3]> {
+    if hex.len() != 6 || !hex.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return None;
+    }
+    Some([0, 2, 4].map(|i| u8::from_str_radix(&hex[i..i + 2], 16).unwrap_or(0)))
 }
 
 impl ShellChoice {
@@ -35,21 +45,22 @@ impl ShellChoice {
             "rounded" => Outline::Rounded,
             _ => return None,
         };
-        let hex = words.next()?;
-        if hex.len() != 6 || !hex.bytes().all(|b| b.is_ascii_hexdigit()) {
-            return None;
-        }
-        let colour = [0, 2, 4].map(|i| u8::from_str_radix(&hex[i..i + 2], 16).unwrap_or(0));
+        let colour = hex_colour(words.next()?)?;
         let finish = match words.next()? {
             "solid" => ShellFinish::Solid,
             "clear" => ShellFinish::Clear,
             "glitter" => ShellFinish::Glitter,
             _ => return None,
         };
+        let back = match words.next() {
+            Some(hex) => Some(hex_colour(hex)?),
+            None => None,
+        };
         words.next().is_none().then_some(ShellChoice {
             outline,
             colour,
             finish,
+            back,
         })
     }
 
@@ -65,7 +76,12 @@ impl ShellChoice {
             ShellFinish::Glitter => "glitter",
         };
         let [r, g, b] = self.colour;
-        format!("{outline} {r:02x}{g:02x}{b:02x} {finish}")
+        match self.back {
+            Some([br, bg, bb]) => {
+                format!("{outline} {r:02x}{g:02x}{b:02x} {finish} {br:02x}{bg:02x}{bb:02x}")
+            }
+            None => format!("{outline} {r:02x}{g:02x}{b:02x} {finish}"),
+        }
     }
 }
 
