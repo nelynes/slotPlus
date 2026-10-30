@@ -189,6 +189,7 @@ fn the_contacts_stay_gold_whatever_colour_the_shell() {
         colour: [0xc0, 0x20, 0x20],
         finish: slot_store::ShellFinish::Solid,
         outline: slot_store::Outline::Auto,
+        back: None,
     });
     for (c, y) in [(ws(), WS_CART_H * 92 / 100), (red, WS_CART_H * 92 / 100)] {
         let f = cart_face(&c);
@@ -236,6 +237,7 @@ fn a_shell_colour_tints_the_plastic_but_not_the_label() {
         colour: [0x20, 0x60, 0xd0],
         finish: slot_store::ShellFinish::Solid,
         outline: slot_store::Outline::Auto,
+        back: None,
     });
     let blue = cart_face(&tinted);
     let (x, y) = (LYNX_CART_W / 2, LYNX_CART_H * 10 / 100);
@@ -362,6 +364,7 @@ fn a_wonderswan_game_gets_a_black_cart_and_a_wonderswan_color_game_a_clear_one()
         colour: [0x20, 0x60, 0xd0],
         finish: slot_store::ShellFinish::Clear,
         outline: slot_store::Outline::Auto,
+        back: None,
     });
     assert!(is_clear(&picked));
 
@@ -396,6 +399,7 @@ fn a_hucard_is_white_with_gold_contacts_along_its_top_whatever_the_colour() {
         colour: [0xc0, 0x20, 0x20],
         finish: slot_store::ShellFinish::Solid,
         outline: slot_store::Outline::Auto,
+        back: None,
     });
     for c in [tg16(), red] {
         let f = cart_face(&c);
@@ -519,6 +523,7 @@ fn a_hucard_label_takes_the_shell_colour_where_it_leaves_the_card_showing() {
         colour: [0x20, 0x60, 0xd0],
         finish: slot_store::ShellFinish::Solid,
         outline: slot_store::Outline::Auto,
+        back: None,
     });
     let f = cart_face(&c);
     let above = at(&f, TG16_LABEL_X + TG16_LABEL_W / 2, TG16_LABEL_Y + 4);

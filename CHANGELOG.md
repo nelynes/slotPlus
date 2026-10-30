@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Two-tone carts. The Japanese Famicom Mini GBA carts now have their red front and muted white back; the white shows when the cart opens to pick a core. Any game can be given a two-tone shell in `Config/cart_shell.txt` or Cart Studio+.
+
 ## [1.11.0-plus2.4](https://github.com/nelynes/slotPlus/releases/tag/v1.11.0-plus2.4)
 
 slotPlus brought up to Slot 1.11.0: a 1.5x fast forward speed, a Fast Forward Toggle shortcut, no more buzz in headphones after the sound stops, and the CPU left at its full fixed speed again. See [Slot's 1.11.0 notes](https://github.com/BrandonKowalski/slot/releases/tag/v1.11.0).

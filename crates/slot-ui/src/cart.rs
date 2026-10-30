@@ -431,7 +431,8 @@ pub fn shows_interior(cart: &Cart) -> bool {
 /// 80% opacity. A GBA cart uses `gba_interior.png`, a Game Boy pak `gb_interior.png`, and a Game
 /// Boy Color pak `gbc_interior.png`. Same size as that cart's board and face.
 pub fn cart_interior(cart: &Cart) -> CartFace {
-    let colour = shell_for(cart).colour;
+    // The inside of the back half, so a two-tone cart's back colour.
+    let colour = shell_for(cart).back_colour();
     let (src, w, h, mask) = match Shape::of(mould_of(cart)) {
         Shape::Extra(mould) => {
             let s = spec(Shape::Extra(mould));
@@ -524,7 +525,12 @@ fn paste_decal(face: &mut CartFace, decal: &[u8]) {
 /// mirrored left to right and clipped to the mirrored outline.
 pub fn cart_back_shell(cart: &Cart) -> CartFace {
     let s = spec(shape_of(cart));
-    let front = shell_face(&s, &shell_for(cart));
+    let shell = shell_for(cart);
+    let back = Shell {
+        colour: shell.back_colour(),
+        ..shell
+    };
+    let front = shell_face(&s, &back);
     let (w, h) = (front.w as usize, front.h as usize);
     let mut rgba = vec![0u8; front.rgba.len()];
     for y in 0..h {
