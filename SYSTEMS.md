@@ -17,6 +17,7 @@ For the Game Boy systems, and everything else Slot does, see the [Slot user guid
 
 - **Shelf:** each system gets its own shelf. Its folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
 - **Label art:** optional PNGs go in `Labels/<folder>/<game name>.png`, named after the game's file without its extension. Each system's cart has its own label size, given below. Art of a different size is scaled to cover the label and cropped, except on HuCards, where it keeps its own shape (see the TurboGrafx-16).
+- **Game guides:** Slot's guides work on every system. Put a `.txt` named after the game in `Guides/<folder>/`, and Guide shows up in the in-game menu.
 - **Controls:** the In-Game controls page in Settings covers every system, so any button can be moved. The tables below show where each one starts.
 - **Screen menu:** each system has its own page under Screen, with its own Shader and Bezel, beside General for Brightness and Blue Light. SELECT + B / A in a game steps through that system's shaders.
 - **Bezels:** your own PNGs go in `Bezels/<folder>/`, the size of the screen with the screen area transparent: 720x480, or 640x480 on a 4:3 handheld such as the RG 35XXSP, where it shows pixel for pixel and the SP frame is offered too. A bezel shows at actual size, not when the picture is stretched.
@@ -37,7 +38,7 @@ For the Game Boy systems, and everything else Slot does, see the [Slot user guid
 | **Core** | DSperate, with its recompiler on. |
 | **Label art** | `Labels/NDS/`, about 230x250 px (0.92:1), the upright shape of a DS card's label. Without art, the card shows the game's name. |
 | **Picture** | The two 256x192 screens, in the layout you pick (see below). |
-| **Shaders** | Off, LCD3x, Grid, Dot. A shader shows where the main screen is drawn at 2x or more. Both Screens, at 1.25x, and the small second screen are drawn plain. |
+| **Shaders** | Off, LCD3x, Grid, Dot, Shimmerless. A shader shows where the main screen is drawn at 2x or more. Both Screens, at 1.25x, and the small second screen are drawn plain. |
 | **Bezel** | DS Lite, bundled and the default: a bezel for each layout, by nelynes. Or your own in `Bezels/NDS/`: a single 720x480 PNG drawn over every layout, or a bezel set, a folder with one PNG for each layout (`both-screens.png`, `one-screen.png`, `full-screen.png`, `side-by-side.png`, `picture-in-picture.png`) that follows the layout as you change it. A layout with no PNG in the set draws no bezel. |
 | **Cart** | The DS game card: a small dark card with one bottom corner cut off, the label in a shallow recess and an arrow at the foot. It goes into the slot narrower than the other carts. With Cart Slot set to Bespoke, the slot is the back of a silver DS Lite. |
 | **Saves** | `Saves/NDS/<game name>.sav`. Save states and the resume state work as usual. There is no rewind for DS games, since their states are about 6 MB each. |
@@ -89,7 +90,7 @@ The TurboExpress was NEC's handheld TurboGrafx-16: it played the same HuCards as
 | **Core** | Beetle PCE Fast, with the two-button pad. |
 | **Label art** | `Labels/TG16/`, 191 px wide and up to 163 px tall. As on real HuCards, labels come in different heights: the art is scaled to the full width at its own shape and sits at the bottom of the card, with plain card above a shorter label. Art taller than the space is shrunk to fit whole. |
 | **Picture** | Most games draw 256x240, shown at 2x. Games that switch to a wider mode follow it: up to 352 wide stays at 2x, and the 512-wide mode, whose pixels are half as wide, is drawn 1x across and 2x down, centred. Stretched, the picture fills the screen whatever its width. |
-| **Shaders** | Off, LCD3x, Grid, Dot. |
+| **Shaders** | Off, LCD3x, Grid, Dot, Shimmerless. |
 | **Bezel** | Four bundled: TG16, a dark face with the TurboGrafx-16 logo down the left side, and PCE, the PC Engine's white case either side of the screen, each with a Wide version for games that draw 320 wide. Or your own in `Bezels/TG16/`, 720x480 with the 512x480 window from x 104 clear (640x480 from x 40 for a wide one). |
 | **Cart** | The HuCard: a thin white card with gold contacts along the top over a dark textured panel, the label printed square at the bottom of the space below the panel, and a ridged grip tab at the foot. It turns end over end before it goes into the slot, contacts first, and turns back when it comes out. |
 | **Saves** | Games that save to the console's backup memory keep it in `Saves/TG16/`. |
@@ -119,7 +120,7 @@ The buttons follow the TurboExpress's layout: II on the left, I on the right.
 | **Core** | Beetle NeoPop, set to English for games that have both languages. |
 | **Label art** | `Labels/NGP/`, about 246x133 px (1.85:1). |
 | **Picture** | The 160x152 screen at 3x, or stretched to fill the screen. |
-| **Shaders** | Off, LCD3x, Grid, Simpletex. |
+| **Shaders** | Off, LCD3x, Grid, Simpletex, Shimmerless. |
 | **Bezel** | A bundled Default with the NeoGeo Pocket name and logo down the left side, or your own in `Bezels/NGP/`. |
 | **Cart** | The NeoGeo Pocket pak: a ridged cap, the label in a recessed frame, and a lower band with SNK and NGP plaques and a down arrow. Dark grey by default. |
 | **Saves** | `Saves/NGP/<game name>.flash`. |
@@ -151,7 +152,7 @@ The buttons follow the NeoGeo Pocket's own layout, so its A is the left button a
 | **Core** | Gearsystem. |
 | **Label art** | `Labels/GG/`, about 290x200 px (1.45:1). |
 | **Picture** | The 160x144 screen at 3x, or stretched to fill the screen. |
-| **Shaders** | Off, LCD3x, Grid, Simpletex. |
+| **Shaders** | Off, LCD3x, Grid, Simpletex, Shimmerless. |
 | **Bezel** | A bundled Default, a black face with the Game Gear's green power light glowing above the screen, or your own in `Bezels/GG/`. |
 | **Cart** | The Game Gear pak: a raised hood with grip ridges arching over the label, and the SEGA plaque at the foot. Black by default. |
 | **Saves** | Games with battery saves keep them in `Saves/GG/`. |
@@ -182,7 +183,7 @@ The buttons follow the NeoGeo Pocket's own layout, so its A is the left button a
 | **Core** | Beetle Lynx. |
 | **Label art** | `Labels/Lynx/`, about 284x190 px (1.5:1). |
 | **Picture** | Shown at 4x, or stretched to fill the screen through `Config/video_mode.txt`. Games made to be held on their side are drawn turned (see below). |
-| **Shaders** | Off, LCD3x, Grid, Dot. |
+| **Shaders** | Off, LCD3x, Grid, Dot, Shimmerless. |
 | **Bezel** | Your own in `Bezels/Lynx/`. |
 | **Cart** | The curved-lip card, with its gold contacts behind a clear strip at the foot. |
 | **Saves** | The core has no battery saves. Use save states and the resume state. |
@@ -237,7 +238,7 @@ The values are `auto` (let the core decide), `0` (not turned), `90` (made to be 
 | **Core** | Beetle WonderSwan (Cygne). |
 | **Label art** | `Labels/WS/`, about 324x132 px (2.45:1). |
 | **Picture** | Horizontal games at 3x, or stretched to fill the screen through `Config/video_mode.txt`. Vertical games are turned (see below). |
-| **Shaders** | Off, LCD3x, Grid, Simpletex. |
+| **Shaders** | Off, LCD3x, Grid, Simpletex, Shimmerless. |
 | **Bezel** | Your own in `Bezels/WS/`. |
 | **Cart** | The wide WonderSwan cart, with the oval nameplate on top and the bare board below the shoulder. Black for a WonderSwan game (`.ws`), frosted smoke-clear with the board showing through for a WonderSwan Color game (`.wsc`). |
 | **Saves** | Games with battery saves keep them in `Saves/WS/`. |
