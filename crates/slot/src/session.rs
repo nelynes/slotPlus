@@ -44,6 +44,7 @@ pub struct Session {
     lynx_upright: bool,
     /// How the handheld is held for the Lynx game playing, as the host is told.
     lynx_held: &'static str,
+    sunlight_sent: Option<u8>,
 }
 
 impl Session {
@@ -74,6 +75,7 @@ impl Session {
             lynx_select: false,
             lynx_upright: false,
             lynx_held: "off",
+            sunlight_sent: None,
         };
         // A game left running comes straight back. Its core loads on its own thread, so start it
         // now and let the card read overlap the rest of the boot. Waiting for the first update
@@ -371,6 +373,12 @@ impl Session {
             ) {
                 emu.set_option(key, value);
                 recoloured = true;
+            }
+        }
+        if let (Some(level), Some(emu)) = (self.app.sunlight(), &self.emu) {
+            if self.sunlight_sent != Some(level) {
+                emu.set_option(crate::core::SUNLIGHT_OPTION, &level.to_string());
+                self.sunlight_sent = Some(level);
             }
         }
         if recoloured && self.held() && !self.app.link_active() {
@@ -679,6 +687,7 @@ impl Session {
         emu.set_driven(self.driven);
         self.app.set_snapshot(Box::new(emu.snapshot()));
         self.emu = Some(emu);
+        self.sunlight_sent = None;
         true
     }
 

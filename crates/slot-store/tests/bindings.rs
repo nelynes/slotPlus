@@ -241,7 +241,7 @@ fn fast_forward_toggle_starts_unbound_and_round_trips_through_the_file() {
         ShortcutKeys::default().get(Shortcut::FastForwardToggle),
         None
     );
-    assert_eq!(Shortcut::FastForwardToggle.label(), "Fast Forward Toggle");
+    assert_eq!(Shortcut::FastForwardToggle.label(), "FF Toggle");
     let d = card();
     let mut keys = ShortcutKeys::default();
     keys.set(Shortcut::FastForwardToggle, plain(Device::R1));
@@ -275,4 +275,38 @@ fn other_shortcuts_may_still_share_a_binding() {
     keys.set(Shortcut::FastForward, plain(Device::L1));
     keys.set(Shortcut::FastForwardToggle, None);
     assert_eq!(keys.get(Shortcut::FastForward), plain(Device::L1));
+}
+
+#[test]
+fn the_sunlight_shortcuts_start_unbound_and_round_trip_through_the_file() {
+    for (shortcut, label, key) in [
+        (Shortcut::SunlightUp, "Sunlight Up", "sunlight_up=r1"),
+        (Shortcut::SunlightDown, "Sunlight Down", "sunlight_down=r1"),
+    ] {
+        assert_eq!(ShortcutKeys::default().get(shortcut), None);
+        assert_eq!(shortcut.label(), label);
+        let d = card();
+        let mut keys = ShortcutKeys::default();
+        keys.set(shortcut, plain(Device::R1));
+        write_shortcuts(d.path(), &keys).unwrap();
+        assert_eq!(read_shortcuts(d.path()).get(shortcut), plain(Device::R1));
+        let text = std::fs::read_to_string(d.path().join("Config/shortcuts.txt")).unwrap();
+        assert!(text.contains(key), "{text}");
+    }
+}
+
+#[test]
+fn reset_starts_unbound_and_round_trips_through_the_file() {
+    assert_eq!(ShortcutKeys::default().get(Shortcut::Reset), None);
+    assert_eq!(Shortcut::Reset.label(), "Reset Game");
+    let d = card();
+    let mut keys = ShortcutKeys::default();
+    keys.set(Shortcut::Reset, plain(Device::R1));
+    write_shortcuts(d.path(), &keys).unwrap();
+    assert_eq!(
+        read_shortcuts(d.path()).get(Shortcut::Reset),
+        plain(Device::R1)
+    );
+    let text = std::fs::read_to_string(d.path().join("Config/shortcuts.txt")).unwrap();
+    assert!(text.contains("reset=r1"), "{text}");
 }
