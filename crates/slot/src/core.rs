@@ -192,7 +192,7 @@ pub fn colour_option(
                 "OFF"
             },
         )),
-        Core::Cygne | Core::Lynx => None,
+        Core::Cygne | Core::Lynx | Core::Pokemini => None,
         Core::Gpsp => Some((
             "gpsp_color_correction",
             if on { "enabled" } else { "disabled" },
@@ -257,7 +257,7 @@ pub fn option_prefix(which: Core) -> &'static str {
 /// Whether the core has a `<prefix>_frameskip` option to set. Beetle Lynx
 /// does not: it is cheap to run and has no frameskip setting.
 fn has_frameskip(which: Core) -> bool {
-    which != Core::Lynx
+    !matches!(which, Core::Lynx | Core::Pokemini)
 }
 
 pub const LYNX_ROTATION_FILE: &str = "Config/lynx_rotation.txt";
@@ -362,6 +362,18 @@ pub fn apply_core_options(
         // the rotation chosen for it. SELECT is left unused so nothing else
         // can fight it.
         core.set_option("lynx_rot_screen", "auto");
+    }
+    if which == Core::Pokemini {
+        // Slot scales and filters the 96x64 picture itself, at 60 frames a
+        // second like the panel: PokeMini drops one frame in six of its 72.
+        // The grey shades come from its LCD's ghosting, so it stays analog.
+        core.set_option("pokemini_video_scale", "1x");
+        core.set_option("pokemini_lcdfilter", "none");
+        core.set_option("pokemini_60hz_mode", "enabled");
+        core.set_option("pokemini_lcdmode", "analog");
+        // The handheld's motor does the shaking, so the picture stays still.
+        core.set_option("pokemini_screen_shake_lv", "0");
+        core.set_option("pokemini_rumble_lv", "10");
     }
     if which == Core::Gpsp {
         core.set_option("gpsp_serial", serial);

@@ -7,6 +7,8 @@ vars:
   GPSP_COMMIT: 7b2dd37394e2822110cacef321e9bb291a305b77
   CYGNE_COMMIT: 4b01295838ea89e3f1355bbe4cb5cf98aa6108cd
   LYNX_COMMIT: fcdefcfb3c11d6d2e71be076a5d3df2e88ab73ed
+  # PokeMini (libretro), 2026-07-31
+  POKEMINI_COMMIT: 132111b76343559860532a1ccc094f93f1ed5650
   EXFATPROGS_VERSION: 1.4.3
   EXFATPROGS_SHA256: 4b5052cba6ff9f6dcb1c63eeeac328620472c5b0b3caf3d38e4ada50e75469d3
   SLOT_IN_PROCESS: >-
@@ -332,6 +334,35 @@ tasks:
       - cp vendor/lynx_libretro.so.meta vendor/lynx-src.meta
       - 'echo "built vendor/lynx_libretro.so from vendor/lynx-src.tar.gz @ {{.LYNX_COMMIT}}"'
 
+  core:pokemini:
+    desc: >-
+        Build the aarch64 linux PokeMini (Pokémon mini) core from its pinned source archive,
+        which ships beside it as its GPL-3.0 corresponding source
+    status:
+      - test -f vendor/pokemini_libretro.so
+      - test -f vendor/pokemini-src.tar.gz
+      - test "$(cat vendor/pokemini-src.sha 2>/dev/null)" = "{{.POKEMINI_COMMIT}}"
+      - test "$(cat vendor/pokemini_libretro.so.meta 2>/dev/null)" = "$(sh cores/pokemini/build.sh stamp {{.POKEMINI_COMMIT}})"
+      - test "$(cat vendor/pokemini-src.meta 2>/dev/null)" = "$(sh cores/pokemini/build.sh stamp {{.POKEMINI_COMMIT}})"
+    cmds:
+      - |
+        set -euo pipefail
+        mkdir -p vendor
+        rm -f vendor/pokemini_libretro.so vendor/pokemini_libretro.so.meta \
+              vendor/pokemini-src.tar.gz vendor/pokemini-src.sha vendor/pokemini-src.meta
+        curl -fsSL -o vendor/pokemini-src.tar.gz \
+          "https://github.com/libretro/PokeMini/archive/{{.POKEMINI_COMMIT}}.tar.gz"
+        tar -tzf vendor/pokemini-src.tar.gz | grep "^PokeMini-{{.POKEMINI_COMMIT}}/Makefile.libretro$" > /dev/null
+      - task: device:sh
+        vars:
+          CMD: >-
+            sh cores/pokemini/build.sh build {{.POKEMINI_COMMIT}} vendor/pokemini-src.tar.gz
+            target-device/pokemini vendor/pokemini_libretro.so
+      - file vendor/pokemini_libretro.so | grep -q aarch64
+      - echo "{{.POKEMINI_COMMIT}}" > vendor/pokemini-src.sha
+      - cp vendor/pokemini_libretro.so.meta vendor/pokemini-src.meta
+      - 'echo "built vendor/pokemini_libretro.so from vendor/pokemini-src.tar.gz @ {{.POKEMINI_COMMIT}}"'
+
   core:gpsp:test:
     desc: Prove gpSP's Advance Wars session-flip patch still fixes what it was written for
     deps: [ core:gpsp ]
@@ -403,7 +434,7 @@ tasks:
 
   dist:device:
     desc: Build the SD2 tree for an H700 device, OUT defaults to ./dist-device
-    deps: [core:device, core:gpsp, core:cygne, core:lynx, fsck:exfat, build:device]
+    deps: [core:device, core:gpsp, core:cygne, core:lynx, core:pokemini, fsck:exfat, build:device]
     vars:
       OUT: '{{.OUT | default "dist-device"}}'
     cmds:
@@ -420,10 +451,12 @@ tasks:
       - file vendor/gpsp_libretro.so | grep -q aarch64
       - file vendor/cygne_libretro.so | grep -q aarch64
       - file vendor/lynx_libretro.so | grep -q aarch64
+      - file vendor/pokemini_libretro.so | grep -q aarch64
       - cp vendor/mgba_libretro.so {{.OUT}}/System/
       - cp vendor/gpsp_libretro.so {{.OUT}}/System/
       - cp vendor/cygne_libretro.so {{.OUT}}/System/
       - cp vendor/lynx_libretro.so {{.OUT}}/System/
+      - cp vendor/pokemini_libretro.so {{.OUT}}/System/
       - cp vendor/fsck.exfat {{.OUT}}/System/
       - cp -r licenses {{.OUT}}/System/licenses
       - cp vendor/exfatprogs-{{.EXFATPROGS_VERSION}}.tar.gz {{.OUT}}/System/licenses/
@@ -453,18 +486,21 @@ tasks:
         sha="$(cat vendor/lynx-src.sha)"
         cp vendor/lynx-src.tar.gz "{{.OUT}}/System/licenses/lynx-${sha}.tar.gz"
         cp vendor/lynx-src.meta "{{.OUT}}/System/licenses/lynx-${sha}.meta"
+        sha="$(cat vendor/pokemini-src.sha)"
+        cp vendor/pokemini-src.tar.gz "{{.OUT}}/System/licenses/pokemini-${sha}.tar.gz"
+        cp vendor/pokemini-src.meta "{{.OUT}}/System/licenses/pokemini-${sha}.meta"
       - 'echo "device tree ready at {{.OUT}}, copy its contents to SD2"'
 
   deploy:device:
     desc: Build and push onto a device over adb, then restart it. SD defaults to /mnt/sdcard
-    deps: [core:device, core:gpsp, core:cygne, core:lynx, fsck:exfat, build:device]
+    deps: [core:device, core:gpsp, core:cygne, core:lynx, core:pokemini, fsck:exfat, build:device]
     cmds:
       - task: deploy:push
         vars: { SD: '{{.SD}}' }
 
   deploy:all:
     desc: Build and push onto every attached adb device, then restart each. SD defaults to /mnt/sdcard
-    deps: [core:device, core:gpsp, core:cygne, core:lynx, fsck:exfat, build:device]
+    deps: [core:device, core:gpsp, core:cygne, core:lynx, core:pokemini, fsck:exfat, build:device]
     vars:
       SERIALS:
         sh: adb devices | awk 'NR > 1 && $2 == "device" {print $1}'
@@ -487,12 +523,14 @@ tasks:
       - file vendor/gpsp_libretro.so | grep -q aarch64
       - file vendor/cygne_libretro.so | grep -q aarch64
       - file vendor/lynx_libretro.so | grep -q aarch64
+      - file vendor/pokemini_libretro.so | grep -q aarch64
       - "{{.ADB}} push target-device/device/slot '{{.SD}}/System/slot'"
       - for f in card/System/*; do {{.ADB}} push "$f" '{{.SD}}/System/'; done
       - "{{.ADB}} push vendor/mgba_libretro.so '{{.SD}}/System/mgba_libretro.so'"
       - "{{.ADB}} push vendor/gpsp_libretro.so '{{.SD}}/System/gpsp_libretro.so'"
       - "{{.ADB}} push vendor/cygne_libretro.so '{{.SD}}/System/cygne_libretro.so'"
       - "{{.ADB}} push vendor/lynx_libretro.so '{{.SD}}/System/lynx_libretro.so'"
+      - "{{.ADB}} push vendor/pokemini_libretro.so '{{.SD}}/System/pokemini_libretro.so'"
       - "{{.ADB}} push vendor/fsck.exfat '{{.SD}}/System/fsck.exfat'"
       - "{{.ADB}} push licenses '{{.SD}}/System/'"
       - "{{.ADB}} push vendor/exfatprogs-{{.EXFATPROGS_VERSION}}.tar.gz '{{.SD}}/System/licenses/'"
@@ -521,6 +559,9 @@ tasks:
         sha="$(cat vendor/lynx-src.sha)"
         {{.ADB}} push vendor/lynx-src.tar.gz "{{.SD}}/System/licenses/lynx-${sha}.tar.gz"
         {{.ADB}} push vendor/lynx-src.meta "{{.SD}}/System/licenses/lynx-${sha}.meta"
+        sha="$(cat vendor/pokemini-src.sha)"
+        {{.ADB}} push vendor/pokemini-src.tar.gz "{{.SD}}/System/licenses/pokemini-${sha}.tar.gz"
+        {{.ADB}} push vendor/pokemini-src.meta "{{.SD}}/System/licenses/pokemini-${sha}.meta"
       - "{{.ADB}} shell 'chmod +x {{.SD}}/System/slot && sync'"
       - "{{.ADB}} reboot"
       - "{{.ADB}} wait-for-device"

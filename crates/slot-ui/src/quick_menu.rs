@@ -57,6 +57,9 @@ pub enum QuickRow {
     LynxShader,
     WsBezel,
     LynxBezel,
+    ScreenPm,
+    PmShader,
+    PmBezel,
     General,
     ShelfPrev,
     ShelfNext,
@@ -118,7 +121,7 @@ pub enum QuickRow {
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 104] = [
+    pub const ALL: [QuickRow; 107] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -165,6 +168,9 @@ impl QuickRow {
         QuickRow::LynxShader,
         QuickRow::WsBezel,
         QuickRow::LynxBezel,
+        QuickRow::ScreenPm,
+        QuickRow::PmShader,
+        QuickRow::PmBezel,
         QuickRow::General,
         QuickRow::ShelfPrev,
         QuickRow::ShelfNext,
@@ -290,13 +296,14 @@ impl QuickRow {
         QuickRow::ScRewind,
     ];
 
-    pub const SCREEN: [QuickRow; 6] = [
+    pub const SCREEN: [QuickRow; 7] = [
         QuickRow::ScreenGeneral,
         QuickRow::ScreenGba,
         QuickRow::ScreenGbc,
         QuickRow::ScreenGb,
         QuickRow::ScreenWs,
         QuickRow::ScreenLynx,
+        QuickRow::ScreenPm,
     ];
 
     pub const SCREEN_GENERAL: [QuickRow; 2] = [QuickRow::Brightness, QuickRow::BlueLight];
@@ -306,6 +313,8 @@ impl QuickRow {
     pub const SCREEN_WS: [QuickRow; 2] = [QuickRow::WsShader, QuickRow::WsBezel];
 
     pub const SCREEN_LYNX: [QuickRow; 2] = [QuickRow::LynxShader, QuickRow::LynxBezel];
+
+    pub const SCREEN_PM: [QuickRow; 2] = [QuickRow::PmShader, QuickRow::PmBezel];
 
     pub const SCREEN_GBA: [QuickRow; 5] = [
         QuickRow::GbaShader,
@@ -384,11 +393,13 @@ impl QuickRow {
             | QuickRow::ScreenGbc
             | QuickRow::ScreenGb
             | QuickRow::ScreenWs
-            | QuickRow::ScreenLynx => &QuickRow::SCREEN,
+            | QuickRow::ScreenLynx
+            | QuickRow::ScreenPm => &QuickRow::SCREEN,
             QuickRow::Brightness | QuickRow::BlueLight => &QuickRow::SCREEN_GENERAL,
             QuickRow::PlayBrightness | QuickRow::PlayBlueLight => &QuickRow::PLAY_SCREEN,
             QuickRow::WsShader | QuickRow::WsBezel => &QuickRow::SCREEN_WS,
             QuickRow::LynxShader | QuickRow::LynxBezel => &QuickRow::SCREEN_LYNX,
+            QuickRow::PmShader | QuickRow::PmBezel => &QuickRow::SCREEN_PM,
             QuickRow::GbaShader
             | QuickRow::GbaColourCorrection
             | QuickRow::GbaBlending
@@ -460,6 +471,7 @@ impl QuickRow {
             QuickRow::GbShader => Some(QuickRow::ScreenGb),
             QuickRow::WsShader => Some(QuickRow::ScreenWs),
             QuickRow::LynxShader => Some(QuickRow::ScreenLynx),
+            QuickRow::PmShader => Some(QuickRow::ScreenPm),
             QuickRow::FastForward => Some(QuickRow::Game),
             QuickRow::PlayScreen => Some(QuickRow::Settings),
             QuickRow::Shader => Some(QuickRow::PlayScreen),
@@ -510,6 +522,7 @@ impl QuickRow {
             QuickRow::ScreenGb => Some(QuickRow::SCREEN_GB[0]),
             QuickRow::ScreenWs => Some(QuickRow::SCREEN_WS[0]),
             QuickRow::ScreenLynx => Some(QuickRow::SCREEN_LYNX[0]),
+            QuickRow::ScreenPm => Some(QuickRow::SCREEN_PM[0]),
             _ => None,
         }
     }
@@ -630,6 +643,9 @@ impl QuickRow {
             QuickRow::LynxShader => "Shader",
             QuickRow::WsBezel => "Bezel",
             QuickRow::LynxBezel => "Bezel",
+            QuickRow::ScreenPm => "Pokémon mini",
+            QuickRow::PmShader => "Shader",
+            QuickRow::PmBezel => "Bezel",
         }
     }
 
@@ -660,6 +676,7 @@ impl QuickRow {
                 | QuickRow::ScreenGb
                 | QuickRow::ScreenWs
                 | QuickRow::ScreenLynx
+                | QuickRow::ScreenPm
                 | QuickRow::ScreenGeneral
         )
     }

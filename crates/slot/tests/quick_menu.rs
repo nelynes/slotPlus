@@ -381,6 +381,7 @@ fn screen_opens_a_page_of_its_own_and_b_comes_back_to_it() {
         QuickRow::ScreenGb,
         QuickRow::ScreenWs,
         QuickRow::ScreenLynx,
+        QuickRow::ScreenPm,
         QuickRow::ScreenGeneral,
         QuickRow::ScreenGba,
         QuickRow::ScreenGbc,

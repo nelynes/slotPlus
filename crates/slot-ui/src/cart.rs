@@ -57,7 +57,13 @@ pub const GBC_LABEL_H: u32 = 199;
 
 // WonderSwan: the label fills the face between the oval nameplate at the top
 // and the shoulder above the exposed contacts.
-pub use crate::bitmaps::{LYNX_CART_H, LYNX_CART_W, WS_CART_H, WS_CART_W};
+pub use crate::bitmaps::{LYNX_CART_H, LYNX_CART_W, PM_CART_H, PM_CART_W, WS_CART_H, WS_CART_W};
+
+// Pokémon mini: the label well below the grip band, as tools/cart_art/pokemini.py draws it.
+pub const PM_LABEL_X: u32 = 24;
+pub const PM_LABEL_Y: u32 = 66;
+pub const PM_LABEL_W: u32 = 216;
+pub const PM_LABEL_H: u32 = 196;
 
 pub const fn ws_label_panel(w: u32, h: u32) -> (u32, u32, u32, u32) {
     (
@@ -131,6 +137,7 @@ pub fn mould_of(cart: &Cart) -> Mould {
     match cart.platform {
         Platform::Ws => Mould::Ws,
         Platform::Lynx => Mould::Lynx,
+        Platform::Pm => Mould::Pm,
         _ => match gb_shell_of(cart) {
             None => Mould::Gba,
             Some(GbShell::Notched) => Mould::Notched,
@@ -147,12 +154,13 @@ pub fn mould_for(platform: Platform) -> Mould {
         Platform::Gb | Platform::Gbc => Mould::Notched,
         Platform::Ws => Mould::Ws,
         Platform::Lynx => Mould::Lynx,
+        Platform::Pm => Mould::Pm,
     }
 }
 
 pub fn gb_shell_of(cart: &Cart) -> Option<GbShell> {
     match cart.platform {
-        Platform::Gba | Platform::Gbav | Platform::Ws | Platform::Lynx => None,
+        Platform::Gba | Platform::Gbav | Platform::Ws | Platform::Lynx | Platform::Pm => None,
         Platform::Gb | Platform::Gbc => Some(match cart.shell.map(|c| c.outline) {
             Some(Outline::Notched) => GbShell::Notched,
             Some(Outline::Rounded) => GbShell::Rounded,
@@ -214,6 +222,7 @@ fn spec(shape: Shape) -> Spec {
                 h,
                 label: match mould {
                     Mould::Ws => (WS_LABEL_X, WS_LABEL_Y, WS_LABEL_W, WS_LABEL_H),
+                    Mould::Pm => (PM_LABEL_X, PM_LABEL_Y, PM_LABEL_W, PM_LABEL_H),
                     _ => (LYNX_LABEL_X, LYNX_LABEL_Y, LYNX_LABEL_W, LYNX_LABEL_H),
                 },
                 mask: extra_mask(mould),
@@ -598,7 +607,7 @@ fn dress(s: &Spec, rgba: &mut [u8]) {
         Mould::Notched => "GAME BOY",
         Mould::Rounded => "GAME BOY COLOR",
         // The slotPlus moulds carry their markings in their art.
-        Mould::Ws | Mould::Lynx => return,
+        Mould::Ws | Mould::Lynx | Mould::Pm => return,
     };
     stamp_console(rgba, s.w, s.h, title, y0);
 }
@@ -761,7 +770,7 @@ fn generated_label(s: &Spec, title: &str) -> Vec<u8> {
 
     if let Some(font) = text::label_font() {
         let (max_px, max_h) = match s.mould {
-            Mould::Gba | Mould::Ws | Mould::Lynx => {
+            Mould::Gba | Mould::Ws | Mould::Lynx | Mould::Pm => {
                 (lh as f32 / (MAX_LINES as f32 * 1.36), f32::INFINITY)
             }
             Mould::Notched | Mould::Rounded => {

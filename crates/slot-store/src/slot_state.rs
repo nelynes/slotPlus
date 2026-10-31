@@ -325,6 +325,7 @@ pub struct SlotState {
     pub shader_gbc: Shader,
     pub shader_ws: Shader,
     pub shader_lynx: Shader,
+    pub shader_pm: Shader,
     pub auto_load: bool,
     pub eject_save: bool,
     pub turbo: bool,
@@ -348,6 +349,7 @@ pub struct SlotState {
     pub bezel_gbc: BezelPick,
     pub bezel_ws: BezelPick,
     pub bezel_lynx: BezelPick,
+    pub bezel_pm: BezelPick,
     pub scale_gba: Scale,
     pub scale_gb: Scale,
     pub scale_gbc: Scale,
@@ -437,6 +439,8 @@ impl Shader {
     /// is made for the Game Boy's unlit screen, and the Lynx from the GBA's.
     pub const WS: [Shader; 4] = [Shader::Off, Shader::Lcd3x, Shader::Grid, Shader::Simpletex];
     pub const LYNX: [Shader; 4] = Shader::GBA;
+    /// The Pokémon mini's unlit screen picks from the Game Boy's list, Transparent among them.
+    pub const PM: [Shader; 5] = Shader::GB;
 
     pub fn name(self) -> &'static str {
         match self {
@@ -498,6 +502,7 @@ impl Default for SlotState {
             shader_gbc: Shader::Simpletex,
             shader_ws: Shader::Simpletex,
             shader_lynx: Shader::Grid,
+            shader_pm: Shader::Grid,
             auto_load: true,
             eject_save: true,
             turbo: true,
@@ -518,6 +523,7 @@ impl Default for SlotState {
             bezel_gbc: BezelPick::Ags102,
             bezel_ws: BezelPick::None,
             bezel_lynx: BezelPick::None,
+            bezel_pm: BezelPick::None,
             scale_gba: Scale::Fit,
             scale_gb: Scale::SpFrame,
             scale_gbc: Scale::SpFrame,
@@ -616,6 +622,7 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     text.push_str(&format!("shader_gbc={}\n", s.shader_gbc.name()));
     text.push_str(&format!("shader_ws={}\n", s.shader_ws.name()));
     text.push_str(&format!("shader_lynx={}\n", s.shader_lynx.name()));
+    text.push_str(&format!("shader_pm={}\n", s.shader_pm.name()));
     text.push_str(&format!("wallpaper_tint={}\n", s.wallpaper_tint.key()));
     text.push_str(&format!("show_recents={}\n", s.show_recents as u8));
     text.push_str(&format!("show_titles={}\n", s.show_titles as u8));
@@ -634,6 +641,7 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     text.push_str(&format!("bezel_gbc={}\n", s.bezel_gbc.key()));
     text.push_str(&format!("bezel_ws={}\n", s.bezel_ws.key()));
     text.push_str(&format!("bezel_lynx={}\n", s.bezel_lynx.key()));
+    text.push_str(&format!("bezel_pm={}\n", s.bezel_pm.key()));
     text.push_str(&format!("scale_gba={}\n", s.scale_gba.name()));
     text.push_str(&format!("scale_gb={}\n", s.scale_gb.name()));
     text.push_str(&format!("scale_gbc={}\n", s.scale_gbc.name()));
@@ -681,6 +689,7 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut shader_gbc = None;
     let mut shader_ws = None;
     let mut shader_lynx = None;
+    let mut shader_pm = None;
     let mut auto_load = None;
     let mut eject_save = None;
     let mut turbo = None;
@@ -701,6 +710,7 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut bezel_gbc = None;
     let mut bezel_ws = None;
     let mut bezel_lynx = None;
+    let mut bezel_pm = None;
     let mut scale_gba = None;
     let mut scale_gb = None;
     let mut scale_gbc = None;
@@ -756,6 +766,7 @@ fn parse(text: &str) -> Option<SlotState> {
             "bezel_gbc" => bezel_gbc = Some(BezelPick::parse(value)),
             "bezel_ws" => bezel_ws = Some(BezelPick::parse(value)),
             "bezel_lynx" => bezel_lynx = Some(BezelPick::parse(value)),
+            "bezel_pm" => bezel_pm = Some(BezelPick::parse(value)),
             "scale_gba" => scale_gba = Scale::parse(value),
             "scale_gb" => scale_gb = Scale::parse(value),
             "scale_gbc" => scale_gbc = Scale::parse(value),
@@ -769,6 +780,7 @@ fn parse(text: &str) -> Option<SlotState> {
             "shader_gb" => shader_gb = Shader::parse(value).filter(|s| Shader::GB.contains(s)),
             "shader_gbc" => shader_gbc = Shader::parse(value).filter(|s| Shader::GB.contains(s)),
             "shader_ws" => shader_ws = Shader::parse(value).filter(|s| Shader::WS.contains(s)),
+            "shader_pm" => shader_pm = Shader::parse(value).filter(|s| Shader::PM.contains(s)),
             "shader_lynx" => {
                 shader_lynx = Shader::parse(value).filter(|s| Shader::LYNX.contains(s))
             }
@@ -811,6 +823,7 @@ fn parse(text: &str) -> Option<SlotState> {
             .or(shader_gb.filter(|s| Shader::WS.contains(s)))
             .unwrap_or(fallback.shader_ws),
         shader_lynx: shader_lynx.or(shader_gba).unwrap_or(fallback.shader_lynx),
+        shader_pm: shader_pm.unwrap_or(fallback.shader_pm),
         auto_load: auto_load.unwrap_or(fallback.auto_load),
         eject_save: eject_save.unwrap_or(fallback.eject_save),
         turbo: turbo.unwrap_or(fallback.turbo),
@@ -831,6 +844,7 @@ fn parse(text: &str) -> Option<SlotState> {
         bezel_gbc: bezel_gbc.unwrap_or(fallback.bezel_gbc),
         bezel_ws: bezel_ws.unwrap_or(fallback.bezel_ws),
         bezel_lynx: bezel_lynx.unwrap_or(fallback.bezel_lynx),
+        bezel_pm: bezel_pm.unwrap_or(fallback.bezel_pm),
         scale_gba: scale_gba.unwrap_or(fallback.scale_gba),
         scale_gb: scale_gb.unwrap_or(fallback.scale_gb),
         scale_gbc: scale_gbc.unwrap_or(fallback.scale_gbc),

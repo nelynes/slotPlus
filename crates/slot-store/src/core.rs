@@ -12,10 +12,17 @@ pub enum Core {
     Gpsp,
     Cygne,
     Lynx,
+    Pokemini,
 }
 
 impl Core {
-    pub const ALL: [Core; 4] = [Core::Mgba, Core::Gpsp, Core::Cygne, Core::Lynx];
+    pub const ALL: [Core; 5] = [
+        Core::Mgba,
+        Core::Gpsp,
+        Core::Cygne,
+        Core::Lynx,
+        Core::Pokemini,
+    ];
 
     pub fn as_str(&self) -> &'static str {
         match self {
@@ -23,6 +30,7 @@ impl Core {
             Core::Gpsp => "gpsp",
             Core::Cygne => "cygne",
             Core::Lynx => "lynx",
+            Core::Pokemini => "pokemini",
         }
     }
 
@@ -40,6 +48,7 @@ impl Core {
             Core::Gpsp => "gpSP",
             Core::Cygne => "Beetle Cygne",
             Core::Lynx => "Beetle Lynx",
+            Core::Pokemini => "PokeMini",
         }
     }
 
@@ -49,6 +58,7 @@ impl Core {
             "gpsp" => Some(Core::Gpsp),
             "cygne" => Some(Core::Cygne),
             "lynx" => Some(Core::Lynx),
+            "pokemini" => Some(Core::Pokemini),
             _ => None,
         }
     }
@@ -62,6 +72,7 @@ impl Core {
             Core::Gpsp => platform.hardware() == Platform::Gba,
             Core::Cygne => platform == Platform::Ws,
             Core::Lynx => platform == Platform::Lynx,
+            Core::Pokemini => platform == Platform::Pm,
         }
     }
 
@@ -70,6 +81,7 @@ impl Core {
             Platform::Gba | Platform::Gb | Platform::Gbc | Platform::Gbav => Core::Mgba,
             Platform::Ws => Core::Cygne,
             Platform::Lynx => Core::Lynx,
+            Platform::Pm => Core::Pokemini,
         }
     }
 }

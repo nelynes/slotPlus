@@ -62,7 +62,7 @@ fn each_cart_has_its_own_mould() {
     assert_eq!(mould_for(Platform::Ws), Mould::Ws);
     assert_eq!(mould_for(Platform::Lynx), Mould::Lynx);
     assert_eq!(mould_for(Platform::Gba), Mould::Gba);
-    assert_eq!(Mould::EXTRA, [Mould::Ws, Mould::Lynx]);
+    assert_eq!(Mould::EXTRA, [Mould::Ws, Mould::Lynx, Mould::Pm]);
     for (i, m) in Mould::ALL.iter().enumerate() {
         assert_eq!(m.index(), i);
     }

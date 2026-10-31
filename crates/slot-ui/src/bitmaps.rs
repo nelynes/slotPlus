@@ -11,19 +11,21 @@ pub enum Mould {
     Rounded,
     Ws,
     Lynx,
+    Pm,
 }
 
 impl Mould {
-    pub const ALL: [Mould; 5] = [
+    pub const ALL: [Mould; 6] = [
         Mould::Gba,
         Mould::Notched,
         Mould::Rounded,
         Mould::Ws,
         Mould::Lynx,
+        Mould::Pm,
     ];
 
     /// The shapes slotPlus adds to Slot's three, each its own set of art.
-    pub const EXTRA: [Mould; 2] = [Mould::Ws, Mould::Lynx];
+    pub const EXTRA: [Mould; 3] = [Mould::Ws, Mould::Lynx, Mould::Pm];
 
     pub fn index(self) -> usize {
         self as usize
@@ -36,6 +38,7 @@ impl Mould {
             Mould::Notched | Mould::Rounded => (GB_CART_W, GB_CART_H),
             Mould::Ws => (WS_CART_W, WS_CART_H),
             Mould::Lynx => (LYNX_CART_W, LYNX_CART_H),
+            Mould::Pm => (PM_CART_W, PM_CART_H),
         }
     }
 }
@@ -50,6 +53,10 @@ pub const WS_CART_H: u32 = 211;
 /// An Atari Lynx card, nearly square, at the Game Boy pak's width.
 pub const LYNX_CART_W: u32 = 312;
 pub const LYNX_CART_H: u32 = 328;
+/// A Pokémon mini cart: a small, nearly square block with a grip band across the top.
+/// tools/cart_art/pokemini.py draws it.
+pub const PM_CART_W: u32 = 264;
+pub const PM_CART_H: u32 = 280;
 pub const BOARD_W: u32 = GBA_CART_W;
 pub const BOARD_H: u32 = GBA_CART_H;
 pub const SOCKET_W: u32 = 64;
@@ -106,6 +113,11 @@ const LYNX_SHELL_PNG: &[u8] = include_bytes!("../../../assets/lynx_neutral.png")
 const LYNX_CLEAR_PNG: &[u8] = include_bytes!("../../../assets/lynx_clear.png");
 const LYNX_INTERIOR_PNG: &[u8] = include_bytes!("../../../assets/lynx_interior.png");
 const LYNX_BOARD_PNG: &[u8] = include_bytes!("../../../assets/lynx_board.png");
+const PM_CART_PNG: &[u8] = include_bytes!("../../../assets/pm_cart.png");
+const PM_SHELL_PNG: &[u8] = include_bytes!("../../../assets/pm_neutral.png");
+const PM_CLEAR_PNG: &[u8] = include_bytes!("../../../assets/pm_clear.png");
+const PM_INTERIOR_PNG: &[u8] = include_bytes!("../../../assets/pm_interior.png");
+const PM_BOARD_PNG: &[u8] = include_bytes!("../../../assets/pm_board.png");
 const WS_DECAL_PNG: &[u8] = include_bytes!("../../../assets/ws_decal.png");
 const LYNX_DECAL_PNG: &[u8] = include_bytes!("../../../assets/lynx_decal.png");
 
@@ -127,9 +139,11 @@ pub fn extra_decal(mould: Mould) -> Option<&'static [u8]> {
 pub fn extra_cart(mould: Mould) -> &'static [u8] {
     static WS: OnceLock<Vec<u8>> = OnceLock::new();
     static LYNX: OnceLock<Vec<u8>> = OnceLock::new();
+    static PM: OnceLock<Vec<u8>> = OnceLock::new();
     let (bytes, slot) = match mould {
         Mould::Ws => (WS_CART_PNG, &WS),
         Mould::Lynx => (LYNX_CART_PNG, &LYNX),
+        Mould::Pm => (PM_CART_PNG, &PM),
         other => panic!("{other:?} is not a slotPlus mould"),
     };
     let (w, h) = mould.size();
@@ -140,9 +154,11 @@ pub fn extra_cart(mould: Mould) -> &'static [u8] {
 pub fn extra_interior(mould: Mould) -> &'static [u8] {
     static WS: OnceLock<Vec<u8>> = OnceLock::new();
     static LYNX: OnceLock<Vec<u8>> = OnceLock::new();
+    static PM: OnceLock<Vec<u8>> = OnceLock::new();
     let (bytes, slot) = match mould {
         Mould::Ws => (WS_INTERIOR_PNG, &WS),
         Mould::Lynx => (LYNX_INTERIOR_PNG, &LYNX),
+        Mould::Pm => (PM_INTERIOR_PNG, &PM),
         other => panic!("{other:?} is not a slotPlus mould"),
     };
     let (w, h) = mould.size();
@@ -153,9 +169,11 @@ pub fn extra_interior(mould: Mould) -> &'static [u8] {
 pub fn extra_board(mould: Mould) -> &'static [u8] {
     static WS: OnceLock<Vec<u8>> = OnceLock::new();
     static LYNX: OnceLock<Vec<u8>> = OnceLock::new();
+    static PM: OnceLock<Vec<u8>> = OnceLock::new();
     let (bytes, slot) = match mould {
         Mould::Ws => (WS_BOARD_PNG, &WS),
         Mould::Lynx => (LYNX_BOARD_PNG, &LYNX),
+        Mould::Pm => (PM_BOARD_PNG, &PM),
         other => panic!("{other:?} is not a slotPlus mould"),
     };
     let (w, h) = mould.size();
@@ -406,7 +424,11 @@ pub fn shell_asset(mould: Mould, clear: bool) -> &'static [u8] {
     static WS_CLEAR: OnceLock<Vec<u8>> = OnceLock::new();
     static LYNX: OnceLock<Vec<u8>> = OnceLock::new();
     static LYNX_CLEAR: OnceLock<Vec<u8>> = OnceLock::new();
+    static PM: OnceLock<Vec<u8>> = OnceLock::new();
+    static PM_CLEAR: OnceLock<Vec<u8>> = OnceLock::new();
     let (bytes, w, h, slot) = match (mould, clear) {
+        (Mould::Pm, false) => (PM_SHELL_PNG, PM_CART_W, PM_CART_H, &PM),
+        (Mould::Pm, true) => (PM_CLEAR_PNG, PM_CART_W, PM_CART_H, &PM_CLEAR),
         (Mould::Ws, false) => (WS_SHELL_PNG, WS_CART_W, WS_CART_H, &WS),
         (Mould::Ws, true) => (WS_CLEAR_PNG, WS_CART_W, WS_CART_H, &WS_CLEAR),
         (Mould::Lynx, false) => (LYNX_SHELL_PNG, LYNX_CART_W, LYNX_CART_H, &LYNX),

@@ -415,7 +415,7 @@ pub struct App {
     quick_clock_faces: Option<[(TexId, u32, u32); 2]>,
     quick_wallpaper_faces: Option<[(TexId, u32, u32); 2]>,
     quick_palette_faces: Option<[(TexId, u32, u32); 2]>,
-    quick_bezel_faces: [Option<[(TexId, u32, u32); 2]>; 5],
+    quick_bezel_faces: [Option<[(TexId, u32, u32); 2]>; 6],
     game_bezel: Option<TexId>,
     in_game_menu: Option<QuickRow>,
     /// 0 while the pause footer is off the bottom, 1 when it sits in the carousel's place.
@@ -641,7 +641,7 @@ impl App {
             quick_clock_faces: None,
             quick_wallpaper_faces: None,
             quick_palette_faces: None,
-            quick_bezel_faces: [None; 5],
+            quick_bezel_faces: [None; 6],
             game_bezel: None,
             in_game_menu: None,
             footer: 0.0,
@@ -1044,8 +1044,12 @@ impl App {
         let mut hidden = Vec::new();
         // The WonderSwan and Lynx cores have no colour correction to set. Their
         // bezel is None, the SP frame on a 4:3 panel, or a png of the card's own.
-        if matches!(platform, Platform::Ws | Platform::Lynx) {
+        if matches!(platform, Platform::Ws | Platform::Lynx | Platform::Pm) {
             hidden.push(QuickRow::ColourCorrection);
+        }
+        // The Pokémon mini has no Start: Select is its Power button.
+        if platform == Platform::Pm {
+            hidden.push(QuickRow::GameStart);
         }
         if !self.palette_live {
             hidden.push(QuickRow::Palette);
@@ -1177,6 +1181,8 @@ impl App {
             (QuickRow::Shader, Platform::Lynx) => QuickRow::LynxShader,
             (QuickRow::Bezel, Platform::Ws) => QuickRow::WsBezel,
             (QuickRow::Bezel, Platform::Lynx) => QuickRow::LynxBezel,
+            (QuickRow::Shader, Platform::Pm) => QuickRow::PmShader,
+            (QuickRow::Bezel, Platform::Pm) => QuickRow::PmBezel,
             (QuickRow::Scale, Platform::Gba) => QuickRow::GbaScale,
             (QuickRow::Scale, Platform::Gb) => QuickRow::GbScale,
             (QuickRow::Scale, Platform::Gbc) => QuickRow::GbcScale,
@@ -1232,6 +1238,7 @@ impl App {
             QuickRow::GbcShader => Some(shader_value(self.state.shader_gbc)),
             QuickRow::WsShader => Some(shader_value(self.state.shader_ws)),
             QuickRow::LynxShader => Some(shader_value(self.state.shader_lynx)),
+            QuickRow::PmShader => Some(shader_value(self.state.shader_pm)),
             QuickRow::Rumble => Some(QuickValue::flag(self.state.rumble)),
             QuickRow::LeftStick => Some(QuickValue::flag(self.state.left_stick_dpad)),
             QuickRow::AutoLoad => Some(QuickValue::flag(self.state.auto_load)),
@@ -1292,8 +1299,10 @@ impl App {
             | QuickRow::GbaBezel
             | QuickRow::WsBezel
             | QuickRow::LynxBezel
+            | QuickRow::PmBezel
             | QuickRow::ScreenWs
             | QuickRow::ScreenLynx
+            | QuickRow::ScreenPm
             | QuickRow::Bezel
             | QuickRow::General
             | QuickRow::ShelfPrev
@@ -1385,6 +1394,7 @@ impl App {
             Platform::Gbc => &mut self.state.bezel_gbc,
             Platform::Ws => &mut self.state.bezel_ws,
             Platform::Lynx => &mut self.state.bezel_lynx,
+            Platform::Pm => &mut self.state.bezel_pm,
         }
     }
 
@@ -1395,6 +1405,7 @@ impl App {
             Platform::Gbc => &self.state.bezel_gbc,
             Platform::Ws => &self.state.bezel_ws,
             Platform::Lynx => &self.state.bezel_lynx,
+            Platform::Pm => &self.state.bezel_pm,
         };
         match self.bezel_choices(platform).contains(pick) {
             true => pick.clone(),
@@ -2695,6 +2706,7 @@ impl App {
             Platform::Gbc => self.state.shader_gbc,
             Platform::Ws => self.state.shader_ws,
             Platform::Lynx => self.state.shader_lynx,
+            Platform::Pm => self.state.shader_pm,
         }
     }
 
@@ -2719,8 +2731,8 @@ impl App {
             Platform::Gba | Platform::Gbav => self.state.colour_correction_gba,
             Platform::Gb => self.state.colour_correction_gb,
             Platform::Gbc => self.state.colour_correction_gbc,
-            // Neither core has colour correction.
-            Platform::Ws | Platform::Lynx => false,
+            // None of their cores has colour correction.
+            Platform::Ws | Platform::Lynx | Platform::Pm => false,
         }
     }
 
@@ -3242,6 +3254,7 @@ impl App {
             | QuickRow::ScreenGbc
             | QuickRow::ScreenWs
             | QuickRow::ScreenLynx
+            | QuickRow::ScreenPm
             | QuickRow::ScreenGb
             | QuickRow::Shortcuts
             | QuickRow::General
@@ -3271,6 +3284,7 @@ impl App {
             | QuickRow::GbcShader
             | QuickRow::WsShader
             | QuickRow::LynxShader
+            | QuickRow::PmShader
             | QuickRow::GbPalette
             | QuickRow::Rumble
             | QuickRow::LeftStick
@@ -3297,6 +3311,7 @@ impl App {
             | QuickRow::GbaBezel
             | QuickRow::WsBezel
             | QuickRow::LynxBezel
+            | QuickRow::PmBezel
             | QuickRow::GbaScale
             | QuickRow::GbScale
             | QuickRow::GbcScale
@@ -3407,13 +3422,15 @@ impl App {
         | QuickRow::GbBezel
         | QuickRow::GbcBezel
         | QuickRow::WsBezel
-        | QuickRow::LynxBezel = row
+        | QuickRow::LynxBezel
+        | QuickRow::PmBezel = row
         {
             let platform = match row {
                 QuickRow::GbaBezel => Platform::Gba,
                 QuickRow::GbBezel => Platform::Gb,
                 QuickRow::WsBezel => Platform::Ws,
                 QuickRow::LynxBezel => Platform::Lynx,
+                QuickRow::PmBezel => Platform::Pm,
                 _ => Platform::Gbc,
             };
             self.cycle_bezel(platform, right);
@@ -3520,6 +3537,13 @@ impl App {
                 }
                 s.shader_lynx = to;
             }
+            QuickRow::PmShader => {
+                let to = s.shader_pm.step(&Shader::PM, right);
+                if to == s.shader_pm {
+                    return;
+                }
+                s.shader_pm = to;
+            }
             QuickRow::Rumble => s.rumble = !s.rumble,
             QuickRow::LeftStick => s.left_stick_dpad = !s.left_stick_dpad,
             QuickRow::AutoLoad => s.auto_load = !s.auto_load,
@@ -3574,8 +3598,10 @@ impl App {
             | QuickRow::GbaBezel
             | QuickRow::WsBezel
             | QuickRow::LynxBezel
+            | QuickRow::PmBezel
             | QuickRow::ScreenWs
             | QuickRow::ScreenLynx
+            | QuickRow::ScreenPm
             | QuickRow::GbaScale
             | QuickRow::GbScale
             | QuickRow::GbcScale
@@ -3642,6 +3668,7 @@ impl App {
             Platform::Gbc => (&mut self.state.shader_gbc, &Shader::GB[..]),
             Platform::Ws => (&mut self.state.shader_ws, &Shader::WS[..]),
             Platform::Lynx => (&mut self.state.shader_lynx, &Shader::LYNX[..]),
+            Platform::Pm => (&mut self.state.shader_pm, &Shader::PM[..]),
         };
         *shader = shader.step(choices, right);
         let said = match *shader {
@@ -3695,7 +3722,7 @@ impl App {
                 Platform::Gba | Platform::Gbav => QuickRow::GbaColourCorrection,
                 Platform::Gb => QuickRow::GbColourCorrection,
                 Platform::Gbc => QuickRow::GbcColourCorrection,
-                Platform::Ws | Platform::Lynx => return true,
+                Platform::Ws | Platform::Lynx | Platform::Pm => return true,
             };
             self.change_setting(row, true);
             let said = match self.colour_correction() {
@@ -6965,5 +6992,6 @@ fn bezel_slot(platform: Platform) -> usize {
         Platform::Gbc => 2,
         Platform::Ws => 3,
         Platform::Lynx => 4,
+        Platform::Pm => 5,
     }
 }

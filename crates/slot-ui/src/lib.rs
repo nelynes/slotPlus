@@ -56,7 +56,8 @@ pub use cart::{
 pub use cart::{
     lynx_label_panel, mould_backing, mould_for, mould_label_rect, mould_of, mould_shadow,
     ws_label_panel, LYNX_CART_H, LYNX_CART_W, LYNX_LABEL_H, LYNX_LABEL_W, LYNX_LABEL_X,
-    LYNX_LABEL_Y, WS_CART_H, WS_CART_W, WS_LABEL_H, WS_LABEL_W, WS_LABEL_X, WS_LABEL_Y,
+    LYNX_LABEL_Y, PM_CART_H, PM_CART_W, PM_LABEL_H, PM_LABEL_W, PM_LABEL_X, PM_LABEL_Y, WS_CART_H,
+    WS_CART_W, WS_LABEL_H, WS_LABEL_W, WS_LABEL_X, WS_LABEL_Y,
 };
 pub use clock::{
     clock_label, date_time_text, hhmm, time_text, ClockFaceSet, ClockFaces, ClockPicker, ClockRow,

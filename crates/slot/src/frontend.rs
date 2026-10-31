@@ -93,8 +93,8 @@ struct QuickPalette {
 struct BezelSync {
     tex: Option<TexId>,
     image: Option<(Console, BezelPick, Option<BezelArt>, (u32, u32))>,
-    labels: [String; 5],
-    faces: [(Option<TexId>, Option<TexId>); 5],
+    labels: [String; 6],
+    faces: [(Option<TexId>, Option<TexId>); 6],
 }
 
 #[derive(Default)]
@@ -1372,6 +1372,7 @@ fn sync_game_bezel(app: &mut App, compositor: &mut Compositor, state: &mut Bezel
         Console::Gbc,
         Console::Ws,
         Console::Lynx,
+        Console::Pm,
     ]
     .into_iter()
     .enumerate()
