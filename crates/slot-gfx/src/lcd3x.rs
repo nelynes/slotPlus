@@ -16,6 +16,7 @@ pub enum ScreenEffect {
     Grid,
     Dot,
     Simpletex,
+    Shimmerless,
     Transparent,
 }
 
@@ -47,7 +48,9 @@ mod tests {
         assert_eq!(ScreenEffect::Grid.mode(), 2.0);
         assert_eq!(ScreenEffect::Dot.mode(), 3.0);
         assert_eq!(ScreenEffect::Simpletex.mode(), 4.0);
-        assert_eq!(ScreenEffect::Transparent.mode(), 5.0);
+        assert_eq!(ScreenEffect::Shimmerless.mode(), 5.0);
+        assert_eq!(ScreenEffect::Transparent.mode(), 6.0);
         assert!(crate::shaders::GAME_FRAG.contains("u_mode > 4.5"));
+        assert!(crate::shaders::GAME_FRAG.contains("u_mode > 5.5"));
     }
 }

@@ -1,9 +1,14 @@
 # Changelog
 
-## [Unreleased]
+## [1.12.0-plus2.5](https://github.com/nelynes/slotPlus/releases/tag/v1.12.0-plus2.5)
 
-### Added
-- Two-tone carts. The Japanese Famicom Mini GBA carts now have their red front and muted white back; the white shows when the cart opens to pick a core. Any game can be given a two-tone shell in `Config/cart_shell.txt` or Cart Studio+.
+slotPlus brought up to Slot 1.12.0: game guides with an in-game viewer, a Reset Game shortcut, the Shimmerless shader, Saturation and Contrast, bezels made for one Scale, and Boktai's solar sensor on mGBA. See [Slot's 1.12.0 notes](https://github.com/BrandonKowalski/slot/releases/tag/v1.12.0).
+
+To upgrade, replace the `System` folder on your card with the one from the zip.
+
+- **Two-tone carts.** The Japanese Famicom Mini GBA carts now have their red front and muted white back, and the white shows when the cart opens to pick a core. Any game can be given a two-tone shell in `Config/cart_shell.txt` or in [Cart Studio+](https://nelynes.github.io/slotPlus-studio/).
+- On slotPlus's own systems: Shimmerless is on every system's Shader list, and guides work for every system, in `Guides/WS` and `Guides/Lynx` (and in slotPlusUltra, `Guides/GG`, `Guides/NGP`, `Guides/TG16` and `Guides/NDS`). Saturation and Contrast apply to every system.
+- On the Game Boy and Game Boy Color, Shimmerless comes before slotPlus's Transparent shader in the list.
 
 ## [1.11.0-plus2.4](https://github.com/nelynes/slotPlus/releases/tag/v1.11.0-plus2.4)
 

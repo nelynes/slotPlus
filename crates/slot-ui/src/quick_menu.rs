@@ -39,6 +39,7 @@ pub enum QuickRow {
     Screenshots,
     Settings,
     ExitGame,
+    UndoReset,
     PlayScreen,
     PlayGameplay,
     Shader,
@@ -102,6 +103,9 @@ pub enum QuickRow {
     ScFastForward,
     ScFastForwardToggle,
     ScRewind,
+    ScSunlightUp,
+    ScSunlightDown,
+    ScReset,
     LidOff,
     Controls,
     ControlsShelf,
@@ -110,8 +114,12 @@ pub enum QuickRow {
     ScreenGeneral,
     Brightness,
     BlueLight,
+    Saturation,
+    Contrast,
     PlayBrightness,
     PlayBlueLight,
+    PlaySaturation,
+    PlayContrast,
     AutoLoad,
     UndoSave,
     UndoLoad,
@@ -126,10 +134,12 @@ pub enum QuickRow {
     GbcBlending,
     GbBlending,
     Blending,
+    Guide,
+    ScGuide,
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 115] = [
+    pub const ALL: [QuickRow; 125] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -158,6 +168,7 @@ impl QuickRow {
         QuickRow::Screenshots,
         QuickRow::Settings,
         QuickRow::ExitGame,
+        QuickRow::UndoReset,
         QuickRow::PlayScreen,
         QuickRow::PlayGameplay,
         QuickRow::Shader,
@@ -221,6 +232,9 @@ impl QuickRow {
         QuickRow::ScFastForward,
         QuickRow::ScFastForwardToggle,
         QuickRow::ScRewind,
+        QuickRow::ScSunlightUp,
+        QuickRow::ScSunlightDown,
+        QuickRow::ScReset,
         QuickRow::LidOff,
         QuickRow::Controls,
         QuickRow::ControlsShelf,
@@ -229,8 +243,12 @@ impl QuickRow {
         QuickRow::ScreenGeneral,
         QuickRow::Brightness,
         QuickRow::BlueLight,
+        QuickRow::Saturation,
+        QuickRow::Contrast,
         QuickRow::PlayBrightness,
         QuickRow::PlayBlueLight,
+        QuickRow::PlaySaturation,
+        QuickRow::PlayContrast,
         QuickRow::AutoLoad,
         QuickRow::UndoSave,
         QuickRow::UndoLoad,
@@ -245,6 +263,8 @@ impl QuickRow {
         QuickRow::GbcBlending,
         QuickRow::GbBlending,
         QuickRow::Blending,
+        QuickRow::Guide,
+        QuickRow::ScGuide,
     ];
 
     pub const MAIN: [QuickRow; 5] = [
@@ -293,22 +313,26 @@ impl QuickRow {
         QuickRow::GameTurboB,
     ];
 
-    pub const SHORTCUTS: [QuickRow; 15] = [
+    pub const SHORTCUTS: [QuickRow; 19] = [
         QuickRow::ScSave,
         QuickRow::ScLoad,
+        QuickRow::ScReset,
+        QuickRow::ScRewind,
+        QuickRow::ScFastForward,
+        QuickRow::ScFastForwardToggle,
         QuickRow::ScScreenshot,
-        QuickRow::ScBrightUp,
+        QuickRow::ScGuide,
         QuickRow::ScBrightDown,
+        QuickRow::ScBrightUp,
         QuickRow::ScBlueDown,
         QuickRow::ScBlueUp,
         QuickRow::ScColour,
         QuickRow::ScPaletteBack,
         QuickRow::ScPaletteNext,
-        QuickRow::ScShaderNext,
         QuickRow::ScShaderBack,
-        QuickRow::ScFastForward,
-        QuickRow::ScFastForwardToggle,
-        QuickRow::ScRewind,
+        QuickRow::ScShaderNext,
+        QuickRow::ScSunlightDown,
+        QuickRow::ScSunlightUp,
     ];
 
     pub const SCREEN: [QuickRow; 10] = [
@@ -324,7 +348,12 @@ impl QuickRow {
         QuickRow::ScreenNds,
     ];
 
-    pub const SCREEN_GENERAL: [QuickRow; 2] = [QuickRow::Brightness, QuickRow::BlueLight];
+    pub const SCREEN_GENERAL: [QuickRow; 4] = [
+        QuickRow::Brightness,
+        QuickRow::BlueLight,
+        QuickRow::Saturation,
+        QuickRow::Contrast,
+    ];
 
     /// The WonderSwan, Lynx, Game Gear, NeoGeo Pocket and TurboGrafx-16 cores
     /// have no colour
@@ -378,12 +407,14 @@ impl QuickRow {
         QuickRow::EjectSave,
     ];
 
-    pub const PLAY: [QuickRow; 7] = [
+    pub const PLAY: [QuickRow; 9] = [
         QuickRow::Resume,
         QuickRow::UndoSave,
         QuickRow::UndoLoad,
+        QuickRow::UndoReset,
         QuickRow::States,
         QuickRow::Screenshots,
+        QuickRow::Guide,
         QuickRow::Settings,
         QuickRow::ExitGame,
     ];
@@ -394,7 +425,7 @@ impl QuickRow {
         QuickRow::PlayControls,
     ];
 
-    pub const PLAY_SCREEN: [QuickRow; 9] = [
+    pub const PLAY_SCREEN: [QuickRow; 11] = [
         QuickRow::Shader,
         QuickRow::Bezel,
         QuickRow::Scale,
@@ -404,6 +435,8 @@ impl QuickRow {
         QuickRow::Blending,
         QuickRow::PlayBrightness,
         QuickRow::PlayBlueLight,
+        QuickRow::PlaySaturation,
+        QuickRow::PlayContrast,
     ];
 
     pub fn index(self) -> usize {
@@ -422,8 +455,14 @@ impl QuickRow {
             | QuickRow::ScreenNgp
             | QuickRow::ScreenTg16
             | QuickRow::ScreenNds => &QuickRow::SCREEN,
-            QuickRow::Brightness | QuickRow::BlueLight => &QuickRow::SCREEN_GENERAL,
-            QuickRow::PlayBrightness | QuickRow::PlayBlueLight => &QuickRow::PLAY_SCREEN,
+            QuickRow::Brightness
+            | QuickRow::BlueLight
+            | QuickRow::Saturation
+            | QuickRow::Contrast => &QuickRow::SCREEN_GENERAL,
+            QuickRow::PlayBrightness
+            | QuickRow::PlayBlueLight
+            | QuickRow::PlaySaturation
+            | QuickRow::PlayContrast => &QuickRow::PLAY_SCREEN,
             QuickRow::WsShader | QuickRow::WsBezel => &QuickRow::SCREEN_WS,
             QuickRow::LynxShader | QuickRow::LynxBezel => &QuickRow::SCREEN_LYNX,
             QuickRow::GgShader | QuickRow::GgBezel => &QuickRow::SCREEN_GG,
@@ -470,8 +509,10 @@ impl QuickRow {
             QuickRow::Resume
             | QuickRow::UndoSave
             | QuickRow::UndoLoad
+            | QuickRow::UndoReset
             | QuickRow::States
             | QuickRow::Screenshots
+            | QuickRow::Guide
             | QuickRow::Settings
             | QuickRow::ExitGame => &QuickRow::PLAY,
             QuickRow::PlayScreen | QuickRow::PlayGameplay | QuickRow::PlayControls => {
@@ -587,6 +628,8 @@ impl QuickRow {
             QuickRow::ScreenGeneral => "General",
             QuickRow::Brightness | QuickRow::PlayBrightness => "Brightness",
             QuickRow::BlueLight | QuickRow::PlayBlueLight => "Blue Light",
+            QuickRow::Saturation | QuickRow::PlaySaturation => "Saturation",
+            QuickRow::Contrast | QuickRow::PlayContrast => "Contrast",
             QuickRow::DateTime => "Date & Time",
             QuickRow::About => "About",
             QuickRow::GbaShader => "Shader",
@@ -610,8 +653,10 @@ impl QuickRow {
             QuickRow::Resume => "Resume",
             QuickRow::UndoSave => "Undo Save",
             QuickRow::UndoLoad => "Undo Load",
+            QuickRow::UndoReset => "Undo Reset",
             QuickRow::States => "States",
             QuickRow::Screenshots => "Screenshots",
+            QuickRow::Guide => "Guide",
             QuickRow::Settings => "Settings",
             QuickRow::ExitGame => "Exit Game",
             QuickRow::General => "General",
@@ -647,7 +692,11 @@ impl QuickRow {
             | QuickRow::ScShaderBack
             | QuickRow::ScFastForward
             | QuickRow::ScFastForwardToggle
-            | QuickRow::ScRewind => self.shortcut().map_or("", Shortcut::label),
+            | QuickRow::ScRewind
+            | QuickRow::ScSunlightUp
+            | QuickRow::ScSunlightDown
+            | QuickRow::ScReset
+            | QuickRow::ScGuide => self.shortcut().map_or("", Shortcut::label),
             QuickRow::ShelfPrev | QuickRow::ShelfNext | QuickRow::ShelfFavorite => {
                 self.carousel_action().map_or("", CarouselAction::label)
             }
@@ -702,8 +751,10 @@ impl QuickRow {
                 | QuickRow::Resume
                 | QuickRow::UndoSave
                 | QuickRow::UndoLoad
+                | QuickRow::UndoReset
                 | QuickRow::States
                 | QuickRow::Screenshots
+                | QuickRow::Guide
                 | QuickRow::Settings
                 | QuickRow::ExitGame
                 | QuickRow::PlayScreen
@@ -762,6 +813,10 @@ impl QuickRow {
             QuickRow::ScFastForward => Shortcut::FastForward,
             QuickRow::ScFastForwardToggle => Shortcut::FastForwardToggle,
             QuickRow::ScRewind => Shortcut::Rewind,
+            QuickRow::ScSunlightUp => Shortcut::SunlightUp,
+            QuickRow::ScSunlightDown => Shortcut::SunlightDown,
+            QuickRow::ScReset => Shortcut::Reset,
+            QuickRow::ScGuide => Shortcut::Guide,
             _ => return None,
         })
     }
@@ -805,6 +860,7 @@ pub enum QuickValue {
     Grid,
     Dot,
     Simpletex,
+    Shimmerless,
     Dark,
     Light,
     Show,
@@ -841,7 +897,7 @@ pub enum QuickValue {
 }
 
 impl QuickValue {
-    pub const ALL: [QuickValue; 44] = [
+    pub const ALL: [QuickValue; 45] = [
         QuickValue::Speed1_5,
         QuickValue::Speed2,
         QuickValue::Speed3,
@@ -853,6 +909,7 @@ impl QuickValue {
         QuickValue::Grid,
         QuickValue::Dot,
         QuickValue::Simpletex,
+        QuickValue::Shimmerless,
         QuickValue::Dark,
         QuickValue::Light,
         QuickValue::Show,
@@ -927,6 +984,7 @@ impl QuickValue {
             QuickValue::Grid => "Grid",
             QuickValue::Dot => "Dot",
             QuickValue::Simpletex => "Simpletex",
+            QuickValue::Shimmerless => "Shimmerless",
             QuickValue::Transparent => "Transparent",
             QuickValue::Dark => "Dark",
             QuickValue::Light => "Light",
@@ -953,13 +1011,13 @@ impl QuickValue {
             QuickValue::Level9 => "9",
             QuickValue::SlotDefault => "Default",
             QuickValue::SlotBespoke => "Bespoke",
-            QuickValue::SpFrame => "SP Frame",
+            QuickValue::SpFrame => "SP Screen",
             QuickValue::Integer => "Integer",
             QuickValue::Fit => "Fit",
             QuickValue::Classic => "Classic",
             QuickValue::FullScreen => "Full Screen",
             QuickValue::Mix => "Mix",
-            QuickValue::Ghosting => "LCD Ghosting",
+            QuickValue::Ghosting => "Ghosting",
         }
     }
 
@@ -1003,6 +1061,8 @@ impl QuickValue {
 pub const QUICK_PITCH: f32 = 52.0;
 pub const QUICK_EDGE: f32 = 32.0;
 pub const QUICK_LABEL_X: f32 = 53.0;
+pub const QUICK_VALUE_GAP: f32 = 24.0;
+const VALUE_MIN_SCALE: f32 = 0.6;
 pub(crate) const POINTER_GAP: f32 = 17.0;
 const POINTER_SCALE: usize = 3;
 const POINTER: [&str; 11] = [
@@ -1113,7 +1173,7 @@ pub fn quick_warning_value_face(text: &str, lit: bool) -> UndoFace {
     UndoFace { rgba, w, h }
 }
 
-fn quick_text_face(label: &str, colour: [u8; 3]) -> UndoFace {
+pub(crate) fn quick_text_face(label: &str, colour: [u8; 3]) -> UndoFace {
     let Some(font) = text::label_font() else {
         return UndoFace {
             rgba: Vec::new(),
@@ -1281,7 +1341,7 @@ fn with_hint(button: UndoFace, label: &str, ink: Option<[u8; 3]>, hint_on_right:
     UndoFace { rgba, w, h }
 }
 
-fn button_face(which: ButtonLegend) -> UndoFace {
+pub(crate) fn button_face(which: ButtonLegend) -> UndoFace {
     let (rgba, w, h) = button_legend(which);
     UndoFace {
         rgba: rgba.to_vec(),
@@ -1372,7 +1432,7 @@ fn four_way() -> UndoFace {
 
 const ARROW_EDGE: u32 = 480;
 
-fn up_down_pair() -> UndoFace {
+pub(crate) fn up_down_pair() -> UndoFace {
     let (left, lw, lh) = button_legend(ButtonLegend::Left);
     let (right, rw, rh) = button_legend(ButtonLegend::Right);
     join(
@@ -1431,7 +1491,7 @@ fn arrow_turned(px: &[u8], w: u32, h: u32) -> Vec<u8> {
     out
 }
 
-fn button_pair(left: ButtonLegend, right: ButtonLegend) -> UndoFace {
+pub(crate) fn button_pair(left: ButtonLegend, right: ButtonLegend) -> UndoFace {
     let (a, aw, ah) = button_legend(left);
     let (b, bw, bh) = button_legend(right);
     join((a, aw, ah), (b, bw, bh))
@@ -1546,11 +1606,13 @@ impl QuickMenu<'_> {
         for row in shown.into_iter().skip(start).take(len) {
             let y = quick_row_top_at(row, self.row, self.hidden) + TYPE_DROP;
             let lit = row == self.row;
+            let mut label_end = QUICK_LABEL_X;
             if let Some(&(tex, w, h)) = label(row).map(|l| &l[lit as usize]) {
                 let x = match row.centred() {
                     true => self.canvas.centred(main_w as f32),
                     false => QUICK_LABEL_X - pad,
                 };
+                label_end = x + w as f32 - pad;
                 push(out, tex, x, y, w, h);
                 if lit {
                     let (tex, pw, ph) = faces.pointer;
@@ -1583,7 +1645,17 @@ impl QuickMenu<'_> {
             let Some((tex, w, h)) = value else {
                 continue;
             };
-            push(out, tex, right + pad - w as f32, y, w, h);
+            let room = right - label_end - QUICK_VALUE_GAP;
+            let s = (room / (w as f32 - 2.0 * pad)).clamp(VALUE_MIN_SCALE, 1.0);
+            let (sw, sh) = (w as f32 * s, h as f32 * s);
+            out.push(Draw::Tex {
+                x: (right - (w as f32 - pad) * s).round(),
+                y: (y + (h as f32 - sh) / 2.0).round(),
+                w: sw,
+                h: sh,
+                tex,
+                alpha: 1.0,
+            });
         }
         if let Some(bar) = quick_scroll(self.row, self.hidden) {
             let x = self.canvas.w - SCROLL_INSET - SCROLL_W;

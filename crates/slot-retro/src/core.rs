@@ -214,6 +214,7 @@ pub trait RetroCore: Send {
     /// touch screen reads it.
     fn set_pointer(&mut self, _pointer: Option<Pointer>) {}
     fn run_frame(&mut self, input: ButtonMask);
+    fn reset(&mut self) {}
     fn run_frame_linked(&mut self, p1: ButtonMask, _p2: ButtonMask) {
         self.run_frame(p1);
     }

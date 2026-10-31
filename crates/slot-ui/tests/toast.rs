@@ -18,6 +18,13 @@ fn the_link_shortcut_on_the_wrong_core_says_to_switch() {
 }
 
 #[test]
+fn sunlight_on_gpsp_says_to_switch_to_mgba() {
+    assert_eq!(Toast::NeedsMgba.text(), "Switch to mGBA");
+    let f = toast_face(Toast::NeedsMgba);
+    assert!(f.rgba.chunks(4).any(|p| p[3] > 0), "the banner is blank");
+}
+
+#[test]
 fn a_cart_gpsp_cannot_link_says_there_is_no_link() {
     assert_eq!(Toast::NoLink.text(), "No link support");
     let f = toast_face(Toast::NoLink);
@@ -28,13 +35,15 @@ fn a_cart_gpsp_cannot_link_says_there_is_no_link() {
 fn the_banner_says_what_happened_and_never_what_is_on_screen() {
     let all = Toast::all();
     assert_eq!(
-        all[..22],
+        all[..25],
         [
             Toast::StateSaved,
             Toast::StateLoaded,
+            Toast::GameReset,
             Toast::ShotCaptured,
             Toast::ShotFailed,
             Toast::NeedsGpsp,
+            Toast::NeedsMgba,
             Toast::NoLink,
             Toast::LinkEnded,
             Toast::PeerEnded,
@@ -46,6 +55,7 @@ fn the_banner_says_what_happened_and_never_what_is_on_screen() {
             Toast::ShaderGrid,
             Toast::ShaderDot,
             Toast::ShaderSimpletex,
+            Toast::ShaderShimmerless,
             Toast::ShaderTransparent,
             Toast::CardUnwritable,
             Toast::CardRepair,
@@ -58,13 +68,13 @@ fn the_banner_says_what_happened_and_never_what_is_on_screen() {
     let palettes = GbColors::all().count();
     assert_eq!(palettes, 49);
     assert_eq!(
-        all[22..22 + palettes],
+        all[25..25 + palettes],
         GbColors::all().map(Toast::Palette).collect::<Vec<_>>()[..],
         "the palette banners do not follow the fixed ones in palette order"
     );
     let duplicates = QuickRow::ALL.into_iter().filter(|r| r.binds()).count();
     assert_eq!(
-        all[22 + palettes..22 + palettes + duplicates],
+        all[25 + palettes..25 + palettes + duplicates],
         QuickRow::ALL
             .into_iter()
             .filter(|r| r.binds())
@@ -73,7 +83,7 @@ fn the_banner_says_what_happened_and_never_what_is_on_screen() {
         "the duplicate warnings do not follow the palettes in row order"
     );
     assert_eq!(
-        all[22 + palettes + duplicates..],
+        all[25 + palettes + duplicates..],
         (0..5).map(Toast::DsLayout).collect::<Vec<_>>()[..],
         "the DS layouts come last, in the order SELECT + L2 steps them"
     );

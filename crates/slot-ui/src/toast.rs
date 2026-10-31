@@ -10,9 +10,11 @@ use crate::{CartFace, QuickRow};
 pub enum Toast {
     StateSaved,
     StateLoaded,
+    GameReset,
     ShotCaptured,
     ShotFailed,
     NeedsGpsp,
+    NeedsMgba,
     NoLink,
     LinkEnded,
     PeerEnded,
@@ -24,6 +26,7 @@ pub enum Toast {
     ShaderGrid,
     ShaderDot,
     ShaderSimpletex,
+    ShaderShimmerless,
     ShaderTransparent,
     CardUnwritable,
     CardRepair,
@@ -46,12 +49,14 @@ pub const DS_LAYOUTS: [&str; 5] = [
 ];
 
 impl Toast {
-    const FIXED: [Toast; 22] = [
+    const FIXED: [Toast; 25] = [
         Toast::StateSaved,
         Toast::StateLoaded,
+        Toast::GameReset,
         Toast::ShotCaptured,
         Toast::ShotFailed,
         Toast::NeedsGpsp,
+        Toast::NeedsMgba,
         Toast::NoLink,
         Toast::LinkEnded,
         Toast::PeerEnded,
@@ -63,6 +68,7 @@ impl Toast {
         Toast::ShaderGrid,
         Toast::ShaderDot,
         Toast::ShaderSimpletex,
+        Toast::ShaderShimmerless,
         Toast::ShaderTransparent,
         Toast::CardUnwritable,
         Toast::CardRepair,
@@ -144,9 +150,11 @@ impl Toast {
         match self {
             Toast::StateSaved => "State Saved",
             Toast::StateLoaded => "State Loaded",
+            Toast::GameReset => "Game Reset",
             Toast::ShotCaptured => "Screenshot Captured",
             Toast::ShotFailed => "Screenshot Failed",
             Toast::NeedsGpsp => "Please switch to gpSP",
+            Toast::NeedsMgba => "Switch to mGBA",
             Toast::NoLink => "No link support",
             Toast::LinkEnded => "Link ended",
             Toast::PeerEnded => "Link was ended",
@@ -158,6 +166,7 @@ impl Toast {
             Toast::ShaderGrid => "Shader: Grid",
             Toast::ShaderDot => "Shader: Dot",
             Toast::ShaderSimpletex => "Shader: Simpletex",
+            Toast::ShaderShimmerless => "Shader: Shimmerless",
             Toast::ShaderTransparent => "Shader: Transparent",
             Toast::CardUnwritable => "Can't write to SD card",
             Toast::CardRepair | Toast::CardRepairCharge => "Can't write to SD card",

@@ -472,7 +472,9 @@ fn each_platform_keeps_its_own_shader_wraps_and_starts_on_grid_and_simpletex() {
     );
     for (btn, want, shown) in [
         (Btn::Right, Shader::Dot, QuickValue::Dot),
+        (Btn::Right, Shader::Shimmerless, QuickValue::Shimmerless),
         (Btn::Right, Shader::Off, QuickValue::Off),
+        (Btn::Left, Shader::Shimmerless, QuickValue::Shimmerless),
         (Btn::Left, Shader::Dot, QuickValue::Dot),
         (Btn::Left, Shader::Grid, QuickValue::Grid),
         (Btn::Left, Shader::Lcd3x, QuickValue::Lcd3x),
@@ -506,8 +508,14 @@ fn each_platform_keeps_its_own_shader_wraps_and_starts_on_grid_and_simpletex() {
     let s = read_slot_state(d.path());
     assert_eq!(
         (s.shader_gba, s.shader_gb, s.shader_gbc),
-        (Shader::Off, Shader::Grid, Shader::Transparent),
-        "GBC steps from Simpletex to Transparent"
+        (Shader::Off, Shader::Grid, Shader::Shimmerless),
+        "GBC steps from Simpletex to Shimmerless"
+    );
+    press(&mut a, Btn::Right);
+    assert_eq!(
+        read_slot_state(d.path()).shader_gbc,
+        Shader::Transparent,
+        "GBC steps from Shimmerless to Transparent"
     );
     press(&mut a, Btn::Right);
     assert_eq!(
@@ -1065,6 +1073,51 @@ fn blue_light_steps_off_to_nine() {
 }
 
 #[test]
+fn saturation_steps_off_to_nine_and_reaches_the_card() {
+    let (d, mut a, _) = on_carousel();
+    open_at(&mut a, QuickRow::Saturation);
+    assert_eq!(a.saturation(), 0);
+    assert_eq!(a.quick_value(QuickRow::Saturation), Some(QuickValue::Off));
+    press(&mut a, Btn::Right);
+    assert_eq!(a.saturation(), 1);
+    assert_eq!(
+        a.quick_value(QuickRow::Saturation),
+        Some(QuickValue::Level1)
+    );
+    press(&mut a, Btn::Left);
+    press(&mut a, Btn::Left);
+    assert_eq!(a.saturation(), 0);
+    for _ in 0..12 {
+        press(&mut a, Btn::Right);
+    }
+    assert_eq!(a.saturation(), 9);
+    a.flush_state();
+    assert_eq!(read_slot_state(d.path()).saturation, 9);
+}
+
+#[test]
+fn contrast_steps_off_to_nine_on_its_own_and_reaches_the_card() {
+    let (d, mut a, _) = on_carousel();
+    open_at(&mut a, QuickRow::Contrast);
+    assert_eq!(a.contrast(), 0);
+    assert_eq!(a.quick_value(QuickRow::Contrast), Some(QuickValue::Off));
+    press(&mut a, Btn::Right);
+    assert_eq!(a.contrast(), 1);
+    assert_eq!(a.quick_value(QuickRow::Contrast), Some(QuickValue::Level1));
+    press(&mut a, Btn::Left);
+    press(&mut a, Btn::Left);
+    assert_eq!(a.contrast(), 0);
+    for _ in 0..12 {
+        press(&mut a, Btn::Right);
+    }
+    assert_eq!(a.contrast(), 9);
+    assert_eq!(a.saturation(), 0, "contrast moved saturation");
+    a.flush_state();
+    let s = read_slot_state(d.path());
+    assert_eq!((s.contrast, s.saturation), (9, 0));
+}
+
+#[test]
 fn the_game_boy_page_steps_the_palette_from_auto() {
     let (d, mut a, _) = on_carousel();
     assert_eq!(
@@ -1439,6 +1492,8 @@ fn the_wonderswan_and_the_lynx_each_have_a_screen_page_with_their_own_shader() {
         Some(QuickValue::Simpletex)
     );
     press(&mut a, Btn::Right);
+    assert_eq!(read_slot_state(d.path()).shader_ws, Shader::Shimmerless);
+    press(&mut a, Btn::Right);
     assert_eq!(
         read_slot_state(d.path()).shader_ws,
         Shader::Off,
@@ -1492,11 +1547,14 @@ fn the_game_gear_has_a_screen_page_with_its_own_shader_and_no_transparent() {
         Some(QuickValue::Simpletex)
     );
     press(&mut a, Btn::Right);
+    assert_eq!(read_slot_state(d.path()).shader_gg, Shader::Shimmerless);
+    press(&mut a, Btn::Right);
     assert_eq!(
         read_slot_state(d.path()).shader_gg,
         Shader::Off,
         "it went on to Transparent instead of wrapping"
     );
+    press(&mut a, Btn::Left);
     press(&mut a, Btn::Left);
     press(&mut a, Btn::Left);
     let s = read_slot_state(d.path());
@@ -1538,6 +1596,8 @@ fn the_neogeo_pocket_has_a_screen_page_with_its_own_shader_and_bezel() {
         Some(QuickValue::Simpletex)
     );
     press(&mut a, Btn::Right);
+    assert_eq!(read_slot_state(d.path()).shader_ngp, Shader::Shimmerless);
+    press(&mut a, Btn::Right);
     assert_eq!(
         read_slot_state(d.path()).shader_ngp,
         Shader::Off,
@@ -1571,10 +1631,12 @@ fn the_turbografx_16_has_a_screen_page_with_its_own_shader_and_bezel() {
     press(&mut a, Btn::Right);
     assert_eq!(read_slot_state(d.path()).shader_tg16, Shader::Dot);
     press(&mut a, Btn::Right);
+    assert_eq!(read_slot_state(d.path()).shader_tg16, Shader::Shimmerless);
+    press(&mut a, Btn::Right);
     assert_eq!(
         read_slot_state(d.path()).shader_tg16,
         Shader::Off,
-        "it went past Dot instead of wrapping"
+        "it went past Shimmerless instead of wrapping"
     );
     assert_eq!(read_slot_state(d.path()).shader_ngp, Shader::Simpletex);
     press(&mut a, Btn::B);

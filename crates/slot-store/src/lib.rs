@@ -13,6 +13,7 @@ mod core;
 pub mod gb;
 mod gb_palette;
 mod gba;
+mod guides;
 pub mod ini;
 mod platform;
 mod ring;
@@ -36,14 +37,19 @@ pub use core::{
 };
 pub use gb_palette::{GbColors, GbPalette};
 pub use gba::{header_clean, header_code, header_title, header_title_code};
+pub use guides::{
+    decode_guide, find_guide, read_guide, read_guide_spot, write_guide_spot, GuideSpot, GUIDES_DIR,
+    GUIDE_SPOTS_FILE,
+};
 pub use platform::Platform;
 pub use ring::{StateEntry, StateRing, RING_MAX};
 pub use scan::{initial, is_hidden, listing, scan, sort_key, Cart, StoreError};
 pub use shots::{shot_stamp, ShotDir, ShotEntry, SCREENSHOTS_DIR};
 pub use slot_state::{
-    read_slot_state, write_slot_state, Appearance, BezelPick, Blending, Recent, Scale, Shader,
-    SlotState, Stretch, WallpaperPick, WallpaperTint, BLUE_LIGHT_MAX, BRIGHTNESS_MAX, FF_SPEEDS,
-    FF_SPEED_DEFAULT, LID_OFF_MIN, RECENTS_MAX, VOLUME_MAX,
+    bezel_for_scale, bezel_scale, read_slot_state, write_slot_state, Appearance, BezelPick,
+    Blending, Recent, Scale, Shader, SlotState, Stretch, WallpaperPick, WallpaperTint,
+    BLUE_LIGHT_MAX, BRIGHTNESS_MAX, CONTRAST_MAX, FF_SPEEDS, FF_SPEED_DEFAULT, LID_OFF_MIN,
+    RECENTS_MAX, SATURATION_MAX, SUNLIGHT_MAX, VOLUME_MAX,
 };
 pub use stamp::{
     civil_from_days, days_from_civil, days_in_month, format_stamp, parse_stamp, stamp_now,

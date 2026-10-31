@@ -2208,10 +2208,10 @@ fn a_game_boy_color_game_keeps_its_own_colour_and_shader() {
     );
     assert_eq!(
         (saved.shader_gb, saved.shader_gbc),
-        (Shader::Simpletex, Shader::Transparent),
+        (Shader::Simpletex, Shader::Shimmerless),
         "a Game Boy Color game's shader shortcut did not land on GBC alone"
     );
-    assert_eq!(s.app().screen_shader(), Shader::Transparent);
+    assert_eq!(s.app().screen_shader(), Shader::Shimmerless);
 }
 
 #[test]
@@ -2343,8 +2343,18 @@ fn the_shader_shortcut_steps_the_seated_carts_shader_both_ways_and_names_it() {
         ),
         (
             slot_input::Action::ShaderNext,
+            Shader::Shimmerless,
+            slot_ui::Toast::ShaderShimmerless,
+        ),
+        (
+            slot_input::Action::ShaderNext,
             Shader::Off,
             slot_ui::Toast::ShaderOff,
+        ),
+        (
+            slot_input::Action::ShaderPrev,
+            Shader::Shimmerless,
+            slot_ui::Toast::ShaderShimmerless,
         ),
         (
             slot_input::Action::ShaderPrev,
@@ -2394,8 +2404,8 @@ fn the_shader_shortcut_steps_only_the_wonderswan_shader_in_a_wonderswan_game() {
     assert_eq!(s.app().screen_shader(), Shader::Simpletex);
     s.app_mut().apply(slot_input::Action::ShaderNext);
     let after = slot_store::read_slot_state(d.path());
-    assert_eq!(after.shader_ws, Shader::Off);
-    assert_eq!(s.app().screen_shader(), Shader::Off);
+    assert_eq!(after.shader_ws, Shader::Shimmerless);
+    assert_eq!(s.app().screen_shader(), Shader::Shimmerless);
     assert_eq!(
         (after.shader_gb, after.shader_gba, after.shader_lynx),
         (Shader::Simpletex, Shader::Grid, Shader::Grid),
