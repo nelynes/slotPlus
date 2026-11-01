@@ -59,11 +59,43 @@ pub const GBC_LABEL_H: u32 = 199;
 // and the shoulder above the exposed contacts.
 pub use crate::bitmaps::{LYNX_CART_H, LYNX_CART_W, PM_CART_H, PM_CART_W, WS_CART_H, WS_CART_W};
 
-// Pokémon mini: the label well below the grip band, as tools/cart_art/pokemini.py draws it.
-pub const PM_LABEL_X: u32 = 24;
-pub const PM_LABEL_Y: u32 = 66;
-pub const PM_LABEL_W: u32 = 216;
-pub const PM_LABEL_H: u32 = 196;
+// Pokémon mini: the label under the hood, about 1.82:1 as the real ones are, with its
+// bottom corners well rounded, as tools/cart_art/pokemini.py draws it.
+pub const PM_LABEL_X: u32 = 26;
+pub const PM_LABEL_Y: u32 = 104;
+pub const PM_LABEL_W: u32 = 248;
+pub const PM_LABEL_H: u32 = 136;
+const PM_LABEL_TOP_R: u32 = 6;
+const PM_LABEL_BOTTOM_R: u32 = 26;
+
+/// Whether a point of a mould's label box is on the label: a Pokémon mini label has
+/// rounded corners, every other label fills its box.
+fn on_label_at(mould: Mould, x: u32, y: u32, w: u32, h: u32) -> bool {
+    if mould != Mould::Pm {
+        return true;
+    }
+    let r = if y < h / 2 {
+        PM_LABEL_TOP_R
+    } else {
+        PM_LABEL_BOTTOM_R
+    };
+    let cx = if x < r {
+        r
+    } else if x >= w - r {
+        w - r
+    } else {
+        return true;
+    };
+    let cy = if y < r {
+        r
+    } else if y >= h - r {
+        h - r
+    } else {
+        return true;
+    };
+    let (dx, dy) = (x as f32 + 0.5 - cx as f32, y as f32 + 0.5 - cy as f32);
+    dx * dx + dy * dy <= (r * r) as f32
+}
 
 pub const fn ws_label_panel(w: u32, h: u32) -> (u32, u32, u32, u32) {
     (
@@ -702,7 +734,9 @@ fn shell_face(s: &Spec, shell: &Shell) -> CartFace {
     let (lx, ly, lw, lh) = s.label;
     for y in 0..s.h {
         for x in 0..s.w {
-            let on_label = (lx..lx + lw).contains(&x) && (ly..ly + lh).contains(&y);
+            let on_label = (lx..lx + lw).contains(&x)
+                && (ly..ly + lh).contains(&y)
+                && on_label_at(s.mould, x - lx, y - ly, lw, lh);
             let i = ((y * s.w + x) * 4) as usize;
             if !on_label {
                 for c in 0..3 {
@@ -807,7 +841,7 @@ fn paste_label(s: &Spec, face: &mut CartFace, label: &[u8]) {
         for x in 0..lw {
             let src = ((y * lw + x) * 4) as usize;
             let a = label[src + 3] as u32;
-            if a == 0 {
+            if a == 0 || !on_label_at(s.mould, x, y, lw, lh) {
                 continue;
             }
             let d = (((y + ly) * s.w + x + lx) * 4) as usize;

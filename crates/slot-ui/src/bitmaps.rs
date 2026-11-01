@@ -53,10 +53,10 @@ pub const WS_CART_H: u32 = 211;
 /// An Atari Lynx card, nearly square, at the Game Boy pak's width.
 pub const LYNX_CART_W: u32 = 312;
 pub const LYNX_CART_H: u32 = 328;
-/// A Pokémon mini cart: a small, nearly square block with a grip band across the top.
-/// tools/cart_art/pokemini.py draws it.
-pub const PM_CART_W: u32 = 264;
-pub const PM_CART_H: u32 = 280;
+/// A Pokémon mini cart: wider than tall, a raised hood across the top and the label
+/// below it. tools/cart_art/pokemini.py draws it.
+pub const PM_CART_W: u32 = 300;
+pub const PM_CART_H: u32 = 262;
 pub const BOARD_W: u32 = GBA_CART_W;
 pub const BOARD_H: u32 = GBA_CART_H;
 pub const SOCKET_W: u32 = 64;
@@ -118,6 +118,7 @@ const PM_SHELL_PNG: &[u8] = include_bytes!("../../../assets/pm_neutral.png");
 const PM_CLEAR_PNG: &[u8] = include_bytes!("../../../assets/pm_clear.png");
 const PM_INTERIOR_PNG: &[u8] = include_bytes!("../../../assets/pm_interior.png");
 const PM_BOARD_PNG: &[u8] = include_bytes!("../../../assets/pm_board.png");
+const PM_DECAL_PNG: &[u8] = include_bytes!("../../../assets/pm_decal.png");
 const WS_DECAL_PNG: &[u8] = include_bytes!("../../../assets/ws_decal.png");
 const LYNX_DECAL_PNG: &[u8] = include_bytes!("../../../assets/lynx_decal.png");
 
@@ -126,9 +127,11 @@ const LYNX_DECAL_PNG: &[u8] = include_bytes!("../../../assets/lynx_decal.png");
 pub fn extra_decal(mould: Mould) -> Option<&'static [u8]> {
     static WS: OnceLock<Vec<u8>> = OnceLock::new();
     static LYNX: OnceLock<Vec<u8>> = OnceLock::new();
+    static PM: OnceLock<Vec<u8>> = OnceLock::new();
     let (bytes, slot) = match mould {
         Mould::Ws => (WS_DECAL_PNG, &WS),
         Mould::Lynx => (LYNX_DECAL_PNG, &LYNX),
+        Mould::Pm => (PM_DECAL_PNG, &PM),
         _ => return None,
     };
     let (w, h) = mould.size();
