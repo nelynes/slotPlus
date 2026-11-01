@@ -485,6 +485,7 @@ impl Frontend {
             .map(|l| l.map(&mut up))
             .collect();
         let ws_turbo_labels = faces.ws_turbo_labels.map(|l| l.map(&mut up));
+        let pm_labels = faces.pm_labels.map(|l| l.map(&mut up));
         let pointer = up(faces.quick_pointer);
         let values = faces
             .quick_values
@@ -537,6 +538,7 @@ impl Frontend {
         app.set_quick_menu_faces(QuickMenuFaces {
             labels,
             ws_turbo_labels,
+            pm_labels,
             pointer,
             values,
             legend,
@@ -928,6 +930,7 @@ struct UiFaces {
     shutdown: Vec<UndoFace>,
     quick_labels: Vec<[UndoFace; 2]>,
     ws_turbo_labels: [[UndoFace; 2]; 2],
+    pm_labels: [[UndoFace; 2]; 3],
     quick_pointer: UndoFace,
     quick_values: Vec<[UndoFace; 2]>,
     quick_legend: [UndoFace; 8],
@@ -979,6 +982,7 @@ impl UiFaces {
                 .map(|r| [false, true].map(|lit| quick_label_face(*r, lit)))
                 .collect(),
             ws_turbo_labels: slot_ui::ws_turbo_label_faces(),
+            pm_labels: slot_ui::pm_button_label_faces(),
             quick_pointer: quick_pointer_face(),
             quick_values: QuickValue::ALL
                 .iter()

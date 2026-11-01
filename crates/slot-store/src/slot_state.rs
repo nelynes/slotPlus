@@ -359,6 +359,8 @@ pub struct SlotState {
     pub shader_ws: Shader,
     pub shader_lynx: Shader,
     pub shader_pm: Shader,
+    /// A Pokémon mini game fills the screen (7.5x) instead of sitting at 6x.
+    pub pm_full_screen: bool,
     pub auto_load: bool,
     pub eject_save: bool,
     pub turbo: bool,
@@ -554,6 +556,7 @@ impl Default for SlotState {
             shader_ws: Shader::Simpletex,
             shader_lynx: Shader::Grid,
             shader_pm: Shader::Grid,
+            pm_full_screen: false,
             auto_load: true,
             eject_save: true,
             turbo: true,
@@ -674,6 +677,7 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     text.push_str(&format!("shader_ws={}\n", s.shader_ws.name()));
     text.push_str(&format!("shader_lynx={}\n", s.shader_lynx.name()));
     text.push_str(&format!("shader_pm={}\n", s.shader_pm.name()));
+    text.push_str(&format!("pm_full_screen={}\n", u8::from(s.pm_full_screen)));
     text.push_str(&format!("saturation={}\n", s.saturation));
     text.push_str(&format!("contrast={}\n", s.contrast));
     text.push_str(&format!("wallpaper_tint={}\n", s.wallpaper_tint.key()));
@@ -745,6 +749,7 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut shader_ws = None;
     let mut shader_lynx = None;
     let mut shader_pm = None;
+    let mut pm_full_screen = None;
     let mut auto_load = None;
     let mut eject_save = None;
     let mut turbo = None;
@@ -838,6 +843,7 @@ fn parse(text: &str) -> Option<SlotState> {
             "shader_gbc" => shader_gbc = Shader::parse(value).filter(|s| Shader::GB.contains(s)),
             "shader_ws" => shader_ws = Shader::parse(value).filter(|s| Shader::WS.contains(s)),
             "shader_pm" => shader_pm = Shader::parse(value).filter(|s| Shader::PM.contains(s)),
+            "pm_full_screen" => pm_full_screen = flag(value),
             "shader_lynx" => {
                 shader_lynx = Shader::parse(value).filter(|s| Shader::LYNX.contains(s))
             }
@@ -883,6 +889,7 @@ fn parse(text: &str) -> Option<SlotState> {
             .unwrap_or(fallback.shader_ws),
         shader_lynx: shader_lynx.or(shader_gba).unwrap_or(fallback.shader_lynx),
         shader_pm: shader_pm.unwrap_or(fallback.shader_pm),
+        pm_full_screen: pm_full_screen.unwrap_or(fallback.pm_full_screen),
         auto_load: auto_load.unwrap_or(fallback.auto_load),
         eject_save: eject_save.unwrap_or(fallback.eject_save),
         turbo: turbo.unwrap_or(fallback.turbo),

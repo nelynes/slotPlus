@@ -1076,7 +1076,7 @@ impl App {
         if self.scale_choices(self.playing_platform()).len() < 2 {
             hidden.push(QuickRow::Scale);
         }
-        if self.stretch_choices(self.playing_platform()).len() < 2 {
+        if platform != Platform::Pm && self.stretch_choices(self.playing_platform()).len() < 2 {
             hidden.push(QuickRow::Stretch);
         }
         // slotPlus's other cores have no frame blending to pick.
@@ -1206,6 +1206,7 @@ impl App {
             (QuickRow::Bezel, Platform::Lynx) => QuickRow::LynxBezel,
             (QuickRow::Shader, Platform::Pm) => QuickRow::PmShader,
             (QuickRow::Bezel, Platform::Pm) => QuickRow::PmBezel,
+            (QuickRow::Stretch, Platform::Pm) => QuickRow::PmFullScreen,
             (QuickRow::Scale, Platform::Gba) => QuickRow::GbaScale,
             (QuickRow::Scale, Platform::Gb) => QuickRow::GbScale,
             (QuickRow::Scale, Platform::Gbc) => QuickRow::GbcScale,
@@ -1273,6 +1274,7 @@ impl App {
             QuickRow::WsShader => Some(shader_value(self.state.shader_ws)),
             QuickRow::LynxShader => Some(shader_value(self.state.shader_lynx)),
             QuickRow::PmShader => Some(shader_value(self.state.shader_pm)),
+            QuickRow::PmFullScreen => Some(QuickValue::flag(self.state.pm_full_screen)),
             QuickRow::Rumble => Some(QuickValue::flag(self.state.rumble)),
             QuickRow::LeftStick => Some(QuickValue::flag(self.state.left_stick_dpad)),
             QuickRow::AutoLoad => Some(QuickValue::flag(self.state.auto_load)),
@@ -2050,6 +2052,18 @@ impl App {
 
     pub fn set_video_mode(&mut self, mode: VideoMode) {
         self.video_mode = mode;
+        // The Pokémon mini's L1 and R1 are its Shake and C, so its picture is a setting
+        // of its own rather than each game's.
+        if self.playing_platform() == Platform::Pm {
+            self.video_mode = self.pm_picture();
+        }
+    }
+
+    fn pm_picture(&self) -> VideoMode {
+        match self.state.pm_full_screen {
+            true => VideoMode::Stretch,
+            false => VideoMode::Actual,
+        }
     }
 
     pub fn source_rect(&self) -> [f32; 4] {
@@ -3434,6 +3448,7 @@ impl App {
             | QuickRow::WsBezel
             | QuickRow::LynxBezel
             | QuickRow::PmBezel
+            | QuickRow::PmFullScreen
             | QuickRow::GbaScale
             | QuickRow::GbScale
             | QuickRow::GbcScale
@@ -3544,6 +3559,14 @@ impl App {
                 _ => Platform::Gbc,
             };
             self.cycle_scale(platform, right);
+            self.persist();
+            return;
+        }
+        if row == QuickRow::PmFullScreen {
+            self.state.pm_full_screen = !self.state.pm_full_screen;
+            if self.playing_platform() == Platform::Pm {
+                self.video_mode = self.pm_picture();
+            }
             self.persist();
             return;
         }
@@ -3743,6 +3766,7 @@ impl App {
             | QuickRow::WsBezel
             | QuickRow::LynxBezel
             | QuickRow::PmBezel
+            | QuickRow::PmFullScreen
             | QuickRow::ScreenWs
             | QuickRow::ScreenLynx
             | QuickRow::ScreenPm
@@ -4745,6 +4769,7 @@ impl App {
                 // Controls are the same for every game, so from the shelf the
                 // turbo rows keep their own names.
                 ws_buttons: false,
+                pm_buttons: false,
                 bound: Some(&self.bound_faces()),
                 description: self.description(*row),
                 values: QuickRow::ALL.map(|r| self.quick_value(r)),
@@ -4922,6 +4947,7 @@ impl App {
                 description: self.description(row),
                 hidden: &hidden,
                 ws_buttons: self.ws_buttons(),
+                pm_buttons: self.playing_platform() == Platform::Pm && self.seated_cart().is_some(),
                 values: QuickRow::ALL.map(|r| self.quick_value(r)),
                 clock: None,
                 wallpaper: None,

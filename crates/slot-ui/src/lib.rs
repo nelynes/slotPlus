@@ -98,11 +98,11 @@ pub use polaroids::{
 pub use power_menu::{menu_detail_face, menu_face, PowerChoice, MENU_PAD};
 pub use quick_menu::{
     clock_legend_faces, core_button_legends, delete_legends, draw_menu_ground, link_button_legends,
-    prompt_legends, quick_description_face, quick_label_face, quick_legend_faces,
-    quick_pointer_face, quick_row_top, quick_row_top_at, quick_scroll, quick_value_face,
-    quick_warning_value_face, quick_window, repair_legends, ws_turbo_label_faces, QuickMenu,
-    QuickMenuFaces, QuickRow, QuickScroll, QuickValue, QUICK_EDGE, QUICK_LABEL_X, QUICK_PITCH,
-    QUICK_VISIBLE, WS_TURBO_LABELS,
+    pm_button_label_faces, prompt_legends, quick_description_face, quick_label_face,
+    quick_legend_faces, quick_pointer_face, quick_row_top, quick_row_top_at, quick_scroll,
+    quick_value_face, quick_warning_value_face, quick_window, repair_legends, ws_turbo_label_faces,
+    QuickMenu, QuickMenuFaces, QuickRow, QuickScroll, QuickValue, QUICK_EDGE, QUICK_LABEL_X,
+    QUICK_PITCH, QUICK_VISIBLE, WS_TURBO_LABELS,
 };
 pub use rebuild::{rebuild_count_face, rebuild_title_face, RebuildScreen};
 pub use refusal::Refusal;

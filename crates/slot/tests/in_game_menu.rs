@@ -652,6 +652,20 @@ fn menu_faces(a: &mut App) {
         labels: (0..QuickRow::ALL.len())
             .map(|i| [(id(100 + i), 80, 40), (id(130 + i), 80, 40)])
             .collect(),
+        pm_labels: [
+            [
+                (TexId::from_raw(3100), 200, 40),
+                (TexId::from_raw(3101), 200, 40),
+            ],
+            [
+                (TexId::from_raw(3102), 200, 40),
+                (TexId::from_raw(3103), 200, 40),
+            ],
+            [
+                (TexId::from_raw(3104), 200, 40),
+                (TexId::from_raw(3105), 200, 40),
+            ],
+        ],
         ws_turbo_labels: [
             [
                 (TexId::from_raw(3000), 200, 40),

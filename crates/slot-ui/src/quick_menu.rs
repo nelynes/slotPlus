@@ -61,6 +61,7 @@ pub enum QuickRow {
     ScreenPm,
     PmShader,
     PmBezel,
+    PmFullScreen,
     General,
     ShelfPrev,
     ShelfNext,
@@ -131,7 +132,7 @@ pub enum QuickRow {
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 117] = [
+    pub const ALL: [QuickRow; 118] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -182,6 +183,7 @@ impl QuickRow {
         QuickRow::ScreenPm,
         QuickRow::PmShader,
         QuickRow::PmBezel,
+        QuickRow::PmFullScreen,
         QuickRow::General,
         QuickRow::ShelfPrev,
         QuickRow::ShelfNext,
@@ -343,7 +345,11 @@ impl QuickRow {
 
     pub const SCREEN_LYNX: [QuickRow; 2] = [QuickRow::LynxShader, QuickRow::LynxBezel];
 
-    pub const SCREEN_PM: [QuickRow; 2] = [QuickRow::PmShader, QuickRow::PmBezel];
+    pub const SCREEN_PM: [QuickRow; 3] = [
+        QuickRow::PmShader,
+        QuickRow::PmBezel,
+        QuickRow::PmFullScreen,
+    ];
 
     pub const SCREEN_GBA: [QuickRow; 5] = [
         QuickRow::GbaShader,
@@ -438,7 +444,7 @@ impl QuickRow {
             | QuickRow::PlayContrast => &QuickRow::PLAY_SCREEN,
             QuickRow::WsShader | QuickRow::WsBezel => &QuickRow::SCREEN_WS,
             QuickRow::LynxShader | QuickRow::LynxBezel => &QuickRow::SCREEN_LYNX,
-            QuickRow::PmShader | QuickRow::PmBezel => &QuickRow::SCREEN_PM,
+            QuickRow::PmShader | QuickRow::PmBezel | QuickRow::PmFullScreen => &QuickRow::SCREEN_PM,
             QuickRow::GbaShader
             | QuickRow::GbaColourCorrection
             | QuickRow::GbaBlending
@@ -695,6 +701,7 @@ impl QuickRow {
             QuickRow::ScreenPm => "Pokémon mini",
             QuickRow::PmShader => "Shader",
             QuickRow::PmBezel => "Bezel",
+            QuickRow::PmFullScreen => "Full Screen",
         }
     }
 
@@ -1045,6 +1052,13 @@ pub const WS_TURBO_LABELS: [&str; 2] = ["X Button", "Y Button"];
 
 pub fn ws_turbo_label_faces() -> [[UndoFace; 2]; 2] {
     WS_TURBO_LABELS.map(|t| [DIM_INK, MENU_INK].map(|ink| quick_text_face(t, ink)))
+}
+
+/// The Pokémon mini's own names for the L, R and Select rows on the In-Game controls page.
+pub const PM_BUTTON_LABELS: [&str; 3] = ["Shake", "C Button", "Power"];
+
+pub fn pm_button_label_faces() -> [[UndoFace; 2]; 3] {
+    PM_BUTTON_LABELS.map(|t| [DIM_INK, MENU_INK].map(|ink| quick_text_face(t, ink)))
 }
 
 fn cap_centre(label: &fontdue::Font, h: u32) -> f32 {
@@ -1484,6 +1498,8 @@ pub struct QuickMenuFaces {
     pub labels: Vec<[(TexId, u32, u32); 2]>,
     /// The Turbo A and Turbo B labels for a WonderSwan game, see `WS_TURBO_LABELS`.
     pub ws_turbo_labels: [FacePair; 2],
+    /// The L, R and Select labels for a Pokémon mini game, see `PM_BUTTON_LABELS`.
+    pub pm_labels: [FacePair; 3],
     pub pointer: (TexId, u32, u32),
     pub values: Vec<[(TexId, u32, u32); 2]>,
     pub legend: [(TexId, u32); 8],
@@ -1496,6 +1512,8 @@ pub struct QuickMenu<'a> {
     pub hidden: &'a [QuickRow],
     /// A WonderSwan game is playing, so the turbo rows are named X and Y.
     pub ws_buttons: bool,
+    /// A Pokémon mini game is in the slot: L, R and Select take its own names.
+    pub pm_buttons: bool,
     pub values: [Option<QuickValue>; QuickRow::ALL.len()],
     pub clock: Option<[(TexId, u32, u32); 2]>,
     pub wallpaper: Option<[(TexId, u32, u32); 2]>,
@@ -1538,9 +1556,12 @@ impl QuickMenu<'_> {
         let Some(faces) = self.faces else {
             return;
         };
-        let label = |row: QuickRow| match (self.ws_buttons, row) {
-            (true, QuickRow::GameTurboA) => Some(&faces.ws_turbo_labels[0]),
-            (true, QuickRow::GameTurboB) => Some(&faces.ws_turbo_labels[1]),
+        let label = |row: QuickRow| match (self.ws_buttons, self.pm_buttons, row) {
+            (true, _, QuickRow::GameTurboA) => Some(&faces.ws_turbo_labels[0]),
+            (true, _, QuickRow::GameTurboB) => Some(&faces.ws_turbo_labels[1]),
+            (_, true, QuickRow::GameL) => Some(&faces.pm_labels[0]),
+            (_, true, QuickRow::GameR) => Some(&faces.pm_labels[1]),
+            (_, true, QuickRow::GameSelect) => Some(&faces.pm_labels[2]),
             _ => faces.labels.get(row.index()),
         };
         let (right, pad) = (self.canvas.w - QUICK_EDGE, MENU_PAD as f32);

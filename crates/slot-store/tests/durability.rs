@@ -250,6 +250,7 @@ fn a_card_from_before_the_settings_keeps_all_its_values() {
             shader_ws: Shader::Simpletex,
             shader_lynx: Shader::Grid,
             shader_pm: Shader::Grid,
+            pm_full_screen: false,
             auto_load: true,
             eject_save: true,
             turbo: true,
