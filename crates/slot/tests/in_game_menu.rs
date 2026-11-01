@@ -95,8 +95,10 @@ fn screen_shows_the_palette_only_when_palettes_are_live() {
     let empty = [
         QuickRow::States,
         QuickRow::Screenshots,
+        QuickRow::Guide,
         QuickRow::UndoSave,
         QuickRow::UndoLoad,
+        QuickRow::UndoReset,
     ];
     assert_eq!(
         a.in_game_hidden(),
@@ -220,14 +222,19 @@ fn palette_steps_the_palette_and_asks_the_core() {
 }
 
 #[test]
-fn the_in_game_screen_page_ends_with_brightness_and_blue_light() {
+fn the_in_game_screen_page_ends_with_brightness_blue_light_saturation_and_contrast() {
     let (d, mut a) = playing();
     let (power, backlight) = common::panel(d.path(), std::time::Duration::from_secs(300));
     a.set_power(power);
     let shown = QuickRow::PlayBrightness.shown(&a.in_game_hidden());
     assert_eq!(
-        shown[shown.len() - 2..],
-        [QuickRow::PlayBrightness, QuickRow::PlayBlueLight]
+        shown[shown.len() - 4..],
+        [
+            QuickRow::PlayBrightness,
+            QuickRow::PlayBlueLight,
+            QuickRow::PlaySaturation,
+            QuickRow::PlayContrast
+        ]
     );
     let before = a.brightness();
     go_to(&mut a, QuickRow::PlayBrightness);
@@ -242,6 +249,15 @@ fn the_in_game_screen_page_ends_with_brightness_and_blue_light() {
     assert_eq!(a.in_game_menu(), Some(QuickRow::PlayBlueLight));
     press(&mut a, Btn::Right);
     assert_eq!(a.blue_light(), 1);
+    press(&mut a, Btn::Down);
+    assert_eq!(a.in_game_menu(), Some(QuickRow::PlaySaturation));
+    press(&mut a, Btn::Right);
+    assert_eq!(a.saturation(), 1);
+    press(&mut a, Btn::Down);
+    assert_eq!(a.in_game_menu(), Some(QuickRow::PlayContrast));
+    press(&mut a, Btn::Right);
+    assert_eq!(a.contrast(), 1);
+    assert_eq!(a.saturation(), 1);
 }
 
 #[test]
@@ -385,6 +401,20 @@ fn undo_load_from_the_menu_replaces_undo_save_and_resumes() {
     go_to(&mut a, QuickRow::UndoLoad);
     press(&mut a, Btn::A);
     assert!(matches!(a.phase(), Phase::Playing { .. }));
+    assert_eq!(a.in_game_menu(), None);
+    assert!(!a.undo_available(a.now()));
+}
+
+#[test]
+fn a_reset_puts_undo_reset_under_resume() {
+    let (_d, mut a) = playing();
+    a.apply(Action::Reset);
+    assert!(matches!(a.phase(), Phase::Playing { .. }));
+    a.apply(Action::QuickMenu);
+    assert!(!a.in_game_hidden().contains(&QuickRow::UndoReset));
+    press(&mut a, Btn::Down);
+    assert_eq!(a.in_game_menu(), Some(QuickRow::UndoReset));
+    press(&mut a, Btn::A);
     assert_eq!(a.in_game_menu(), None);
     assert!(!a.undo_available(a.now()));
 }

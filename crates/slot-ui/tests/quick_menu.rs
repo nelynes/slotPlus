@@ -128,7 +128,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
     );
     assert_eq!(
         QuickRow::SCREEN_GENERAL.map(QuickRow::label),
-        ["Brightness", "Blue Light"]
+        ["Brightness", "Blue Light", "Saturation", "Contrast"]
     );
     assert_eq!(
         QuickRow::SCREEN_GBA.map(QuickRow::label),
@@ -189,6 +189,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::Screenshots,
             QuickRow::Settings,
             QuickRow::ExitGame,
+            QuickRow::UndoReset,
             QuickRow::PlayScreen,
             QuickRow::PlayGameplay,
             QuickRow::ScreenGba,
@@ -205,7 +206,8 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::ControlsInGame,
             QuickRow::ScreenGeneral,
             QuickRow::UndoSave,
-            QuickRow::UndoLoad
+            QuickRow::UndoLoad,
+            QuickRow::Guide
         ]
     );
     for page in [
@@ -261,6 +263,7 @@ fn the_values_read_as_the_menu_prints_them() {
             "Grid",
             "Dot",
             "Simpletex",
+            "Shimmerless",
             "Dark",
             "Light",
             "Show",
@@ -287,13 +290,13 @@ fn the_values_read_as_the_menu_prints_them() {
             "9",
             "Default",
             "Bespoke",
-            "SP Frame",
+            "SP Screen",
             "Integer",
             "Fit",
             "Classic",
             "Full Screen",
             "Mix",
-            "LCD Ghosting",
+            "Ghosting",
         ]
     );
     assert_eq!(QuickValue::flag(true), QuickValue::On);
@@ -375,8 +378,10 @@ fn the_in_game_pages_hold_their_rows_in_order() {
             QuickRow::Resume,
             QuickRow::UndoSave,
             QuickRow::UndoLoad,
+            QuickRow::UndoReset,
             QuickRow::States,
             QuickRow::Screenshots,
+            QuickRow::Guide,
             QuickRow::Settings,
             QuickRow::ExitGame
         ]
@@ -403,7 +408,9 @@ fn the_in_game_pages_hold_their_rows_in_order() {
             QuickRow::ColourCorrection,
             QuickRow::Blending,
             QuickRow::PlayBrightness,
-            QuickRow::PlayBlueLight
+            QuickRow::PlayBlueLight,
+            QuickRow::PlaySaturation,
+            QuickRow::PlayContrast
         ]
     );
     for row in QuickRow::PLAY {
@@ -465,7 +472,7 @@ fn in_game_rows_read_as_the_menu_shows_them() {
 }
 
 #[test]
-fn a_hidden_palette_and_bezel_leave_seven_screen_rows() {
+fn a_hidden_palette_and_bezel_leave_nine_screen_rows() {
     let hidden = [QuickRow::Palette, QuickRow::Bezel];
     assert_eq!(
         QuickRow::Shader.shown(&hidden),
@@ -476,10 +483,12 @@ fn a_hidden_palette_and_bezel_leave_seven_screen_rows() {
             QuickRow::ColourCorrection,
             QuickRow::Blending,
             QuickRow::PlayBrightness,
-            QuickRow::PlayBlueLight
+            QuickRow::PlayBlueLight,
+            QuickRow::PlaySaturation,
+            QuickRow::PlayContrast
         ]
     );
-    assert_eq!(QuickRow::PlayBlueLight.down(&hidden), QuickRow::Shader);
+    assert_eq!(QuickRow::PlayContrast.down(&hidden), QuickRow::Shader);
 }
 
 #[test]
@@ -488,33 +497,33 @@ fn the_in_game_screen_panel_shows_three_rows_and_scrolls_the_rest() {
     assert_eq!(slot_ui::quick_window(QuickRow::Bezel, &[]), (0, 3));
     assert_eq!(slot_ui::quick_window(QuickRow::Scale, &[]), (1, 3));
     assert_eq!(slot_ui::quick_window(QuickRow::Stretch, &[]), (2, 3));
-    assert_eq!(slot_ui::quick_window(QuickRow::PlayBlueLight, &[]), (6, 3));
+    assert_eq!(slot_ui::quick_window(QuickRow::PlayContrast, &[]), (8, 3));
     let hidden = [QuickRow::Palette, QuickRow::Bezel];
     assert_eq!(
-        slot_ui::quick_window(QuickRow::PlayBlueLight, &hidden),
-        (4, 3)
+        slot_ui::quick_window(QuickRow::PlayContrast, &hidden),
+        (6, 3)
     );
 }
 
 #[test]
 fn a_scroll_bar_shows_only_on_a_page_with_rows_out_of_sight() {
-    let top = slot_ui::quick_scroll(QuickRow::Shader, &[]).expect("nine rows in three");
+    let top = slot_ui::quick_scroll(QuickRow::Shader, &[]).expect("eleven rows in three");
     assert!(
         (top.thumb_y - top.y).abs() < 0.5,
         "the thumb is not at the top"
     );
     assert!(
-        (top.thumb_h - top.h / 9.0).abs() < 0.5,
-        "the thumb is not one row of nine"
+        (top.thumb_h - top.h / 11.0).abs() < 0.5,
+        "the thumb is not one row of eleven"
     );
-    let end = slot_ui::quick_scroll(QuickRow::PlayBlueLight, &[]).expect("nine rows in three");
+    let end = slot_ui::quick_scroll(QuickRow::PlayContrast, &[]).expect("eleven rows in three");
     assert!(
         (end.thumb_y + end.thumb_h - (end.y + end.h)).abs() < 0.5,
         "the thumb is not at the bottom"
     );
     assert!(
         slot_ui::quick_scroll(QuickRow::Shader, &[QuickRow::Palette, QuickRow::Bezel]).is_some(),
-        "seven rows in three still scroll"
+        "nine rows in three still scroll"
     );
     assert_eq!(slot_ui::quick_scroll(QuickRow::Rumble, &[]), None);
     assert!(slot_ui::quick_scroll(QuickRow::GameUp, &[]).is_some());
