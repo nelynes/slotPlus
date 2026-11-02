@@ -330,3 +330,29 @@ pub fn achievement_icon_face(px: u32) -> CartFace {
         h: px,
     }
 }
+
+/// slotPlus: a small red stop sign reading "RA", shown over a game whose achievement set
+/// hasn't loaded yet, so nothing it does can count.
+pub fn ra_wait_face(px: u32) -> CartFace {
+    // A regular octagon, white-rimmed like a road sign.
+    let (a, b) = (7.03, 16.97); // 24 * (1 - 1/sqrt 2) / 2 and its mirror
+    let points = |inset: f64| {
+        let (lo, hi) = (a + inset * 0.414, b - inset * 0.414);
+        let (n, f) = (inset, 24.0 - inset);
+        format!("{lo},{n} {hi},{n} {f},{lo} {f},{hi} {hi},{f} {lo},{f} {n},{hi} {n},{lo}")
+    };
+    let svg = format!(
+        r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <polygon points="{}" fill="#ffffff"/>
+      <polygon points="{}" fill="#c8202a"/>
+    </svg>"##,
+        points(0.6),
+        points(1.9)
+    );
+    let mut rgba = crate::art::render_svg(&svg, px, px).unwrap_or_else(|| vec![0; (px * px * 4) as usize]);
+    if let Some(font) = crate::text::label_font() {
+        let layout = crate::text::fit(font, "RA", px as f32 * 0.66, 1, px as f32 * 0.5, 6.0);
+        crate::text::draw_centred(&mut rgba, px, px, &layout, [255, 255, 255]);
+    }
+    CartFace { rgba, w: px, h: px }
+}
