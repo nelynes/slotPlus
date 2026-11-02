@@ -454,6 +454,10 @@ pub(crate) fn run(
                         ));
                         game.online = true;
                         game.ready = false;
+                        // Nothing to earn, so nothing to wait for.
+                        status
+                            .waiting
+                            .store(false, std::sync::atomic::Ordering::Release);
                     } else {
                         let patch = call(&mut http, auth, "patch", &[("g", id.to_string())])?;
                         let data: Game = serde_json::from_value(patch["PatchData"].clone())

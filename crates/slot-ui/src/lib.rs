@@ -88,7 +88,8 @@ pub use hud::{
     HUD_ICON_PX, HUD_INK, HUD_MS, LINK_HOST_INK, LINK_JOIN_INK, PLATE_H,
 };
 pub use icon::{
-    achievement_icon_face, badge_face, heart_face, icon_box, icon_face, warm_fonts, Badge, Icon,
+    achievement_icon_face, badge_face, heart_face, icon_box, icon_face, ra_wait_face, warm_fonts,
+    Badge, Icon,
 };
 pub use keyboard::{
     draw_keyboard, draw_keyboard_legends, key_rect, keyboard_cap_faces, keyboard_faces, keyboard_faces_on,

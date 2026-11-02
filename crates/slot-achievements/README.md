@@ -49,6 +49,10 @@ slotPlus uses Slot's Wi-Fi, which is up on the shelf and off while a game runs. 
   back) while that game's set and badges download, ahead of everything else, then goes off.
   It gives up after two minutes if the network never answers. Tracking starts the moment the
   set arrives, usually within seconds; anything earned before that can't be counted.
+- While a game can't earn yet, a small red stop sign reading **RA** sits in the bottom-left
+  corner of the screen. It goes as soon as the set is active, or when the server says the ROM
+  has no achievements. If it stays, nothing in that session will count; go back to the shelf
+  with Wi-Fi and let the set download.
 - While the shelf sits idle with Wi-Fi up, slotPlus logs in and quietly prepares every
   `.gb`, `.gbc` and `.gba` game on the card (achievement sets and badges), a little at a time,
   so games start tracking straight away even with no network.

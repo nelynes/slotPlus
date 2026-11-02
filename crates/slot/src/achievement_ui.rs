@@ -37,6 +37,8 @@ pub(crate) struct Notifications {
     requested_progress: Option<u8>,
     displayed_progress: Option<u8>,
     progress: Option<[TexId; 2]>,
+    /// The RA stop sign, over a game whose set hasn't loaded yet.
+    sign: Option<TexId>,
 }
 
 enum Request {
@@ -47,6 +49,7 @@ enum Request {
 enum Built {
     Progress(u8, [CartFace; 2]),
     Sync([CartFace; 2]),
+    Sign(CartFace),
     Banner(CartFace, CartFace, Vec<i16>),
 }
 
@@ -60,6 +63,7 @@ impl Notifications {
                 if outbox
                     .send(Built::Sync([false, true].map(slot_ui::sync_icon_face)))
                     .is_err()
+                    || outbox.send(Built::Sign(slot_ui::ra_wait_face(SIGN_PX))).is_err()
                 {
                     return;
                 }
@@ -104,6 +108,7 @@ impl Notifications {
             requested_progress: None,
             displayed_progress: None,
             progress: None,
+            sign: None,
         }
     }
 
@@ -136,6 +141,9 @@ impl Notifications {
                         }
                     });
                     self.displayed_progress = Some(percent);
+                }
+                Built::Sign(face) => {
+                    self.sign = Some(compositor.create_texture(face.w, face.h, &face.rgba));
                 }
                 Built::Sync(face) => {
                     self.sync = Some(
@@ -208,6 +216,16 @@ impl Notifications {
                 }
             }
         }
+        if let Some(sign) = self.sign.filter(|_| sign_shown(session)) {
+            draws.push(Draw::Tex {
+                x: SIGN_MARGIN,
+                y: slot_gfx::OUT_H as f32 - SIGN_MARGIN - SIGN_PX as f32,
+                w: SIGN_PX as f32,
+                h: SIGN_PX as f32,
+                tex: sign,
+                alpha: 0.92,
+            });
+        }
         if let (Some(tex), Some(badge), Some(shown)) = (self.texture, self.badge, self.shown) {
             draw_banner(
                 session.app().canvas(),
@@ -218,6 +236,19 @@ impl Notifications {
             );
         }
     }
+}
+
+/// slotPlus: the RA stop sign's size and its gap from the screen's bottom-left corner.
+const SIGN_PX: u32 = 28;
+const SIGN_MARGIN: f32 = 10.0;
+
+/// The sign shows while a game runs that can't earn yet, and not over the in-game menu,
+/// whose legends sit in that corner.
+fn sign_shown(session: &Session) -> bool {
+    let app = session.app();
+    matches!(app.phase(), Phase::Playing { .. })
+        && app.in_game_menu().is_none()
+        && session.achievement_waiting()
 }
 
 fn progress_face(percent: u8, light: bool) -> CartFace {

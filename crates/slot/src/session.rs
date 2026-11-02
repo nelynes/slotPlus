@@ -170,6 +170,11 @@ impl Session {
         self.achievements.take_notice()
     }
 
+    /// The game in play can't earn achievements yet: its set hasn't loaded.
+    pub fn achievement_waiting(&self) -> bool {
+        self.achievements.waiting_for_set()
+    }
+
     pub fn achievement_flush_ready(&self) -> bool {
         self.achievements.flush_ready()
     }
