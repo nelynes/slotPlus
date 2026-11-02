@@ -33,6 +33,7 @@ Each release comes in two versions. Pick the one you want from the [releases pag
 
 - **Folders:** each system's folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
 - **Carts:** each system has its own cart, drawn in Slot's look. WonderSwan games get a black cart, WonderSwan Color games a frosted clear one, and a HuCard turns over to go into the slot contacts first.
+- **RetroAchievements:** Game Boy, Game Boy Color and Game Boy Advance games earn softcore achievements, with a banner in Slot's style. Copy `Config/retroachievements.toml.example` to `Config/retroachievements.toml`, add your account, and join Wi-Fi. Achievements earned offline are sent later. [More](crates/slot-achievements/README.md).
 - **Cart Slot:** set Settings > General > Cart Slot to Bespoke and the slot on each shelf becomes the back of that system's handheld: a pearl WonderSwan and a Lynx II, plus a Game Gear, a carbon NeoGeo Pocket Color, a TurboExpress and a silver DS Lite in Ultra. The Game Boy shelves keep Slot's own.
 
 **Controls, label art sizes, bezels, saves, the DS's screen layouts and stylus, and how Lynx and WonderSwan games that turn sideways work are all in the [systems guide](SYSTEMS.md).**

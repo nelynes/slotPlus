@@ -1,11 +1,12 @@
 # Changelog
 
-## [1.13.0-plus2.5](https://github.com/nelynes/slotPlus/releases/tag/v1.13.0-plus2.5)
+## [1.13.0-plus2.6](https://github.com/nelynes/slotPlus/releases/tag/v1.13.0-plus2.6)
 
-slotPlus brought up to Slot 1.13.0: Wi-Fi, updates over the air, Gamebit for managing the card from a browser, the on-device Cart Studio with art fetched over Wi-Fi, the clock set from network time, and a Shelf wallpaper. See [Slot's 1.13.0 notes](https://github.com/BrandonKowalski/slot/releases/tag/v1.13.0).
+**RetroAchievements** for Game Boy, Game Boy Color and Game Boy Advance games, and slotPlus brought up to Slot 1.13.0: Wi-Fi, updates over the air, Gamebit for managing the card from a browser, the on-device Cart Studio with art fetched over Wi-Fi, the clock set from network time, and a Shelf wallpaper. See [Slot's 1.13.0 notes](https://github.com/BrandonKowalski/slot/releases/tag/v1.13.0).
 
 To upgrade, replace the `System` folder on your card with the one from the zip. After this one, Network → Check for Updates can do it for you.
 
+- **RetroAchievements.** Copy `Config/retroachievements.toml.example` to `Config/retroachievements.toml`, add your RetroAchievements username and password, join Wi-Fi from the Network menu and restart. Softcore achievements in mGBA and gpSP games pop up as a banner in Slot's style, with the achievement's own badge and a quiet chime. While the shelf sits idle on Wi-Fi, slotPlus prepares every Game Boy family game on the card, so achievements work offline; ones earned while you play are kept on the card and sent when you're back on the shelf. A small sync mark by the clock shows when it's working. `encore = true` lets achievements you already have go off again. Ported from Prashant Vaibhav's fork of Slot, with the official rcheevos.
 - **Updates come from slotPlus.** Check for Updates looks at slotPlus's own releases, never Slot's, so it can't swap slotPlus for plain Slot, and slotPlus and slotPlusUltra each get their own download. BaseOS updates are offered as in Slot.
 - **Gamebit knows slotPlus's systems:** WonderSwan and Atari Lynx have their own pages for games, labels, bezels and saves, and the Lynx's page takes its `lynxboot.img` (slotPlusUltra adds Game Gear, NeoGeo Pocket, TurboGrafx-16 and Nintendo DS).
 - **Cart Studio on the handheld** works on slotPlus's carts too, with each cart's own label shape. Fetch Missing Art finds labels for the Game Boy family; slotPlus's other systems keep their labels from Cart Studio+ or your own PNGs.
