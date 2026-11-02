@@ -572,6 +572,7 @@ tasks:
           CMD: ./target-device/device/slot --init-root {{.OUT}}
       - cp target-device/device/slot {{.OUT}}/System/slot
       - cp -R card/System/* {{.OUT}}/System/
+      - cp crates/slot-achievements/retroachievements.toml.example {{.OUT}}/Config/
       - cp -R web/dist {{.OUT}}/System/web
       - for d in Bezels Labels Wallpapers; do cp card/$d/README.txt {{.OUT}}/$d/; done
       - file vendor/mgba_libretro.so | grep -q aarch64

@@ -1,0 +1,14 @@
+# Copy to Config/retroachievements.toml, fill in your account, then restart slotPlus.
+# Join a network from the shelf's Network menu. Achievements earned while you play are
+# kept on the card and sent the next time you are back on the shelf with Wi-Fi.
+enabled = true
+username = ""
+password = ""
+
+# After a successful login, slot remembers its token; you may remove password.
+# Or supply an emulator login token (not a Web API key):
+# token = ""
+
+# Encore: achievements you have already unlocked go off again (banner and chime) when you
+# earn them again. Nothing is sent to RetroAchievements for those.
+# encore = true

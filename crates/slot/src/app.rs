@@ -649,6 +649,8 @@ pub struct App {
     joined_hidden: Option<(String, bool)>,
     wifi_bars: u8,
     wifi_faces: Option<[[slot_ui::NetFace; 4]; 2]>,
+    /// The RetroAchievements sync mark beside the shelf's clock.
+    achievement_sync: Option<slot_ui::SyncIndicator>,
     wifi_sampled: Millis,
     wifi_scanning: bool,
     keyboard: Option<(slot_ui::Keyboard, KeyboardFor)>,
@@ -818,6 +820,7 @@ impl App {
             joined_hidden: None,
             wifi_bars: 3,
             wifi_faces: None,
+            achievement_sync: None,
             wifi_sampled: 0,
             wifi_scanning: false,
             keyboard: None,
@@ -2214,6 +2217,10 @@ impl App {
 
     pub fn set_wifi_faces(&mut self, faces: [[slot_ui::NetFace; 4]; 2]) {
         self.wifi_faces = Some(faces);
+    }
+
+    pub fn set_achievement_sync(&mut self, icon: Option<slot_ui::SyncIndicator>) {
+        self.achievement_sync = icon;
     }
 
     fn wifi_face(&self) -> Option<slot_ui::NetFace> {
@@ -5658,6 +5665,9 @@ impl App {
                 );
                 if self.wifi_up() {
                     slot_ui::draw_wifi_icon(self.battery_percent, self.wifi_face(), out);
+                }
+                if let Some(icon) = self.achievement_sync {
+                    slot_ui::draw_footer_sync(self.canvas(), self.shelf_clock, icon, out);
                 }
                 if let Some(picker) = self.core_picker_shown() {
                     let lift = lift_of(picker.openness(self.now()));
