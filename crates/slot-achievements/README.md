@@ -1,16 +1,25 @@
 # RetroAchievements
 
-slot can earn **softcore GB, GBC, and GBA achievements**, online or offline, with a short in-game
-1.8-second notification showing the achievement's cached RA badge, name and points, accompanied by a quiet
-240 ms chime that follows the game volume and mute setting. There is no achievement browser or
-account menu. Save states, resume, rewind, and fast-forward remain available.
+slotPlus earns **softcore RetroAchievements for Game Boy, Game Boy Color and Game Boy
+Advance games**. Earning one shows a short banner in Slot's style, the achievement's title and
+points on one line and its description below, with its own badge, and plays a quiet chime that
+follows the game's volume. There is no achievement browser, leaderboards or hardcore mode.
+Save states, resume, rewind and fast-forward all still work.
 
-The notification slides and fades in, gives the badge a small pop, then fades away.
-The total duration includes both transitions. A small trophy is used only when a badge is
-missing or invalid; showing an unlock never waits for a download.
+Ported from Prashant Vaibhav's fork of Slot (github.com/pvaibhav/slot), GPL-3.0, with the
+official rcheevos evaluator (MIT, `vendor/rcheevos`).
 
-Copy the bundled `Config/retroachievements.toml.example` to `Config/retroachievements.toml`
-on the card and fill in your account:
+## Setting it up
+
+The easy way: Settings → RetroAchievements. Enter your **Username** and **Password** on the
+keyboard, join Wi-Fi from Settings → Wireless, and you're set; the service starts again with
+the new account straight away. The page also has **Encore** and shows **Cheevo Mode**, which
+is always Casual (softcore): hardcore needs a live connection the whole time and no save
+states, rewind or fast-forward, which slotPlus doesn't do.
+
+The page reads and writes `Config/retroachievements.toml`, keeping anything else in it, so
+the file still works by hand. Copy `Config/retroachievements.toml.example` to it and fill in
+your account:
 
 ```toml
 enabled = true
@@ -18,118 +27,57 @@ username = "your-ra-username"
 password = "your-ra-password"
 ```
 
-Restart slot. A successful login remembers the account's login token privately under
-`Saves/RetroAchievements/`; you can then remove the `password` line from the config.
-Alternatively, set `token = "your-login-token"` instead of `password`. This is an
-**emulator login token**, such as one obtained by NextUI, not a RetroAchievements Web API
-key. An explicitly configured token takes precedence over a password or remembered token.
-Account and configuration changes take effect on restart. Omit the file or set
-`enabled = false` to disable the feature. TOML comments and literal strings are supported;
-for example, single quotes preserve backslashes in a password without escaping them.
+Join a Wi-Fi network from Settings → Wireless → Network, then restart slotPlus. After the first
+login the account's token is kept under `Saves/RetroAchievements/` and the `password` line
+can be removed. `token = "..."` works instead of a password; it is an emulator login token,
+not a Web API key. Omit the file or set `enabled = false` to turn the feature off.
 
-For home networking, configure `Config/wifi.toml` from its bundled example and turn
-**Home Wi-Fi** **On** once in the main menu. The toggle is remembered across reboots.
-Wi-Fi connection, network time sync, RA login, and library preparation then run automatically.
-When the Wi-Fi worker reports a new connection, RA retries immediately instead of waiting
-for its normal network backoff. Releases and deployment copy only the example files;
-existing credentials and caches are preserved.
+`encore = true` lets achievements you already have go off again (banner and chime). Nothing
+is sent to RetroAchievements for those.
 
-Treat the config and cached login token as credentials. slot does not print them in logs.
-It uses verified HTTPS with bundled trusted roots; it needs neither curl nor a system CA
-bundle on the handheld. The device clock must be reasonably accurate for TLS and offline
-unlock timestamps.
+Typing a username or password in Settings turns achievements on and drops a `token` line
+from the file, since a token would otherwise win over the password just typed.
 
-## Automatic offline preparation
+Treat the file and the token as credentials. Neither is logged. Like Slot's own Wi-Fi
+password, they are on the card, so anyone you let into Gamebit can reach them.
 
-While slot is running, it automatically prepares `.gba` files in `Games/GBA` and
-`.gb` and `.gbc` files in `Games/GB` and `Games/GBC` whenever the server is reachable.
-You do not have to open each game first. The current game has
-priority; other ROMs are prepared gradually in the background. New/changed ROMs are
-discovered every five minutes, and cached definitions and server unlocks refresh weekly.
-Library preparation does not start play sessions on the server.
-Unlocked badge images are also cached in the background, including for games you have not
-opened. They remain available offline. Missing or damaged images are retried independently;
-badge downloads take lower priority than unlock uploads and game setup. Older caches are
-refreshed once to add badge metadata.
-The shelf's bottom bar has a small sync icon just left of the clock. It rotates while
-preparing or syncing, shows cache progress during metadata preparation and badge downloads,
-disappears when caught up, and shows an amber dot when queued work is waiting for
-internet or when account/data/storage needs attention. It is absent when disabled. Routine
-status never interrupts gameplay with a banner; only earned achievements show a banner.
-Background diagnostics go to slot's log. Cache refresh progress reserves the first half
-for game metadata and the second half for badge downloads; badge-only resumes use
-the full range. Brief login and presence requests have no percentage.
+## Wi-Fi and offline play
 
-A cart whose ROM is prepared, and has at least one core achievement, wears a holographic
-seal on its label's bottom-left corner. It is part of the cart's face, so it stays on through
-the core picker and the slot. The shelf reads readiness from the library index and the game
-caches on a worker, and looks again each time a cache is written; it never hashes a ROM.
-A replaced ROM loses its seal until it is prepared again. A cart sealed while on screen
-glints once.
+slotPlus uses Slot's Wi-Fi, which is up on the shelf and off while a game runs. So:
 
-Each ROM needs its initial download once. Leave slot running online long enough to prepare
-the library before taking a newly populated card offline. Unknown ROM hashes cannot earn
-achievements; use a ROM version supported by RetroAchievements. Cached games start tracking
-without waiting for a network timeout. Initial preparation is asynchronous; events before
-tracking starts cannot be recovered.
+- When a game starts whose achievement set isn't on the card yet, Wi-Fi stays up (or comes
+  back) while that game's set and badges download, ahead of everything else, then goes off.
+  It gives up after two minutes if the network never answers. Tracking starts the moment the
+  set arrives, usually within seconds; anything earned before that can't be counted.
+- While a game can't earn yet, a small red stop sign reading **RA** sits in the bottom-left
+  corner of the screen. It goes as soon as the set is active, or when the server says the ROM
+  has no achievements. If it stays, nothing in that session will count; go back to the shelf
+  with Wi-Fi and let the set download.
+- While the shelf sits idle with Wi-Fi up, slotPlus logs in and quietly prepares every
+  `.gb`, `.gbc` and `.gba` game on the card (achievement sets and badges), a little at a time,
+  so games start tracking straight away even with no network.
+- Achievements earned in a game are saved on the card at once, survive ejects and power-offs,
+  and are sent the next time Wi-Fi is up on the shelf. Network failures back off from 30
+  seconds to five minutes and retry on their own.
+- The shelf's footer shows a small sync mark left of the clock while it prepares or sends,
+  with progress while caching, and an amber dot when something is waiting for the internet or
+  needs attention. It is absent when the feature is off.
 
-Unlocks are saved atomically before the trophy notification appears. They survive
-ejects, shutdowns, and restarts. Automatic sync covers all games, including while the shelf
-is open. Network failures back off from 30 seconds to five minutes and retry automatically;
-no manual sync is needed. Only server-confirmed awards leave the pending state. Confirmed
-records are retained so an offline restart does not award the same achievement again.
+A newly added game needs its set downloaded once, so leave slotPlus on the shelf with Wi-Fi
+for a while after adding games. Only ROM versions RetroAchievements knows can earn
+achievements. Keep `Saves/RetroAchievements` when backing up the card: it holds unsent
+unlocks and the prepared sets.
 
-The cache and unlock ledger are separated by account. Keep `Saves/RetroAchievements` when
-backing up or moving the card: deleting it removes unsynced unlocks and offline preparation.
-Do not edit `unlocks.json`. A damaged ledger is reported and preserved, not silently replaced.
+## How it works
 
-## Gameplay and networking
-
-Evaluation, persistence, ROM hashing, library scanning, HTTPS, and banner rasterization run
-on background threads. The emulator copies up to 352 KiB of memory after each emulated
-frame into a bounded queue (including fast-forward frames); it never waits for the worker.
-No emulator pointers cross threads. If evaluation falls behind, slot logs an interruption
-and resets achievement hit/delta tracking across the missing frames, avoiding false awards.
-State loads and rewind also reset partial achievement progress.
-
-mGBA exposes the required memory for GB, GBC, and GBA. gpSP supports GBA achievements.
-GB and GBC snapshots include fixed work RAM banks, high RAM, cartridge RAM banks,
-and echo RAM. GBC's extra work RAM banks use RetroAchievements addresses `0x10000`
-through `0x15FFF`. Extra cartridge RAM banks use `0x16000` through `0x33FFF`.
-Missing banks and unmapped memory remain invalid rather than being read as zero.
-gpSP's network link can continue tracking from the cache when its softAP has no internet.
-mGBA's two-console cable mode is excluded because its memory belongs to two players.
-Leaderboards, hardcore mode, and achievement browsing are not included.
-
-The Wi-Fi configuration UI is independent: this feature uses ordinary HTTPS whenever the OS
-has a route to the internet. It does not configure radios, interfaces, softAP, or Wi-Fi.
-
-## Implementation and verification
-
-`slot-achievements` vendors the official rcheevos 12.2.1 evaluator at the same revision used
-by NextUI. The REST protocol and GB, GBC, and GBA memory layouts follow that revision's
-API helpers and console definitions. Account authentication uses `login2`; preparation uses `gameid`,
-`patch`, and `unlocks`; play uses `startsession` and periodic `ping`. Deferred
-`awardachievement` requests include the original unlock age and the corresponding signature.
-
-The focused tests use a fake server and real rcheevos conditions to cover offline earning,
-restart/replay, account isolation, automatic preparation, failed writes, rejected awards,
-dropped frames, and rewind. Offline earning and sync cover all three systems.
-`slot-retro` also runs original test ROMs to check GB and GBC memory banks in mGBA
-and GBA memory in mGBA and gpSP,
-when the host cores are available in `vendor/`.
+Hashing, library preparation, HTTPS and banner drawing run on background threads, and
+background work only runs while the shelf is idle. The emulator copies the game's memory
+after each frame into a bounded queue and never waits on the evaluator; if evaluation falls
+behind, partial progress is reset rather than risking a false unlock, as it is after a state
+load or rewind. Only mGBA and gpSP games are tracked, and never over a link cable.
 
 ```sh
 cargo test -p slot-achievements -p slot-retro
-cargo clippy --workspace --all-targets -- -D warnings
-task build:device
 ```
 
-A real account and an on-device offline/online session are still needed to verify live
-server acceptance and handheld performance. The tests never send an achievement to a real
-account.
-
-Rich presence scripts are cached with game data and evaluated on the achievement
-worker. Starting an online game immediately publishes a playing status; heartbeats
-refresh it every two minutes using the game's rich presence, with a title fallback.
-Presence is live-only: offline activity is not replayed as a current playing status.
+The tests use a fake server and never send anything to a real account.

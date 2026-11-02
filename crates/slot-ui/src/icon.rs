@@ -5,21 +5,6 @@ use fontdue::{Font, FontSettings};
 
 use crate::CartFace;
 
-/// A small trophy for earned achievements, independent of the HUD glyph frame.
-pub fn achievement_icon_face(px: u32) -> CartFace {
-    let svg = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-      <g fill="none" stroke="#d6be7a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M7 4h10v6a5 5 0 0 1-10 0zM7 6H4v3a4 4 0 0 0 4 4m9-7h3v3a4 4 0 0 1-4 4M12 15v5m-4 0h8"/>
-      </g>
-    </svg>"##;
-    CartFace {
-        rgba: crate::art::render_svg(svg, px, px)
-            .unwrap_or_else(|| vec![0; (px * px * 4) as usize]),
-        w: px,
-        h: px,
-    }
-}
-
 const SYMBOLS_TTF: &[u8] = include_bytes!("../assets/SymbolsNerdFontMono-Regular.ttf");
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -37,12 +22,15 @@ pub enum Icon {
     Headphones,
     HeadphonesMuted,
     Camera,
-    Wifi,
     Sunlight,
+    Backspace,
+    Return,
+    Shift,
+    Space,
 }
 
 impl Icon {
-    pub const ALL: [Icon; 15] = [
+    pub const ALL: [Icon; 18] = [
         Icon::Volume,
         Icon::VolumeZero,
         Icon::VolumeMuted,
@@ -56,8 +44,11 @@ impl Icon {
         Icon::Headphones,
         Icon::HeadphonesMuted,
         Icon::Camera,
-        Icon::Wifi,
         Icon::Sunlight,
+        Icon::Backspace,
+        Icon::Return,
+        Icon::Shift,
+        Icon::Space,
     ];
 
     pub fn index(self) -> usize {
@@ -79,8 +70,11 @@ impl Icon {
             Icon::Headphones => '\u{f025}',
             Icon::HeadphonesMuted => '\u{f07ce}',
             Icon::Camera => '\u{f030}',
-            Icon::Wifi => '\u{f1eb}',
             Icon::Sunlight => '\u{f0a72}',
+            Icon::Backspace => '\u{f0b5c}',
+            Icon::Return => '\u{f0311}',
+            Icon::Shift => '\u{f0636}',
+            Icon::Space => '\u{f1050}',
         }
     }
 }
@@ -178,24 +172,23 @@ impl Badge {
     }
 }
 
-const STAR: [&str; 9] = [
-    "....#....",
-    "...###...",
-    "...###...",
+const HEART: [&str; 8] = [
+    ".##...##.",
+    "####.####",
+    "#########",
     "#########",
     ".#######.",
     "..#####..",
-    "..#####..",
-    ".###.###.",
-    ".##...##.",
+    "...###...",
+    "....#....",
 ];
 
-pub fn star_face(scale: u32, colour: [u8; 3]) -> CartFace {
-    let (gw, gh) = (STAR[0].len() as i32, STAR.len() as i32);
+pub fn heart_face(scale: u32, colour: [u8; 3]) -> CartFace {
+    let (gw, gh) = (HEART[0].len() as i32, HEART.len() as i32);
     let ink = |x: i32, y: i32| {
         (0..gw).contains(&x)
             && (0..gh).contains(&y)
-            && STAR[y as usize].as_bytes()[x as usize] == b'#'
+            && HEART[y as usize].as_bytes()[x as usize] == b'#'
     };
     let (w, h) = ((gw + 2) as u32 * scale, (gh + 2) as u32 * scale);
     let mut rgba = vec![0u8; (w * h * 4) as usize];
@@ -321,4 +314,45 @@ pub(crate) fn symbols_font() -> Option<&'static Font> {
     static FONT: OnceLock<Option<Font>> = OnceLock::new();
     FONT.get_or_init(|| Font::from_bytes(SYMBOLS_TTF, FontSettings::default()).ok())
         .as_ref()
+}
+
+/// A small trophy for earned achievements, independent of the HUD glyph frame.
+pub fn achievement_icon_face(px: u32) -> CartFace {
+    let svg = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <g fill="none" stroke="#d6be7a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 4h10v6a5 5 0 0 1-10 0zM7 6H4v3a4 4 0 0 0 4 4m9-7h3v3a4 4 0 0 1-4 4M12 15v5m-4 0h8"/>
+      </g>
+    </svg>"##;
+    CartFace {
+        rgba: crate::art::render_svg(svg, px, px)
+            .unwrap_or_else(|| vec![0; (px * px * 4) as usize]),
+        w: px,
+        h: px,
+    }
+}
+
+/// slotPlus: a small red stop sign reading "RA", shown over a game whose achievement set
+/// hasn't loaded yet, so nothing it does can count.
+pub fn ra_wait_face(px: u32) -> CartFace {
+    // A regular octagon, white-rimmed like a road sign.
+    let (a, b) = (7.03, 16.97); // 24 * (1 - 1/sqrt 2) / 2 and its mirror
+    let points = |inset: f64| {
+        let (lo, hi) = (a + inset * 0.414, b - inset * 0.414);
+        let (n, f) = (inset, 24.0 - inset);
+        format!("{lo},{n} {hi},{n} {f},{lo} {f},{hi} {hi},{f} {lo},{f} {n},{hi} {n},{lo}")
+    };
+    let svg = format!(
+        r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <polygon points="{}" fill="#ffffff"/>
+      <polygon points="{}" fill="#c8202a"/>
+    </svg>"##,
+        points(0.6),
+        points(1.9)
+    );
+    let mut rgba = crate::art::render_svg(&svg, px, px).unwrap_or_else(|| vec![0; (px * px * 4) as usize]);
+    if let Some(font) = crate::text::label_font() {
+        let layout = crate::text::fit(font, "RA", px as f32 * 0.66, 1, px as f32 * 0.5, 6.0);
+        crate::text::draw_centred(&mut rgba, px, px, &layout, [255, 255, 255]);
+    }
+    CartFace { rgba, w: px, h: px }
 }

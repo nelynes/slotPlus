@@ -1,10 +1,16 @@
 <div align="center">
 
-<img src=".github/resources/banner.png" width="100%" alt="slot. A bespoke, Game Boy-centric frontend for the Anbernic RG SP. slot plays Game Boy Advance, Game Boy Color and Game Boy. slotPlus, for the 3:2 fan, adds WonderSwan, WonderSwan Color and Atari Lynx. slotPlusUltra, for the ultimate handheld, adds Game Gear, NeoGeo Pocket, TurboGrafx-16 and Nintendo DS on top of that. Every version adds HDMI out to your TV and pixel transparency for GB and GBC.">
+<img src=".github/resources/banner.png" width="100%" alt="slot. A bespoke, Game Boy-centric frontend for the Anbernic RG SP. slot plays Game Boy Advance, Game Boy Color and Game Boy. slotPlus, for the 3:2 fan, adds WonderSwan, WonderSwan Color and Atari Lynx. slotPlusUltra, for the ultimate handheld, adds Game Gear, NeoGeo Pocket, TurboGrafx-16 and Nintendo DS on top of that. Every version adds HDMI out to your TV, pixel transparency for GB and GBC, and RetroAchievements.">
 
 </div>
 
 ---
+
+# New on 2.6
+
+- **Retroachievements come to SlotPlus. (Beta)** With Slot's integration of wifi, Retro achievements are now enabled.
+- RA sets are cached while on the shelf menu, or upon a game boot. Since Slot turns wifi off while in a game, all your achievements earned are cached until you go back online next time you are on the shelf.
+- RAs can be earned for the Game Boy family of games while in beta.
 
 # What is slotPlus?
 
@@ -33,6 +39,7 @@ Each release comes in two versions. Pick the one you want from the [releases pag
 
 - **Folders:** each system's folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
 - **Carts:** each system has its own cart, drawn in Slot's look. WonderSwan games get a black cart, WonderSwan Color games a frosted clear one, and a HuCard turns over to go into the slot contacts first.
+- **RetroAchievements:** Game Boy, Game Boy Color and Game Boy Advance games earn softcore achievements, with a banner in Slot's style. Enter your account in Settings → RetroAchievements and join Wi-Fi. Achievements earned offline are sent later. [More](crates/slot-achievements/README.md).
 - **Cart Slot:** set Settings > General > Cart Slot to Bespoke and the slot on each shelf becomes the back of that system's handheld: a pearl WonderSwan and a Lynx II, plus a Game Gear, a carbon NeoGeo Pocket Color, a TurboExpress and a silver DS Lite in Ultra. The Game Boy shelves keep Slot's own.
 
 **Controls, label art sizes, bezels, saves, the DS's screen layouts and stylus, and how Lynx and WonderSwan games that turn sideways work are all in the [systems guide](SYSTEMS.md).**
@@ -65,8 +72,6 @@ Has support for GBA, GBC, and GB titles only.
 > ROMs must be unzipped. slot does not read `.zip` or `.7z` files.
 
 A full user guide can be found at [slot-cfw.fyi](https://slot-cfw.fyi).
-
-Release notes can be found in the [changelog](CHANGELOG.md).
 
 ---
 
@@ -103,6 +108,16 @@ Release notes can be found in the [changelog](CHANGELOG.md).
 
 If you have one of the untested devices, or have tried slot on a device not listed,
 please [open an issue on GitHub](https://github.com/BrandonKowalski/slot/issues) and let me know how it went.
+
+---
+
+# Discord Community
+
+slot has a [Discord server](https://discord.gg/NYRWsSuPUu) for questions, sharing setups, and talking about the project.
+
+It is open to everyone in the slot universe. That includes folks running or building forks of slot.
+
+There is no reason for this community to be fragmented so long as we are having fun!
 
 ---
 

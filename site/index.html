@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>slot+</title>
-<meta name="description" content="slotPlus: Slot's bespoke, Game Boy-centric frontend for the Anbernic RG SP, plus WonderSwan, Atari Lynx, Game Gear, NeoGeo Pocket, TurboGrafx-16, Nintendo DS and HDMI out.">
+<meta name="description" content="slotPlus: Slot's bespoke, Game Boy-centric frontend for the Anbernic RG SP, plus WonderSwan, Atari Lynx, Game Gear, NeoGeo Pocket, TurboGrafx-16, Nintendo DS, HDMI out and RetroAchievements.">
 <meta property="og:title" content="slot+">
 <meta property="og:description" content="Slot's bespoke, Game Boy-centric frontend for the Anbernic RG SP, plus more handhelds and HDMI out.">
 <meta property="og:type" content="website">
@@ -341,10 +341,15 @@
         <h3>HDMI Support</h3>
         <p>Plug a TV into the mini-HDMI port and the shelf and games move to it, sound and all.<br>Pull the cable mid-game and slotPlus saves, moves back to the handheld and carries on.</p>
       </li>
+      <li class="step" id="achievements" data-clip="achievements.mp4">
+        <p class="badges"><span class="badge extras">Every version</span></p>
+        <h3>RetroAchievements</h3>
+        <p>Game Boy, Game Boy Color and Game Boy Advance games earn achievements, with a banner and the achievement's own badge.<br>Enter your account in Settings &gt; RetroAchievements and join Wi-Fi. Games get ready while the shelf sits idle, so they earn offline too, and unlocks are sent when you're back online.<br>A red <b>RA</b> sign in the corner means the game's set hasn't loaded yet and nothing will count.</p>
+      </li>
   </ol>
   <div class="stepper">
     <button class="step-nav" type="button" id="step-prev" aria-label="Previous step">&#8592;</button>
-    <p class="step-count" aria-live="polite"><span id="step-at">1</span> of <span id="step-of">10</span></p>
+    <p class="step-count" aria-live="polite"><span id="step-at">1</span> of <span id="step-of">11</span></p>
     <button class="step-nav" type="button" id="step-next" aria-label="Next step">&#8594;</button>
   </div>
   <p class="guide-more"><a class="btn ghost" href="https://slot-cfw.fyi/#guide">slot's guide</a> <span>Carousel, save states, rewind, link cable and the rest.</span></p>
@@ -375,6 +380,7 @@
         <div class="key"><dt>Stretch</dt><dd>Game Gear, NeoGeo Pocket and TurboGrafx-16: <kbd>L1</kbd> stretches, <kbd>R1</kbd> gives back actual size. Lynx and WonderSwan use L1 and R1 as game buttons, so a game is set to stretch in <code>Config/video_mode.txt</code>, as <code>Game Name (USA) = stretch</code>. Each game remembers its choice. The Nintendo DS has screen layouts instead.</dd></div>
         <div class="key"><dt>Cart shells</dt><dd>Each system's carts have a default shell. <code>Config/cart_shell.txt</code> gives a single game its own.</dd></div>
         <div class="key"><dt>Two-tone carts</dt><dd>Famicom Mini carts are red in front and white behind, as they came. Give any game a two-tone shell with a fourth colour in <code>Config/cart_shell.txt</code>.</dd></div>
+        <div class="key"><dt>RetroAchievements</dt><dd>Game Boy, Game Boy Color and Game Boy Advance games earn softcore achievements. Enter your account in Settings → RetroAchievements and join Wi-Fi. Achievements earned while playing are kept on the card and sent when you're back on the shelf; a game whose set isn't on the card yet keeps Wi-Fi up until it has downloaded.</dd></div>
         <div class="key"><dt>States and resume</dt><dd>Save states and the resume state work as they do for every other system.</dd></div>
       </dl>
     </div>
@@ -581,6 +587,7 @@
       <div class="key"><dt>NeoGeo Pocket</dt><dd><a href="https://github.com/libretro/beetle-ngp-libretro">Beetle NeoPop</a>, from Mednafen</dd></div>
       <div class="key"><dt>TurboGrafx-16</dt><dd><a href="https://github.com/libretro/beetle-pce-fast-libretro">Beetle PCE Fast</a>, from Mednafen</dd></div>
       <div class="key"><dt>Nintendo DS</dt><dd><a href="https://github.com/beebono/DSperate">DSperate</a> by beebono, through <a href="https://github.com/thwonp/dsperate-lr">dsperate-lr</a> by thwonp</dd></div>
+      <div class="key"><dt>RetroAchievements</dt><dd><a href="https://github.com/RetroAchievements/rcheevos">rcheevos</a> by RetroAchievements, under MIT, ported from <a href="https://github.com/pvaibhav/slot">Prashant Vaibhav's fork of slot</a></dd></div>
       <div class="key"><dt>Underlying OS</dt><dd><a href="https://github.com/pvaibhav/BaseOS">BaseOS</a> by <a href="https://github.com/pvaibhav">Prashant Vaibhav</a></dd></div>
     </dl>
     <p class="note">Every core's licence, the patches slotPlus makes and its source are in <code>System/licenses/</code> in each download.</p>

@@ -6,6 +6,7 @@ mod library;
 mod network;
 mod ready;
 mod runtime;
+mod settings;
 mod storage;
 #[cfg(test)]
 mod tests;
@@ -18,6 +19,7 @@ use std::time::{Duration, Instant};
 
 pub use badges::{load_badge, BadgeImage};
 pub use ready::Readiness;
+pub use settings::{save, Change, Settings};
 use slot_retro::{AchievementMemory, RetroCore};
 use storage::{Config, Store, Unlock};
 
@@ -51,6 +53,12 @@ struct Status {
     // changed (milliseconds since `EPOCH`). Background library work waits for quiet.
     busy: AtomicBool,
     changed_ms: AtomicU64,
+    // slotPlus: the game in play has no cached achievement set (or its badges) yet, so
+    // slot keeps Wi-Fi up for it rather than dropping it for play.
+    wants_network: AtomicBool,
+    // slotPlus: a game is loaded but its achievement set isn't active yet, so nothing it
+    // does can count. The game shows the RA sign while this holds.
+    waiting: AtomicBool,
 }
 
 /// When the service started; background work is measured from here.
@@ -250,6 +258,18 @@ impl Service {
         self.status.get()
     }
 
+    /// slotPlus: the game in play is still waiting on its achievement set, or the badges
+    /// for it, from the server. Slot keeps Wi-Fi up while this holds.
+    pub fn wants_network(&self) -> bool {
+        self.status.wants_network.load(Ordering::Acquire)
+    }
+
+    /// slotPlus: the game in play can't earn yet: its set hasn't loaded. Clears once the
+    /// set is active, or once the server says the ROM has none.
+    pub fn waiting_for_set(&self) -> bool {
+        self.status.waiting.load(Ordering::Acquire)
+    }
+
     /// The Wi-Fi worker observed a new connection. Wake retries without blocking the UI.
     pub fn network_available(&self) {
         self.status.reconnect.store(true, Ordering::Release);
@@ -392,6 +412,7 @@ fn run(
                 }
                 Ok(Control::Load(mut load)) => {
                     generation = load.generation;
+                    status.waiting.store(true, Ordering::Release);
                     playing = None;
                     tracking.store(0, Ordering::Release);
                     *status.presence.lock().unwrap() = None;
@@ -425,6 +446,7 @@ fn run(
                 }
                 Ok(Control::Unload(id)) if id == generation => {
                     generation = 0;
+                    status.waiting.store(false, Ordering::Release);
                     playing = None;
                     tracking.store(0, Ordering::Release);
                     *status.presence.lock().unwrap() = None;
@@ -480,6 +502,7 @@ fn run(
                 }
                 game.achievements = updated;
                 game.encore = again;
+                status.waiting.store(false, Ordering::Release);
                 continue;
             }
             let Some(mut runtime) = runtime::Runtime::new() else {
@@ -538,6 +561,7 @@ fn run(
                 warned_gap: false,
             });
             tracking.store(generation, Ordering::Release);
+            status.waiting.store(false, Ordering::Release);
         }
         match frames.recv_timeout(Duration::from_millis(5)) {
             Ok(frame) => {

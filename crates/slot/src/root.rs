@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-pub const DIRS: [&str; 52] = [
+pub const DIRS: [&str; 53] = [
     "BIOS",
     "Bezels",
     "Bezels/GBA",
@@ -9,6 +9,7 @@ pub const DIRS: [&str; 52] = [
     "Bezels/WS",
     "Bezels/Lynx",
     "Bezels/PokeMini",
+    "Cache",
     "Config",
     "Games",
     "Games/GBA",
@@ -59,8 +60,22 @@ pub fn ensure(root: &Path) {
     for sub in DIRS {
         let _ = std::fs::create_dir_all(root.join(sub));
     }
+    move_label_cache(root);
     if let Err(e) = slot_store::move_config(root) {
         eprintln!("slot: config: {e}");
+    }
+}
+
+pub fn move_label_cache(root: &Path) {
+    let old = root.join("System/Cache");
+    let labels = old.join("Labels");
+    let new = root.join("Cache/Labels");
+    if labels.is_dir() && !new.exists() {
+        let _ = std::fs::create_dir_all(root.join("Cache"));
+        let _ = std::fs::rename(&labels, &new);
+    }
+    if old.exists() {
+        let _ = std::fs::remove_dir_all(&old);
     }
 }
 

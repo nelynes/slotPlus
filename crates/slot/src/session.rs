@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 use std::thread::JoinHandle;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use slot_input::{Action, Btn, Chord, Contexts, Entry, Gestures, Millis, Mod, RawEvent};
 use slot_retro::{Rumble, WsLayout, HANDHELD_TURN_OPTION};
@@ -18,10 +18,12 @@ use crate::frames::FrameRef;
 use crate::input::Pad;
 use crate::persist;
 use crate::prefetch::Prefetch;
+use crate::print_scene::Cue;
 
 pub struct Session {
     achievements: slot_achievements::Service,
-    home_connected: bool,
+    /// Slot's Wi-Fi was up last frame, so RetroAchievements hears when it comes back.
+    wifi_up: bool,
     root: PathBuf,
     app: App,
     emu: Option<EmuHandle>,
@@ -47,6 +49,7 @@ pub struct Session {
     /// How the handheld is held for the Lynx game playing, as the host is told.
     lynx_held: &'static str,
     sunlight_sent: Option<u8>,
+    buzz_ends: Option<Instant>,
 }
 
 impl Session {
@@ -57,7 +60,7 @@ impl Session {
     pub fn boot_with(root: PathBuf, sink: Box<dyn AudioSink>) -> Self {
         let mut session = Session {
             achievements: slot_achievements::Service::start(root.clone()),
-            home_connected: false,
+            wifi_up: false,
             app: App::boot(&root),
             root,
             emu: None,
@@ -80,6 +83,7 @@ impl Session {
             lynx_upright: false,
             lynx_held: "off",
             sunlight_sent: None,
+            buzz_ends: None,
         };
         // A game left running comes straight back. Its core loads on its own thread, so start it
         // now and let the card read overlap the rest of the boot. Waiting for the first update
@@ -99,6 +103,26 @@ impl Session {
         let mut samples = sfx.render(rate);
         crate::audio::volume::apply(&mut samples, self.app.output_volume());
         ring.mix(&samples);
+    }
+
+    fn play_print_cue(&mut self, cue: Cue) {
+        match cue {
+            Cue::Buzz => {
+                self.play_sfx(Sfx::PrintBuzz);
+                let left = Duration::from_secs_f32(Sfx::PrintBuzz.tail());
+                self.buzz_ends = Some(Instant::now() + left);
+            }
+            Cue::Tear => self.play_sfx(Sfx::Tear),
+            Cue::BuzzOff => {
+                if self
+                    .buzz_ends
+                    .take()
+                    .is_some_and(|end| Instant::now() < end)
+                {
+                    self.sink.ring().hush();
+                }
+            }
+        }
     }
 
     pub fn audio_queued(&self) -> usize {
@@ -144,6 +168,11 @@ impl Session {
 
     pub fn take_achievement_notice(&self) -> Option<slot_achievements::Notice> {
         self.achievements.take_notice()
+    }
+
+    /// The game in play can't earn achievements yet: its set hasn't loaded.
+    pub fn achievement_waiting(&self) -> bool {
+        self.achievements.waiting_for_set()
     }
 
     pub fn achievement_flush_ready(&self) -> bool {
@@ -225,6 +254,19 @@ impl Session {
         let latched = self.gestures.ff_latched();
         self.gestures.set_context(self.app.input_context());
         let mut entries = self.app.binding_table().entries();
+        if self.app.restart_chord() {
+            entries.insert(
+                0,
+                Entry {
+                    chord: Chord {
+                        modifier: Some(Mod::Select),
+                        button: Btn::Start,
+                    },
+                    action: Action::Restart,
+                    contexts: Contexts::ALL,
+                },
+            );
+        }
         if self.app.repair_offered() {
             let chord = Chord {
                 modifier: Some(Mod::Select),
@@ -373,11 +415,18 @@ impl Session {
         // with booting, opening a game or playing one for the card.
         let idle = self.opening.is_none() && matches!(self.app.phase(), Phase::Shelf);
         self.achievements.set_busy(!idle);
-        let connected = self.app.home_connected();
-        if connected && !self.home_connected {
+        // Slot's Wi-Fi is up on the shelf; unlocks earned in a game wait for it.
+        let up = self.app.wifi_up();
+        if up && !self.wifi_up {
             self.achievements.network_available();
         }
-        self.home_connected = connected;
+        self.wifi_up = up;
+        self.app.set_achievements_want_wifi(self.achievements.wants_network());
+        if self.app.take_achievements_changed() {
+            // The account or Encore changed in Settings: start again with the new file.
+            // Unlocks are already on the card, so nothing is lost.
+            self.achievements = slot_achievements::Service::start(self.root.clone());
+        }
         self.sink.hold_open(self.app.headphones());
         if let Some(emu) = &self.emu {
             emu.set_volume(self.app.output_volume());
@@ -442,6 +491,9 @@ impl Session {
         }
         if let Some(sfx) = self.app.take_sfx() {
             self.play_sfx(sfx);
+        }
+        for cue in self.app.take_print_cues() {
+            self.play_print_cue(cue);
         }
         self.sync_core();
         self.sync_reload();

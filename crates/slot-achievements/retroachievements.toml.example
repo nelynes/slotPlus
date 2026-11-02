@@ -1,5 +1,7 @@
-# Copy to Config/retroachievements.toml, fill in your account, then restart slot.
-# Needs Home Wi-Fi: see Config/wifi.toml.example.
+# Settings > RetroAchievements fills this in for you. By hand: copy to
+# Config/retroachievements.toml, fill in your account, then restart slotPlus.
+# Join a network from the shelf's Network menu. Achievements earned while you play are
+# kept on the card and sent the next time you are back on the shelf with Wi-Fi.
 enabled = true
 username = ""
 password = ""

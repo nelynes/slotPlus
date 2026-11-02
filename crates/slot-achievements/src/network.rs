@@ -343,6 +343,14 @@ pub(crate) fn run(
             Err(mpsc::RecvTimeoutError::Disconnected) => return,
             Err(mpsc::RecvTimeoutError::Timeout) => {}
         }
+        // slotPlus: the game in play isn't cached yet, or its badges are still to come, so
+        // slot holds Wi-Fi for it. A badge download that failed waits for the shelf.
+        status.wants_network.store(
+            active
+                .as_ref()
+                .is_some_and(|game| (!game.ready && !game.online) || (badges.urgent() && !badges.waiting)),
+            std::sync::atomic::Ordering::Release,
+        );
         // Metadata preparation and badge downloads each occupy half of a cache refresh.
         status.pending.store(
             !library.is_empty()
@@ -446,6 +454,10 @@ pub(crate) fn run(
                         ));
                         game.online = true;
                         game.ready = false;
+                        // Nothing to earn, so nothing to wait for.
+                        status
+                            .waiting
+                            .store(false, std::sync::atomic::Ordering::Release);
                     } else {
                         let patch = call(&mut http, auth, "patch", &[("g", id.to_string())])?;
                         let data: Game = serde_json::from_value(patch["PatchData"].clone())

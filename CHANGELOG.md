@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.13.0-plus2.6](https://github.com/nelynes/slotPlus/releases/tag/v1.13.0-plus2.6)
+
+**RetroAchievements** for Game Boy, Game Boy Color and Game Boy Advance games, and slotPlus brought up to Slot 1.13.0: Wi-Fi, updates over the air, Gamebit for managing the card from a browser, the on-device Cart Studio with art fetched over Wi-Fi, the clock set from network time, and a Shelf wallpaper. See [Slot's 1.13.0 notes](https://github.com/BrandonKowalski/slot/releases/tag/v1.13.0).
+
+To upgrade, replace the `System` folder on your card with the one from the zip. After this one, Settings → Wireless → Check for Updates can do it for you.
+
+- **RetroAchievements** for Game Boy, Game Boy Color and Game Boy Advance games (softcore, in mGBA and gpSP). Ported from Prashant Vaibhav's fork of Slot, with the official rcheevos.
+  - Enter your account in Settings → RetroAchievements and join Wi-Fi. The page also has Encore, to let achievements you already have go off again, and Cheevo Mode, which is Casual. `Config/retroachievements.toml` still works by hand.
+  - Earned achievements pop up as a banner in Slot's style, with the achievement's own badge and a quiet chime.
+  - While the shelf sits idle on Wi-Fi, slotPlus prepares every Game Boy family game on the card, so achievements work offline. Ones earned while you play are kept on the card and sent when you're back on the shelf. A small sync mark by the clock shows when it's working.
+  - A game whose set isn't on the card yet keeps Wi-Fi up until it has downloaded, for up to two minutes. Until the set is active, a small red RA stop sign sits in the corner: nothing earned then will count.
+- **Updates come from slotPlus.** Check for Updates looks at slotPlus's own releases, never Slot's, so it can't swap slotPlus for plain Slot, and slotPlus and slotPlusUltra each get their own download. BaseOS updates are offered as in Slot.
+- **Gamebit knows slotPlus's systems:** WonderSwan and Atari Lynx have their own pages for games, labels, bezels and saves, and the Lynx's page takes its `lynxboot.img` (slotPlusUltra adds Game Gear, NeoGeo Pocket, TurboGrafx-16 and Nintendo DS).
+- **Cart Studio on the handheld** works on slotPlus's carts too, with each cart's own label shape. Fetch Missing Art finds labels for the Game Boy family; slotPlus's other systems keep their labels from Cart Studio+ or your own PNGs.
+- The footer's Wi-Fi and sync marks, and the menu and keyboard legends, take each shelf's ink, so they show on the light WonderSwan and DS Lite Cart Slots.
+- The Shelf wallpaper works for slotPlus's shelves: name a wallpaper after the shelf, such as `ws.png` or `lynx.png`.
+- Groundwork for experimental features, not yet ready for general use.
+
 ## [1.12.0-plus2.5](https://github.com/nelynes/slotPlus/releases/tag/v1.12.0-plus2.5)
 
 slotPlus brought up to Slot 1.12.0: game guides with an in-game viewer, a Reset Game shortcut, the Shimmerless shader, Saturation and Contrast, bezels made for one Scale, and Boktai's solar sensor on mGBA. See [Slot's 1.12.0 notes](https://github.com/BrandonKowalski/slot/releases/tag/v1.12.0).
@@ -9,7 +27,6 @@ To upgrade, replace the `System` folder on your card with the one from the zip.
 - **Two-tone carts.** The Japanese Famicom Mini GBA carts now have their red front and muted white back, and the white shows when the cart opens to pick a core. Any game can be given a two-tone shell in `Config/cart_shell.txt` or in [Cart Studio+](https://nelynes.github.io/slotPlus-studio/).
 - On slotPlus's own systems: Shimmerless is on every system's Shader list, and guides work for every system, in `Guides/WS` and `Guides/Lynx` (and in slotPlusUltra, `Guides/GG`, `Guides/NGP`, `Guides/TG16` and `Guides/NDS`). Saturation and Contrast apply to every system.
 - On the Game Boy and Game Boy Color, Shimmerless comes before slotPlus's Transparent shader in the list.
-- Groundwork for experimental features, not yet ready for general use.
 
 ## [1.11.0-plus2.4](https://github.com/nelynes/slotPlus/releases/tag/v1.11.0-plus2.4)
 

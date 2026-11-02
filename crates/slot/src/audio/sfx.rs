@@ -1,5 +1,7 @@
 const INSERT: &[u8] = include_bytes!("../../assets/insert.pcm");
 const EJECT: &[u8] = include_bytes!("../../assets/eject.pcm");
+const PRINT_BUZZ: &[u8] = include_bytes!("../../../../assets/server/buzz.pcm");
+const TEAR: &[u8] = include_bytes!("../../../../assets/server/tear.pcm");
 /// Original, softly enveloped two-note chime, 240 ms at 48 kHz.
 const ACHIEVEMENT: &[u8] = include_bytes!("../../assets/achievement.pcm");
 const ASSET_HZ: f32 = 48_000.0;
@@ -8,6 +10,8 @@ const ASSET_HZ: f32 = 48_000.0;
 pub enum Sfx {
     Insert,
     Eject,
+    PrintBuzz,
+    Tear,
     Achievement,
 }
 
@@ -16,28 +20,39 @@ impl Sfx {
         match self {
             Sfx::Insert => 0.097,
             Sfx::Eject => 0.021,
+            Sfx::PrintBuzz | Sfx::Tear => 0.0,
             Sfx::Achievement => 0.0,
         }
     }
 
-    pub fn tail(self) -> f32 {
-        let pcm = match self {
+    fn pcm(self) -> &'static [u8] {
+        match self {
             Sfx::Insert => INSERT,
             Sfx::Eject => EJECT,
+            Sfx::PrintBuzz => PRINT_BUZZ,
+            Sfx::Tear => TEAR,
             Sfx::Achievement => ACHIEVEMENT,
-        };
-        pcm.len() as f32 / 2.0 / ASSET_HZ - self.lead()
+        }
+    }
+
+    fn level(self) -> f32 {
+        match self {
+            Sfx::Insert | Sfx::Eject | Sfx::Achievement => 1.0,
+            Sfx::PrintBuzz => 0.40,
+            Sfx::Tear => 0.45,
+        }
+    }
+
+    pub fn tail(self) -> f32 {
+        self.pcm().len() as f32 / 2.0 / ASSET_HZ - self.lead()
     }
 
     pub fn render(self, sample_rate: u32) -> Vec<i16> {
-        let pcm = match self {
-            Sfx::Insert => INSERT,
-            Sfx::Eject => EJECT,
-            Sfx::Achievement => ACHIEVEMENT,
-        };
+        let pcm = self.pcm();
+        let level = self.level();
         let mut out = Vec::with_capacity(pcm.len());
         for v in resampled(pcm, sample_rate) {
-            let s = v.clamp(-32768.0, 32767.0) as i16;
+            let s = (v * level).clamp(-32768.0, 32767.0) as i16;
             out.push(s);
             out.push(s);
         }

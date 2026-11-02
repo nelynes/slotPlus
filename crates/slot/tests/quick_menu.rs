@@ -115,7 +115,7 @@ fn the_quick_menu_is_only_on_the_carousel() {
 }
 
 #[test]
-fn wallpaper_cycles_none_random_default_blur_then_the_folder_and_saves() {
+fn wallpaper_cycles_none_random_shelf_default_blur_then_the_folder_and_saves() {
     let (d, mut a, _) = on_carousel();
     let dir = d.path().join("Wallpapers");
     std::fs::create_dir_all(&dir).unwrap();
@@ -144,7 +144,13 @@ fn wallpaper_cycles_none_random_default_blur_then_the_folder_and_saves() {
     assert_eq!(a.resolved_wallpaper().label(), "Random");
     assert_eq!(read_slot_state(d.path()).wallpaper, WallpaperPick::Random);
     press(&mut a, Btn::Right);
+    assert_eq!(a.resolved_wallpaper(), WallpaperPick::Shelf);
+    assert_eq!(a.resolved_wallpaper().label(), "Shelf");
+    assert_eq!(read_slot_state(d.path()).wallpaper, WallpaperPick::Shelf);
+    press(&mut a, Btn::Right);
     assert_eq!(a.resolved_wallpaper(), WallpaperPick::Default);
+    press(&mut a, Btn::Left);
+    assert_eq!(a.resolved_wallpaper(), WallpaperPick::Shelf);
     press(&mut a, Btn::Left);
     assert_eq!(a.resolved_wallpaper(), WallpaperPick::Random);
     press(&mut a, Btn::Left);
@@ -237,6 +243,8 @@ fn up_and_down_move_the_bar_and_wrap_at_the_ends() {
         QuickRow::Screen,
         QuickRow::Game,
         QuickRow::Controls,
+        QuickRow::Network,
+        QuickRow::Achievements,
         QuickRow::About,
         QuickRow::General,
     ] {
@@ -578,26 +586,163 @@ fn x_on_about_restarts() {
     press(&mut a, Btn::A);
     assert!(!a.restarting(), "opening About restarted");
     press(&mut a, Btn::X);
+    assert!(
+        a.restarting() && !a.powering_off(),
+        "X on About did not restart"
+    );
+}
+
+#[test]
+fn select_start_on_about_still_restarts() {
+    let (_d, mut a, _) = on_carousel();
+    open_at(&mut a, QuickRow::About);
+    press(&mut a, Btn::A);
+    assert!(a.restart_chord());
+    a.apply(Action::Restart);
     assert!(a.restarting() && !a.powering_off());
 }
 
 #[test]
-fn the_about_footer_puts_restart_on_the_right() {
+fn the_about_footer_shows_back_and_x_restart() {
     let (_d, mut a, _) = on_carousel();
     fake_faces(&mut a);
     open_at(&mut a, QuickRow::About);
-    assert!(!drawn(&frame(&a), 404), "Restart is on the menu");
     press(&mut a, Btn::A);
     let out = frame(&a);
-    let (lx, ly, _) = legend_box(&out, 400);
-    let (rx, ry, rw) = legend_box(&out, 404);
-    assert_eq!(ly, ry);
+    let (lx, _, _) = legend_box(&out, 400);
     assert!(lx.abs() < 1.0, "Back is not on the left: {lx}");
+    let (rx, _, rw) = legend_box(&out, 404);
     let right = rx + rw - HINT_EDGE as f32;
     assert!(
         (right - OUT_W as f32).abs() < 1.0,
         "Restart is not on the right: {right}"
     );
+}
+
+#[test]
+fn network_sits_between_controls_and_about() {
+    let at = |row| QuickRow::MAIN.iter().position(|r| *r == row);
+    assert_eq!(at(QuickRow::Network), at(QuickRow::Controls).map(|i| i + 1));
+    // slotPlus: RetroAchievements sits between Wireless and About.
+    assert_eq!(at(QuickRow::Achievements), at(QuickRow::Network).map(|i| i + 1));
+    assert_eq!(at(QuickRow::About), at(QuickRow::Achievements).map(|i| i + 1));
+    assert_eq!(QuickRow::Network.label(), "Wireless");
+    let (_d, mut a, _) = on_carousel();
+    open_at(&mut a, QuickRow::Network);
+    press(&mut a, Btn::A);
+    assert_eq!(a.quick_menu(), Some(QuickRow::WifiPower));
+    press(&mut a, Btn::B);
+    assert_eq!(a.quick_menu(), Some(QuickRow::Network));
+}
+
+#[test]
+fn fetch_missing_art_moved_to_network() {
+    assert_eq!(
+        QuickRow::NETWORK,
+        [
+            QuickRow::WifiPower,
+            QuickRow::Networks,
+            QuickRow::Server,
+            QuickRow::FetchArt,
+            QuickRow::CheckUpdates,
+        ]
+    );
+    assert_eq!(
+        QuickRow::NETWORK.map(QuickRow::label),
+        [
+            "Wi-Fi",
+            "Network",
+            "Gamebit",
+            "Fetch Missing Art",
+            "Check for Updates"
+        ]
+    );
+    assert!(!QuickRow::GENERAL.contains(&QuickRow::FetchArt));
+    assert_eq!(QuickRow::FetchArt.parent(), Some(QuickRow::Network));
+    let (_d, mut a, _) = on_carousel();
+    common::connect(&mut a);
+    for row in QuickRow::NETWORK {
+        assert!(!a.hidden_rows().contains(&row), "{row:?} is hidden");
+    }
+}
+
+#[test]
+fn wifi_row_toggles_with_a_and_left_right() {
+    let (d, mut a, _) = on_carousel();
+    open_at(&mut a, QuickRow::WifiPower);
+    assert_eq!(a.quick_value(QuickRow::WifiPower), Some(QuickValue::On));
+    for (btn, off) in [
+        (Btn::A, true),
+        (Btn::A, false),
+        (Btn::Left, true),
+        (Btn::Right, false),
+        (Btn::Right, true),
+    ] {
+        press(&mut a, btn);
+        assert_eq!(a.wifi_is_off(), off, "{btn:?}");
+        assert_eq!(
+            a.quick_value(QuickRow::WifiPower),
+            Some(QuickValue::flag(!off)),
+            "{btn:?}"
+        );
+        assert_eq!(
+            a.quick_menu(),
+            Some(QuickRow::WifiPower),
+            "{btn:?} moved the bar"
+        );
+    }
+    assert!(read_slot_state(d.path()).wifi_off, "Off was not saved");
+}
+
+#[test]
+fn wifi_off_leaves_only_the_wifi_row_on_the_network_page() {
+    let (_d, mut a, _) = on_carousel();
+    open_at(&mut a, QuickRow::WifiPower);
+    press(&mut a, Btn::A);
+    assert!(a.wifi_is_off());
+    assert_eq!(
+        QuickRow::WifiPower.shown(&a.hidden_rows()),
+        [QuickRow::WifiPower]
+    );
+    press(&mut a, Btn::Down);
+    assert_eq!(a.quick_menu(), Some(QuickRow::WifiPower));
+    press(&mut a, Btn::A);
+    assert!(QuickRow::WifiPower
+        .shown(&a.hidden_rows())
+        .contains(&QuickRow::Networks));
+}
+
+#[test]
+fn the_network_row_waits_for_wlan0() {
+    let (d, mut a, _) = on_carousel();
+    let wlan0 = d.path().join("net/wlan0");
+    a.set_wifi_probe(wlan0.clone());
+    a.tick_ms(a.now() + 1);
+    assert!(a.hidden_rows().contains(&QuickRow::Network));
+    std::fs::create_dir_all(&wlan0).unwrap();
+    a.tick_ms(a.now() + 1100);
+    assert!(!a.hidden_rows().contains(&QuickRow::Network));
+    std::fs::remove_dir(&wlan0).unwrap();
+    a.tick_ms(a.now() + 1100);
+    assert!(!a.hidden_rows().contains(&QuickRow::Network));
+}
+
+#[test]
+fn the_networks_row_says_off_or_not_connected() {
+    let (_d, mut a, _) = on_carousel();
+    assert_eq!(a.networks_value(), "Not Connected");
+    a.set_wifi_off(true);
+    assert_eq!(a.networks_value(), "Off");
+}
+
+#[test]
+fn fetch_missing_art_waits_for_a_connection() {
+    let (_d, mut a, _) = on_carousel();
+    assert!(a.hidden_rows().contains(&QuickRow::FetchArt));
+    common::connect(&mut a);
+    open_at(&mut a, QuickRow::FetchArt);
+    press(&mut a, Btn::A);
+    assert!(a.fetch_art().is_some(), "fetch did not open");
 }
 
 #[test]
@@ -1342,6 +1487,7 @@ fn wallpaper_tint_hides_until_a_wallpaper_of_your_own_is_picked() {
         (WallpaperPick::File("a.png".into()), true),
         (WallpaperPick::None, false),
         (WallpaperPick::Random, true),
+        (WallpaperPick::Shelf, true),
         (WallpaperPick::Default, false),
     ] {
         press(&mut a, Btn::Right);
@@ -1696,4 +1842,128 @@ fn the_pokemon_mini_page_has_full_screen() {
         read_slot_state(d.path()).pm_full_screen,
         "Full Screen did not reach the card"
     );
+}
+
+#[test]
+fn gba_skips_shimmerless_on_a_three_by_two_panel_and_keeps_it_on_four_by_three() {
+    let (d, mut a, _) = on_carousel();
+    a.set_panel((720, 480));
+    open_at(&mut a, QuickRow::GbaShader);
+    press(&mut a, Btn::Right);
+    assert_eq!(a.quick_value(QuickRow::GbaShader), Some(QuickValue::Dot));
+    press(&mut a, Btn::Right);
+    assert_eq!(a.quick_value(QuickRow::GbaShader), Some(QuickValue::Off));
+    assert_eq!(read_slot_state(d.path()).shader_gba, Shader::Off);
+    press(&mut a, Btn::Left);
+    assert_eq!(read_slot_state(d.path()).shader_gba, Shader::Dot);
+
+    a.set_panel((640, 480));
+    press(&mut a, Btn::Right);
+    assert_eq!(
+        a.quick_value(QuickRow::GbaShader),
+        Some(QuickValue::Shimmerless)
+    );
+}
+
+#[test]
+fn game_boy_keeps_shimmerless_on_a_three_by_two_panel() {
+    let (_d, mut a, _) = on_carousel();
+    a.set_panel((720, 480));
+    open_at(&mut a, QuickRow::GbShader);
+    press(&mut a, Btn::Right);
+    assert_eq!(
+        a.quick_value(QuickRow::GbShader),
+        Some(QuickValue::Shimmerless)
+    );
+}
+
+#[test]
+fn a_saved_gba_shimmerless_reads_as_off_on_three_by_two_and_survives_on_the_card() {
+    let (d, mut a, _) = on_carousel_with(SlotState {
+        shader_gba: Shader::Shimmerless,
+        ..SlotState::default()
+    });
+    a.set_panel((720, 480));
+    assert_eq!(a.quick_value(QuickRow::GbaShader), Some(QuickValue::Off));
+    assert_eq!(read_slot_state(d.path()).shader_gba, Shader::Shimmerless);
+    a.set_panel((640, 480));
+    assert_eq!(
+        a.quick_value(QuickRow::GbaShader),
+        Some(QuickValue::Shimmerless)
+    );
+}
+
+fn ra_file(d: &TempDir) -> String {
+    std::fs::read_to_string(d.path().join("Config/retroachievements.toml")).unwrap_or_default()
+}
+
+#[test]
+fn the_retroachievements_page_holds_the_account_mode_and_encore() {
+    assert_eq!(
+        QuickRow::ACHIEVEMENTS.map(QuickRow::label),
+        ["Username", "Password", "Cheevo Mode", "Encore"]
+    );
+    let (_d, mut a, _) = on_carousel();
+    open_at(&mut a, QuickRow::Achievements);
+    press(&mut a, Btn::A);
+    assert_eq!(a.quick_menu(), Some(QuickRow::RaUsername));
+    assert_eq!(a.achievements_values(), ["Not Set", "Not Set", "Casual"]);
+    assert_eq!(a.quick_value(QuickRow::RaEncore), Some(QuickValue::Off));
+    press(&mut a, Btn::B);
+    assert_eq!(a.quick_menu(), Some(QuickRow::Achievements));
+}
+
+#[test]
+fn the_username_is_typed_on_the_keyboard_and_reaches_the_file() {
+    let (d, mut a, _) = on_carousel();
+    std::fs::write(
+        d.path().join("Config/retroachievements.toml"),
+        "# mine\nusername = \"Player\"\ntoken = \"old\"\n",
+    )
+    .unwrap();
+    open_at(&mut a, QuickRow::RaUsername);
+    press(&mut a, Btn::A);
+    assert!(a.keyboard().is_some(), "Username opens the keyboard");
+    // The keyboard starts with the name already there; Start is Done.
+    press(&mut a, Btn::Start);
+    assert!(a.keyboard().is_none());
+    assert!(ra_file(&d).contains("token = \"old\""), "an unchanged name leaves the file be");
+    assert!(!a.take_achievements_changed());
+    press(&mut a, Btn::A);
+    press(&mut a, Btn::Y);
+    assert!(a.keyboard().is_none(), "Y cancels");
+    assert_eq!(a.quick_menu(), Some(QuickRow::RaUsername));
+}
+
+#[test]
+fn a_password_is_never_shown_and_turns_achievements_on() {
+    let (d, mut a, _) = on_carousel();
+    open_at(&mut a, QuickRow::RaPassword);
+    press(&mut a, Btn::A);
+    assert!(a.keyboard().is_some());
+    press(&mut a, Btn::X);
+    press(&mut a, Btn::Start);
+    assert!(a.keyboard().is_none());
+    let text = ra_file(&d);
+    assert!(text.contains("password = \" \"") && text.contains("enabled = true"), "{text}");
+    assert_eq!(a.achievements_values()[1], "Set");
+    assert!(a.take_achievements_changed(), "the service starts again with it");
+}
+
+#[test]
+fn encore_flips_with_a_or_left_and_right() {
+    let (d, mut a, _) = on_carousel();
+    open_at(&mut a, QuickRow::RaEncore);
+    press(&mut a, Btn::A);
+    assert_eq!(a.quick_value(QuickRow::RaEncore), Some(QuickValue::On));
+    assert!(ra_file(&d).contains("encore = true"));
+    press(&mut a, Btn::Right);
+    assert_eq!(a.quick_value(QuickRow::RaEncore), Some(QuickValue::Off));
+    assert!(ra_file(&d).contains("encore = false"));
+    // Cheevo Mode stays Casual.
+    press(&mut a, Btn::Up);
+    assert_eq!(a.quick_menu(), Some(QuickRow::RaMode));
+    press(&mut a, Btn::A);
+    press(&mut a, Btn::Right);
+    assert_eq!(a.achievements_values()[2], "Casual");
 }
