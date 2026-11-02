@@ -91,7 +91,7 @@ pub use icon::{
     achievement_icon_face, badge_face, heart_face, icon_box, icon_face, warm_fonts, Badge, Icon,
 };
 pub use keyboard::{
-    draw_keyboard, draw_keyboard_legends, key_rect, keyboard_cap_faces, keyboard_faces,
+    draw_keyboard, draw_keyboard_legends, key_rect, keyboard_cap_faces, keyboard_faces, keyboard_faces_on,
     keyboard_help_columns, keyboard_help_face, keyboard_text_face, Cap, KeyTex, Keyboard,
     KeyboardFaces, KeyboardTex, Layout, Shortcut, Special, Typed, KEYBOARD_HELP_TITLE,
 };

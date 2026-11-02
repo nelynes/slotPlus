@@ -614,8 +614,8 @@ pub fn keyboard_cap_faces(kb: &Keyboard, canvas: Canvas) -> Vec<Vec<[UndoFace; 2
         .collect()
 }
 
-fn legend(button: UndoFace, word: &str, button_first: bool) -> UndoFace {
-    let word = word_ink(word, footer_ink(false));
+fn legend(button: UndoFace, word: &str, button_first: bool, light: bool) -> UndoFace {
+    let word = word_ink(word, footer_ink(light));
     let w = button.w + CAP_GAP + word.w + HINT_EDGE;
     let h = button.h;
     let mut rgba = vec![0u8; (w * h * 4) as usize];
@@ -686,6 +686,11 @@ pub fn keyboard_help_face(layout: Layout) -> UndoFace {
 }
 
 pub fn keyboard_faces(kb: &Keyboard, canvas: Canvas) -> KeyboardFaces {
+    keyboard_faces_on(kb, canvas, false)
+}
+
+/// slotPlus: the same, with the legends inked for a pale band (a light Bespoke slot).
+pub fn keyboard_faces_on(kb: &Keyboard, canvas: Canvas, light_band: bool) -> KeyboardFaces {
     let (text, stops) = keyboard_text_face(kb);
     KeyboardFaces {
         title: heading_face(kb.title()),
@@ -697,8 +702,8 @@ pub fn keyboard_faces(kb: &Keyboard, canvas: Canvas) -> KeyboardFaces {
         help_title: title_face(KEYBOARD_HELP_TITLE),
         help_back: hint_face(GUIDE_HELP_HINT.0, GUIDE_HELP_HINT.1),
         legends: [
-            legend(button_face(ButtonLegend::Y), "Cancel", true),
-            legend(button_face(ButtonLegend::Menu), "Help", false),
+            legend(button_face(ButtonLegend::Y), "Cancel", true, light_band),
+            legend(button_face(ButtonLegend::Menu), "Help", false, light_band),
         ],
     }
 }

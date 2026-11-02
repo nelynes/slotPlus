@@ -1052,3 +1052,28 @@ fn b_held_to_close_the_help_does_not_delete() {
     hold(&mut a, Btn::B, 1000);
     assert_eq!(a.keyboard().unwrap().text(), "secret99");
 }
+
+#[test]
+fn a_game_waiting_on_its_achievements_keeps_wifi_up_for_a_while() {
+    let _g = serial();
+    let d = tmp_root_with_carts(&["Emerald", "Fusion"]);
+    std::fs::write(d.path().join("Config/wifi.conf"), b"network={}\n").unwrap();
+    let mut a = common::app_playing_in(d.path(), "Emerald");
+    a.set_wifi(Wifi::inline(Box::new(Fake::joined())));
+    settle(&mut a);
+    assert!(!a.wifi().held, "Slot keeps Wi-Fi off in a game");
+    a.set_achievements_want_wifi(true);
+    settle(&mut a);
+    assert!(a.wifi().held, "a game still fetching its achievement set keeps Wi-Fi");
+    a.set_achievements_want_wifi(false);
+    settle(&mut a);
+    assert!(!a.wifi().held, "and lets it go once the set is in");
+    a.set_achievements_want_wifi(true);
+    settle(&mut a);
+    assert!(a.wifi().held);
+    for _ in 0..130 {
+        let t = a.now();
+        a.tick_ms(t + 1_000);
+    }
+    assert!(!a.wifi().held, "a network that never answers can't hold Wi-Fi all game");
+}

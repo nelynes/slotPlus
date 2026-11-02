@@ -82,7 +82,15 @@ fn the_fast_forward_row_offers_off_a_slow_speed_and_the_four_ceilings() {
 fn the_rows_run_in_the_order_the_user_chose() {
     assert_eq!(
         QuickRow::MAIN.map(QuickRow::label),
-        ["General", "Screen", "Gameplay", "Controls", "Wireless", "About"]
+        [
+            "General",
+            "Screen",
+            "Gameplay",
+            "Controls",
+            "Wireless",
+            "RetroAchievements",
+            "About"
+        ]
     );
     assert_eq!(
         QuickRow::GENERAL.map(QuickRow::label),
@@ -219,7 +227,10 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::Network,
             QuickRow::Networks,
             QuickRow::CheckUpdates,
-            QuickRow::Server
+            QuickRow::Server,
+            QuickRow::Achievements,
+            QuickRow::RaUsername,
+            QuickRow::RaPassword
         ]
     );
     for page in [
@@ -647,7 +658,7 @@ fn server_sits_last_on_the_network_page() {
     assert_eq!(QuickRow::NETWORK[2], QuickRow::Server);
     assert!(!QuickRow::MAIN.contains(&QuickRow::Server));
     assert_eq!(QuickRow::Server.parent(), Some(QuickRow::Network));
-    assert_eq!(QuickRow::MAIN.len(), 6);
+    assert_eq!(QuickRow::MAIN.len(), 7);
     assert_eq!(QuickRow::NETWORK.len(), 5);
     assert_eq!(QuickRow::Server.label(), "Gamebit");
     assert!(QuickRow::Server.opens());

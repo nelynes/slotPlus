@@ -128,10 +128,15 @@ pub enum QuickRow {
     Networks,
     CheckUpdates,
     Server,
+    Achievements,
+    RaUsername,
+    RaPassword,
+    RaMode,
+    RaEncore,
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 119] = [
+    pub const ALL: [QuickRow; 124] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -251,15 +256,30 @@ impl QuickRow {
         QuickRow::Networks,
         QuickRow::CheckUpdates,
         QuickRow::Server,
+        QuickRow::Achievements,
+        QuickRow::RaUsername,
+        QuickRow::RaPassword,
+        QuickRow::RaMode,
+        QuickRow::RaEncore,
     ];
 
-    pub const MAIN: [QuickRow; 6] = [
+    pub const MAIN: [QuickRow; 7] = [
         QuickRow::General,
         QuickRow::Screen,
         QuickRow::Game,
         QuickRow::Controls,
         QuickRow::Network,
+        QuickRow::Achievements,
         QuickRow::About,
+    ];
+
+    /// slotPlus: the RetroAchievements page. Hardcore needs a live connection and no save
+    /// states, so Cheevo Mode is fixed at Casual.
+    pub const ACHIEVEMENTS: [QuickRow; 4] = [
+        QuickRow::RaUsername,
+        QuickRow::RaPassword,
+        QuickRow::RaMode,
+        QuickRow::RaEncore,
     ];
 
     pub const GENERAL: [QuickRow; 8] = [
@@ -483,6 +503,9 @@ impl QuickRow {
             | QuickRow::CheckUpdates
             | QuickRow::FetchArt
             | QuickRow::Server => &QuickRow::NETWORK,
+            QuickRow::RaUsername | QuickRow::RaPassword | QuickRow::RaMode | QuickRow::RaEncore => {
+                &QuickRow::ACHIEVEMENTS
+            }
             QuickRow::ControlsShelf | QuickRow::Shortcuts | QuickRow::ControlsInGame => {
                 &QuickRow::CONTROL_PAGES
             }
@@ -528,6 +551,7 @@ impl QuickRow {
             QuickRow::ScSave => Some(QuickRow::Shortcuts),
             QuickRow::Theme => Some(QuickRow::General),
             QuickRow::WifiPower => Some(QuickRow::Network),
+            QuickRow::RaUsername => Some(QuickRow::Achievements),
             QuickRow::ControlsShelf => Some(QuickRow::Controls),
             QuickRow::ShelfPrev => Some(QuickRow::ControlsShelf),
             _ => None,
@@ -564,6 +588,7 @@ impl QuickRow {
             QuickRow::Shortcuts => Some(QuickRow::SHORTCUTS[0]),
             QuickRow::General => Some(QuickRow::GENERAL[0]),
             QuickRow::Network => Some(QuickRow::NETWORK[0]),
+            QuickRow::Achievements => Some(QuickRow::ACHIEVEMENTS[0]),
             QuickRow::Controls => Some(QuickRow::CONTROL_PAGES[0]),
             QuickRow::ControlsShelf => Some(QuickRow::SHELF_KEYS[0]),
             QuickRow::ControlsInGame => Some(QuickRow::CONTROLS[0]),
@@ -639,6 +664,11 @@ impl QuickRow {
             QuickRow::Network => "Wireless",
             QuickRow::WifiPower => "Wi-Fi",
             QuickRow::Networks => "Network",
+            QuickRow::Achievements => "RetroAchievements",
+            QuickRow::RaUsername => "Username",
+            QuickRow::RaPassword => "Password",
+            QuickRow::RaMode => "Cheevo Mode",
+            QuickRow::RaEncore => "Encore",
             QuickRow::CheckUpdates => "Check for Updates",
             QuickRow::Server => "Gamebit",
             QuickRow::Controls => "Controls",
@@ -744,6 +774,9 @@ impl QuickRow {
                 | QuickRow::Networks
                 | QuickRow::CheckUpdates
                 | QuickRow::Server
+                | QuickRow::Achievements
+                | QuickRow::RaUsername
+                | QuickRow::RaPassword
         )
     }
 
@@ -1587,6 +1620,8 @@ pub struct QuickMenu<'a> {
     pub clock: Option<[(TexId, u32, u32); 2]>,
     pub wallpaper: Option<[(TexId, u32, u32); 2]>,
     pub networks: Option<[(TexId, u32, u32); 2]>,
+    /// slotPlus: the RetroAchievements page's Username, Password and Cheevo Mode values.
+    pub achievements: [Option<[(TexId, u32, u32); 2]>; 3],
     pub faces: Option<&'a QuickMenuFaces>,
     pub ground: Option<(TexId, u32)>,
     pub palette: Option<[(TexId, u32, u32); 2]>,
@@ -1661,6 +1696,10 @@ impl QuickMenu<'_> {
                 QuickRow::DateTime => self.clock.map(|c| c[lit as usize]),
                 QuickRow::Wallpaper => self.wallpaper.map(|c| c[lit as usize]),
                 QuickRow::Networks => self.networks.map(|c| c[lit as usize]),
+                QuickRow::RaUsername => self.achievements[0].map(|c| c[lit as usize]),
+                QuickRow::RaPassword => self.achievements[1].map(|c| c[lit as usize]),
+                // Casual is the only mode, so its value stays dim even when lit.
+                QuickRow::RaMode => self.achievements[2].map(|c| c[0]),
                 QuickRow::Palette | QuickRow::GbPalette => self.palette.map(|c| c[lit as usize]),
                 QuickRow::GbaBezel => self.gba_bezel.map(|c| c[lit as usize]),
                 QuickRow::GbBezel => self.gb_bezel.map(|c| c[lit as usize]),

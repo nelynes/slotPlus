@@ -129,6 +129,9 @@ const WIFI_SETTLE_MS: Millis = 2_000;
 const STUDIO_SLIDE_MS: f32 = 240.0;
 const WIFI_SAMPLE_MS: Millis = 5000;
 const WIFI_RETRY_MS: Millis = 60_000;
+/// slotPlus: how long Wi-Fi may stay up in a game for its achievement set, so a network
+/// that never answers can't keep the radio on for the whole session.
+const ACHIEVEMENT_WIFI_MS: Millis = 120_000;
 const NET_TOOLS: [QuickRow; 3] = [QuickRow::Server, QuickRow::CheckUpdates, QuickRow::FetchArt];
 const WIFI_PROBE_MS: Millis = 1_000;
 const SUMMARY_WAIT_MS: f64 = 1500.0;
@@ -345,6 +348,9 @@ pub enum Phase {
 pub enum KeyboardFor {
     Password { ssid: String, hidden: bool },
     NetworkName,
+    /// slotPlus: the RetroAchievements page's account.
+    AchievementsUser,
+    AchievementsPassword,
 }
 
 pub struct NetLegends {
@@ -640,6 +646,12 @@ pub struct App {
     wifi_faces: Option<[[slot_ui::NetFace; 4]; 2]>,
     /// The RetroAchievements sync mark beside the shelf's clock.
     achievement_sync: Option<slot_ui::SyncIndicator>,
+    /// Since when the game in play has wanted Wi-Fi for its achievement set.
+    achievement_wifi: Option<Millis>,
+    /// The RetroAchievements page's view of the card's settings.
+    achievement_settings: slot_achievements::Settings,
+    achievements_changed: bool,
+    quick_achievement_faces: [Option<[(TexId, u32, u32); 2]>; 3],
     wifi_sampled: Millis,
     wifi_scanning: bool,
     keyboard: Option<(slot_ui::Keyboard, KeyboardFor)>,
@@ -810,6 +822,10 @@ impl App {
             wifi_bars: 3,
             wifi_faces: None,
             achievement_sync: None,
+            achievement_wifi: None,
+            achievement_settings: slot_achievements::Settings::default(),
+            achievements_changed: false,
+            quick_achievement_faces: [None; 3],
             wifi_sampled: 0,
             wifi_scanning: false,
             keyboard: None,
@@ -1636,7 +1652,12 @@ impl App {
                 QuickValue::Dark
             }),
             QuickRow::WifiPower => Some(QuickValue::flag(!self.state.wifi_off)),
-            QuickRow::DateTime
+            QuickRow::RaEncore => Some(QuickValue::flag(self.achievement_settings.encore)),
+            QuickRow::Achievements
+            | QuickRow::RaUsername
+            | QuickRow::RaPassword
+            | QuickRow::RaMode
+            | QuickRow::DateTime
             | QuickRow::FetchArt
             | QuickRow::Network
             | QuickRow::Networks
@@ -2156,9 +2177,76 @@ impl App {
         self.achievement_sync = icon;
     }
 
+    /// The game in play is still fetching its achievement set or badges.
+    pub fn set_achievements_want_wifi(&mut self, want: bool) {
+        match (want, self.achievement_wifi) {
+            (true, None) => self.achievement_wifi = Some(self.now()),
+            (false, Some(_)) => self.achievement_wifi = None,
+            _ => {}
+        }
+    }
+
+    /// Wi-Fi stays up in a game only while its achievement set is on the way.
+    fn achievements_hold_wifi(&self) -> bool {
+        self.achievement_wifi
+            .is_some_and(|since| self.now().saturating_sub(since) < ACHIEVEMENT_WIFI_MS)
+            && self.seated_cart().is_some()
+    }
+
+    fn read_achievement_settings(&self) -> slot_achievements::Settings {
+        self.root
+            .as_deref()
+            .map(slot_achievements::Settings::read)
+            .unwrap_or_default()
+    }
+
+    /// Write a RetroAchievements change to the card, then have the service start again
+    /// with it.
+    fn save_achievements(&mut self, change: slot_achievements::Change) {
+        let Some(root) = self.root.clone() else {
+            return;
+        };
+        // A card that can't be written raises Slot's own card alarm.
+        if slot_achievements::save(&root, change).is_err() {
+            eprintln!("slot: could not write the RetroAchievements settings");
+            return;
+        }
+        self.achievement_settings = slot_achievements::Settings::read(&root);
+        self.achievements_changed = true;
+    }
+
+    fn set_encore(&mut self, on: bool) {
+        self.save_achievements(slot_achievements::Change::Encore(on));
+    }
+
+    /// The RetroAchievements page's Username, Password and Cheevo Mode values.
+    pub fn achievements_values(&self) -> [String; 3] {
+        let s = &self.achievement_settings;
+        let name = match s.username.is_empty() {
+            true => "Not Set".to_string(),
+            false => s.username.clone(),
+        };
+        let password = match (s.has_password, s.has_token) {
+            (true, _) => "Set",
+            (false, true) => "Token",
+            (false, false) => "Not Set",
+        };
+        [name, password.into(), "Casual".into()]
+    }
+
+    pub fn set_quick_achievement_faces(&mut self, faces: [Option<[(TexId, u32, u32); 2]>; 3]) {
+        self.quick_achievement_faces = faces;
+    }
+
+    /// Settings changed the RetroAchievements file since last asked.
+    pub fn take_achievements_changed(&mut self) -> bool {
+        std::mem::take(&mut self.achievements_changed)
+    }
+
     fn wifi_face(&self) -> Option<slot_ui::NetFace> {
         let faces = self.wifi_faces?;
-        Some(faces[usize::from(self.light())][usize::from(self.wifi_bars.min(3))])
+        // The band's ink, so the mark shows on a light Bespoke slot too.
+        Some(faces[usize::from(self.band_light())][usize::from(self.wifi_bars.min(3))])
     }
 
     pub fn set_bolt_face(&mut self, bolt: TexId) {
@@ -2190,6 +2278,15 @@ impl App {
 
     /// The cart slot for the system in play, or on the shelf being looked at:
     /// its own when Cart Slot is Bespoke and it has one, Slot's otherwise.
+    /// The menus' legends sit on the band, so on a pale Bespoke slot they take its dark
+    /// ink, as the battery and clock do. In a game they keep the theme's.
+    pub fn legends_light(&self) -> bool {
+        match self.phase {
+            Phase::Playing { .. } | Phase::Polaroids { .. } => self.light(),
+            _ => self.band_light(),
+        }
+    }
+
     fn bespoke_now(&self) -> Option<([TexId; 3], bool)> {
         if !self.state.bespoke_slot {
             return None;
@@ -3798,6 +3895,29 @@ impl App {
             QuickRow::Server => self.open_server(),
             QuickRow::WifiPower => self.set_wifi_off(!self.state.wifi_off),
             QuickRow::Networks => self.open_networks(),
+            QuickRow::Achievements => {
+                self.achievement_settings = self.read_achievement_settings();
+                self.phase = Phase::QuickMenu {
+                    row: QuickRow::ACHIEVEMENTS[0],
+                };
+            }
+            QuickRow::RaUsername => {
+                let name = self.achievement_settings.username.clone();
+                let kb = slot_ui::Keyboard::new(
+                    slot_ui::Layout::General,
+                    "RetroAchievements Username",
+                    None,
+                    &name,
+                );
+                self.keyboard = Some((kb, KeyboardFor::AchievementsUser));
+            }
+            QuickRow::RaPassword => self.open_keyboard(
+                "RetroAchievements Password",
+                Some(&self.achievement_settings.username.clone()).filter(|n| !n.is_empty()).map(String::as_str),
+                KeyboardFor::AchievementsPassword,
+            ),
+            QuickRow::RaEncore => self.set_encore(!self.achievement_settings.encore),
+            QuickRow::RaMode => {}
             QuickRow::Screen
             | QuickRow::ScreenGeneral
             | QuickRow::Game
@@ -3921,6 +4041,9 @@ impl App {
     fn change_setting(&mut self, row: QuickRow, right: bool) {
         if row == QuickRow::WifiPower {
             return self.set_wifi_off(!self.state.wifi_off);
+        }
+        if row == QuickRow::RaEncore {
+            return self.set_encore(!self.achievement_settings.encore);
         }
         if row == QuickRow::Blending {
             let to = self
@@ -4220,7 +4343,12 @@ impl App {
             | QuickRow::WifiPower
             | QuickRow::Networks
             | QuickRow::CheckUpdates
-            | QuickRow::Server => return,
+            | QuickRow::Server
+            | QuickRow::Achievements
+            | QuickRow::RaUsername
+            | QuickRow::RaPassword
+            | QuickRow::RaMode
+            | QuickRow::RaEncore => return,
         }
         self.persist();
     }
@@ -5205,6 +5333,8 @@ impl App {
                 self.draw_clock_legends(picker, *from_menu, out);
                 return;
             }
+            // slotPlus: the RetroAchievements page types its account on Slot's keyboard.
+            Phase::QuickMenu { .. } if self.draw_keyboard_screen(out) => return,
             Phase::QuickMenu { row } => QuickMenu {
                 row: *row,
                 hidden: &self.hidden_rows(),
@@ -5214,6 +5344,7 @@ impl App {
                 bound: Some(&self.bound_faces()),
                 description: self.description(*row),
                 values: QuickRow::ALL.map(|r| self.quick_value(r)),
+                achievements: self.quick_achievement_faces,
                 clock: self.quick_clock_faces,
                 wallpaper: self.quick_wallpaper_faces,
                 networks: self.quick_network_faces,
@@ -5399,6 +5530,7 @@ impl App {
                 hidden: &hidden,
                 ws_buttons: self.ws_buttons(),
                 values: QuickRow::ALL.map(|r| self.quick_value(r)),
+                achievements: [None; 3],
                 clock: None,
                 wallpaper: None,
                 networks: None,
@@ -5465,6 +5597,10 @@ impl App {
     }
 
     fn draw_menu_footer(&self, out: &mut Vec<Draw>) {
+        // The keyboard draws its own legends and slot.
+        if self.keyboard.is_some() && matches!(self.phase, Phase::QuickMenu { .. }) {
+            return;
+        }
         let carousel = matches!(self.phase, Phase::QuickMenu { .. } | Phase::About);
         let dy = if carousel {
             0.0
@@ -5588,7 +5724,7 @@ impl App {
         let Some(faces) = &self.quick_menu_faces else {
             return;
         };
-        let [back, _, _, _, restart, ..] = match self.light() {
+        let [back, _, _, _, restart, ..] = match self.legends_light() {
             true => faces.legend_light,
             false => faces.legend,
         };
@@ -5600,7 +5736,7 @@ impl App {
         let Some(faces) = &self.quick_menu_faces else {
             return;
         };
-        let [back, change, open, resume, _, set, clear, reset] = match self.light() {
+        let [back, change, open, resume, _, set, clear, reset] = match self.legends_light() {
             true => faces.legend_light,
             false => faces.legend,
         };
@@ -5617,6 +5753,10 @@ impl App {
             false => back,
         };
         self.draw_side_legend(left, false, y, out);
+        // Cheevo Mode has only Casual, so there is nothing to change.
+        if row == QuickRow::RaMode {
+            return;
+        }
         let right = if row.opens() { open } else { change };
         self.draw_side_legend(right, true, y, out);
     }
@@ -5625,7 +5765,7 @@ impl App {
         let (Some(faces), Some(clock)) = (&self.quick_menu_faces, self.clock_legends) else {
             return;
         };
-        let [back, change, open, ..] = match self.light() {
+        let [back, change, open, ..] = match self.legends_light() {
             true => faces.legend_light,
             false => faces.legend,
         };
@@ -6781,6 +6921,14 @@ impl App {
     }
 
     fn wifi_wanted(&self) -> bool {
+        if self.achievements_hold_wifi()
+            && !self.link_active()
+            && !self.shutting_down()
+            && !self.state.wifi_off
+            && self.has_saved()
+        {
+            return true;
+        }
         matches!(
             self.phase,
             Phase::Shelf
@@ -8902,6 +9050,19 @@ impl App {
                 self.keyboard = None;
                 self.join_network(ssid, text, hidden);
             }
+            KeyboardFor::AchievementsUser => {
+                self.keyboard = None;
+                let name = text.trim().to_string();
+                if !name.is_empty() && name != self.achievement_settings.username {
+                    self.save_achievements(slot_achievements::Change::Username(name));
+                }
+            }
+            KeyboardFor::AchievementsPassword => {
+                self.keyboard = None;
+                if !text.is_empty() {
+                    self.save_achievements(slot_achievements::Change::Password(text));
+                }
+            }
         }
     }
 
@@ -9121,14 +9282,30 @@ impl App {
         self.forget_faces = faces;
     }
 
+    /// The on-screen keyboard over the whole screen, once its faces are up. False while
+    /// no keyboard is open.
+    fn draw_keyboard_screen(&self, out: &mut Vec<Draw>) -> bool {
+        let Some((kb, _)) = &self.keyboard else {
+            return false;
+        };
+        let Some(tex) = &self.keyboard_tex else {
+            // Its faces arrive next frame; until then, just the ground.
+            slot_ui::draw_menu_ground(self.canvas(), self.menu_ground(), out);
+            return true;
+        };
+        slot_ui::draw_keyboard(self.canvas(), self.menu_ground(), tex, kb, out);
+        if kb.help() {
+            return true;
+        }
+        // The shelf's own slot, as under the menu, so the legends' ink matches it.
+        draw_empty_slot(self.canvas(), self.slot_now(), out);
+        slot_ui::draw_keyboard_legends(self.canvas(), tex, out);
+        true
+    }
+
     fn draw_networks(&self, out: &mut Vec<Draw>) {
-        if let (Some((kb, _)), Some(tex)) = (&self.keyboard, &self.keyboard_tex) {
-            slot_ui::draw_keyboard(self.canvas(), self.menu_ground(), tex, kb, out);
-            if kb.help() {
-                return;
-            }
-            draw_empty_slot(self.canvas(), self.slot_faces, out);
-            slot_ui::draw_keyboard_legends(self.canvas(), tex, out);
+        if let (Some(_), Some(_)) = (&self.keyboard, &self.keyboard_tex) {
+            self.draw_keyboard_screen(out);
             return;
         }
         slot_ui::NetworkList {
@@ -9145,7 +9322,7 @@ impl App {
         let Some(faces) = &self.quick_menu_faces else {
             return;
         };
-        let light = self.light();
+        let light = self.legends_light();
         let [back, change, open, ..] = match light {
             true => faces.legend_light,
             false => faces.legend,

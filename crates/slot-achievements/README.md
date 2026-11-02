@@ -11,8 +11,15 @@ official rcheevos evaluator (MIT, `vendor/rcheevos`).
 
 ## Setting it up
 
-Copy `Config/retroachievements.toml.example` to `Config/retroachievements.toml` on the card
-and fill in your account:
+The easy way: Settings → RetroAchievements. Enter your **Username** and **Password** on the
+keyboard, join Wi-Fi from Settings → Wireless, and you're set; the service starts again with
+the new account straight away. The page also has **Encore** and shows **Cheevo Mode**, which
+is always Casual (softcore): hardcore needs a live connection the whole time and no save
+states, rewind or fast-forward, which slotPlus doesn't do.
+
+The page reads and writes `Config/retroachievements.toml`, keeping anything else in it, so
+the file still works by hand. Copy `Config/retroachievements.toml.example` to it and fill in
+your account:
 
 ```toml
 enabled = true
@@ -28,6 +35,9 @@ not a Web API key. Omit the file or set `enabled = false` to turn the feature of
 `encore = true` lets achievements you already have go off again (banner and chime). Nothing
 is sent to RetroAchievements for those.
 
+Typing a username or password in Settings turns achievements on and drops a `token` line
+from the file, since a token would otherwise win over the password just typed.
+
 Treat the file and the token as credentials. Neither is logged. Like Slot's own Wi-Fi
 password, they are on the card, so anyone you let into Gamebit can reach them.
 
@@ -35,6 +45,10 @@ password, they are on the card, so anyone you let into Gamebit can reach them.
 
 slotPlus uses Slot's Wi-Fi, which is up on the shelf and off while a game runs. So:
 
+- When a game starts whose achievement set isn't on the card yet, Wi-Fi stays up (or comes
+  back) while that game's set and badges download, ahead of everything else, then goes off.
+  It gives up after two minutes if the network never answers. Tracking starts the moment the
+  set arrives, usually within seconds; anything earned before that can't be counted.
 - While the shelf sits idle with Wi-Fi up, slotPlus logs in and quietly prepares every
   `.gb`, `.gbc` and `.gba` game on the card (achievement sets and badges), a little at a time,
   so games start tracking straight away even with no network.

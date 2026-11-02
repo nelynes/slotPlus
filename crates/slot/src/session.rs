@@ -416,6 +416,12 @@ impl Session {
             self.achievements.network_available();
         }
         self.wifi_up = up;
+        self.app.set_achievements_want_wifi(self.achievements.wants_network());
+        if self.app.take_achievements_changed() {
+            // The account or Encore changed in Settings: start again with the new file.
+            // Unlocks are already on the card, so nothing is lost.
+            self.achievements = slot_achievements::Service::start(self.root.clone());
+        }
         self.sink.hold_open(self.app.headphones());
         if let Some(emu) = &self.emu {
             emu.set_volume(self.app.output_volume());

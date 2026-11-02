@@ -1141,3 +1141,35 @@ fn an_encore_unlock_is_shown_but_never_recorded_again() {
         "an encore unlock was recorded"
     );
 }
+
+#[test]
+fn an_uncached_game_wants_the_network_until_its_set_arrives() {
+    // Offline: the set can't come, so the game keeps asking.
+    let root = configured();
+    let rom = root.path().join("Games/GBA/Test.gba");
+    std::fs::write(&rom, b"fixture ROM").unwrap();
+    let service = Service::start_with(root.path().into(), Offline);
+    wait_for(|| service.enabled.load(Ordering::Acquire));
+    assert!(!service.wants_network(), "nothing is playing");
+    let mut core = service.wrap(Box::<TestCore>::default());
+    core.load(&rom).unwrap();
+    wait_for(|| service.wants_network());
+    drop(core);
+    wait_for(|| !service.wants_network());
+
+    // Online: it stops asking once the set (and its badges) are in.
+    let root = configured();
+    let rom = root.path().join("Games/GBA/Test.gba");
+    std::fs::write(&rom, b"fixture ROM").unwrap();
+    let (calls, _requests) = mpsc::channel();
+    let service = Service::start_with(root.path().into(), Server { calls });
+    wait_for(|| service.enabled.load(Ordering::Acquire));
+    let mut core = service.wrap(Box::<TestCore>::default());
+    core.load(&rom).unwrap();
+    wait_for(|| tracked(&service));
+    wait_for(|| !service.wants_network());
+}
+
+fn tracked(service: &Service) -> bool {
+    service.tracking.load(Ordering::Acquire) != 0
+}
