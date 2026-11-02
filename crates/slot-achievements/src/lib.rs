@@ -6,6 +6,7 @@ mod library;
 mod network;
 mod ready;
 mod runtime;
+mod settings;
 mod storage;
 #[cfg(test)]
 mod tests;
@@ -18,6 +19,7 @@ use std::time::{Duration, Instant};
 
 pub use badges::{load_badge, BadgeImage};
 pub use ready::Readiness;
+pub use settings::{save, Change, Settings};
 use slot_retro::{AchievementMemory, RetroCore};
 use storage::{Config, Store, Unlock};
 
@@ -51,6 +53,9 @@ struct Status {
     // changed (milliseconds since `EPOCH`). Background library work waits for quiet.
     busy: AtomicBool,
     changed_ms: AtomicU64,
+    // slotPlus: the game in play has no cached achievement set (or its badges) yet, so
+    // slot keeps Wi-Fi up for it rather than dropping it for play.
+    wants_network: AtomicBool,
 }
 
 /// When the service started; background work is measured from here.
@@ -248,6 +253,12 @@ impl Service {
 
     pub fn sync_status(&self) -> SyncStatus {
         self.status.get()
+    }
+
+    /// slotPlus: the game in play is still waiting on its achievement set, or the badges
+    /// for it, from the server. Slot keeps Wi-Fi up while this holds.
+    pub fn wants_network(&self) -> bool {
+        self.status.wants_network.load(Ordering::Acquire)
     }
 
     /// The Wi-Fi worker observed a new connection. Wake retries without blocking the UI.

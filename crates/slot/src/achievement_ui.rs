@@ -165,7 +165,8 @@ impl Notifications {
         }
         let status = session.achievement_sync_status();
         let visible = status == SyncStatus::Syncing || session.achievement_sync_pending();
-        let theme = usize::from(session.app().light());
+        // The band's ink, like the clock beside it, so it shows on a light Bespoke slot.
+        let theme = usize::from(session.app().band_light());
         let icon = self.sync.and_then(|faces| {
             visible.then_some(SyncIndicator {
                 face: faces[theme],

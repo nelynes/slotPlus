@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use slot_gfx::{Compositor, TexId};
 use slot_ui::{
-    footer_ink, keyboard_cap_faces, keyboard_faces, keyboard_text_face, menu_detail_face,
+    footer_ink, keyboard_cap_faces, keyboard_faces_on, keyboard_text_face, menu_detail_face,
     menu_face, net_bars_face, net_lock_face, prompt_legends, quick_value_face, toast_face_text,
     Keyboard, NetFace, NetIcons, NetLine, Toast, UndoFace,
 };
@@ -220,7 +220,7 @@ impl NetworkSync {
         let pool = &mut self.pool;
         let mut at = 0;
         let canvas = app.canvas();
-        let tex = keyboard_faces(kb, canvas).upload(|f| {
+        let tex = keyboard_faces_on(kb, canvas, app.legends_light()).upload(|f| {
             let id = match pool.get(at) {
                 Some(&id) => {
                     compositor.update_texture(id, f.w, f.h, &f.rgba);

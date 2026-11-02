@@ -68,6 +68,7 @@ pub struct Frontend {
     print_stage_asked: bool,
     quick_clock: QuickClock,
     quick_network: QuickClock,
+    quick_achievements: [QuickClock; 3],
     networks: crate::network_faces::NetworkSync,
     quick_palette: QuickPalette,
     wallpaper: WallpaperSync,
@@ -581,6 +582,7 @@ impl Frontend {
             print_stage_asked: false,
             quick_clock: QuickClock::default(),
             quick_network: QuickClock::default(),
+            quick_achievements: Default::default(),
             networks: Default::default(),
             quick_palette: QuickPalette::default(),
             wallpaper: WallpaperSync::default(),
@@ -1100,6 +1102,7 @@ impl Frontend {
         }
         sync_quick_clock(self.session.app_mut(), compositor, &mut self.quick_clock);
         sync_quick_network(self.session.app_mut(), compositor, &mut self.quick_network);
+        sync_quick_achievements(self.session.app_mut(), compositor, &mut self.quick_achievements);
         self.networks.sync(self.session.app_mut(), compositor);
         sync_quick_palette(self.session.app_mut(), compositor, &mut self.quick_palette);
         sync_wallpaper(self.session.app_mut(), compositor, &mut self.wallpaper);
@@ -2071,6 +2074,31 @@ fn sync_quick_network(app: &mut App, compositor: &mut Compositor, state: &mut Qu
     let lit = upload(compositor, &mut state.lit, lit);
     app.set_quick_network_faces((dim, dim_size.0, dim_size.1), (lit, lit_size.0, lit_size.1));
     state.shown = text;
+}
+
+/// slotPlus: the RetroAchievements page's Username, Password and Cheevo Mode values.
+fn sync_quick_achievements(
+    app: &mut App,
+    compositor: &mut Compositor,
+    states: &mut [QuickClock; 3],
+) {
+    if app.quick_menu().is_none() {
+        return;
+    }
+    let texts = app.achievements_values();
+    if states.iter().zip(&texts).all(|(s, t)| s.dim.is_some() && s.shown == *t) {
+        return;
+    }
+    let mut faces = [None; 3];
+    for ((state, text), out) in states.iter_mut().zip(texts).zip(faces.iter_mut()) {
+        let (dim, lit) = (quick_value_face(&text, false), quick_value_face(&text, true));
+        let (dim_size, lit_size) = ((dim.w, dim.h), (lit.w, lit.h));
+        let dim = upload(compositor, &mut state.dim, dim);
+        let lit = upload(compositor, &mut state.lit, lit);
+        *out = Some([(dim, dim_size.0, dim_size.1), (lit, lit_size.0, lit_size.1)]);
+        state.shown = text;
+    }
+    app.set_quick_achievement_faces(faces);
 }
 
 fn sync_quick_palette(app: &mut App, compositor: &mut Compositor, state: &mut QuickPalette) {
