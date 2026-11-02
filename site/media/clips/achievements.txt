@@ -1,0 +1,46 @@
+# state: show_recents=0
+# state: show_titles=0
+# state: cart=
+# state: cart_platform=
+# state: shelf=gba
+# state: shelf_cart=gba/Advance Wars (USA) (Rev 1) (No Glitch) (Bartis1989)
+# file: Config/retroachievements.toml|enabled = true
+# file: Config/retroachievements.toml|username = "Player"
+# file: Config/retroachievements.toml|password = "hunter2"
+wait 90
+rec
+wait 40
+tap menu
+wait 30
+tap down
+wait 12
+tap down
+wait 12
+tap down
+wait 12
+tap down
+wait 12
+tap down
+wait 40
+tap a
+wait 60
+tap down
+wait 30
+tap down
+wait 30
+tap down
+wait 40
+tap a
+wait 50
+tap a
+wait 50
+tap up
+wait 20
+tap up
+wait 20
+tap up
+wait 40
+tap a
+wait 70
+tap y
+wait 40

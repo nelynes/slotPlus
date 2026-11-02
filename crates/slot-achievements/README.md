@@ -27,7 +27,7 @@ username = "your-ra-username"
 password = "your-ra-password"
 ```
 
-Join a Wi-Fi network from the shelf's Network menu, then restart slotPlus. After the first
+Join a Wi-Fi network from Settings → Wireless → Network, then restart slotPlus. After the first
 login the account's token is kept under `Saves/RetroAchievements/` and the `password` line
 can be removed. `token = "..."` works instead of a password; it is an emulator login token,
 not a Web API key. Omit the file or set `enabled = false` to turn the feature off.
