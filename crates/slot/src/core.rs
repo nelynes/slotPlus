@@ -134,6 +134,9 @@ fn open_named(
                     palette,
                 );
                 apply_blending(&mut opened, core, blending);
+                if core == Core::Dsperate {
+                    apply_ds_console(&mut opened, root);
+                }
                 if let Some(player) = link {
                     apply_link_options(&mut opened, core, player);
                 }
@@ -363,6 +366,51 @@ pub fn lynx_select_toggles(turn: &str) -> bool {
     turn != "manual"
 }
 
+/// slotPlus: the DS console's nickname when it has none of its own yet: DSperate's.
+pub const NDS_DEFAULT_NAME: &str = "DSperate";
+/// The DS firmware holds up to ten characters of nickname.
+pub const NDS_NAME_MAX: usize = 10;
+const NDS_NAME_FILE: &str = "Config/nds_name.txt";
+
+/// A typed name as the DS firmware takes it: trimmed, at most ten characters.
+pub fn nds_name_clean(text: &str) -> String {
+    text.trim().chars().take(NDS_NAME_MAX).collect()
+}
+
+pub fn read_nds_name(root: &Path) -> String {
+    std::fs::read_to_string(root.join(NDS_NAME_FILE))
+        .map(|s| nds_name_clean(s.lines().next().unwrap_or("")))
+        .unwrap_or_default()
+}
+
+/// Empty clears it, so DSperate's own name comes back.
+pub fn write_nds_name(root: &Path, name: &str) -> std::io::Result<()> {
+    let path = root.join(NDS_NAME_FILE);
+    if name.is_empty() {
+        return match std::fs::remove_file(&path) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(e),
+            _ => Ok(()),
+        };
+    }
+    slot_store::atomic_write(&path, format!("{name}\n").as_bytes())
+}
+
+/// slotPlus: the DS's console name and its clock. DSperate seeds the DS clock from the
+/// system's local time, but the handheld's system clock is UTC with no time zone, so
+/// Slot hands over its own offset (cores/dsperate/0001-rtc-utc-offset.patch and
+/// wrapper-0002-console-name-and-clock.patch).
+fn apply_ds_console(core: &mut LibretroCore, root: &Path) {
+    let name = read_nds_name(root);
+    if !name.is_empty() {
+        core.set_option("dsperate_nickname", &name);
+    }
+    let utc = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs() as i64);
+    let offset = slot_store::read_slot_state(root).zone.offset_min(utc);
+    core.set_option("dsperate_utc_offset", &offset.to_string());
+}
+
 pub fn apply_core_options(
     core: &mut LibretroCore,
     which: Core,
@@ -446,6 +494,20 @@ pub fn apply_core_options(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_ds_console_name_is_ten_characters_kept_on_the_card() {
+        assert_eq!(nds_name_clean("  Nelynes  "), "Nelynes");
+        assert_eq!(nds_name_clean("ABCDEFGHIJKLMN"), "ABCDEFGHIJ");
+        let d = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(d.path().join("Config")).unwrap();
+        assert_eq!(read_nds_name(d.path()), "");
+        write_nds_name(d.path(), "Nelynes").unwrap();
+        assert_eq!(read_nds_name(d.path()), "Nelynes");
+        write_nds_name(d.path(), "").unwrap();
+        assert_eq!(read_nds_name(d.path()), "", "clearing it gives DSperate's own back");
+        write_nds_name(d.path(), "").unwrap();
+    }
+
     use super::*;
     use std::sync::Mutex;
 

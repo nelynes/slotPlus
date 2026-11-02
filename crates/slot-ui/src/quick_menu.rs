@@ -145,10 +145,11 @@ pub enum QuickRow {
     RaPassword,
     RaMode,
     RaEncore,
+    NdsName,
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 136] = [
+    pub const ALL: [QuickRow; 137] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -285,6 +286,7 @@ impl QuickRow {
         QuickRow::RaPassword,
         QuickRow::RaMode,
         QuickRow::RaEncore,
+        QuickRow::NdsName,
     ];
 
     pub const MAIN: [QuickRow; 7] = [
@@ -406,7 +408,8 @@ impl QuickRow {
     pub const SCREEN_NGP: [QuickRow; 2] = [QuickRow::NgpShader, QuickRow::NgpBezel];
 
     pub const SCREEN_TG16: [QuickRow; 2] = [QuickRow::Tg16Shader, QuickRow::Tg16Bezel];
-    pub const SCREEN_NDS: [QuickRow; 2] = [QuickRow::NdsShader, QuickRow::NdsBezel];
+    /// slotPlus: the DS's page also names the console, for games that greet you.
+    pub const SCREEN_NDS: [QuickRow; 3] = [QuickRow::NdsShader, QuickRow::NdsBezel, QuickRow::NdsName];
 
     pub const SCREEN_GBA: [QuickRow; 5] = [
         QuickRow::GbaShader,
@@ -507,7 +510,7 @@ impl QuickRow {
             QuickRow::GgShader | QuickRow::GgBezel => &QuickRow::SCREEN_GG,
             QuickRow::NgpShader | QuickRow::NgpBezel => &QuickRow::SCREEN_NGP,
             QuickRow::Tg16Shader | QuickRow::Tg16Bezel => &QuickRow::SCREEN_TG16,
-            QuickRow::NdsShader | QuickRow::NdsBezel => &QuickRow::SCREEN_NDS,
+            QuickRow::NdsShader | QuickRow::NdsBezel | QuickRow::NdsName => &QuickRow::SCREEN_NDS,
             QuickRow::GbaShader
             | QuickRow::GbaColourCorrection
             | QuickRow::GbaBlending
@@ -800,6 +803,7 @@ impl QuickRow {
             QuickRow::ScreenNds => "Nintendo DS",
             QuickRow::NdsShader => "Shader",
             QuickRow::NdsBezel => "Bezel",
+            QuickRow::NdsName => "Console Name",
         }
     }
 
@@ -845,6 +849,7 @@ impl QuickRow {
                 | QuickRow::Achievements
                 | QuickRow::RaUsername
                 | QuickRow::RaPassword
+                | QuickRow::NdsName
         )
     }
 
@@ -1690,6 +1695,8 @@ pub struct QuickMenu<'a> {
     pub networks: Option<[(TexId, u32, u32); 2]>,
     /// slotPlus: the RetroAchievements page's Username, Password and Cheevo Mode values.
     pub achievements: [Option<[(TexId, u32, u32); 2]>; 3],
+    /// slotPlus: the DS console name's value.
+    pub nds_name: Option<[(TexId, u32, u32); 2]>,
     pub faces: Option<&'a QuickMenuFaces>,
     pub ground: Option<(TexId, u32)>,
     pub palette: Option<[(TexId, u32, u32); 2]>,
@@ -1768,6 +1775,7 @@ impl QuickMenu<'_> {
                 QuickRow::Wallpaper => self.wallpaper.map(|c| c[lit as usize]),
                 QuickRow::Networks => self.networks.map(|c| c[lit as usize]),
                 QuickRow::RaUsername => self.achievements[0].map(|c| c[lit as usize]),
+                QuickRow::NdsName => self.nds_name.map(|c| c[lit as usize]),
                 QuickRow::RaPassword => self.achievements[1].map(|c| c[lit as usize]),
                 // Casual is the only mode, so its value stays dim even when lit.
                 QuickRow::RaMode => self.achievements[2].map(|c| c[0]),

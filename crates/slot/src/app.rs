@@ -355,6 +355,8 @@ pub enum KeyboardFor {
     /// slotPlus: the RetroAchievements page's account.
     AchievementsUser,
     AchievementsPassword,
+    /// slotPlus: the DS console's nickname.
+    NdsName,
 }
 
 pub struct NetLegends {
@@ -663,6 +665,9 @@ pub struct App {
     achievement_settings: slot_achievements::Settings,
     achievements_changed: bool,
     quick_achievement_faces: [Option<[(TexId, u32, u32); 2]>; 3],
+    /// slotPlus: the DS console's nickname, from Config/nds_name.txt.
+    nds_name: String,
+    quick_nds_name_faces: Option<[(TexId, u32, u32); 2]>,
     wifi_sampled: Millis,
     wifi_scanning: bool,
     keyboard: Option<(slot_ui::Keyboard, KeyboardFor)>,
@@ -837,6 +842,8 @@ impl App {
             achievement_settings: slot_achievements::Settings::default(),
             achievements_changed: false,
             quick_achievement_faces: [None; 3],
+            nds_name: String::new(),
+            quick_nds_name_faces: None,
             wifi_sampled: 0,
             wifi_scanning: false,
             keyboard: None,
@@ -1078,6 +1085,7 @@ impl App {
         app.carousel = read_carousel(root);
         app.shortcuts = read_shortcuts(root);
         app.controls = read_controls(root);
+        app.nds_name = crate::core::read_nds_name(root);
         app.restock_recents();
         app.restock_favorites();
         if let Some((at, i)) = app.remembered_seat() {
@@ -1699,6 +1707,7 @@ impl App {
             QuickRow::WifiPower => Some(QuickValue::flag(!self.state.wifi_off)),
             QuickRow::RaEncore => Some(QuickValue::flag(self.achievement_settings.encore)),
             QuickRow::Achievements
+            | QuickRow::NdsName
             | QuickRow::RaUsername
             | QuickRow::RaPassword
             | QuickRow::RaMode
@@ -2303,6 +2312,33 @@ impl App {
 
     pub fn set_quick_achievement_faces(&mut self, faces: [Option<[(TexId, u32, u32); 2]>; 3]) {
         self.quick_achievement_faces = faces;
+    }
+
+    /// The DS console name the DS page shows: the one set, or DSperate's own.
+    pub fn nds_name_value(&self) -> String {
+        match self.nds_name.is_empty() {
+            true => crate::core::NDS_DEFAULT_NAME.into(),
+            false => self.nds_name.clone(),
+        }
+    }
+
+    pub fn set_quick_nds_name_faces(&mut self, faces: [(TexId, u32, u32); 2]) {
+        self.quick_nds_name_faces = Some(faces);
+    }
+
+    fn set_nds_name(&mut self, text: &str) {
+        let name = crate::core::nds_name_clean(text);
+        if name == self.nds_name {
+            return;
+        }
+        let Some(root) = self.root.clone() else {
+            return;
+        };
+        if crate::core::write_nds_name(&root, &name).is_err() {
+            eprintln!("slot: could not write the DS console name");
+            return;
+        }
+        self.nds_name = name;
     }
 
     /// Settings changed the RetroAchievements file since last asked.
@@ -4185,6 +4221,15 @@ impl App {
             ),
             QuickRow::RaEncore => self.set_encore(!self.achievement_settings.encore),
             QuickRow::RaMode => {}
+            QuickRow::NdsName => {
+                let kb = slot_ui::Keyboard::new(
+                    slot_ui::Layout::General,
+                    "DS Console Name",
+                    Some("Up to 10 characters"),
+                    &self.nds_name,
+                );
+                self.keyboard = Some((kb, KeyboardFor::NdsName));
+            }
             QuickRow::Screen
             | QuickRow::ScreenGeneral
             | QuickRow::Game
@@ -4671,7 +4716,8 @@ impl App {
             | QuickRow::RaUsername
             | QuickRow::RaPassword
             | QuickRow::RaMode
-            | QuickRow::RaEncore => return,
+            | QuickRow::RaEncore
+            | QuickRow::NdsName => return,
         }
         self.persist();
     }
@@ -5724,6 +5770,7 @@ impl App {
                 description: self.description(*row),
                 values: QuickRow::ALL.map(|r| self.quick_value(r)),
                 achievements: self.quick_achievement_faces,
+                nds_name: self.quick_nds_name_faces,
                 clock: self.quick_clock_faces,
                 wallpaper: self.quick_wallpaper_faces,
                 networks: self.quick_network_faces,
@@ -5922,6 +5969,7 @@ impl App {
                 ws_buttons: self.ws_buttons(),
                 values: QuickRow::ALL.map(|r| self.quick_value(r)),
                 achievements: [None; 3],
+                nds_name: None,
                 clock: None,
                 wallpaper: None,
                 networks: None,
@@ -9458,6 +9506,10 @@ impl App {
                 if !name.is_empty() && name != self.achievement_settings.username {
                     self.save_achievements(slot_achievements::Change::Username(name));
                 }
+            }
+            KeyboardFor::NdsName => {
+                self.keyboard = None;
+                self.set_nds_name(&text);
             }
             KeyboardFor::AchievementsPassword => {
                 self.keyboard = None;

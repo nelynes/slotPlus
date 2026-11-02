@@ -1,0 +1,67 @@
+--- a/src/libretro.cpp
++++ b/src/libretro.cpp
+@@ -17,6 +17,7 @@
+ #endif
+ 
+ #include <cstdarg>
++#include <cstdlib>
+ #include <cstdio>
+ #include <cstring>
+ #include <memory>
+@@ -38,6 +39,13 @@
+ std::unique_ptr<ds::NDS> nds;
+ std::string rom_path;
+ bool jit_on = true;
++// slotPlus: the console's nickname for a generated firmware (dsperate_nickname;
++// a dumped firmware.bin keeps its own), and the frontend's UTC offset in
++// minutes (dsperate_utc_offset), so the DS clock shows the frontend's local
++// time on a handheld whose system clock is UTC with no time zone.
++std::string nickname;
++bool utc_offset_set = false;
++int utc_offset_min = 0;
+ // Frameskip, driven by the frontend: with dsperate_frameskip=auto it says,
+ // through the audio buffer status callback, which frames it would rather not
+ // have drawn (its underrun flag), and DSperate's adaptive frameskip skips
+@@ -87,6 +95,11 @@
+   jit_on = !(env_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &v) && v.value && !std::strcmp(v.value, "disabled"));
+   retro_variable f{"dsperate_frameskip", nullptr};
+   fs_auto = env_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &f) && f.value && !std::strcmp(f.value, "auto");
++  retro_variable n{"dsperate_nickname", nullptr};
++  nickname = env_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &n) && n.value ? n.value : "";
++  retro_variable o{"dsperate_utc_offset", nullptr};
++  utc_offset_set = env_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &o) && o.value && *o.value;
++  utc_offset_min = utc_offset_set ? std::atoi(o.value) : 0;
+ }
+ 
+ // Battery saves are the frontend's (RETRO_MEMORY_SAVE_RAM, a raw chip image,
+@@ -120,10 +133,15 @@
+     return p;
+   };
+   std::string err;
+-  if (!nds->load_bios(in_sys("bios9.bin"), in_sys("bios7.bin"), in_sys("firmware.bin"), {}, &err)) {
++  ds::bios::UserSettings user;
++  if (!nickname.empty()) user.nickname = nickname;
++  if (!nds->load_bios(in_sys("bios9.bin"), in_sys("bios7.bin"), in_sys("firmware.bin"), user, &err)) {
+     log(RETRO_LOG_ERROR, "dsperate: bios: %s\n", err.c_str());
+     return false;
+   }
++  // The DS clock runs from real time, and reset() reseeds it from then on.
++  if (utc_offset_set) nds->io.set_rtc_utc_offset(utc_offset_min);
++  nds->io.start_rtc_clock();
+   nds->reset();
+   if (!nds->load_rom(rom_path)) {
+     log(RETRO_LOG_ERROR, "dsperate: %s: %s\n", rom_path.c_str(), nds->rom_error.c_str());
+@@ -285,7 +303,12 @@
+   if (4 + size_t(n) > size) return false;
+   ds::state::Reader r(static_cast<const ds::u8*>(data) + 4, n);
+   std::string err;
+-  if (nds->load_state(r, err)) return true;
++  if (nds->load_state(r, err)) {
++    // A state holds the clock as it was then: set it to now again, as the SDL
++    // frontend does on resume.
++    nds->io.resync_rtc_clock();
++    return true;
++  }
+   // A failed load leaves the machine unusable: start the game over.
+   log(RETRO_LOG_ERROR, "dsperate: state refused: %s\n", err.c_str());
+   retro_reset();

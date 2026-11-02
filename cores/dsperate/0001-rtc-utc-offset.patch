@@ -1,0 +1,49 @@
+--- a/src/core/io/io.cpp
++++ b/src/core/io/io.cpp
+@@ -575,13 +575,23 @@
+ static void rtc_ev(NDS& nds, u32) { nds.io.rtc_event(); }
+ 
+ void Io::rtc_seed() {
+-  const std::time_t t = std::time(nullptr);
++  std::time_t t = std::time(nullptr);
+   std::tm lt{};
++  if (rtc_offset_set_) {
++    // slotPlus: the frontend's local time, from UTC and its own offset.
++    t += static_cast<std::time_t>(rtc_offset_min_) * 60;
+ #if defined(_WIN32)
+-  localtime_s(&lt, &t);
++    gmtime_s(&lt, &t);
+ #else
+-  localtime_r(&t, &lt);
++    gmtime_r(&t, &lt);
+ #endif
++  } else {
++#if defined(_WIN32)
++    localtime_s(&lt, &t);
++#else
++    localtime_r(&t, &lt);
++#endif
++  }
+   Rtc& r = rtc;
+   r.datetime[0] = to_bcd(lt.tm_year % 100);     // two digits; 2000-2099
+   r.datetime[1] = to_bcd(lt.tm_mon + 1);
+--- a/src/core/io/io.h
++++ b/src/core/io/io.h
+@@ -307,11 +307,17 @@
+   void rtc_tick();
+   void rtc_seed();              // from host local time
+   bool rtc_host_clock_ = false; // survives reset()
++  // slotPlus: the frontend's own UTC offset, for a handheld whose system clock
++  // is UTC with no time zone. Unset, the host's local time is used.
++  bool rtc_offset_set_ = false;
++  int rtc_offset_min_ = 0;
+   // status1 bit 7 (power lost) clears on guest read and stays clear across
+   // reset(); otherwise every reboot re-enters the setup wizard.
+   bool rtc_power_lost_seen_ = false;
+ public:
+   void start_rtc_clock();   // host time; also clears power-lost; survives reset()
++  // slotPlus: seed from UTC plus this many minutes instead of host local time.
++  void set_rtc_utc_offset(int minutes) { rtc_offset_set_ = true; rtc_offset_min_ = minutes; }
+   bool rtc_host_clock() const { return rtc_host_clock_; }
+   // Re-read the host clock into a running RTC (after the host slept, which
+   // emulated time does not see). No-op unless start_rtc_clock() was called.

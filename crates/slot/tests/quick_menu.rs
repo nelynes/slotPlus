@@ -2081,3 +2081,25 @@ fn encore_flips_with_a_or_left_and_right() {
     press(&mut a, Btn::Right);
     assert_eq!(a.achievements_values()[2], "Casual");
 }
+
+#[test]
+fn the_ds_page_names_the_console_on_the_keyboard() {
+    assert_eq!(
+        QuickRow::SCREEN_NDS.map(QuickRow::label),
+        ["Shader", "Bezel", "Console Name"]
+    );
+    let (d, mut a, _) = on_carousel();
+    assert_eq!(a.nds_name_value(), "DSperate");
+    open_at(&mut a, QuickRow::NdsName);
+    press(&mut a, Btn::A);
+    assert!(a.keyboard().is_some(), "Console Name opens the keyboard");
+    for _ in 0..3 {
+        press(&mut a, Btn::A);
+    }
+    press(&mut a, Btn::Start);
+    assert!(a.keyboard().is_none());
+    let name = a.nds_name_value();
+    assert_eq!(name.chars().count(), 3, "{name}");
+    let file = std::fs::read_to_string(d.path().join("Config/nds_name.txt")).unwrap();
+    assert_eq!(file.trim(), name);
+}

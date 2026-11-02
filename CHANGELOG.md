@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- **Nintendo DS (slotPlusUltra): console name and clock.** Settings → Screen → Nintendo DS → Console Name names the DS on the keyboard, for games that greet you by it. The DS clock now runs on slotPlus's date, time and time zone, and is set again after loading a state or resuming, so games that follow the day and time see the real one.
+
 ## [1.13.0-plus2.6](https://github.com/nelynes/slotPlus/releases/tag/v1.13.0-plus2.6)
 
 **RetroAchievements** for Game Boy, Game Boy Color and Game Boy Advance games, and slotPlus brought up to Slot 1.13.0: Wi-Fi, updates over the air, Gamebit for managing the card from a browser, the on-device Cart Studio with art fetched over Wi-Fi, the clock set from network time, and a Shelf wallpaper. See [Slot's 1.13.0 notes](https://github.com/BrandonKowalski/slot/releases/tag/v1.13.0).

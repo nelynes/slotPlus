@@ -69,6 +69,7 @@ pub struct Frontend {
     quick_clock: QuickClock,
     quick_network: QuickClock,
     quick_achievements: [QuickClock; 3],
+    quick_nds_name: QuickClock,
     networks: crate::network_faces::NetworkSync,
     quick_palette: QuickPalette,
     wallpaper: WallpaperSync,
@@ -583,6 +584,7 @@ impl Frontend {
             quick_clock: QuickClock::default(),
             quick_network: QuickClock::default(),
             quick_achievements: Default::default(),
+            quick_nds_name: QuickClock::default(),
             networks: Default::default(),
             quick_palette: QuickPalette::default(),
             wallpaper: WallpaperSync::default(),
@@ -1103,6 +1105,7 @@ impl Frontend {
         sync_quick_clock(self.session.app_mut(), compositor, &mut self.quick_clock);
         sync_quick_network(self.session.app_mut(), compositor, &mut self.quick_network);
         sync_quick_achievements(self.session.app_mut(), compositor, &mut self.quick_achievements);
+        sync_quick_nds_name(self.session.app_mut(), compositor, &mut self.quick_nds_name);
         self.networks.sync(self.session.app_mut(), compositor);
         sync_quick_palette(self.session.app_mut(), compositor, &mut self.quick_palette);
         sync_wallpaper(self.session.app_mut(), compositor, &mut self.wallpaper);
@@ -2099,6 +2102,23 @@ fn sync_quick_achievements(
         state.shown = text;
     }
     app.set_quick_achievement_faces(faces);
+}
+
+/// slotPlus: the DS page's Console Name value.
+fn sync_quick_nds_name(app: &mut App, compositor: &mut Compositor, state: &mut QuickClock) {
+    if app.quick_menu().is_none() {
+        return;
+    }
+    let text = app.nds_name_value();
+    if state.dim.is_some() && text == state.shown {
+        return;
+    }
+    let (dim, lit) = (quick_value_face(&text, false), quick_value_face(&text, true));
+    let (dim_size, lit_size) = ((dim.w, dim.h), (lit.w, lit.h));
+    let dim = upload(compositor, &mut state.dim, dim);
+    let lit = upload(compositor, &mut state.lit, lit);
+    app.set_quick_nds_name_faces([(dim, dim_size.0, dim_size.1), (lit, lit_size.0, lit_size.1)]);
+    state.shown = text;
 }
 
 fn sync_quick_palette(app: &mut App, compositor: &mut Compositor, state: &mut QuickPalette) {

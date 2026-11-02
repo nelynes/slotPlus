@@ -161,7 +161,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
     assert_eq!(QuickRow::ScreenTg16.label(), "TurboGrafx-16");
     assert_eq!(
         QuickRow::SCREEN_NDS.map(QuickRow::label),
-        ["Shader", "Bezel"]
+        ["Shader", "Bezel", "Console Name"]
     );
     assert_eq!(QuickRow::ScreenNds.label(), "Nintendo DS");
     assert_eq!(
@@ -256,7 +256,8 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::Server,
             QuickRow::Achievements,
             QuickRow::RaUsername,
-            QuickRow::RaPassword
+            QuickRow::RaPassword,
+            QuickRow::NdsName
         ]
     );
     for page in [
