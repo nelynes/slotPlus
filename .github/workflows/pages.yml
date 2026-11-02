@@ -7,6 +7,9 @@ on:
       - 'site/**'
       - 'CHANGELOG.md'
       - '.github/workflows/pages.yml'
+      - '.github/scripts/**'
+  schedule:
+    - cron: '0 6,18 * * *'
   workflow_dispatch:
 
 permissions:
@@ -40,6 +43,13 @@ jobs:
           sed -i "s|href=\"style.css\"|href=\"style.css?v=$v\"|; s|src=\"app.js\"|src=\"app.js?v=$v\"|" site/index.html
           grep -q "style.css?v=$v" site/index.html
           grep -q "app.js?v=$v" site/index.html
+
+      # What a slotPlus card checks for an update: the latest release's zip for each
+      # edition, and BaseOS. Published beside the site, at /versions.json.
+      - name: Publish versions.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: OUT=site/versions.json SLOT_REPO="$GITHUB_REPOSITORY" bash .github/scripts/versions.sh
 
       - uses: actions/configure-pages@v5
 

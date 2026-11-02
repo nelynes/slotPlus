@@ -242,7 +242,12 @@ fn strip(canvas: Canvas, tex: TexId, alpha: f32) -> Draw {
     }
 }
 
-fn draw_slot_back(canvas: Canvas, slot: Option<(TexId, TexId)>, alpha: f32, out: &mut Vec<Draw>) {
+pub fn draw_slot_back(
+    canvas: Canvas,
+    slot: Option<(TexId, TexId)>,
+    alpha: f32,
+    out: &mut Vec<Draw>,
+) {
     if let Some((back, _)) = slot {
         out.push(strip(canvas, back, alpha));
         return;
@@ -257,7 +262,12 @@ fn draw_slot_back(canvas: Canvas, slot: Option<(TexId, TexId)>, alpha: f32, out:
     });
 }
 
-fn draw_slot_front(canvas: Canvas, slot: Option<(TexId, TexId)>, alpha: f32, out: &mut Vec<Draw>) {
+pub fn draw_slot_front(
+    canvas: Canvas,
+    slot: Option<(TexId, TexId)>,
+    alpha: f32,
+    out: &mut Vec<Draw>,
+) {
     if let Some((_, front)) = slot {
         out.push(strip(canvas, front, alpha));
         return;
@@ -324,9 +334,9 @@ pub fn draw_slot_title(canvas: Canvas, title: Printed, alpha: f32, out: &mut Vec
     });
 }
 
-pub fn draw_plugged_slot(canvas: Canvas, plugged: Option<TexId>, out: &mut Vec<Draw>) {
+pub fn draw_plugged_slot(canvas: Canvas, plugged: Option<TexId>, alpha: f32, out: &mut Vec<Draw>) {
     if let Some(tex) = plugged {
-        out.push(strip(canvas, tex, 1.0));
+        out.push(strip(canvas, tex, alpha));
     }
 }
 

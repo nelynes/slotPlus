@@ -15,10 +15,13 @@ LINK_RESCAN="${AGS_LINK_RESCAN:-2}"
 LINK_AP_GLOBAL="${AGS_LINK_AP_GLOBAL:-}"
 LINK_TRACE="${AGS_LINK_TRACE:-}"
 LINK_MARK="$RUN/slotlink.session"
+WIFI_MARK="$RUN/slotwifi.on"
 
 WPA_SUPPLICANT="${AGS_WPA_SUPPLICANT:-wpa_supplicant}"
 WPA_CLI="${AGS_WPA_CLI:-wpa_cli}"
 IP="${AGS_IP:-ip}"
+RFKILL="${AGS_RFKILL:-rfkill}"
+UDHCPC="${AGS_UDHCPC:-udhcpc}"
 UPTIME="${AGS_UPTIME:-/proc/uptime}"
 CTRL_DIR="${AGS_CTRL_DIR:-/var/run/wpa_supplicant}"
 
@@ -40,7 +43,7 @@ wait_dev() {
 wifi_up() {
 	wait_dev wlan0 40 || return 0
 	trace "wlan0 present"
-	rfkill unblock wifi 2>/dev/null || true
+	$RFKILL unblock wifi 2>/dev/null || true
 	$IP link set wlan0 up 2>/dev/null || true
 }
 
@@ -62,6 +65,7 @@ link_clear() {
 	supplicant_stop "$RUN/wpa_ap" wlan1
 	$IP addr flush dev wlan1 2>/dev/null || true
 	/bin/rm -f "$RUN/slotlink-ap.conf"
+	wifi_stop
 	if [ -f "$RUN/slotlink-sta.conf" ]; then
 		supplicant_stop "$CTRL_DIR" wlan0
 		$IP addr flush dev wlan0 2>/dev/null || true
@@ -194,14 +198,53 @@ link_warm() {
 	wait_dev wlan1 4
 }
 
+wifi_start() {
+	[ -f "${1:-}" ] || return 3
+	wifi_up
+	[ -d "$NET/wlan0" ] || return 3
+	/bin/mkdir -p "$CTRL_DIR"
+	supplicant_stop "$CTRL_DIR" wlan0
+	: > "$WIFI_MARK"
+	$WPA_SUPPLICANT -B -i wlan0 -c "$1" -Dnl80211 >/dev/null 2>&1 || return 3
+	n=0
+	while [ "$n" -lt 20 ]; do
+		$WPA_CLI -p "$CTRL_DIR" -i wlan0 ping 2>/dev/null | grep -q PONG && return 0
+		sleep 0.25 2>/dev/null || sleep 1
+		n=$((n + 1))
+	done
+	return 3
+}
+
+wifi_stop() {
+	if [ -f "$RUN/udhcpc.wlan0.pid" ]; then
+		kill "$(cat "$RUN/udhcpc.wlan0.pid")" 2>/dev/null || true
+		/bin/rm -f "$RUN/udhcpc.wlan0.pid"
+	fi
+	[ -f "$WIFI_MARK" ] || return 0
+	supplicant_stop "$CTRL_DIR" wlan0
+	$IP addr flush dev wlan0 2>/dev/null || true
+	/bin/rm -f "$WIFI_MARK"
+	return 0
+}
+
+wifi_off() {
+	wifi_stop
+	$IP link set wlan0 down 2>/dev/null || true
+	$RFKILL block wifi 2>/dev/null || true
+	return 0
+}
+
 case "${1:-} ${2:-}" in
+"wifi start") wifi_start "${3:-}" ;;
+"wifi stop") wifi_stop ;;
+"wifi off") wifi_off ;;
 "link host") link_host ;;
 "link join") link_join ;;
 "link down") link_down ;;
 "link warm") link_warm ;;
 "link cool") exit 0 ;;
 *)
-	echo "usage: slotlink.sh link [host|join|down|warm|cool]" >&2
+	echo "usage: slotlink.sh link [host|join|down|warm|cool] | wifi [start CONF|stop|off]" >&2
 	exit 2
 	;;
 esac

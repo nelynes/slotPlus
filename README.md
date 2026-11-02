@@ -66,8 +66,6 @@ Has support for GBA, GBC, and GB titles only.
 
 A full user guide can be found at [slot-cfw.fyi](https://slot-cfw.fyi).
 
-Release notes can be found in the [changelog](CHANGELOG.md).
-
 ---
 
 # What does it look like?
@@ -103,6 +101,16 @@ Release notes can be found in the [changelog](CHANGELOG.md).
 
 If you have one of the untested devices, or have tried slot on a device not listed,
 please [open an issue on GitHub](https://github.com/BrandonKowalski/slot/issues) and let me know how it went.
+
+---
+
+# Discord Community
+
+slot has a [Discord server](https://discord.gg/NYRWsSuPUu) for questions, sharing setups, and talking about the project.
+
+It is open to everyone in the slot universe. That includes folks running or building forks of slot.
+
+There is no reason for this community to be fragmented so long as we are having fun!
 
 ---
 

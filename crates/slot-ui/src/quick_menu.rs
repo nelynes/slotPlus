@@ -1,9 +1,7 @@
 use crate::bitmaps::{button_legend, ButtonLegend};
 use crate::draw::{Canvas, Draw, TexId, OUT_H, OUT_W};
 use crate::icon::{Icon, WARNING_INK};
-use crate::plate::{
-    blit, centred_hints, word_face, word_ink, UndoFace, CAP_GAP, HINT_EDGE, HINT_H, LEGEND_GAP,
-};
+use crate::plate::{blit, word_face, word_ink, UndoFace, CAP_GAP, HINT_EDGE};
 use crate::power_menu::{MENU_H, MENU_INK, MENU_PAD, MENU_PX};
 use crate::slot_chrome::{opening, MOUTH_H};
 use crate::text;
@@ -107,6 +105,7 @@ pub enum QuickRow {
     ScSunlightDown,
     ScReset,
     LidOff,
+    FetchArt,
     Controls,
     ControlsShelf,
     ControlsInGame,
@@ -136,10 +135,15 @@ pub enum QuickRow {
     Blending,
     Guide,
     ScGuide,
+    Network,
+    WifiPower,
+    Networks,
+    CheckUpdates,
+    Server,
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 125] = [
+    pub const ALL: [QuickRow; 131] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -236,6 +240,7 @@ impl QuickRow {
         QuickRow::ScSunlightDown,
         QuickRow::ScReset,
         QuickRow::LidOff,
+        QuickRow::FetchArt,
         QuickRow::Controls,
         QuickRow::ControlsShelf,
         QuickRow::ControlsInGame,
@@ -265,13 +270,19 @@ impl QuickRow {
         QuickRow::Blending,
         QuickRow::Guide,
         QuickRow::ScGuide,
+        QuickRow::Network,
+        QuickRow::WifiPower,
+        QuickRow::Networks,
+        QuickRow::CheckUpdates,
+        QuickRow::Server,
     ];
 
-    pub const MAIN: [QuickRow; 5] = [
+    pub const MAIN: [QuickRow; 6] = [
         QuickRow::General,
         QuickRow::Screen,
         QuickRow::Game,
         QuickRow::Controls,
+        QuickRow::Network,
         QuickRow::About,
     ];
 
@@ -284,6 +295,14 @@ impl QuickRow {
         QuickRow::CartSlot,
         QuickRow::LidOff,
         QuickRow::DateTime,
+    ];
+
+    pub const NETWORK: [QuickRow; 5] = [
+        QuickRow::WifiPower,
+        QuickRow::Networks,
+        QuickRow::Server,
+        QuickRow::FetchArt,
+        QuickRow::CheckUpdates,
     ];
 
     pub const CONTROL_PAGES: [QuickRow; 3] = [
@@ -503,6 +522,11 @@ impl QuickRow {
             | QuickRow::ShowTitles
             | QuickRow::CartSlot
             | QuickRow::LidOff => &QuickRow::GENERAL,
+            QuickRow::WifiPower
+            | QuickRow::Networks
+            | QuickRow::CheckUpdates
+            | QuickRow::FetchArt
+            | QuickRow::Server => &QuickRow::NETWORK,
             QuickRow::ControlsShelf | QuickRow::Shortcuts | QuickRow::ControlsInGame => {
                 &QuickRow::CONTROL_PAGES
             }
@@ -551,6 +575,7 @@ impl QuickRow {
             QuickRow::GameUp => Some(QuickRow::ControlsInGame),
             QuickRow::ScSave => Some(QuickRow::Shortcuts),
             QuickRow::Theme => Some(QuickRow::General),
+            QuickRow::WifiPower => Some(QuickRow::Network),
             QuickRow::ControlsShelf => Some(QuickRow::Controls),
             QuickRow::ShelfPrev => Some(QuickRow::ControlsShelf),
             _ => None,
@@ -586,6 +611,7 @@ impl QuickRow {
             QuickRow::PlayControls => Some(QuickRow::CONTROLS[0]),
             QuickRow::Shortcuts => Some(QuickRow::SHORTCUTS[0]),
             QuickRow::General => Some(QuickRow::GENERAL[0]),
+            QuickRow::Network => Some(QuickRow::NETWORK[0]),
             QuickRow::Controls => Some(QuickRow::CONTROL_PAGES[0]),
             QuickRow::ControlsShelf => Some(QuickRow::SHELF_KEYS[0]),
             QuickRow::ControlsInGame => Some(QuickRow::CONTROLS[0]),
@@ -661,6 +687,12 @@ impl QuickRow {
             QuickRow::ExitGame => "Exit Game",
             QuickRow::General => "General",
             QuickRow::LidOff => "Lid Power Off",
+            QuickRow::FetchArt => "Fetch Missing Art",
+            QuickRow::Network => "Wireless",
+            QuickRow::WifiPower => "Wi-Fi",
+            QuickRow::Networks => "Network",
+            QuickRow::CheckUpdates => "Check for Updates",
+            QuickRow::Server => "Gamebit",
             QuickRow::Controls => "Controls",
             QuickRow::ControlsShelf => "Shelf",
             QuickRow::ControlsInGame => "In-Game",
@@ -745,6 +777,7 @@ impl QuickRow {
         matches!(
             self,
             QuickRow::DateTime
+                | QuickRow::FetchArt
                 | QuickRow::About
                 | QuickRow::Screen
                 | QuickRow::Game
@@ -775,6 +808,10 @@ impl QuickRow {
                 | QuickRow::ScreenTg16
                 | QuickRow::ScreenNds
                 | QuickRow::ScreenGeneral
+                | QuickRow::Network
+                | QuickRow::Networks
+                | QuickRow::CheckUpdates
+                | QuickRow::Server
         )
     }
 
@@ -1062,7 +1099,7 @@ pub const QUICK_PITCH: f32 = 52.0;
 pub const QUICK_EDGE: f32 = 32.0;
 pub const QUICK_LABEL_X: f32 = 53.0;
 pub const QUICK_VALUE_GAP: f32 = 24.0;
-const VALUE_MIN_SCALE: f32 = 0.6;
+pub(crate) const VALUE_MIN_SCALE: f32 = 0.6;
 pub(crate) const POINTER_GAP: f32 = 17.0;
 const POINTER_SCALE: usize = 3;
 const POINTER: [&str; 11] = [
@@ -1251,18 +1288,19 @@ pub fn quick_description_face(lines: &[&str]) -> UndoFace {
 }
 
 /// Cancel, Swap, Choose. Swap keeps the button before the word, the way the old arrows did.
-pub fn core_button_legends() -> Vec<UndoFace> {
+pub fn core_button_legends(ink: [u8; 3]) -> Vec<UndoFace> {
+    let hint = Some(ink);
     vec![
-        with_hint(button_face(ButtonLegend::B), "Cancel", None, true),
+        with_hint(button_face(ButtonLegend::B), "Cancel", hint, true),
         with_hint(
             button_pair(ButtonLegend::Left, ButtonLegend::Right),
             "Swap",
-            None,
+            hint,
             true,
         ),
-        with_hint(button_face(ButtonLegend::A), "Choose", None, false),
+        with_hint(button_face(ButtonLegend::A), "Choose", hint, false),
         // The Lynx rotation picker's chip goes any of four ways.
-        with_hint(four_way(), "Swap", None, true),
+        with_hint(four_way(), "Swap", hint, true),
     ]
 }
 
@@ -1306,12 +1344,83 @@ pub fn repair_legends(ink: [u8; 3]) -> [UndoFace; 2] {
     prompt_legends(ink, "Not now", "Repair")
 }
 
+pub fn update_legends(ink: [u8; 3]) -> [UndoFace; 3] {
+    let [cancel, install] = prompt_legends(ink, "Cancel", "Install");
+    [
+        cancel,
+        install,
+        with_hint(button_face(ButtonLegend::B), "Back", Some(ink), true),
+    ]
+}
+
 pub fn delete_legends(ink: [u8; 3]) -> [UndoFace; 2] {
     let hint = Some(ink);
     [
         with_hint(button_face(ButtonLegend::B), "Keep", hint, true),
         with_hint(button_face(ButtonLegend::X), "Delete", hint, false),
     ]
+}
+
+pub fn fetch_choice_legends(ink: [u8; 3]) -> [UndoFace; 2] {
+    let hint = Some(ink);
+    [
+        with_hint(button_face(ButtonLegend::B), "Cancel", hint, true),
+        with_hint(
+            button_pair(ButtonLegend::Left, ButtonLegend::Right),
+            "Pick",
+            hint,
+            false,
+        ),
+    ]
+}
+
+pub fn fetch_legends(ink: [u8; 3]) -> UndoFace {
+    with_hint(button_face(ButtonLegend::B), "Stop", Some(ink), true)
+}
+
+pub fn print_stop_legend(ink: [u8; 3]) -> UndoFace {
+    let (src, w, h) = button_legend(ButtonLegend::B);
+    let side = PRINT_STOP_BUTTON;
+    let rgba = crate::art::cover_rgba(src, w, h, side, side).unwrap_or_default();
+    let button = UndoFace {
+        rgba,
+        w: side,
+        h: side,
+    };
+    with_hint(button, "Stop", Some(ink), true)
+}
+
+pub fn fetch_skip_legend(ink: [u8; 3]) -> UndoFace {
+    with_hint(button_face(ButtonLegend::X), "Skip", Some(ink), false)
+}
+
+const PRINT_STOP_BUTTON: u32 = 24;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StudioGlyph {
+    A,
+    B,
+    X,
+    Y,
+    LeftRight,
+    UpDown,
+}
+
+pub fn studio_legend(
+    glyph: StudioGlyph,
+    word: &str,
+    ink: [u8; 3],
+    hint_on_right: bool,
+) -> UndoFace {
+    let button = match glyph {
+        StudioGlyph::A => button_face(ButtonLegend::A),
+        StudioGlyph::B => button_face(ButtonLegend::B),
+        StudioGlyph::X => button_face(ButtonLegend::X),
+        StudioGlyph::Y => button_face(ButtonLegend::Y),
+        StudioGlyph::LeftRight => button_pair(ButtonLegend::Left, ButtonLegend::Right),
+        StudioGlyph::UpDown => up_down_pair(),
+    };
+    with_hint(button, word, Some(ink), hint_on_right)
 }
 
 pub fn prompt_legends(ink: [u8; 3], no: &str, yes: &str) -> [UndoFace; 2] {
@@ -1545,6 +1654,7 @@ pub struct QuickMenu<'a> {
     pub values: [Option<QuickValue>; QuickRow::ALL.len()],
     pub clock: Option<[(TexId, u32, u32); 2]>,
     pub wallpaper: Option<[(TexId, u32, u32); 2]>,
+    pub networks: Option<[(TexId, u32, u32); 2]>,
     pub faces: Option<&'a QuickMenuFaces>,
     pub ground: Option<(TexId, u32)>,
     pub palette: Option<[(TexId, u32, u32); 2]>,
@@ -1558,8 +1668,6 @@ pub struct QuickMenu<'a> {
     pub bound: Option<&'a [Option<FacePair>]>,
     pub description: Option<(TexId, u32, u32)>,
     pub over_game: bool,
-    /// The carousel footer carries the legends, so the centred pair is not drawn.
-    pub footer_legends: bool,
     /// Where the sliding footer starts. The scrim stops there so it does not darken the strip.
     pub footer_top: f32,
     pub canvas: Canvas,
@@ -1623,6 +1731,7 @@ impl QuickMenu<'_> {
             let value = match row {
                 QuickRow::DateTime => self.clock.map(|c| c[lit as usize]),
                 QuickRow::Wallpaper => self.wallpaper.map(|c| c[lit as usize]),
+                QuickRow::Networks => self.networks.map(|c| c[lit as usize]),
                 QuickRow::Palette | QuickRow::GbPalette => self.palette.map(|c| c[lit as usize]),
                 QuickRow::GbaBezel => self.gba_bezel.map(|c| c[lit as usize]),
                 QuickRow::GbBezel => self.gb_bezel.map(|c| c[lit as usize]),
@@ -1680,18 +1789,6 @@ impl QuickMenu<'_> {
             let y = OUT_H as f32 - MOUTH_H - h as f32 - DESCRIPTION_GAP;
             push(out, tex, self.canvas.centred(w as f32), y, w, h);
         }
-        if self.over_game || self.footer_legends {
-            return;
-        }
-        let [back, change, open, resume, ..] = faces.legend;
-        let back = match self.row.page() == QuickRow::PLAY {
-            true => resume,
-            false => back,
-        };
-        let other = if self.row.opens() { open } else { change };
-        for (tex, w, x) in centred_hints(self.canvas, &[back, other], LEGEND_GAP) {
-            push(out, tex, x, LEGEND_Y, w, HINT_H);
-        }
     }
 }
 
@@ -1730,9 +1827,9 @@ pub const QUICK_VISIBLE: usize = 6;
 
 const PANEL_VISIBLE: usize = 3;
 
-const SCROLL_INSET: f32 = 12.0;
+pub(crate) const SCROLL_INSET: f32 = 12.0;
 
-const SCROLL_W: f32 = 4.0;
+pub(crate) const SCROLL_W: f32 = 4.0;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct QuickScroll {
@@ -1792,7 +1889,11 @@ pub fn quick_scroll(selected: QuickRow, hidden: &[QuickRow]) -> Option<QuickScro
 
 pub fn quick_row_top_at(row: QuickRow, selected: QuickRow, hidden: &[QuickRow]) -> f32 {
     let (start, len) = quick_window(selected, hidden);
-    let rows = QUICK_PITCH * len as f32;
+    let held = match row.page() == QuickRow::NETWORK {
+        true => QuickRow::NETWORK.len(),
+        false => len,
+    };
+    let rows = QUICK_PITCH * held as f32;
     let top = match row.page() == QuickRow::PLAY_SCREEN {
         true => OUT_H as f32 - MOUTH_H - PANEL_GAP - rows,
         false => (LEGEND_Y - rows) / 2.0,

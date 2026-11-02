@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.13.0-plus2.5](https://github.com/nelynes/slotPlus/releases/tag/v1.13.0-plus2.5)
+
+slotPlus brought up to Slot 1.13.0: Wi-Fi, updates over the air, Gamebit for managing the card from a browser, the on-device Cart Studio with art fetched over Wi-Fi, the clock set from network time, and a Shelf wallpaper. See [Slot's 1.13.0 notes](https://github.com/BrandonKowalski/slot/releases/tag/v1.13.0).
+
+To upgrade, replace the `System` folder on your card with the one from the zip. After this one, Network → Check for Updates can do it for you.
+
+- **Updates come from slotPlus.** Check for Updates looks at slotPlus's own releases, never Slot's, so it can't swap slotPlus for plain Slot, and slotPlus and slotPlusUltra each get their own download. BaseOS updates are offered as in Slot.
+- **Gamebit knows slotPlus's systems:** WonderSwan and Atari Lynx have their own pages for games, labels, bezels and saves, and the Lynx's page takes its `lynxboot.img` (slotPlusUltra adds Game Gear, NeoGeo Pocket, TurboGrafx-16 and Nintendo DS).
+- **Cart Studio on the handheld** works on slotPlus's carts too, with each cart's own label shape. Fetch Missing Art finds labels for the Game Boy family; slotPlus's other systems keep their labels from Cart Studio+ or your own PNGs.
+- The Shelf wallpaper works for slotPlus's shelves: name a wallpaper after the shelf, such as `ws.png` or `lynx.png`.
+
 ## [1.12.0-plus2.5](https://github.com/nelynes/slotPlus/releases/tag/v1.12.0-plus2.5)
 
 slotPlus brought up to Slot 1.12.0: game guides with an in-game viewer, a Reset Game shortcut, the Shimmerless shader, Saturation and Contrast, bezels made for one Scale, and Boktai's solar sensor on mGBA. See [Slot's 1.12.0 notes](https://github.com/BrandonKowalski/slot/releases/tag/v1.12.0).

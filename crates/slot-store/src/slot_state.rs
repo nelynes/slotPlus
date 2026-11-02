@@ -115,6 +115,7 @@ impl WallpaperTint {
 pub enum WallpaperPick {
     None,
     Random,
+    Shelf,
     #[default]
     Default,
     Blur,
@@ -126,6 +127,7 @@ impl WallpaperPick {
         match self {
             WallpaperPick::None => "none".to_string(),
             WallpaperPick::Random => "random".to_string(),
+            WallpaperPick::Shelf => "shelf".to_string(),
             WallpaperPick::Default => "default".to_string(),
             WallpaperPick::Blur => "default_blur".to_string(),
             WallpaperPick::File(name) => name.clone(),
@@ -136,6 +138,7 @@ impl WallpaperPick {
         match self {
             WallpaperPick::None => "None".to_string(),
             WallpaperPick::Random => "Random".to_string(),
+            WallpaperPick::Shelf => "Shelf".to_string(),
             WallpaperPick::Default => "Default".to_string(),
             WallpaperPick::Blur => "DEFAULT BLUR".to_string(),
             WallpaperPick::File(name) => name
@@ -150,6 +153,7 @@ impl WallpaperPick {
         match value {
             "none" => WallpaperPick::None,
             "random" => WallpaperPick::Random,
+            "shelf" => WallpaperPick::Shelf,
             "" | "default" => WallpaperPick::Default,
             "default_blur" => WallpaperPick::Blur,
             other => WallpaperPick::File(other.to_string()),
@@ -359,6 +363,7 @@ pub struct SlotState {
     pub clock_set: bool,
     pub zone: Zone,
     pub clock_24h: bool,
+    pub network_time: bool,
     pub rumble: bool,
     pub ff_speed: u8,
     pub ff_sound: bool,
@@ -388,6 +393,7 @@ pub struct SlotState {
     /// Each system with a cart slot of its own shows it on its shelf, in place
     /// of Slot's.
     pub bespoke_slot: bool,
+    pub wifi_off: bool,
     pub left_stick_dpad: bool,
     pub lid_off_min: Option<u8>,
     pub bezel_gba: BezelPick,
@@ -483,6 +489,7 @@ impl Shader {
         Shader::Dot,
         Shader::Shimmerless,
     ];
+    pub const GBA_3_2: [Shader; 4] = [Shader::Off, Shader::Lcd3x, Shader::Grid, Shader::Dot];
     /// The Game Boy and Game Boy Color list, Transparent among them.
     pub const GB: [Shader; 6] = [
         Shader::Off,
@@ -566,6 +573,7 @@ impl Default for SlotState {
             clock_set: false,
             zone: Zone::default(),
             clock_24h: true,
+            network_time: false,
             rumble: true,
             ff_speed: FF_SPEED_DEFAULT,
             ff_sound: false,
@@ -593,6 +601,7 @@ impl Default for SlotState {
             show_recents: false,
             show_titles: false,
             bespoke_slot: false,
+            wifi_off: false,
             left_stick_dpad: true,
             lid_off_min: None,
             bezel_gba: BezelPick::Ags102,
@@ -669,7 +678,7 @@ fn write_list(root: &Path, name: &str, list: &[Recent]) -> std::io::Result<()> {
 
 pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     let mut text = format!(
-        "cart={}\ncart_platform={}\nbrightness={}\nblue_light={}\nvolume={}\nvolume_hp={}\nmuted={}\nmuted_hp={}\nclock_set={}\nzone={}\nclock_24h={}\nrumble={}\nff_speed={}\nff_sound={}\ncolour_correction_gba={}\ncolour_correction_gb={}\nshader_gba={}\nshader_gb={}\neject_save={}\nturbo={}\nrewind={}\ngb_palettes={}\ngb_palette={}\nappearance={}\nwallpaper={}\n",
+        "cart={}\ncart_platform={}\nbrightness={}\nblue_light={}\nvolume={}\nvolume_hp={}\nmuted={}\nmuted_hp={}\nclock_set={}\nzone={}\nclock_24h={}\nnetwork_time={}\nrumble={}\nff_speed={}\nff_sound={}\ncolour_correction_gba={}\ncolour_correction_gb={}\nshader_gba={}\nshader_gb={}\neject_save={}\nturbo={}\nrewind={}\ngb_palettes={}\ngb_palette={}\nappearance={}\nwallpaper={}\n",
         s.cart.as_deref().unwrap_or(""),
         s.cart_platform.map_or(String::new(), platform_key),
         s.brightness,
@@ -681,6 +690,7 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
         s.clock_set as u8,
         s.zone.id(),
         s.clock_24h as u8,
+        s.network_time as u8,
         s.rumble as u8,
         ff_speed_text(s.ff_speed),
         s.ff_sound as u8,
@@ -713,6 +723,9 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     text.push_str(&format!("show_recents={}\n", s.show_recents as u8));
     text.push_str(&format!("show_titles={}\n", s.show_titles as u8));
     text.push_str(&format!("bespoke_slot={}\n", s.bespoke_slot as u8));
+    if s.wifi_off {
+        text.push_str("wifi_off=1\n");
+    }
     text.push_str(&format!("left_stick_dpad={}\n", s.left_stick_dpad as u8));
     text.push_str(&format!("auto_load={}\n", s.auto_load as u8));
     if let Some(min) = s.lid_off_min {
@@ -764,6 +777,7 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut utc_offset_min = None;
     let mut zone = None;
     let mut clock_24h = None;
+    let mut network_time = None;
     let mut rumble = None;
     let mut ff_speed = None;
     let mut ff_sound = None;
@@ -792,6 +806,7 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut show_recents = None;
     let mut show_titles = None;
     let mut bespoke_slot = None;
+    let mut wifi_off = None;
     let mut left_stick_dpad = None;
     let mut lid_off_min = None;
     let mut bezel_gba = None;
@@ -832,6 +847,7 @@ fn parse(text: &str) -> Option<SlotState> {
             "utc_offset_min" => utc_offset_min = Some(offset(value)?),
             "zone" => zone = Zone::parse(value),
             "clock_24h" => clock_24h = flag(value),
+            "network_time" => network_time = flag(value),
             "rumble" => rumble = flag(value),
             "ff_speed" => ff_speed = ff_speed_value(value),
             "ff_sound" => ff_sound = flag(value),
@@ -852,6 +868,7 @@ fn parse(text: &str) -> Option<SlotState> {
             "show_recents" => show_recents = flag(value),
             "show_titles" => show_titles = flag(value),
             "bespoke_slot" => bespoke_slot = flag(value),
+            "wifi_off" => wifi_off = flag(value),
             "left_stick_dpad" => left_stick_dpad = flag(value),
             "lid_off_min" => lid_off_min = value.parse().ok().filter(|m| LID_OFF_MIN.contains(m)),
             "bezel_gba" => bezel_gba = Some(BezelPick::parse(value)),
@@ -904,6 +921,7 @@ fn parse(text: &str) -> Option<SlotState> {
         clock_set: clock_set?,
         zone: zone.or_else(|| utc_offset_min.map(|m| Zone::for_offset(i64::from(m), now())))?,
         clock_24h: clock_24h.unwrap_or(fallback.clock_24h),
+        network_time: network_time.unwrap_or(fallback.network_time),
         rumble: rumble.unwrap_or(fallback.rumble),
         ff_speed: ff_speed.unwrap_or(fallback.ff_speed),
         ff_sound: ff_sound.unwrap_or(fallback.ff_sound),
@@ -949,6 +967,7 @@ fn parse(text: &str) -> Option<SlotState> {
         show_recents: show_recents.unwrap_or(fallback.show_recents),
         show_titles: show_titles.unwrap_or(fallback.show_titles),
         bespoke_slot: bespoke_slot.unwrap_or(fallback.bespoke_slot),
+        wifi_off: wifi_off.unwrap_or(fallback.wifi_off),
         left_stick_dpad: left_stick_dpad.unwrap_or(fallback.left_stick_dpad),
         lid_off_min,
         bezel_gba: bezel_gba.unwrap_or(fallback.bezel_gba),
