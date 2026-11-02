@@ -14,7 +14,7 @@ To upgrade, replace the `System` folder on your card with the one from the zip. 
 - **Updates come from slotPlus.** Check for Updates looks at slotPlus's own releases, never Slot's, so it can't swap slotPlus for plain Slot, and slotPlus and slotPlusUltra each get their own download. BaseOS updates are offered as in Slot.
 - **Gamebit knows slotPlus's systems:** WonderSwan and Atari Lynx have their own pages for games, labels, bezels and saves, and the Lynx's page takes its `lynxboot.img` (slotPlusUltra adds Game Gear, NeoGeo Pocket, TurboGrafx-16 and Nintendo DS).
 - **Cart Studio on the handheld** works on slotPlus's carts too, with each cart's own label shape. Fetch Missing Art finds labels for the Game Boy family; slotPlus's other systems keep their labels from Cart Studio+ or your own PNGs.
-- The Wi-Fi mark in the footer follows each shelf's ink, so it shows on the light WonderSwan and DS Lite slots.
+- The footer's Wi-Fi and sync marks, and the menu and keyboard legends, take each shelf's ink, so they show on the light WonderSwan and DS Lite Cart Slots.
 - The Shelf wallpaper works for slotPlus's shelves: name a wallpaper after the shelf, such as `ws.png` or `lynx.png`.
 
 ## [1.12.0-plus2.5](https://github.com/nelynes/slotPlus/releases/tag/v1.12.0-plus2.5)
