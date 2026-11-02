@@ -30,7 +30,11 @@ fn placed(s: &Shelf) -> Vec<(f32, f32)> {
             Draw::Tex { x, w, .. } => (x, w),
             Draw::Part { x, w, .. } => (x, w),
             Draw::Turned { x, w, .. } => (x, w),
-            Draw::Game | Draw::Shot { .. } | Draw::Capture => (0.0, OUT_W as f32),
+            Draw::Game
+            | Draw::Shot { .. }
+            | Draw::Capture
+            | Draw::Quad { .. }
+            | Draw::Paper { .. } => (0.0, OUT_W as f32),
         })
         .collect()
 }
@@ -41,7 +45,9 @@ fn xw(d: &Draw) -> (f32, f32) {
         | Draw::Tex { x, w, .. }
         | Draw::Part { x, w, .. }
         | Draw::Turned { x, w, .. } => (x, w),
-        Draw::Game | Draw::Shot { .. } | Draw::Capture => (0.0, OUT_W as f32),
+        Draw::Game | Draw::Shot { .. } | Draw::Capture | Draw::Quad { .. } | Draw::Paper { .. } => {
+            (0.0, OUT_W as f32)
+        }
     }
 }
 
@@ -710,7 +716,11 @@ fn cart_spans(out: &[Draw]) -> Vec<(f32, f32)> {
             | Draw::Tex { x, w, h, .. }
             | Draw::Part { x, w, h, .. }
             | Draw::Turned { x, w, h, .. } => (h > 60.0).then_some((x, x + w)),
-            Draw::Game | Draw::Shot { .. } | Draw::Capture => None,
+            Draw::Game
+            | Draw::Shot { .. }
+            | Draw::Capture
+            | Draw::Quad { .. }
+            | Draw::Paper { .. } => None,
         })
         .filter(|(x0, x1)| *x1 > 0.0 && *x0 < OUT_W as f32)
         .collect()
@@ -1247,34 +1257,34 @@ fn a_mixed_row_does_not_jump_when_the_selection_moves() {
 }
 
 #[test]
-fn only_a_starred_cart_wears_the_star_in_its_label_top_right_corner() {
-    let star = TexId::from_raw(9);
+fn only_a_hearted_cart_wears_the_heart_in_its_label_top_right_corner() {
+    let heart = TexId::from_raw(9);
     let mut s = shelf_with(3);
-    s.set_star(star, 22, 22);
-    s.mark_starred(|c| c.stem == "Game 1");
+    s.set_heart(heart, 22, 22);
+    s.mark_hearted(|c| c.stem == "Game 1");
     s.select(1);
     settle(&mut s);
     let mut out = Vec::new();
     s.draw_row(Canvas::FRAMED, None, 0.0, 0.0, 1.0, &mut out);
-    let stars: Vec<(f32, f32)> = out
+    let hearts: Vec<(f32, f32)> = out
         .iter()
         .filter_map(|d| match *d {
-            Draw::Tex { x, y, w, tex, .. } if tex == star => Some((x + w, y)),
+            Draw::Tex { x, y, w, tex, .. } if tex == heart => Some((x + w, y)),
             _ => None,
         })
         .collect();
-    assert_eq!(stars.len(), 1, "{out:?}");
-    let (right, top) = stars[0];
+    assert_eq!(hearts.len(), 1, "{out:?}");
+    let (right, top) = hearts[0];
     let x0 = 360.0 - CART_W as f32 / 2.0;
     let y0 = rest_y(CART_H as f32);
     let (lx, ly) = (x0 + LABEL_X as f32, y0 + LABEL_Y as f32);
     let label_right = lx + LABEL_W as f32;
     assert!(
         right <= label_right && right > label_right - 16.0,
-        "star right edge {right}, label right {label_right}"
+        "heart right edge {right}, label right {label_right}"
     );
     assert!(
         top >= ly && top < ly + 16.0,
-        "star top {top}, label top {ly}"
+        "heart top {top}, label top {ly}"
     );
 }

@@ -17,6 +17,8 @@ For the Game Boy systems, and everything else Slot does, see the [Slot user guid
 
 - **Shelf:** each system gets its own shelf. Its folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
 - **Label art:** optional PNGs go in `Labels/<folder>/<game name>.png`, named after the game's file without its extension. Each system's cart has its own label size, given below. Art of a different size is scaled to cover the label and cropped, except on HuCards, where it keeps its own shape (see the TurboGrafx-16).
+- **Wallpapers:** with Wallpaper set to Shelf, a wallpaper named after a shelf (`ws.png`, `lynx.png`, and in slotPlusUltra `gg.png`, `ngp.png`, `tg16.png`, `nds.png`) shows on that shelf.
+- **Wi-Fi and updates:** Network → Check for Updates offers slotPlus's own releases, the right one for slotPlus or slotPlusUltra. Gamebit, Slot's page for managing the card from a browser, lists every system here.
 - **Game guides:** Slot's guides work on every system. Put a `.txt` named after the game in `Guides/<folder>/`, and Guide shows up in the in-game menu.
 - **Controls:** the In-Game controls page in Settings covers every system, so any button can be moved. The tables below show where each one starts.
 - **Screen menu:** each system has its own page under Screen, with its own Shader and Bezel, beside General for Brightness and Blue Light. SELECT + B / A in a game steps through that system's shaders.

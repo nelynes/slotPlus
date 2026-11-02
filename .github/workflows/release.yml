@@ -43,15 +43,19 @@ jobs:
         with:
           ref: ${{ matrix.ref }}
 
-      - name: Install zip, cmake and Task
+      - name: Install zip, cmake, Task and Bun
         run: |
           set -eu
           sed -i '/bullseye-security/d' /etc/apt/sources.list
           apt-get -o Acquire::Check-Valid-Until=false update
-          apt-get install -y --no-install-recommends zip cmake
+          apt-get install -y --no-install-recommends zip unzip cmake
           curl -fsSL https://taskfile.dev/install.sh | sh -s -- -b /usr/local/bin
+          curl -fsSL https://bun.sh/install | BUN_INSTALL=/usr/local bash -s "bun-v1.2.6"
 
       - name: Build the tree
+        # The version slot reports, and compares with versions.json to offer an update.
+        env:
+          SLOT_VERSION: ${{ github.ref_name }}
         run: task dist:device OUT="slot-${GITHUB_REF_NAME}${{ matrix.suffix }}"
 
       - name: Check what is about to ship
@@ -105,6 +109,7 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      actions: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -158,3 +163,9 @@ jobs:
           NOTES
           gh release create "$tag" slot-plus.zip slot-plusultra.zip --repo "$GITHUB_REPOSITORY" \
             --title "$tag" --notes-file notes.md
+
+      # Republish the site so versions.json offers this release to cards over Wi-Fi.
+      - name: Publish versions.json with the site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main

@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 use std::thread::JoinHandle;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use slot_input::{Action, Btn, Chord, Contexts, Entry, Gestures, Millis, Mod, RawEvent};
 use slot_retro::{Rumble, WsLayout, HANDHELD_TURN_OPTION};
@@ -18,6 +18,7 @@ use crate::frames::FrameRef;
 use crate::input::Pad;
 use crate::persist;
 use crate::prefetch::Prefetch;
+use crate::print_scene::Cue;
 
 pub struct Session {
     root: PathBuf,
@@ -45,6 +46,7 @@ pub struct Session {
     /// How the handheld is held for the Lynx game playing, as the host is told.
     lynx_held: &'static str,
     sunlight_sent: Option<u8>,
+    buzz_ends: Option<Instant>,
 }
 
 impl Session {
@@ -76,6 +78,7 @@ impl Session {
             lynx_upright: false,
             lynx_held: "off",
             sunlight_sent: None,
+            buzz_ends: None,
         };
         // A game left running comes straight back. Its core loads on its own thread, so start it
         // now and let the card read overlap the rest of the boot. Waiting for the first update
@@ -95,6 +98,26 @@ impl Session {
         let mut samples = sfx.render(rate);
         crate::audio::volume::apply(&mut samples, self.app.output_volume());
         ring.mix(&samples);
+    }
+
+    fn play_print_cue(&mut self, cue: Cue) {
+        match cue {
+            Cue::Buzz => {
+                self.play_sfx(Sfx::PrintBuzz);
+                let left = Duration::from_secs_f32(Sfx::PrintBuzz.tail());
+                self.buzz_ends = Some(Instant::now() + left);
+            }
+            Cue::Tear => self.play_sfx(Sfx::Tear),
+            Cue::BuzzOff => {
+                if self
+                    .buzz_ends
+                    .take()
+                    .is_some_and(|end| Instant::now() < end)
+                {
+                    self.sink.ring().hush();
+                }
+            }
+        }
     }
 
     pub fn audio_queued(&self) -> usize {
@@ -192,6 +215,19 @@ impl Session {
         let latched = self.gestures.ff_latched();
         self.gestures.set_context(self.app.input_context());
         let mut entries = self.app.binding_table().entries();
+        if self.app.restart_chord() {
+            entries.insert(
+                0,
+                Entry {
+                    chord: Chord {
+                        modifier: Some(Mod::Select),
+                        button: Btn::Start,
+                    },
+                    action: Action::Restart,
+                    contexts: Contexts::ALL,
+                },
+            );
+        }
         if self.app.repair_offered() {
             let chord = Chord {
                 modifier: Some(Mod::Select),
@@ -400,6 +436,9 @@ impl Session {
         }
         if let Some(sfx) = self.app.take_sfx() {
             self.play_sfx(sfx);
+        }
+        for cue in self.app.take_print_cues() {
+            self.play_print_cue(cue);
         }
         self.sync_core();
         self.sync_reload();
