@@ -622,7 +622,11 @@ impl Drop for EmuHandle {
             }
             let _ = join.join();
         }
-        eprintln!("slot: emu: stopped at {:.1} ms", crate::boot_time::ms());
+        eprintln!(
+            "slot: emu: stopped at {:.1} ms{}",
+            crate::boot_time::ms(),
+            system_note()
+        );
     }
 }
 
@@ -1670,6 +1674,47 @@ struct CoreTrace {
 const SLOW_FRAME: Duration = Duration::from_millis(15);
 
 /// The CPU's clock now and at most, in MHz, for the trace.
+/// slotPlus: the hottest thermal zone, memory left and Slot's own size, and the load.
+fn system_note() -> String {
+    let mut out = String::new();
+    let hottest = (0..8)
+        .filter_map(|i| {
+            std::fs::read_to_string(format!("/sys/class/thermal/thermal_zone{i}/temp"))
+                .ok()?
+                .trim()
+                .parse::<i64>()
+                .ok()
+        })
+        .max();
+    if let Some(t) = hottest {
+        out.push_str(&format!(", {:.1} C", t as f64 / 1000.0));
+    }
+    let field = |text: &str, key: &str| -> Option<u64> {
+        text.lines()
+            .find(|l| l.starts_with(key))?
+            .split_whitespace()
+            .nth(1)?
+            .parse()
+            .ok()
+    };
+    if let Ok(mem) = std::fs::read_to_string("/proc/meminfo") {
+        if let Some(kb) = field(&mem, "MemAvailable:") {
+            out.push_str(&format!(", {} MB free", kb / 1024));
+        }
+    }
+    if let Ok(me) = std::fs::read_to_string("/proc/self/status") {
+        if let (Some(rss), Some(threads)) = (field(&me, "VmRSS:"), field(&me, "Threads:")) {
+            out.push_str(&format!(", slot {} MB in {threads} threads", rss / 1024));
+        }
+    }
+    if let Ok(load) = std::fs::read_to_string("/proc/loadavg") {
+        if let Some(one) = load.split_whitespace().next() {
+            out.push_str(&format!(", load {one}"));
+        }
+    }
+    out
+}
+
 fn cpu_mhz() -> Option<(u32, u32)> {
     let read = |f: &str| {
         std::fs::read_to_string(format!("/sys/devices/system/cpu/cpu0/cpufreq/{f}"))
@@ -1728,6 +1773,9 @@ impl CoreTrace {
             };
             let cpu =
                 cpu_mhz().map_or(String::new(), |(now, max)| format!(", cpu {now}/{max} MHz"));
+            // slotPlus: what else the handheld is doing, to tell heat, memory and other
+            // work apart when a game slows.
+            let cpu = format!("{cpu}{}", system_note());
             eprintln!(
                 "slot: core: {} frames in {:.1} s ({:.1} fps), mean {:.1} ms, slowest {:.1} ms, {} over 16.7 ms; {} skipped at {} ms, {} drawn at {} ms{cpu}",
                 self.frames,
