@@ -7,6 +7,7 @@ use crate::platform::Platform;
 use crate::zone::Zone;
 
 pub const BRIGHTNESS_MAX: u8 = 9;
+pub const DIM_MAX: u8 = 6;
 pub const BLUE_LIGHT_MAX: u8 = 9;
 pub const SATURATION_MAX: u8 = 9;
 pub const CONTRAST_MAX: u8 = 9;
@@ -301,6 +302,7 @@ impl Blending {
         match core {
             Core::Mgba => &Blending::MGBA,
             Core::Gpsp => &Blending::GPSP,
+            Core::Gambatte => &Blending::MGBA,
             // slotPlus's other cores have no frame blending of their own.
             _ => &[Blending::Off],
         }
@@ -341,6 +343,7 @@ pub struct SlotState {
     pub cart: Option<String>,
     pub cart_platform: Option<Platform>,
     pub brightness: u8,
+    pub dim: u8,
     pub blue_light: u8,
     pub saturation: u8,
     pub contrast: u8,
@@ -378,6 +381,7 @@ pub struct SlotState {
     /// of Slot's.
     pub bespoke_slot: bool,
     pub wifi_off: bool,
+    pub gb_core: Core,
     pub left_stick_dpad: bool,
     pub lid_off_min: Option<u8>,
     pub bezel_gba: BezelPick,
@@ -428,6 +432,11 @@ impl SlotState {
             },
         );
         self.recents.truncate(RECENTS_MAX);
+    }
+
+    pub fn forget(&mut self, platform: Platform, stem: &str) {
+        self.recents
+            .retain(|r| !(r.platform == platform && r.stem == stem));
     }
 
     pub fn is_favorite(&self, platform: Platform, stem: &str) -> bool {
@@ -533,6 +542,7 @@ impl Default for SlotState {
             cart: None,
             cart_platform: None,
             brightness: 5,
+            dim: 0,
             blue_light: 0,
             saturation: 0,
             contrast: 0,
@@ -568,6 +578,7 @@ impl Default for SlotState {
             show_titles: false,
             bespoke_slot: false,
             wifi_off: false,
+            gb_core: Core::Gambatte,
             left_stick_dpad: true,
             lid_off_min: None,
             bezel_gba: BezelPick::Ags102,
@@ -672,6 +683,7 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
         s.colour_correction_gbc as u8
     ));
     text.push_str(&format!("shader_gbc={}\n", s.shader_gbc.name()));
+    text.push_str(&format!("dim={}\n", s.dim));
     text.push_str(&format!("shader_ws={}\n", s.shader_ws.name()));
     text.push_str(&format!("shader_lynx={}\n", s.shader_lynx.name()));
     text.push_str(&format!("saturation={}\n", s.saturation));
@@ -683,6 +695,7 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     if s.wifi_off {
         text.push_str("wifi_off=1\n");
     }
+    text.push_str(&format!("gb_core={}\n", s.gb_core.as_str()));
     text.push_str(&format!("left_stick_dpad={}\n", s.left_stick_dpad as u8));
     text.push_str(&format!("auto_load={}\n", s.auto_load as u8));
     if let Some(min) = s.lid_off_min {
@@ -720,6 +733,7 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut cart_platform = None;
     let mut brightness = None;
     let mut blue_light = None;
+    let mut dim = None;
     let mut saturation = None;
     let mut contrast = None;
     let mut volume = None;
@@ -756,6 +770,7 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut show_titles = None;
     let mut bespoke_slot = None;
     let mut wifi_off = None;
+    let mut gb_core = None;
     let mut left_stick_dpad = None;
     let mut lid_off_min = None;
     let mut bezel_gba = None;
@@ -782,6 +797,7 @@ fn parse(text: &str) -> Option<SlotState> {
             "cart_platform" => cart_platform = platform_value(value),
             "brightness" => brightness = Some(level(value, BRIGHTNESS_MAX)?),
             "blue_light" => blue_light = Some(level(value, BLUE_LIGHT_MAX)?),
+            "dim" => dim = level(value, DIM_MAX),
             "saturation" => saturation = level(value, SATURATION_MAX),
             "contrast" => contrast = level(value, CONTRAST_MAX),
             "volume" => volume = Some(level(value, VOLUME_MAX)?),
@@ -814,6 +830,7 @@ fn parse(text: &str) -> Option<SlotState> {
             "show_titles" => show_titles = flag(value),
             "bespoke_slot" => bespoke_slot = flag(value),
             "wifi_off" => wifi_off = flag(value),
+            "gb_core" => gb_core = Core::parse(value).filter(|c| c.runs(Platform::Gb)),
             "left_stick_dpad" => left_stick_dpad = flag(value),
             "lid_off_min" => lid_off_min = value.parse().ok().filter(|m| LID_OFF_MIN.contains(m)),
             "bezel_gba" => bezel_gba = Some(BezelPick::parse(value)),
@@ -846,6 +863,7 @@ fn parse(text: &str) -> Option<SlotState> {
         cart: (!cart.is_empty()).then_some(cart),
         cart_platform,
         brightness: brightness?,
+        dim: dim.unwrap_or(fallback.dim),
         blue_light: blue_light?,
         saturation: saturation.unwrap_or(fallback.saturation),
         contrast: contrast.unwrap_or(fallback.contrast),
@@ -892,6 +910,7 @@ fn parse(text: &str) -> Option<SlotState> {
         show_titles: show_titles.unwrap_or(fallback.show_titles),
         bespoke_slot: bespoke_slot.unwrap_or(fallback.bespoke_slot),
         wifi_off: wifi_off.unwrap_or(fallback.wifi_off),
+        gb_core: gb_core.unwrap_or(Core::Mgba),
         left_stick_dpad: left_stick_dpad.unwrap_or(fallback.left_stick_dpad),
         lid_off_min,
         bezel_gba: bezel_gba.unwrap_or(fallback.bezel_gba),

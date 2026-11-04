@@ -33,19 +33,10 @@ pub const LABEL_Y: u32 = label_panel(CART_W, CART_H).1;
 pub const LABEL_W: u32 = label_panel(CART_W, CART_H).2 - LABEL_X;
 pub const LABEL_H: u32 = label_panel(CART_W, CART_H).3 - LABEL_Y;
 
-pub const fn gb_label_panel(w: u32, h: u32) -> (u32, u32, u32, u32) {
-    (
-        (w * 147 + 500) / 1000,
-        (h * 291 + 500) / 1000,
-        (w * 854 + 500) / 1000,
-        (h * 868 + 500) / 1000,
-    )
-}
-
-pub const GB_LABEL_X: u32 = gb_label_panel(GB_CART_W, GB_CART_H).0;
-pub const GB_LABEL_Y: u32 = gb_label_panel(GB_CART_W, GB_CART_H).1;
-pub const GB_LABEL_W: u32 = gb_label_panel(GB_CART_W, GB_CART_H).2 - GB_LABEL_X;
-pub const GB_LABEL_H: u32 = gb_label_panel(GB_CART_W, GB_CART_H).3 - GB_LABEL_Y;
+pub const GB_LABEL_X: u32 = 44;
+pub const GB_LABEL_Y: u32 = 95;
+pub const GB_LABEL_W: u32 = 223;
+pub const GB_LABEL_H: u32 = 199;
 
 /// The Game Boy Color pak's label box: exactly the flat label well drawn in
 /// `assets/gbc_neutral.png`, x 45..267, y 110..308 of 312x337. It is the same 223x199
@@ -148,6 +139,43 @@ pub fn mould_for(platform: Platform) -> Mould {
         Platform::Ws => Mould::Ws,
         Platform::Lynx => Mould::Lynx,
     }
+}
+
+pub fn folder_gb_shell(cart: &Cart) -> Option<GbShell> {
+    match cart.platform {
+        Platform::Gba | Platform::Gbav | Platform::Ws | Platform::Lynx => None,
+        Platform::Gb | Platform::Gbc => Some(match cart.shell.map(|c| c.outline) {
+            Some(Outline::Notched) => GbShell::Notched,
+            Some(Outline::Rounded) => GbShell::Rounded,
+            _ if cart.platform == Platform::Gbc => GbShell::Rounded,
+            _ => GbShell::Notched,
+        }),
+    }
+}
+
+pub fn folder_is_clear(cart: &Cart) -> bool {
+    cart.shell
+        .is_some_and(|c| c.finish != slot_store::ShellFinish::Solid)
+}
+
+pub fn shelf_shape(cart: &Cart) -> (Option<GbShell>, bool) {
+    let clear = |shell: Option<Shell>| match shell {
+        Some(s) => s.finish != Finish::Solid,
+        None => folder_is_clear(cart),
+    };
+    let shell = crate::shell::indexed_shell(cart);
+    let outline = cart.shell.map(|c| c.outline);
+    let shape = match (cart.platform, outline) {
+        (Platform::Gba | Platform::Gbav | Platform::Ws | Platform::Lynx, _) => None,
+        (_, Some(Outline::Notched)) => Some(GbShell::Notched),
+        (_, Some(Outline::Rounded)) => Some(GbShell::Rounded),
+        _ => match slot_store::header_index::peek_gb_header(&cart.rom).flatten() {
+            Some(h) if h.class() == Class::ColourOnly => Some(GbShell::Rounded),
+            Some(_) => Some(GbShell::Notched),
+            None => folder_gb_shell(cart),
+        },
+    };
+    (shape, clear(shell))
 }
 
 pub fn gb_shell_of(cart: &Cart) -> Option<GbShell> {
@@ -372,8 +400,12 @@ pub fn cart_backing(shell: Option<GbShell>) -> CartFace {
             h: BOARD_H,
         };
     };
+    gb_backing(bitmaps::gb_board(), shell)
+}
+
+pub fn gb_backing(board: &[u8], shell: GbShell) -> CartFace {
     let s = spec(Shape::Gb(shell));
-    let mut rgba = bitmaps::gb_board().to_vec();
+    let mut rgba = board.to_vec();
     for (px, cover) in rgba.chunks_exact_mut(4).zip(s.mask) {
         px[3] = ((px[3] as u32 * *cover as u32 + 127) / 255) as u8;
     }

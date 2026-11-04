@@ -60,6 +60,7 @@ pub enum QuickRow {
     ShelfPrev,
     ShelfNext,
     ShelfFavorite,
+    ShelfForget,
     PlayControls,
     Shortcuts,
     GameUp,
@@ -124,6 +125,7 @@ pub enum QuickRow {
     Guide,
     ScGuide,
     Network,
+    Wifi,
     WifiPower,
     Networks,
     CheckUpdates,
@@ -133,10 +135,19 @@ pub enum QuickRow {
     RaPassword,
     RaMode,
     RaEncore,
+    Romm,
+    RommProtocol,
+    RommServer,
+    RommPort,
+    RommSelfSigned,
+    RommPair,
+    RommStatus,
+    RommPairedServer,
+    RommDisconnect,
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 124] = [
+    pub const ALL: [QuickRow; 135] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -188,6 +199,7 @@ impl QuickRow {
         QuickRow::ShelfPrev,
         QuickRow::ShelfNext,
         QuickRow::ShelfFavorite,
+        QuickRow::ShelfForget,
         QuickRow::PlayControls,
         QuickRow::Shortcuts,
         QuickRow::GameUp,
@@ -252,6 +264,7 @@ impl QuickRow {
         QuickRow::Guide,
         QuickRow::ScGuide,
         QuickRow::Network,
+        QuickRow::Wifi,
         QuickRow::WifiPower,
         QuickRow::Networks,
         QuickRow::CheckUpdates,
@@ -261,6 +274,15 @@ impl QuickRow {
         QuickRow::RaPassword,
         QuickRow::RaMode,
         QuickRow::RaEncore,
+        QuickRow::Romm,
+        QuickRow::RommProtocol,
+        QuickRow::RommServer,
+        QuickRow::RommPort,
+        QuickRow::RommSelfSigned,
+        QuickRow::RommPair,
+        QuickRow::RommStatus,
+        QuickRow::RommPairedServer,
+        QuickRow::RommDisconnect,
     ];
 
     pub const MAIN: [QuickRow; 7] = [
@@ -282,7 +304,7 @@ impl QuickRow {
         QuickRow::RaEncore,
     ];
 
-    pub const GENERAL: [QuickRow; 8] = [
+    pub const GENERAL: [QuickRow; 9] = [
         QuickRow::Theme,
         QuickRow::Wallpaper,
         QuickRow::WallpaperTint,
@@ -291,14 +313,41 @@ impl QuickRow {
         QuickRow::CartSlot,
         QuickRow::LidOff,
         QuickRow::DateTime,
+        QuickRow::Wifi,
     ];
 
-    pub const NETWORK: [QuickRow; 5] = [
-        QuickRow::WifiPower,
-        QuickRow::Networks,
+    pub const WIFI: [QuickRow; 2] = [QuickRow::WifiPower, QuickRow::Networks];
+
+    pub const NETWORK: [QuickRow; 4] = [
         QuickRow::Server,
+        QuickRow::Romm,
         QuickRow::FetchArt,
         QuickRow::CheckUpdates,
+    ];
+
+    pub const ROMM: [QuickRow; 8] = [
+        QuickRow::RommProtocol,
+        QuickRow::RommServer,
+        QuickRow::RommPort,
+        QuickRow::RommSelfSigned,
+        QuickRow::RommPair,
+        QuickRow::RommStatus,
+        QuickRow::RommPairedServer,
+        QuickRow::RommDisconnect,
+    ];
+
+    pub const ROMM_SETUP: [QuickRow; 5] = [
+        QuickRow::RommProtocol,
+        QuickRow::RommServer,
+        QuickRow::RommPort,
+        QuickRow::RommSelfSigned,
+        QuickRow::RommPair,
+    ];
+
+    pub const ROMM_PAIRED: [QuickRow; 3] = [
+        QuickRow::RommStatus,
+        QuickRow::RommPairedServer,
+        QuickRow::RommDisconnect,
     ];
 
     pub const CONTROL_PAGES: [QuickRow; 3] = [
@@ -307,10 +356,11 @@ impl QuickRow {
         QuickRow::ControlsInGame,
     ];
 
-    pub const SHELF_KEYS: [QuickRow; 3] = [
+    pub const SHELF_KEYS: [QuickRow; 4] = [
         QuickRow::ShelfPrev,
         QuickRow::ShelfNext,
         QuickRow::ShelfFavorite,
+        QuickRow::ShelfForget,
     ];
 
     pub const CONTROLS: [QuickRow; 12] = [
@@ -497,15 +547,24 @@ impl QuickRow {
             | QuickRow::Recents
             | QuickRow::ShowTitles
             | QuickRow::CartSlot
-            | QuickRow::LidOff => &QuickRow::GENERAL,
-            QuickRow::WifiPower
-            | QuickRow::Networks
-            | QuickRow::CheckUpdates
+            | QuickRow::LidOff
+            | QuickRow::Wifi => &QuickRow::GENERAL,
+            QuickRow::WifiPower | QuickRow::Networks => &QuickRow::WIFI,
+            QuickRow::CheckUpdates
             | QuickRow::FetchArt
+            | QuickRow::Romm
             | QuickRow::Server => &QuickRow::NETWORK,
             QuickRow::RaUsername | QuickRow::RaPassword | QuickRow::RaMode | QuickRow::RaEncore => {
                 &QuickRow::ACHIEVEMENTS
             }
+            QuickRow::RommProtocol
+            | QuickRow::RommServer
+            | QuickRow::RommPort
+            | QuickRow::RommSelfSigned
+            | QuickRow::RommPair
+            | QuickRow::RommStatus
+            | QuickRow::RommPairedServer
+            | QuickRow::RommDisconnect => &QuickRow::ROMM,
             QuickRow::ControlsShelf | QuickRow::Shortcuts | QuickRow::ControlsInGame => {
                 &QuickRow::CONTROL_PAGES
             }
@@ -550,7 +609,9 @@ impl QuickRow {
             QuickRow::GameUp => Some(QuickRow::ControlsInGame),
             QuickRow::ScSave => Some(QuickRow::Shortcuts),
             QuickRow::Theme => Some(QuickRow::General),
-            QuickRow::WifiPower => Some(QuickRow::Network),
+            QuickRow::Server => Some(QuickRow::Network),
+            QuickRow::RommProtocol => Some(QuickRow::Romm),
+            QuickRow::WifiPower => Some(QuickRow::Wifi),
             QuickRow::RaUsername => Some(QuickRow::Achievements),
             QuickRow::ControlsShelf => Some(QuickRow::Controls),
             QuickRow::ShelfPrev => Some(QuickRow::ControlsShelf),
@@ -572,6 +633,7 @@ impl QuickRow {
             &QuickRow::PLAY,
             &QuickRow::SETTINGS,
             &QuickRow::SCREEN,
+            &QuickRow::NETWORK,
             &QuickRow::CONTROL_PAGES,
         ]
         .contains(&self.page())
@@ -589,6 +651,8 @@ impl QuickRow {
             QuickRow::General => Some(QuickRow::GENERAL[0]),
             QuickRow::Network => Some(QuickRow::NETWORK[0]),
             QuickRow::Achievements => Some(QuickRow::ACHIEVEMENTS[0]),
+            QuickRow::Romm => Some(QuickRow::ROMM[0]),
+            QuickRow::Wifi => Some(QuickRow::WIFI[0]),
             QuickRow::Controls => Some(QuickRow::CONTROL_PAGES[0]),
             QuickRow::ControlsShelf => Some(QuickRow::SHELF_KEYS[0]),
             QuickRow::ControlsInGame => Some(QuickRow::CONTROLS[0]),
@@ -661,8 +725,8 @@ impl QuickRow {
             QuickRow::General => "General",
             QuickRow::LidOff => "Lid Power Off",
             QuickRow::FetchArt => "Fetch Missing Art",
-            QuickRow::Network => "Wireless",
-            QuickRow::WifiPower => "Wi-Fi",
+            QuickRow::Network => "Tools",
+            QuickRow::Wifi | QuickRow::WifiPower => "Wi-Fi",
             QuickRow::Networks => "Network",
             QuickRow::Achievements => "RetroAchievements",
             QuickRow::RaUsername => "Username",
@@ -671,6 +735,14 @@ impl QuickRow {
             QuickRow::RaEncore => "Encore",
             QuickRow::CheckUpdates => "Check for Updates",
             QuickRow::Server => "Gamebit",
+            QuickRow::Romm => "RomM",
+            QuickRow::RommProtocol => "Protocol",
+            QuickRow::RommServer | QuickRow::RommPairedServer => "Server",
+            QuickRow::RommPort => "Port",
+            QuickRow::RommSelfSigned => "Accept Self-Signed",
+            QuickRow::RommPair => "Pair",
+            QuickRow::RommStatus => "Status",
+            QuickRow::RommDisconnect => "Disconnect",
             QuickRow::Controls => "Controls",
             QuickRow::ControlsShelf => "Shelf",
             QuickRow::ControlsInGame => "In-Game",
@@ -707,9 +779,10 @@ impl QuickRow {
             | QuickRow::ScSunlightDown
             | QuickRow::ScReset
             | QuickRow::ScGuide => self.shortcut().map_or("", Shortcut::label),
-            QuickRow::ShelfPrev | QuickRow::ShelfNext | QuickRow::ShelfFavorite => {
-                self.carousel_action().map_or("", CarouselAction::label)
-            }
+            QuickRow::ShelfPrev
+            | QuickRow::ShelfNext
+            | QuickRow::ShelfFavorite
+            | QuickRow::ShelfForget => self.carousel_action().map_or("", CarouselAction::label),
             QuickRow::PlayScreen => "Screen",
             QuickRow::PlayGameplay => "Gameplay",
             QuickRow::Shader => "Shader",
@@ -771,12 +844,18 @@ impl QuickRow {
                 | QuickRow::ScreenLynx
                 | QuickRow::ScreenGeneral
                 | QuickRow::Network
+                | QuickRow::Wifi
                 | QuickRow::Networks
                 | QuickRow::CheckUpdates
                 | QuickRow::Server
                 | QuickRow::Achievements
                 | QuickRow::RaUsername
                 | QuickRow::RaPassword
+                | QuickRow::Romm
+                | QuickRow::RommServer
+                | QuickRow::RommPort
+                | QuickRow::RommPair
+                | QuickRow::RommDisconnect
         )
     }
 
@@ -828,6 +907,7 @@ impl QuickRow {
             QuickRow::ShelfPrev => CarouselAction::PreviousShelf,
             QuickRow::ShelfNext => CarouselAction::NextShelf,
             QuickRow::ShelfFavorite => CarouselAction::Favorite,
+            QuickRow::ShelfForget => CarouselAction::ForgetRecent,
             _ => return None,
         })
     }
@@ -889,6 +969,12 @@ pub enum QuickValue {
     Level9,
     SlotDefault,
     SlotBespoke,
+    Level10,
+    Level11,
+    Level12,
+    Level13,
+    Level14,
+    Level15,
     SpFrame,
     Integer,
     Fit,
@@ -896,10 +982,12 @@ pub enum QuickValue {
     FullScreen,
     Mix,
     Ghosting,
+    Https,
+    Http,
 }
 
 impl QuickValue {
-    pub const ALL: [QuickValue; 45] = [
+    pub const ALL: [QuickValue; 53] = [
         QuickValue::Speed1_5,
         QuickValue::Speed2,
         QuickValue::Speed3,
@@ -938,6 +1026,12 @@ impl QuickValue {
         QuickValue::Level9,
         QuickValue::SlotDefault,
         QuickValue::SlotBespoke,
+        QuickValue::Level10,
+        QuickValue::Level11,
+        QuickValue::Level12,
+        QuickValue::Level13,
+        QuickValue::Level14,
+        QuickValue::Level15,
         QuickValue::SpFrame,
         QuickValue::Integer,
         QuickValue::Fit,
@@ -945,9 +1039,11 @@ impl QuickValue {
         QuickValue::FullScreen,
         QuickValue::Mix,
         QuickValue::Ghosting,
+        QuickValue::Https,
+        QuickValue::Http,
     ];
 
-    pub const LEVELS: [QuickValue; 10] = [
+    pub const LEVELS: [QuickValue; 16] = [
         QuickValue::Level0,
         QuickValue::Level1,
         QuickValue::Level2,
@@ -958,6 +1054,12 @@ impl QuickValue {
         QuickValue::Level7,
         QuickValue::Level8,
         QuickValue::Level9,
+        QuickValue::Level10,
+        QuickValue::Level11,
+        QuickValue::Level12,
+        QuickValue::Level13,
+        QuickValue::Level14,
+        QuickValue::Level15,
     ];
 
     pub const LID_OFF: [QuickValue; 6] = [
@@ -1013,6 +1115,12 @@ impl QuickValue {
             QuickValue::Level9 => "9",
             QuickValue::SlotDefault => "Default",
             QuickValue::SlotBespoke => "Bespoke",
+            QuickValue::Level10 => "10",
+            QuickValue::Level11 => "11",
+            QuickValue::Level12 => "12",
+            QuickValue::Level13 => "13",
+            QuickValue::Level14 => "14",
+            QuickValue::Level15 => "15",
             QuickValue::SpFrame => "SP Screen",
             QuickValue::Integer => "Integer",
             QuickValue::Fit => "Fit",
@@ -1020,6 +1128,8 @@ impl QuickValue {
             QuickValue::FullScreen => "Full Screen",
             QuickValue::Mix => "Mix",
             QuickValue::Ghosting => "Ghosting",
+            QuickValue::Https => "HTTPS",
+            QuickValue::Http => "HTTP",
         }
     }
 
@@ -1622,6 +1732,7 @@ pub struct QuickMenu<'a> {
     pub networks: Option<[(TexId, u32, u32); 2]>,
     /// slotPlus: the RetroAchievements page's Username, Password and Cheevo Mode values.
     pub achievements: [Option<[(TexId, u32, u32); 2]>; 3],
+    pub romm: [Option<[(TexId, u32, u32); 2]>; 4],
     pub faces: Option<&'a QuickMenuFaces>,
     pub ground: Option<(TexId, u32)>,
     pub palette: Option<[(TexId, u32, u32); 2]>,
@@ -1695,7 +1806,13 @@ impl QuickMenu<'_> {
             let value = match row {
                 QuickRow::DateTime => self.clock.map(|c| c[lit as usize]),
                 QuickRow::Wallpaper => self.wallpaper.map(|c| c[lit as usize]),
-                QuickRow::Networks => self.networks.map(|c| c[lit as usize]),
+                QuickRow::Wifi | QuickRow::Networks => self.networks.map(|c| c[lit as usize]),
+                QuickRow::Romm => self.romm[0].map(|c| c[lit as usize]),
+                QuickRow::RommServer | QuickRow::RommPairedServer => {
+                    self.romm[1].map(|c| c[lit as usize])
+                }
+                QuickRow::RommPort => self.romm[2].map(|c| c[lit as usize]),
+                QuickRow::RommStatus => self.romm[3].map(|c| c[lit as usize]),
                 QuickRow::RaUsername => self.achievements[0].map(|c| c[lit as usize]),
                 QuickRow::RaPassword => self.achievements[1].map(|c| c[lit as usize]),
                 // Casual is the only mode, so its value stays dim even when lit.
@@ -1849,8 +1966,8 @@ pub fn quick_scroll(selected: QuickRow, hidden: &[QuickRow]) -> Option<QuickScro
 
 pub fn quick_row_top_at(row: QuickRow, selected: QuickRow, hidden: &[QuickRow]) -> f32 {
     let (start, len) = quick_window(selected, hidden);
-    let held = match row.page() == QuickRow::NETWORK {
-        true => QuickRow::NETWORK.len(),
+    let held = match row.page() == QuickRow::WIFI {
+        true => QuickRow::WIFI.len(),
         false => len,
     };
     let rows = QUICK_PITCH * held as f32;

@@ -64,6 +64,7 @@ jobs:
           out="slot-${GITHUB_REF_NAME}${{ matrix.suffix }}"
           test -x "$out/System/slot"
           file "$out/System/slot" | grep -q aarch64
+          test -f "$out/System/gambatte_libretro.so"
           # Every core in the tree is built for the device...
           for so in "$out"/System/*_libretro.so; do
             file "$so" | grep -q aarch64
