@@ -99,6 +99,7 @@ impl Index {
             .collect();
         let states = Core::ALL
             .iter()
+            .filter(|c| c.runs(platform))
             .map(|c| {
                 let dirs = at(root, &["States", tag, c.as_str()])
                     .ok()
@@ -135,6 +136,7 @@ impl Index {
 fn resume_cores(root: &Path, cart: &Cart) -> Vec<&'static str> {
     Core::ALL
         .iter()
+        .filter(|c| c.runs(cart.platform))
         .filter(|c| StateRing::new(root, cart.platform, **c, &cart.stem).has_resume())
         .map(|c| c.text())
         .collect()
@@ -376,6 +378,7 @@ fn delete(root: &Path, index: &Index, cart: &Cart, req: &Request) -> Reply {
     if fs::remove_file(&rom).is_err() {
         return Reply::error(500, "delete failed");
     }
+    forget_gift(root, cart.platform, &cart.stem, None);
     if purge {
         for path in extras {
             let _ = fs::remove_file(path);
@@ -387,6 +390,17 @@ fn delete(root: &Path, index: &Index, cart: &Cart, req: &Request) -> Reply {
         super::carts::forget(root, cart.platform, &cart.stem);
     }
     ok()
+}
+
+fn forget_gift(root: &Path, platform: Platform, stem: &str, to: Option<&str>) {
+    if !root.join(crate::romm::GIFTS).is_file() {
+        return;
+    }
+    let mut gifts = crate::romm::Gifts::load(root);
+    match to {
+        Some(new) => gifts.rename(root, platform, stem, new),
+        None => gifts.remove(root, platform, stem),
+    }
 }
 
 fn new_rom_name(cart: &Cart, name: &str) -> Result<String, Refused> {
@@ -478,6 +492,7 @@ fn rename(root: &Path, index: &Index, cart: &Cart, name: &str) -> Result<(), Ref
         _ => None,
     };
     refs::carry(root, cart.platform, &cart.stem, &new_stem, guide_move);
+    forget_gift(root, cart.platform, &cart.stem, Some(&new_stem));
     super::carts::forget(root, cart.platform, &cart.stem);
     Ok(())
 }

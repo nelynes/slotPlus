@@ -59,7 +59,7 @@ impl Session {
 
     pub fn boot_with(root: PathBuf, sink: Box<dyn AudioSink>) -> Self {
         let mut session = Session {
-            achievements: slot_achievements::Service::start(root.clone()),
+            achievements: crate::achievement_service(&root),
             wifi_up: false,
             app: App::boot(&root),
             root,
@@ -425,7 +425,7 @@ impl Session {
         if self.app.take_achievements_changed() {
             // The account or Encore changed in Settings: start again with the new file.
             // Unlocks are already on the card, so nothing is lost.
-            self.achievements = slot_achievements::Service::start(self.root.clone());
+            self.achievements = crate::achievement_service(&self.root);
         }
         self.sink.hold_open(self.app.headphones());
         if let Some(emu) = &self.emu {
@@ -443,7 +443,9 @@ impl Session {
         let mut recoloured = false;
         if let Some(p) = self.app.take_gb_colors() {
             if let Some(emu) = &self.emu {
-                emu.set_option("mgba_gb_colors", p.core_name());
+                for (key, value) in crate::core::palette_options(self.app.core(), p) {
+                    emu.set_option(key, value);
+                }
                 recoloured = true;
             }
         }
@@ -658,7 +660,11 @@ impl Session {
             Some(CoreState::Loading) => {}
             Some(CoreState::Ready) => {
                 if let (true, Some(emu)) = (self.app.palette_live(), &self.emu) {
-                    emu.set_option("mgba_gb_colors", self.app.gb_colors().core_name());
+                    for (key, value) in
+                        crate::core::palette_options(self.app.core(), self.app.gb_colors())
+                    {
+                        emu.set_option(key, value);
+                    }
                 }
                 self.app.on_core_ready()
             }
@@ -678,7 +684,7 @@ impl Session {
         else {
             return;
         };
-        let core = slot_store::core_for_platform(&self.root, stem, platform);
+        let core = slot_store::core_for_platform(&self.root, stem, platform, self.app.gb_core());
         launch(&format!("opening {stem} on {}", core.as_str()));
         self.app.set_core(core);
         self.app.set_platform(platform);
@@ -748,10 +754,12 @@ impl Session {
         let resume = self.app.card_read("resume", loaded.resume);
         let (sav_unread, resume_unread) = (sav.is_none(), resume.is_none());
         // Tracked only for the Game Boy family, and never over a link cable.
-        let tracked = matches!(
-            loaded.platform,
-            Platform::Gb | Platform::Gbc | Platform::Gba
-        ) && loaded.player.is_none();
+        let tracked = crate::ACHIEVEMENTS
+            && matches!(
+                loaded.platform,
+                Platform::Gb | Platform::Gbc | Platform::Gba
+            )
+            && loaded.player.is_none();
         let core = if tracked {
             self.achievements.wrap(loaded.opened.core)
         } else {

@@ -122,7 +122,7 @@ fn open_named(
         if !path.exists() {
             continue;
         }
-        match LibretroCore::open_with(path, &bios, &saves) {
+        match LibretroCore::open_preset(path, &bios, &saves, init_options(core)) {
             Ok(mut opened) => {
                 apply_core_options(
                     &mut opened,
@@ -202,6 +202,16 @@ pub fn colour_option(
             "gpsp_color_correction",
             if on { "enabled" } else { "disabled" },
         )),
+        Core::Gambatte => Some((
+            "gambatte_gbc_color_correction",
+            if !on {
+                "disabled"
+            } else if platform == Platform::Gb {
+                "always"
+            } else {
+                "GBC only"
+            },
+        )),
     }
 }
 
@@ -236,6 +246,9 @@ pub fn blend_option(which: Core, blending: Blending) -> Option<(&'static str, &'
         (Core::Mgba, Blending::Ghosting) => ("mgba_interframe_blending", "lcd_ghosting"),
         (Core::Gpsp, Blending::Off) => ("gpsp_frame_mixing", "disabled"),
         (Core::Gpsp, Blending::Mix | Blending::Ghosting) => ("gpsp_frame_mixing", "enabled"),
+        (Core::Gambatte, Blending::Off) => ("gambatte_mix_frames", "disabled"),
+        (Core::Gambatte, Blending::Mix) => ("gambatte_mix_frames", "mix"),
+        (Core::Gambatte, Blending::Ghosting) => ("gambatte_mix_frames", "lcd_ghosting"),
         _ => return None,
     })
 }
@@ -267,7 +280,7 @@ pub fn option_prefix(which: Core) -> &'static str {
 /// Whether the core has a `<prefix>_frameskip` option to set. Beetle Lynx
 /// does not: it is cheap to run and has no frameskip setting.
 fn has_frameskip(which: Core) -> bool {
-    !matches!(which, Core::Lynx | Core::Pokemini)
+    !matches!(which, Core::Lynx | Core::Gambatte | Core::Pokemini)
 }
 
 pub const LYNX_ROTATION_FILE: &str = "Config/lynx_rotation.txt";
@@ -330,6 +343,24 @@ pub fn lynx_select_toggles(turn: &str) -> bool {
     turn != "manual"
 }
 
+pub fn palette_options(which: Core, colors: GbColors) -> Vec<(&'static str, &'static str)> {
+    match (which, colors) {
+        (Core::Gambatte, GbColors::Palette(p)) => vec![
+            ("gambatte_gb_colorization", "internal"),
+            ("gambatte_gb_internal_palette", p.gambatte_name()),
+        ],
+        (Core::Gambatte, GbColors::Auto) => vec![("gambatte_gb_colorization", "GBC")],
+        _ => vec![("mgba_gb_colors", colors.core_name())],
+    }
+}
+
+fn init_options(core: Core) -> &'static [(&'static str, &'static str)] {
+    match core {
+        Core::Gambatte => &[("gambatte_gb_bootloader", "enabled")],
+        _ => &[],
+    }
+}
+
 pub fn apply_core_options(
     core: &mut LibretroCore,
     which: Core,
@@ -384,6 +415,15 @@ pub fn apply_core_options(
         // The handheld's motor does the shaking, so the picture stays still.
         core.set_option("pokemini_screen_shake_lv", "0");
         core.set_option("pokemini_rumble_lv", "10");
+    }
+    if which == Core::Gambatte {
+        core.set_option("gambatte_gb_hwmode", "Auto");
+        for (key, value) in palette_options(which, palette.unwrap_or(GbColors::Auto)) {
+            core.set_option(key, value);
+        }
+        if let Some((key, value)) = colour_option(which, platform, colour) {
+            core.set_option(key, value);
+        }
     }
     if which == Core::Gpsp {
         core.set_option("gpsp_serial", serial);
@@ -483,6 +523,56 @@ mod tests {
         // not know is dropped without a word.
         assert_eq!(option_prefix(Core::Cygne), "wswan");
         assert_eq!(option_prefix(Core::Lynx), "lynx");
+    }
+
+    #[test]
+    fn palette_options_are_spelled_per_core() {
+        let p = slot_store::GbPalette::parse("SGB 1-A").unwrap();
+        assert_eq!(
+            palette_options(Core::Mgba, GbColors::Palette(p)),
+            vec![("mgba_gb_colors", "SGB 1-A")]
+        );
+        assert_eq!(
+            palette_options(Core::Mgba, GbColors::Auto),
+            vec![("mgba_gb_colors", "Auto")]
+        );
+        assert_eq!(
+            palette_options(Core::Gambatte, GbColors::Palette(p)),
+            vec![
+                ("gambatte_gb_colorization", "internal"),
+                ("gambatte_gb_internal_palette", "SGB - 1A")
+            ]
+        );
+        assert_eq!(
+            palette_options(Core::Gambatte, GbColors::Auto),
+            vec![("gambatte_gb_colorization", "GBC")]
+        );
+    }
+
+    #[test]
+    fn gambatte_spells_blending_and_color_correction() {
+        for (blending, want) in [
+            (Blending::Off, "disabled"),
+            (Blending::Mix, "mix"),
+            (Blending::Ghosting, "lcd_ghosting"),
+        ] {
+            assert_eq!(
+                blend_option(Core::Gambatte, blending),
+                Some(("gambatte_mix_frames", want))
+            );
+        }
+        assert_eq!(
+            colour_option(Core::Gambatte, Platform::Gbc, true),
+            Some(("gambatte_gbc_color_correction", "GBC only"))
+        );
+        assert_eq!(
+            colour_option(Core::Gambatte, Platform::Gb, true),
+            Some(("gambatte_gbc_color_correction", "always"))
+        );
+        assert_eq!(
+            colour_option(Core::Gambatte, Platform::Gb, false),
+            Some(("gambatte_gbc_color_correction", "disabled"))
+        );
     }
 
     #[test]

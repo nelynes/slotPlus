@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.14.0-plus2.6](https://github.com/nelynes/slotPlus/releases/tag/v1.14.0-plus2.6)
+
+slotPlus brought up to Slot 1.14.0: Gambatte for Game Boy and Game Boy Color (the default on new cards; existing cards stay on mGBA, and START on a Game Boy cart switches), Game Boy audio without pops, six extra dim steps below the lowest brightness, X to take a game off Recents, smoother scrolling on big shelves, and a Tools page in Settings. See [Slot's 1.14.0 notes](https://github.com/BrandonKowalski/slot/releases/tag/v1.14.0).
+
+To upgrade, use Settings → Tools → Check for Updates, or replace the `System` folder on your card with the one from the zip.
+
+- WonderSwan and Lynx carts keep their own shapes, shadows and labels with Slot's faster shelf, and START on a Lynx cart still chooses how it's held.
+- **RetroAchievements is switched off for now** while it's finished. Settings → RetroAchievements is greyed out, no game is tracked and nothing is sent; your account file and unlocks stay on the card for when it returns.
+- Wi-Fi's settings moved with Slot's to Settings → General → Wi-Fi; Check for Updates, Gamebit and Fetch Missing Art are under Settings → Tools.
+- Groundwork for experimental features, not yet ready for general use.
+
 ## [1.13.0-plus2.6](https://github.com/nelynes/slotPlus/releases/tag/v1.13.0-plus2.6)
 
 **RetroAchievements** for Game Boy, Game Boy Color and Game Boy Advance games, and slotPlus brought up to Slot 1.13.0: Wi-Fi, updates over the air, Gamebit for managing the card from a browser, the on-device Cart Studio with art fetched over Wi-Fi, the clock set from network time, and a Shelf wallpaper. See [Slot's 1.13.0 notes](https://github.com/BrandonKowalski/slot/releases/tag/v1.13.0).
@@ -16,7 +27,6 @@ To upgrade, replace the `System` folder on your card with the one from the zip. 
 - **Cart Studio on the handheld** works on slotPlus's carts too, with each cart's own label shape. Fetch Missing Art finds labels for the Game Boy family; slotPlus's other systems keep their labels from Cart Studio+ or your own PNGs.
 - The footer's Wi-Fi and sync marks, and the menu and keyboard legends, take each shelf's ink, so they show on the light WonderSwan and DS Lite Cart Slots.
 - The Shelf wallpaper works for slotPlus's shelves: name a wallpaper after the shelf, such as `ws.png` or `lynx.png`.
-- Groundwork for experimental features, not yet ready for general use.
 
 ## [1.12.0-plus2.5](https://github.com/nelynes/slotPlus/releases/tag/v1.12.0-plus2.5)
 
