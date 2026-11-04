@@ -2371,6 +2371,14 @@ impl App {
         self.quick_achievement_faces = faces;
     }
 
+    /// slotPlus: menu rows shown greyed out, reached but not opened.
+    pub fn disabled_rows(&self) -> &'static [QuickRow] {
+        match crate::ACHIEVEMENTS {
+            true => &[],
+            false => &[QuickRow::Achievements],
+        }
+    }
+
     /// Settings changed the RetroAchievements file since last asked.
     pub fn take_achievements_changed(&mut self) -> bool {
         std::mem::take(&mut self.achievements_changed)
@@ -4035,6 +4043,8 @@ impl App {
             }
             QuickRow::WifiPower => self.set_wifi_off(!self.state.wifi_off),
             QuickRow::Networks => self.open_networks(),
+            // Greyed out while RetroAchievements is switched off in this build.
+            QuickRow::Achievements if !crate::ACHIEVEMENTS => {}
             QuickRow::Achievements => {
                 self.achievement_settings = self.read_achievement_settings();
                 self.phase = Phase::QuickMenu {
@@ -5598,6 +5608,7 @@ impl App {
             Phase::QuickMenu { row } => QuickMenu {
                 row: *row,
                 hidden: &self.hidden_rows(),
+                disabled: self.disabled_rows(),
                 // Controls are the same for every game, so from the shelf the
                 // turbo rows keep their own names.
                 ws_buttons: false,
@@ -5795,6 +5806,7 @@ impl App {
                 bound: Some(&bound),
                 description: self.description(row),
                 hidden: &hidden,
+                disabled: &[],
                 ws_buttons: self.ws_buttons(),
                 values: QuickRow::ALL.map(|r| self.quick_value(r)),
                 achievements: [None; 3],
@@ -6021,8 +6033,9 @@ impl App {
             false => back,
         };
         self.draw_side_legend(left, false, y, out);
-        // Cheevo Mode has only Casual, so there is nothing to change.
-        if row == QuickRow::RaMode {
+        // Cheevo Mode has only Casual, so there is nothing to change; a greyed-out row
+        // has nothing to open.
+        if row == QuickRow::RaMode || self.disabled_rows().contains(&row) {
             return;
         }
         let right = if row.opens() { open } else { change };

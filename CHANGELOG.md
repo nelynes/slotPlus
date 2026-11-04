@@ -7,7 +7,7 @@ slotPlus brought up to Slot 1.14.0: Gambatte for Game Boy and Game Boy Color (th
 To upgrade, use Settings → Tools → Check for Updates, or replace the `System` folder on your card with the one from the zip.
 
 - WonderSwan and Lynx carts keep their own shapes, shadows and labels with Slot's faster shelf, and START on a Lynx cart still chooses how it's held.
-- RetroAchievements now tracks Game Boy games on Gambatte as well as mGBA.
+- **RetroAchievements is switched off for now** while it's finished. Settings → RetroAchievements is greyed out, no game is tracked and nothing is sent; your account file and unlocks stay on the card for when it returns.
 - Wi-Fi's settings moved with Slot's to Settings → General → Wi-Fi; Check for Updates, Gamebit and Fetch Missing Art are under Settings → Tools.
 
 ## [1.13.0-plus2.6](https://github.com/nelynes/slotPlus/releases/tag/v1.13.0-plus2.6)

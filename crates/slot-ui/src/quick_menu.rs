@@ -1724,6 +1724,8 @@ pub struct QuickMenuFaces {
 pub struct QuickMenu<'a> {
     pub row: QuickRow,
     pub hidden: &'a [QuickRow],
+    /// slotPlus: rows shown greyed out, which can be reached but not opened.
+    pub disabled: &'a [QuickRow],
     /// A WonderSwan game is playing, so the turbo rows are named X and Y.
     pub ws_buttons: bool,
     pub values: [Option<QuickValue>; QuickRow::ALL.len()],
@@ -1789,14 +1791,23 @@ impl QuickMenu<'_> {
         for row in shown.into_iter().skip(start).take(len) {
             let y = quick_row_top_at(row, self.row, self.hidden) + TYPE_DROP;
             let lit = row == self.row;
+            // slotPlus: a greyed-out row keeps its dim face, faded, even under the pointer.
+            let greyed = self.disabled.contains(&row);
             let mut label_end = QUICK_LABEL_X;
-            if let Some(&(tex, w, h)) = label(row).map(|l| &l[lit as usize]) {
+            if let Some(&(tex, w, h)) = label(row).map(|l| &l[(lit && !greyed) as usize]) {
                 let x = match row.centred() {
                     true => self.canvas.centred(main_w as f32),
                     false => QUICK_LABEL_X - pad,
                 };
                 label_end = x + w as f32 - pad;
-                push(out, tex, x, y, w, h);
+                out.push(Draw::Tex {
+                    x: x.round(),
+                    y: y.round(),
+                    w: w as f32,
+                    h: h as f32,
+                    tex,
+                    alpha: if greyed { GREYED_ALPHA } else { 1.0 },
+                });
                 if lit {
                     let (tex, pw, ph) = faces.pointer;
                     let px = x + pad - POINTER_GAP - pw as f32;
@@ -1901,6 +1912,9 @@ pub fn draw_menu_ground(canvas: Canvas, ground: Option<(TexId, u32)>, out: &mut 
         }),
     }
 }
+
+/// slotPlus: how faint a greyed-out row is drawn.
+const GREYED_ALPHA: f32 = 0.4;
 
 pub const QUICK_VISIBLE: usize = 6;
 

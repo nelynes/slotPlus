@@ -235,6 +235,25 @@ impl Service {
         }
     }
 
+    /// slotPlus: a service that does nothing: no worker, no network, nothing read from the
+    /// card. Used while RetroAchievements is switched off in this build.
+    pub fn off() -> Self {
+        let (controls, _) = mpsc::channel();
+        let (frames, _) = mpsc::sync_channel(QUEUE_SIZE);
+        let (_, notices) = mpsc::channel();
+        Self {
+            controls,
+            frames,
+            notices,
+            enabled: Arc::new(AtomicBool::new(false)),
+            current: Arc::new(AtomicU64::new(0)),
+            tracking: Arc::new(AtomicU64::new(0)),
+            flushing: AtomicBool::new(false),
+            flushed: Arc::new(AtomicBool::new(true)),
+            status: Arc::new(Status::default()),
+        }
+    }
+
     /// slotPlus: slot is booting, opening or closing a game, or in a menu. Background
     /// library work pauses, and resumes once slot has been quiet for a while.
     pub fn set_busy(&self, busy: bool) {
