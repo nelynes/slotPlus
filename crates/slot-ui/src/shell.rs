@@ -143,8 +143,7 @@ pub fn indexed_shell(cart: &Cart) -> Option<Shell> {
         Platform::Gb | Platform::Gbc => slot_store::header_index::peek_gb_header(&cart.rom)
             .map(|h| gb_shell_from(h.as_ref(), &cart.rom)),
         // slotPlus's systems need no header.
-        Platform::Ws => Some(ws_shell_for(&cart.rom)),
-        Platform::Lynx => Some(LYNX_SHELL),
+        _ => Some(shell_for(cart)),
     }
 }
 

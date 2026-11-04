@@ -16,13 +16,22 @@ fn release_json(tag: &str, zip: &str, sha256: &str) -> String {
         true => slot::edition::ZIP,
         false => zip,
     };
+    // The zip under test goes in this build's own edition; the other keeps its own.
+    let (plus, ultra) = match slot::edition::KEY {
+        "plus" => (zip, "slot-plusultra.zip"),
+        _ => ("slot-plus.zip", zip),
+    };
+    let (plus_size, ultra_size) = match slot::edition::KEY {
+        "plus" => (6919551, 26996984),
+        _ => (26996984, 6919551),
+    };
     format!(
         r#"{{
   "stable": {{
     "version": "{version}",
     "tag": "{tag}",
-    "plus": {{ "zip": "{zip}", "size": 6919551, "sha256": "{sha256}" }},
-    "ultra": {{ "zip": "slot-plusultra.zip", "size": 26996984, "sha256": "{sha256}" }}
+    "plus": {{ "zip": "{plus}", "size": {plus_size}, "sha256": "{sha256}" }},
+    "ultra": {{ "zip": "{ultra}", "size": {ultra_size}, "sha256": "{sha256}" }}
   }}
 }}"#
     )
@@ -171,7 +180,10 @@ fn parse_release_reads_the_version_url_and_digest() {
     assert_eq!(r.version, "1.11.0");
     assert_eq!(
         r.url,
-        "https://github.com/nelynes/slotPlus/releases/download/v1.11.0/slot-plus.zip"
+        format!(
+            "https://github.com/nelynes/slotPlus/releases/download/v1.11.0/{}",
+            slot::edition::ZIP
+        )
     );
     assert_eq!(r.size, 6919551);
     assert_eq!(&r.sha256[..2], &[0xe7, 0x8b]);
@@ -206,7 +218,7 @@ fn a_slotplus_version_is_newer_than_the_slot_it_is_built_on() {
 #[test]
 fn an_update_comes_from_slotplus_and_never_from_slot() {
     assert_eq!(slot::update::LATEST, "https://nelynes.github.io/slotPlus/versions.json");
-    let r = parse_release(&release_json("v1.13.0-plus2.5", "slot-plus.zip", DIGEST)).unwrap();
+    let r = parse_release(&release_json("v1.13.0-plus2.5", slot::edition::ZIP, DIGEST)).unwrap();
     assert_eq!(r.version, "1.13.0-plus2.5");
     assert!(r.url.starts_with("https://github.com/nelynes/slotPlus/releases/download/v1.13.0-plus2.5/"));
 }

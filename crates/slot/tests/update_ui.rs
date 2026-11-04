@@ -235,7 +235,7 @@ fn up_to_date_says_so_and_b_returns_to_about() {
     assert_eq!(
         text(&a),
         Some((
-            "slotPlus is up to date".into(),
+            format!("{} is up to date", slot::edition::NAME),
             format!("{running} is the latest version.")
         ))
     );

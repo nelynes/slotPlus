@@ -143,13 +143,14 @@ pub fn mould_for(platform: Platform) -> Mould {
 
 pub fn folder_gb_shell(cart: &Cart) -> Option<GbShell> {
     match cart.platform {
-        Platform::Gba | Platform::Gbav | Platform::Ws | Platform::Lynx => None,
         Platform::Gb | Platform::Gbc => Some(match cart.shell.map(|c| c.outline) {
             Some(Outline::Notched) => GbShell::Notched,
             Some(Outline::Rounded) => GbShell::Rounded,
             _ if cart.platform == Platform::Gbc => GbShell::Rounded,
             _ => GbShell::Notched,
         }),
+        // The GBA, and slotPlus's systems: no Game Boy pak.
+        _ => None,
     }
 }
 
@@ -166,7 +167,8 @@ pub fn shelf_shape(cart: &Cart) -> (Option<GbShell>, bool) {
     let shell = crate::shell::indexed_shell(cart);
     let outline = cart.shell.map(|c| c.outline);
     let shape = match (cart.platform, outline) {
-        (Platform::Gba | Platform::Gbav | Platform::Ws | Platform::Lynx, _) => None,
+        // slotPlus: only the Game Boy family has a pak shape to find.
+        (p, _) if !matches!(p, Platform::Gb | Platform::Gbc) => None,
         (_, Some(Outline::Notched)) => Some(GbShell::Notched),
         (_, Some(Outline::Rounded)) => Some(GbShell::Rounded),
         _ => match slot_store::header_index::peek_gb_header(&cart.rom).flatten() {

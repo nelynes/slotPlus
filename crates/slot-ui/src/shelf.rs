@@ -97,13 +97,13 @@ impl Shelf {
             return Mould::Gba;
         };
         match cart.platform {
-            Platform::Ws => Mould::Ws,
-            Platform::Lynx => Mould::Lynx,
-            _ => match shelf_shape(cart).0 {
+            Platform::Gb | Platform::Gbc | Platform::Gba | Platform::Gbav => match shelf_shape(cart).0 {
                 None => Mould::Gba,
                 Some(GbShell::Notched) => Mould::Notched,
                 Some(GbShell::Rounded) => Mould::Rounded,
             },
+            // slotPlus's systems: one mould each.
+            other => crate::cart::mould_for(other),
         }
     }
 
