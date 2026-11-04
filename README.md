@@ -8,7 +8,7 @@
 
 # RetroAchievements: on hold
 
-RetroAchievements arrived in 1.13.0-plus2.6 as a beta. From 1.14.0-plus2.6 it's switched off while the rough edges are worked out: Settings → RetroAchievements is greyed out, no game is tracked and nothing is sent. Your `Config/retroachievements.toml` and any unlocks already on the card are left as they are, ready for when it comes back.
+RetroAchievements arrived in 1.13.0-plus2.6 as a beta. Unfortunately I was not happy with the performance and have pulled it from 1.14.0-plus2.6 and it's switched off while the rough edges are worked out: Settings → RetroAchievements is greyed out, no game is tracked and nothing is sent. Your unlocks already on the card are left as they are, ready for when it comes back.
 
 # What is slotPlus?
 
