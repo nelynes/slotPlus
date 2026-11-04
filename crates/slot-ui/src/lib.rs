@@ -1,5 +1,5 @@
 mod art;
-pub use art::{cover, cover_bytes};
+pub use art::{cover, cover_bytes, decode_png_bytes};
 mod bitmaps;
 pub use bitmaps::{
     bespoke_slot, bespoke_slot_light, link_port, link_port_light, slot_back, slot_back_light,
@@ -49,21 +49,21 @@ pub use backdrop::{
 pub use barcode::{code39, CODE39_NARROW, CODE39_WIDE};
 pub use battery::{draw_gauge, BOLT_PX, GAUGE_H, GAUGE_W, WALL};
 pub use board::{
-    bare_board_face, baseos_cart_face, board_at, board_face, board_from, board_in, board_x,
-    board_zoom, chip_face, chip_face_text, chip_shadow_face, grown, hold_chip_at, hold_socket_at,
-    lid_at, lid_from, lift_of, lynx_back_face, named_socket_face, on_board, padded, rom_marking,
-    rom_marking_face, shelf_cart, shelf_cart_at, slide_of, socket_face, socket_face_text,
-    update_cart_face, Placed, BOARD_H, BOARD_W, BOARD_Y, CHIP_H, CHIP_TIP, CHIP_U, CHIP_V, CHIP_W,
-    FINGERS, FINGER_H, FINGER_Y, HOLD_NAMES, HOP_LIFT, LID_TURN, ROM_H, ROM_W, ROM_X, ROM_Y,
+    bare_board_face, baseos_cart_face, board_at, board_face, board_from, board_from_shaped,
+    board_in, board_x, board_zoom, chip_face, chip_face_text, chip_shadow_face, gb_chip_face,
+    gb_socket_face, grown, hold_chip_at, hold_socket_at, lid_at,
+    lid_from, lid_from_shaped, lift_of, lynx_back_face, named_socket_face, on_board, padded, rom_marking, rom_marking_face, seats,
+    shelf_cart, shelf_cart_at, shelf_cart_shaped, slide_of, socket_face, socket_face_text,
+    update_cart_face, Placed, Seats, BOARD_H, BOARD_W, BOARD_Y, CHIP_H, CHIP_TIP, CHIP_U, CHIP_V,
+    CHIP_W, FINGERS, FINGER_H, FINGER_Y, GBA_SEATS, HOLD_NAMES, HOP_LIFT, LID_TURN, ROM_H, ROM_W, ROM_X, ROM_Y,
     SHADOW_H, SHADOW_W, SLIDE_SHARE, SLIDE_UP, SOCKET_H, SOCKET_U, SOCKET_V, SOCKET_W, TURN_PAD,
 };
 pub use cart::{
-    bare_face, cart_back_shell, cart_backing, cart_box, cart_face, cart_face_with, cart_interior,
-    cart_shadow, clean_label, gb_cart_shadow, gb_label_panel, gb_shell_of, is_clear, label_colour,
-    label_panel, label_size, label_tags, label_text, neutral_shell, seated_box, shows_interior,
-    text_label, CartFace, CART_H, CART_W, GBC_LABEL_H, GBC_LABEL_W, GBC_LABEL_X, GBC_LABEL_Y,
-    GB_CART_H, GB_CART_W, GB_LABEL_H, GB_LABEL_W, GB_LABEL_X, GB_LABEL_Y, LABEL_H, LABEL_W,
-    LABEL_WELL, LABEL_X, LABEL_Y,
+    bare_face, cart_back_shell, cart_backing, cart_box, cart_face, cart_face_with, cart_interior, cart_shadow, clean_label,
+    folder_gb_shell, gb_cart_shadow, gb_shell_of, is_clear, label_colour, label_panel, label_size,
+    label_tags, label_text, neutral_shell, seated_box, shelf_shape, shows_interior, text_label, CartFace, CART_H, CART_W,
+    GBC_LABEL_H, GBC_LABEL_W, GBC_LABEL_X, GBC_LABEL_Y, GB_CART_H, GB_CART_W, GB_LABEL_H,
+    GB_LABEL_W, GB_LABEL_X, GB_LABEL_Y, LABEL_H, LABEL_W, LABEL_WELL, LABEL_X, LABEL_Y,
 };
 pub use cart::{
     gg_label_panel, inserts_turned, label_art, label_on_card, GG_CART_H, GG_CART_W, GG_LABEL_H, GG_LABEL_W, GG_LABEL_X, GG_LABEL_Y,
@@ -117,8 +117,9 @@ pub use link_art::{
     PLUG_TIP_X, PLUG_W, PORT_H, PORT_W, PORT_Y,
 };
 pub use network_menu::{
-    bars_rect, lock_rect, net_bars_face, net_lock_face, net_row_top, net_window, wifi_face,
-    NetFace, NetIcons, NetLine, NetworkList,
+    bars_rect, lock_rect, net_bars_face, net_lock_face, net_row_top, net_window, pair_face,
+    pair_text_width, wifi_face, NetFace, NetIcons, NetLine, NetworkList, PairScreen, PairSlot,
+    PAIR_QR,
 };
 pub use plate::{
     arrows_hint_coloured, arrows_hint_face, arrows_hint_width, cap_width, hint_coloured, hint_face,
@@ -142,10 +143,10 @@ pub use quick_menu::{
 pub use rebuild::{headline_face, rebuild_count_face, rebuild_title_face, RebuildScreen};
 pub use receipt::{receipt_blank, receipt_face, ReceiptText};
 pub use refusal::Refusal;
-pub use shelf::{foot_y, repeat_gap, rest_y, Shelf, HEART_INK, HEART_SCALE, REPEAT_DELAY_MS};
+pub use shelf::{box_size, foot_y, repeat_gap, rest_y, Shelf, HEART_INK, HEART_SCALE, REPEAT_DELAY_MS};
 pub use shell::{
     gb_plastics, gb_table_shells, gba_plastics, gba_shell_for,
-    lookup_order_is_exact_then_family_then_default, shell_for, shell_presets, table_keys, Finish,
+    indexed_shell, lookup_order_is_exact_then_family_then_default, shell_for, shell_presets, table_keys, Finish,
     Shell, DEFAULT_SHELL, DMG_SHELL, DUAL_MODE_SHELL, FAMICOM_MINI_SHELL, GB_CLEAR_SHELL, GG_SHELL,
     LYNX_SHELL, NGP_SHELL, TG16_SHELL, WS_SHELL,
 };

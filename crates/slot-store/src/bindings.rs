@@ -557,13 +557,15 @@ pub enum CarouselAction {
     PreviousShelf,
     NextShelf,
     Favorite,
+    ForgetRecent,
 }
 
 impl CarouselAction {
-    pub const ALL: [CarouselAction; 3] = [
+    pub const ALL: [CarouselAction; 4] = [
         CarouselAction::PreviousShelf,
         CarouselAction::NextShelf,
         CarouselAction::Favorite,
+        CarouselAction::ForgetRecent,
     ];
 
     pub fn label(self) -> &'static str {
@@ -571,6 +573,7 @@ impl CarouselAction {
             CarouselAction::PreviousShelf => "Previous Shelf",
             CarouselAction::NextShelf => "Next Shelf",
             CarouselAction::Favorite => "Favorite",
+            CarouselAction::ForgetRecent => "Remove Recent",
         }
     }
 
@@ -579,6 +582,7 @@ impl CarouselAction {
             CarouselAction::PreviousShelf => "previous_shelf",
             CarouselAction::NextShelf => "next_shelf",
             CarouselAction::Favorite => "favorite",
+            CarouselAction::ForgetRecent => "remove_recent",
         }
     }
 
@@ -589,7 +593,7 @@ impl CarouselAction {
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct CarouselKeys {
-    keys: [Option<Binding>; 3],
+    keys: [Option<Binding>; 4],
 }
 
 impl Default for CarouselKeys {
@@ -599,6 +603,7 @@ impl Default for CarouselKeys {
                 Binding::plain(Device::L1),
                 Binding::plain(Device::R1),
                 Binding::plain(Device::Y),
+                Binding::plain(Device::X),
             ],
         }
     }

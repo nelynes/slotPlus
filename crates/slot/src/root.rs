@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-pub const DIRS: [&str; 71] = [
+pub const DIRS: [&str; 72] = [
     "BIOS",
     "Bezels",
     "Bezels/GBA",
@@ -13,6 +13,7 @@ pub const DIRS: [&str; 71] = [
     "Bezels/TG16",
     "Bezels/NDS",
     "Cache",
+    "Cache/romm",
     "Config",
     "Games",
     "Games/GBA",
@@ -79,6 +80,7 @@ pub fn ensure(root: &Path) {
         let _ = std::fs::create_dir_all(root.join(sub));
     }
     move_label_cache(root);
+    crate::romm::install::sweep(root);
     if let Err(e) = slot_store::move_config(root) {
         eprintln!("slot: config: {e}");
     }

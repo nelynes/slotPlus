@@ -9,11 +9,12 @@ use sha2::{Digest, Sha256};
 
 pub const STAGING: &str = "System.new";
 pub const MANIFEST: &str = ".manifest";
-const REQUIRED: [&str; 4] = [
+const REQUIRED: [&str; 5] = [
     "slot",
     "launch_frontend.sh",
     "mgba_libretro.so",
     "gpsp_libretro.so",
+    "gambatte_libretro.so",
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -733,7 +734,7 @@ pub(crate) fn wait_online() -> Result<(), UpdateFail> {
     Ok(())
 }
 
-const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+pub(crate) const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 #[cfg(feature = "device")]
 const ONLINE_TIMEOUT: Duration = Duration::from_secs(30);
 pub(crate) const API_TIMEOUT: Duration = Duration::from_secs(15);

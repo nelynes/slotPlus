@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.14.0-plus2.6](https://github.com/nelynes/slotPlus/releases/tag/v1.14.0-plus2.6)
+
+slotPlus brought up to Slot 1.14.0: Gambatte for Game Boy and Game Boy Color (the default on new cards; existing cards stay on mGBA, and START on a Game Boy cart switches), Game Boy audio without pops, six extra dim steps below the lowest brightness, X to take a game off Recents, smoother scrolling on big shelves, and a Tools page in Settings. See [Slot's 1.14.0 notes](https://github.com/BrandonKowalski/slot/releases/tag/v1.14.0).
+
+To upgrade, use Settings → Tools → Check for Updates, or replace the `System` folder on your card with the one from the zip.
+
+- WonderSwan and Lynx carts keep their own shapes, shadows and labels with Slot's faster shelf, and START on a Lynx cart still chooses how it's held.
+- RetroAchievements now tracks Game Boy games on Gambatte as well as mGBA.
+- Wi-Fi's settings moved with Slot's to Settings → General → Wi-Fi; Check for Updates, Gamebit and Fetch Missing Art are under Settings → Tools.
+
 ## [1.13.0-plus2.6](https://github.com/nelynes/slotPlus/releases/tag/v1.13.0-plus2.6)
 
 **RetroAchievements** for Game Boy, Game Boy Color and Game Boy Advance games, and slotPlus brought up to Slot 1.13.0: Wi-Fi, updates over the air, Gamebit for managing the card from a browser, the on-device Cart Studio with art fetched over Wi-Fi, the clock set from network time, and a Shelf wallpaper. See [Slot's 1.13.0 notes](https://github.com/BrandonKowalski/slot/releases/tag/v1.13.0).

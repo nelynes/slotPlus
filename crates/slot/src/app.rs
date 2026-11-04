@@ -10,16 +10,16 @@ use slot_store::{
     format_stamp, parse_stamp, read_slot_state, scan, write_slot_state, BezelPick, Blending, Cart,
     Core, GbColors, Platform, Recent, Scale, Shader, ShotDir, ShotEntry, SlotState, StateEntry,
     StateRing, Stretch, WallpaperPick, WallpaperTint, BLUE_LIGHT_MAX, BRIGHTNESS_MAX, CONTRAST_MAX,
-    FF_SPEEDS, RING_MAX, SATURATION_MAX, SUNLIGHT_MAX, VOLUME_MAX,
+    DIM_MAX, FF_SPEEDS, RING_MAX, SATURATION_MAX, SUNLIGHT_MAX, VOLUME_MAX,
 };
 use slot_ui::{
-    board_from, board_zoom, draw_empty_slot, draw_footer, draw_ground, draw_sticker, ease,
-    footer_ink, grown, lid_at, lid_from, lift_of, on_board, repeat_gap, shelf_cart_at, BezelArt,
+    board_from_shaped, draw_empty_slot, draw_footer, draw_ground, draw_sticker, ease, footer_ink,
+    grown, lid_at, lid_from_shaped, lift_of, repeat_gap, seats, shelf_cart_shaped, BezelArt,
     ClockFaces, ClockPicker, ClockRow, ClockScreen, Draw, FfState, GbShell, Guide, Hud, HudKind,
     Icon, LinkBadge, Millis, Placed, Polaroids, PowerChoice, QuickMenu, QuickMenuFaces, QuickRow,
-    QuickValue, Refusal, Shelf, ShotMode, ShotViewer, SlotChrome, TexId, Toast, CART_W, CHIP_H,
-    CHIP_U, CHIP_V, CHIP_W, HINT_EDGE, HOP_LIFT, MOUTH_H, REPEAT_DELAY_MS, SHADOW_H, SHADOW_W,
-    SOCKET_H, SOCKET_U, SOCKET_V, SOCKET_W, TURN_PAD,
+    QuickValue, Refusal, Seats, Shelf, ShotMode, ShotViewer, SlotChrome, TexId, Toast, CART_W, CHIP_H,
+    CHIP_W,
+    GBA_SEATS, HINT_EDGE, HOP_LIFT, MOUTH_H, REPEAT_DELAY_MS, SHADOW_H, SHADOW_W, TURN_PAD,
 };
 
 use crate::art::jobs::{no_art_jobs, ArtEvent, ArtJob, ArtJobs};
@@ -37,7 +37,9 @@ use crate::link_start::{link_port, LinkFail, LinkProgress, LinkStarter, LinkStep
 use crate::loading_mark::LoadingMark;
 use crate::persist::{self, Snapshot};
 use crate::print_scene::{print_draws, Cue, PrintArtState, PrintFrame, PrintTextures};
+use crate::unwrap_scene::{unwrap_draws, UnwrapScene, UnwrapTextures};
 use crate::server::{ServerNet, ServerPaper, ServerSession};
+use crate::romm::{no_romm_jobs, PairFail, RommEvent, RommJob, RommJobs};
 use crate::update::{
     no_update_jobs, Kind, Release, UpdateEvent, UpdateFail, UpdateJob, UpdateJobs,
 };
@@ -75,6 +77,7 @@ pub const POWER_ON_S: f32 = 0.22;
 const POWER_OFF_S: f32 = 0.16;
 
 const FOOTER_SLIDE_S: f32 = POWER_ON_S;
+const GIFT_REACH: i32 = 4;
 
 const BLANK_WARM_S: f32 = 1.5;
 const BLANK_DIM: f32 = 0.1;
@@ -136,7 +139,6 @@ const WIFI_RETRY_MS: Millis = 60_000;
 /// slotPlus: how long Wi-Fi may stay up in a game for its achievement set, so a network
 /// that never answers can't keep the radio on for the whole session.
 const ACHIEVEMENT_WIFI_MS: Millis = 120_000;
-const NET_TOOLS: [QuickRow; 3] = [QuickRow::Server, QuickRow::CheckUpdates, QuickRow::FetchArt];
 const WIFI_PROBE_MS: Millis = 1_000;
 const SUMMARY_WAIT_MS: f64 = 1500.0;
 const SLIP_SHUFFLE_PX: f32 = 28.0;
@@ -300,6 +302,9 @@ impl LinkLegend {
     }
 }
 
+const ROMM_HOST_SHOWN: usize = 28;
+const ROMM_POLL_MS: Millis = 30_000;
+
 pub const LINKED_HOLD_MS: Millis = 1000;
 
 pub const UNPLUG_HOLD_MS: Millis = 420;
@@ -346,6 +351,28 @@ pub enum Phase {
         ssid: String,
         row: usize,
     },
+    RommPair,
+    Unwrap {
+        stem: String,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum PairScreen {
+    Starting,
+    Show { url: String, code: String },
+    Failed(PairFail),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PairView {
+    pub url: Option<String>,
+    pub lines: Vec<(slot_ui::PairSlot, String)>,
+}
+
+pub struct PairFaces {
+    pub qr: Option<slot_ui::NetFace>,
+    pub lines: Vec<(slot_ui::PairSlot, slot_ui::NetFace)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -355,6 +382,8 @@ pub enum KeyboardFor {
     /// slotPlus: the RetroAchievements page's account.
     AchievementsUser,
     AchievementsPassword,
+    RommServer,
+    RommPort,
 }
 
 pub struct NetLegends {
@@ -362,6 +391,7 @@ pub struct NetLegends {
     pub scan: [(TexId, u32); 2],
     pub cancel: [(TexId, u32); 2],
     pub connect: [(TexId, u32); 2],
+    pub retry: [(TexId, u32); 2],
     pub disconnect: [(TexId, u32); 2],
     pub forget: [(TexId, u32); 2],
 }
@@ -418,6 +448,9 @@ enum UpdateState {
 enum NetNotice {
     Password,
     ServerFailed,
+    NoNetwork,
+    RommNoServer,
+    RommPort,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -506,6 +539,9 @@ pub struct App {
     core_socket_faces: Vec<TexId>,
     core_chip_faces: Vec<TexId>,
     core_blank_chip_face: Option<TexId>,
+    core_gb_socket_faces: Vec<TexId>,
+    core_gb_chip_faces: Vec<TexId>,
+    core_gb_blank_chip_face: Option<TexId>,
     core_chip_shadow_face: Option<TexId>,
     core_legend_faces: [Vec<(TexId, u32)>; 2],
     game_menu: Option<GameMenu>,
@@ -575,6 +611,8 @@ pub struct App {
     quick_clock_faces: Option<[(TexId, u32, u32); 2]>,
     quick_wallpaper_faces: Option<[(TexId, u32, u32); 2]>,
     quick_network_faces: Option<[(TexId, u32, u32); 2]>,
+    quick_romm_faces: [Option<[(TexId, u32, u32); 2]>; 4],
+    pub romm: crate::romm::RommConf,
     quick_palette_faces: Option<[(TexId, u32, u32); 2]>,
     quick_bezel_faces: [Option<[(TexId, u32, u32); 2]>; 9],
     game_bezel: Option<TexId>,
@@ -641,6 +679,18 @@ pub struct App {
     radio: Box<dyn RadioJobs>,
     update_jobs: Box<dyn UpdateJobs>,
     art_jobs: Box<dyn ArtJobs>,
+    romm_jobs: Box<dyn RommJobs>,
+    romm_poll_at: Millis,
+    romm_open: bool,
+    romm_carts: Option<Vec<Cart>>,
+    romm_gifts: Vec<(Platform, String)>,
+    gifts: crate::romm::Gifts,
+    unwrap_scene: Option<UnwrapScene>,
+    unwrap_tex: Option<UnwrapTextures>,
+    romm_note: Option<String>,
+    romm_online: bool,
+    pair_screen: PairScreen,
+    pair_faces: Option<PairFaces>,
     fetch_art: Option<FetchArt>,
     wifi_held: bool,
     wifi_boot_blocked: bool,
@@ -745,6 +795,7 @@ pub struct App {
 }
 
 const FACE_AHEAD: i32 = 8;
+const LETTER_REPEAT_MS: Option<Millis> = None;
 const FACE_KEEP: i32 = 12;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -752,6 +803,11 @@ pub struct FaceWant {
     pub shelf: usize,
     pub index: usize,
     pub on_screen: bool,
+}
+
+fn retain_headers(carts: &[Cart]) {
+    let roms: Vec<std::path::PathBuf> = carts.iter().map(|c| c.rom.clone()).collect();
+    slot_store::header_index::retain(&roms);
 }
 
 fn shelves_of(carts: Vec<Cart>) -> Vec<(Rack, Shelf)> {
@@ -818,6 +874,18 @@ impl App {
             radio: radio_jobs(),
             update_jobs: no_update_jobs(),
             art_jobs: no_art_jobs(),
+            romm_jobs: no_romm_jobs(),
+            romm_poll_at: 0,
+            romm_open: false,
+            romm_carts: None,
+            romm_gifts: Vec::new(),
+            gifts: crate::romm::Gifts::default(),
+            unwrap_scene: None,
+            unwrap_tex: None,
+            romm_note: None,
+            romm_online: false,
+            pair_screen: PairScreen::Starting,
+            pair_faces: None,
             fetch_art: None,
             wifi_held: false,
             wifi_boot_blocked: false,
@@ -936,6 +1004,9 @@ impl App {
             core_socket_faces: Vec::new(),
             core_chip_faces: Vec::new(),
             core_blank_chip_face: None,
+            core_gb_socket_faces: Vec::new(),
+            core_gb_chip_faces: Vec::new(),
+            core_gb_blank_chip_face: None,
             core_chip_shadow_face: None,
             core_legend_faces: [Vec::new(), Vec::new()],
             game_menu: None,
@@ -1002,6 +1073,8 @@ impl App {
             quick_clock_faces: None,
             quick_wallpaper_faces: None,
             quick_network_faces: None,
+            quick_romm_faces: [None; 4],
+            romm: crate::romm::RommConf::default(),
             quick_palette_faces: None,
             quick_bezel_faces: [None; 9],
             game_bezel: None,
@@ -1068,13 +1141,17 @@ impl App {
 
     pub fn boot_marked(root: &Path, loading: Option<LoadingMark>) -> Self {
         crate::root::ensure(root);
+        slot_store::header_index::load(root);
         crate::boot_time::mark("root");
         let carts = scan(root).unwrap_or_default();
+        retain_headers(&carts);
         crate::boot_time::mark("scan");
         let mut app = App::new(carts);
         app.root = Some(root.to_path_buf());
         app.loading = loading;
         app.state = read_slot_state(root);
+        app.romm = crate::romm::RommConf::load(root);
+        app.gifts = crate::romm::Gifts::load(root);
         app.carousel = read_carousel(root);
         app.shortcuts = read_shortcuts(root);
         app.controls = read_controls(root);
@@ -1148,7 +1225,7 @@ impl App {
         let (Some(root), Some(platform)) = (&self.root, platform) else {
             return;
         };
-        let core = slot_store::core_for_platform(root, stem, platform);
+        let core = slot_store::core_for_platform(root, stem, platform, self.state.gb_core);
         let ring = StateRing::new(root, platform, core, stem);
         match ring.retire_resume(&format_stamp(self.wall_secs())) {
             Ok(Some(to)) => eprintln!("slot: resume: moved {stem}'s state to {}", to.display()),
@@ -1235,8 +1312,21 @@ impl App {
             self.held_dir = None;
             return;
         }
-        self.held_dir = Some((btn, self.now() + repeat_gap(fired), fired + 1));
+        let gap = match LETTER_REPEAT_MS {
+            Some(ms) if self.jumps_letters(btn) => ms,
+            _ => repeat_gap(fired),
+        };
+        self.held_dir = Some((btn, self.now() + gap, fired + 1));
         self.apply(Action::GbaDown(btn));
+    }
+
+    fn jumps_letters(&self, btn: Btn) -> bool {
+        matches!(btn, Btn::Up | Btn::Down)
+            && matches!(self.phase, Phase::Shelf)
+            && self.core_picker.is_none()
+            && self.studio.is_none()
+            && self.keyboard.is_none()
+            && self.game_menu.is_none()
     }
 
     fn repeats(&self, btn: Btn) -> bool {
@@ -1629,7 +1719,7 @@ impl App {
             QuickRow::GbcBlending => Some(blending_value(self.state.blending_gbc)),
             QuickRow::GbBlending => Some(blending_value(self.state.blending_gb)),
             QuickRow::Blending => Some(blending_value(self.blending_in_play())),
-            QuickRow::Brightness => Some(QuickValue::level(self.state.brightness)),
+            QuickRow::Brightness => Some(QuickValue::level(self.brightness_level())),
             QuickRow::BlueLight => Some(match self.state.blue_light {
                 0 => QuickValue::Off,
                 n => QuickValue::level(n),
@@ -1698,13 +1788,26 @@ impl App {
             }),
             QuickRow::WifiPower => Some(QuickValue::flag(!self.state.wifi_off)),
             QuickRow::RaEncore => Some(QuickValue::flag(self.achievement_settings.encore)),
+            QuickRow::RommProtocol => Some(match self.romm.protocol {
+                crate::romm::Protocol::Https => QuickValue::Https,
+                crate::romm::Protocol::Http => QuickValue::Http,
+            }),
+            QuickRow::RommSelfSigned => Some(QuickValue::flag(self.romm.self_signed)),
             QuickRow::Achievements
             | QuickRow::RaUsername
             | QuickRow::RaPassword
             | QuickRow::RaMode
+            | QuickRow::Romm
+            | QuickRow::RommServer
+            | QuickRow::RommPort
+            | QuickRow::RommPair
+            | QuickRow::RommStatus
+            | QuickRow::RommPairedServer
+            | QuickRow::RommDisconnect
             | QuickRow::DateTime
             | QuickRow::FetchArt
             | QuickRow::Network
+            | QuickRow::Wifi
             | QuickRow::Networks
             | QuickRow::CheckUpdates
             | QuickRow::Server
@@ -1748,6 +1851,7 @@ impl App {
             | QuickRow::ShelfPrev
             | QuickRow::ShelfNext
             | QuickRow::ShelfFavorite
+            | QuickRow::ShelfForget
             | QuickRow::PlayControls
             | QuickRow::Shortcuts
             | QuickRow::GameUp
@@ -1801,6 +1905,31 @@ impl App {
 
     pub fn set_quick_network_faces(&mut self, dim: (TexId, u32, u32), lit: (TexId, u32, u32)) {
         self.quick_network_faces = Some([dim, lit]);
+    }
+
+    pub fn set_quick_romm_faces(&mut self, faces: [Option<[(TexId, u32, u32); 2]>; 4]) {
+        self.quick_romm_faces = faces;
+    }
+
+    pub fn romm_texts(&self) -> [String; 4] {
+        let host = self.romm.host();
+        let server = match host.is_empty() {
+            true => "Not Set".to_string(),
+            false if host.chars().count() > ROMM_HOST_SHOWN => {
+                let head: String = host.chars().take(ROMM_HOST_SHOWN - 3).collect();
+                format!("{head}...")
+            }
+            false => host.to_string(),
+        };
+        let row = match (self.romm.paired(), self.romm_online) {
+            (false, _) => "SETUP",
+            (true, true) => "ONLINE",
+            (true, false) => "OFFLINE",
+        }
+        .to_string();
+        let port = self.romm.port.map(|p| p.to_string()).unwrap_or_default();
+        let status = self.romm_note.clone().unwrap_or("Paired".to_string());
+        [row, server, port, status]
     }
 
     pub fn set_quick_bezel_faces(
@@ -2135,16 +2264,20 @@ impl App {
             hidden.push(QuickRow::Server);
         }
         if self.wifi_probe.is_some() {
-            hidden.push(QuickRow::Network);
+            hidden.extend([QuickRow::Network, QuickRow::Wifi]);
         }
         if self.state.wifi_off {
-            hidden.extend(
-                QuickRow::NETWORK
-                    .into_iter()
-                    .filter(|r| *r != QuickRow::WifiPower),
-            );
-        } else if !self.wifi_up() {
-            hidden.extend(NET_TOOLS);
+            hidden.push(QuickRow::Networks);
+        }
+        if !cfg!(feature = "romm") {
+            hidden.push(QuickRow::Romm);
+        }
+        match self.romm.paired() {
+            true => hidden.extend(QuickRow::ROMM_SETUP),
+            false => hidden.extend(QuickRow::ROMM_PAIRED),
+        }
+        if self.romm.protocol == crate::romm::Protocol::Http {
+            hidden.push(QuickRow::RommSelfSigned);
         }
         hidden
     }
@@ -3956,6 +4089,7 @@ impl App {
                 Action::PreviousShelf => self.switch_shelf(-1),
                 Action::NextShelf => self.switch_shelf(1),
                 Action::Favorite => self.toggle_favorite(),
+                Action::ForgetRecent if self.shelf_at == RECENTS_AT => self.forget_recent(),
                 Action::GbaDown(Btn::Up) => self.jump_letter(-1),
                 Action::GbaDown(Btn::Down) => self.jump_letter(1),
                 Action::ShelfLeft | Action::GbaDown(Btn::Left) => self.shelf_mut().hold_left(now),
@@ -3965,11 +4099,13 @@ impl App {
                 Action::QuickMenu => self.open_quick_menu(),
                 Action::GbaDown(Btn::A) => self.play_held = Some(now),
                 Action::GbaUp(Btn::A) => {
-                    if self.play_held.take().is_some() {
+                    if self.play_held.take().is_some() && !self.unwrap_seated() {
                         self.insert(!self.state.auto_load);
                     }
                 }
-                Action::Insert => self.insert(!self.state.auto_load),
+                Action::Insert if !self.unwrap_seated() => {
+                    self.insert(!self.state.auto_load);
+                }
                 _ => {}
             },
             Phase::Inserting { .. } if action == Action::Eject => self.eject(),
@@ -4025,6 +4161,7 @@ impl App {
             Phase::Networks { .. } => self.networks_input(action),
             Phase::NetworkScan { .. } => self.network_scan_input(action),
             Phase::NetworkPage { .. } => self.network_page_input(action),
+            Phase::RommPair => self.pair_input(action),
             _ => {}
         }
     }
@@ -4160,6 +4297,9 @@ impl App {
             QuickRow::FetchArt => self.open_fetch_missing_art(),
             QuickRow::CheckUpdates => self.open_check_for_updates(),
             QuickRow::Server => self.open_server(),
+            QuickRow::Network if !self.wifi_up() => {
+                self.set_update(Some(UpdateState::Notice(NetNotice::NoNetwork)));
+            }
             QuickRow::WifiPower => self.set_wifi_off(!self.state.wifi_off),
             QuickRow::Networks => self.open_networks(),
             QuickRow::Achievements => {
@@ -4182,9 +4322,37 @@ impl App {
                 "RetroAchievements Password",
                 Some(&self.achievement_settings.username.clone()).filter(|n| !n.is_empty()).map(String::as_str),
                 KeyboardFor::AchievementsPassword,
+                slot_ui::Layout::General,
+                "",
             ),
             QuickRow::RaEncore => self.set_encore(!self.achievement_settings.encore),
             QuickRow::RaMode => {}
+            QuickRow::RommProtocol | QuickRow::RommSelfSigned => self.change_setting(row, true),
+            QuickRow::RommServer => {
+                let text = self.romm.server.clone();
+                self.open_keyboard(
+                    "Server",
+                    None,
+                    KeyboardFor::RommServer,
+                    slot_ui::Layout::Host,
+                    &text,
+                );
+            }
+            QuickRow::RommPort => {
+                let text = self.romm.port.map(|p| p.to_string()).unwrap_or_default();
+                self.open_keyboard(
+                    "Port",
+                    None,
+                    KeyboardFor::RommPort,
+                    slot_ui::Layout::Numeric,
+                    &text,
+                );
+            }
+            QuickRow::RommPair => self.pair_romm(),
+            QuickRow::RommDisconnect => {
+                self.romm_jobs.ask(RommJob::Disconnect(self.romm.clone()));
+            }
+            QuickRow::RommStatus | QuickRow::RommPairedServer => {}
             QuickRow::Screen
             | QuickRow::ScreenGeneral
             | QuickRow::Game
@@ -4200,6 +4368,8 @@ impl App {
             | QuickRow::Shortcuts
             | QuickRow::General
             | QuickRow::Network
+            | QuickRow::Romm
+            | QuickRow::Wifi
             | QuickRow::Controls
             | QuickRow::ControlsShelf
             | QuickRow::ControlsInGame => {
@@ -4281,6 +4451,7 @@ impl App {
             | QuickRow::ShelfPrev
             | QuickRow::ShelfNext
             | QuickRow::ShelfFavorite
+            | QuickRow::ShelfForget
             | QuickRow::PlayControls
             | QuickRow::GameUp
             | QuickRow::GameDown
@@ -4318,6 +4489,20 @@ impl App {
     }
 
     fn change_setting(&mut self, row: QuickRow, right: bool) {
+        match row {
+            QuickRow::RommProtocol => {
+                self.romm.protocol = match self.romm.protocol {
+                    crate::romm::Protocol::Https => crate::romm::Protocol::Http,
+                    crate::romm::Protocol::Http => crate::romm::Protocol::Https,
+                };
+                return self.save_romm();
+            }
+            QuickRow::RommSelfSigned => {
+                self.romm.self_signed = !self.romm.self_signed;
+                return self.save_romm();
+            }
+            _ => {}
+        }
         if row == QuickRow::WifiPower {
             return self.set_wifi_off(!self.state.wifi_off);
         }
@@ -4350,18 +4535,17 @@ impl App {
             self.persist_soon();
             return;
         }
-        if let QuickRow::Brightness | QuickRow::BlueLight = row {
-            let (kind, now, max) = match row {
-                QuickRow::Brightness => {
-                    (HudKind::Brightness, self.state.brightness, BRIGHTNESS_MAX)
-                }
-                _ => (HudKind::BlueLight, self.state.blue_light, BLUE_LIGHT_MAX),
-            };
+        if row == QuickRow::Brightness {
+            self.step_brightness(right);
+            return;
+        }
+        if row == QuickRow::BlueLight {
+            let now = self.state.blue_light;
             let to = match right {
-                true => up(now, 1, max),
+                true => up(now, 1, BLUE_LIGHT_MAX),
                 false => now.saturating_sub(1),
             };
-            self.set_level(kind, to);
+            self.set_level(HudKind::BlueLight, to);
             return;
         }
         if let QuickRow::Palette | QuickRow::GbPalette = row {
@@ -4624,6 +4808,7 @@ impl App {
             | QuickRow::ShelfPrev
             | QuickRow::ShelfNext
             | QuickRow::ShelfFavorite
+            | QuickRow::ShelfForget
             | QuickRow::PlayControls
             | QuickRow::Shortcuts
             | QuickRow::GameUp
@@ -4663,15 +4848,25 @@ impl App {
             | QuickRow::LidOff
             | QuickRow::FetchArt
             | QuickRow::Network
+            | QuickRow::Wifi
             | QuickRow::WifiPower
             | QuickRow::Networks
             | QuickRow::CheckUpdates
-            | QuickRow::Server
             | QuickRow::Achievements
             | QuickRow::RaUsername
             | QuickRow::RaPassword
             | QuickRow::RaMode
-            | QuickRow::RaEncore => return,
+            | QuickRow::RaEncore
+            | QuickRow::Romm
+            | QuickRow::RommProtocol
+            | QuickRow::RommServer
+            | QuickRow::RommPort
+            | QuickRow::RommSelfSigned
+            | QuickRow::RommPair
+            | QuickRow::RommStatus
+            | QuickRow::RommPairedServer
+            | QuickRow::RommDisconnect
+            | QuickRow::Server => return,
         }
         self.persist();
     }
@@ -4769,10 +4964,16 @@ impl App {
             self.step_sunlight(action == Action::SunlightUp);
             return true;
         }
+        if let Action::BrightnessUp | Action::BrightnessDown = action {
+            self.step_brightness(action == Action::BrightnessUp);
+            let now = self.now();
+            let muted = self.muted();
+            self.hud
+                .show(HudKind::Brightness, self.brightness_level(), muted, now);
+            return true;
+        }
         let s = &self.state;
         let (kind, value) = match action {
-            Action::BrightnessUp => (HudKind::Brightness, up(s.brightness, 1, BRIGHTNESS_MAX)),
-            Action::BrightnessDown => (HudKind::Brightness, s.brightness.saturating_sub(1)),
             Action::BlueLightUp => (HudKind::BlueLight, up(s.blue_light, 1, BLUE_LIGHT_MAX)),
             Action::BlueLightDown => (HudKind::BlueLight, s.blue_light.saturating_sub(1)),
             Action::VolumeUp => (HudKind::Volume, up(self.level(), VOLUME_STEP, VOLUME_MAX)),
@@ -4790,6 +4991,25 @@ impl App {
             self.persist_soon();
         }
         true
+    }
+
+    fn step_brightness(&mut self, brighter: bool) {
+        let s = &self.state;
+        let dim = match brighter {
+            true => s.dim.saturating_sub(1),
+            false if s.brightness == 0 => up(s.dim, 1, DIM_MAX),
+            false => s.dim,
+        };
+        if dim != s.dim {
+            self.state.dim = dim;
+            self.persist_soon();
+            return;
+        }
+        let to = match brighter {
+            true => up(s.brightness, 1, BRIGHTNESS_MAX),
+            false => s.brightness.saturating_sub(1),
+        };
+        self.set_level(HudKind::Brightness, to);
     }
 
     fn set_level(&mut self, kind: HudKind, value: u8) -> bool {
@@ -4876,6 +5096,14 @@ impl App {
 
     pub fn brightness(&self) -> u8 {
         self.state.brightness
+    }
+
+    pub fn dim(&self) -> u8 {
+        self.state.dim
+    }
+
+    pub fn brightness_level(&self) -> u8 {
+        DIM_MAX - self.state.dim.min(DIM_MAX) + self.state.brightness
     }
 
     pub fn volume(&self) -> u8 {
@@ -4970,6 +5198,12 @@ impl App {
         if !self.on_shelf() {
             self.shelf_mut().release_hold();
         }
+        if let Phase::Unwrap { stem } = &self.phase {
+            if self.unwrap_scene.is_none_or(|s| s.done(now)) {
+                let stem = stem.clone();
+                self.finish_unwrap(&stem);
+            }
+        }
         let mut touched = false;
         let at = self.shelf_at;
         // A cart that came out upside down turns back over before it is
@@ -4986,6 +5220,10 @@ impl App {
                 let shelf = &mut self.shelves[at].1;
                 shelf.tick(now);
                 shelf.update(dt);
+                None
+            }
+            Phase::Unwrap { .. } => {
+                self.shelves[at].1.update(dt);
                 None
             }
             Phase::Inserting {
@@ -5295,6 +5533,8 @@ impl App {
         self.step_server();
         self.step_net_time();
         self.take_art_events();
+        self.take_romm_events();
+        self.romm_tick(self.now());
         self.take_update_events();
         self.play_hold();
         self.repeat_held_dir();
@@ -5481,6 +5721,26 @@ impl App {
         let shelf_at = self.shelf_at;
         self.restock_favorites();
         if self.shelf_at != shelf_at {
+            self.shelf_platform = slot_ui::Printed::default();
+            self.slot_letter = None;
+            self.shelf_named = None;
+            self.name_pending = true;
+        }
+        self.persist();
+    }
+
+    fn forget_recent(&mut self) {
+        let Some(cart) = self.shelf().carts.get(self.shelf().index) else {
+            return;
+        };
+        let (platform, stem) = (cart.platform, cart.stem.clone());
+        self.state.forget(platform, &stem);
+        let index = self.shelves[RECENTS_AT].1.index;
+        self.restock_recents();
+        let shelf = &mut self.shelves[RECENTS_AT].1;
+        if self.shelf_at == RECENTS_AT && !shelf.carts.is_empty() {
+            shelf.select(index.min(shelf.carts.len() - 1));
+        } else {
             self.shelf_platform = slot_ui::Printed::default();
             self.slot_letter = None;
             self.shelf_named = None;
@@ -5727,6 +5987,7 @@ impl App {
                 clock: self.quick_clock_faces,
                 wallpaper: self.quick_wallpaper_faces,
                 networks: self.quick_network_faces,
+                romm: self.quick_romm_faces,
                 faces: self.quick_menu_faces.as_ref(),
                 ground: self.menu_ground(),
                 palette: self.quick_palette_faces,
@@ -5748,7 +6009,7 @@ impl App {
                 canvas: self.canvas(),
             }
             .draw(out),
-            Phase::Shelf => {
+            Phase::Shelf | Phase::Unwrap { .. } => {
                 self.draw_background(out);
                 let openness = self
                     .core_picker_shown()
@@ -5769,8 +6030,10 @@ impl App {
                         draw_empty_slot(self.canvas(), self.slot_now(), out);
                     }
                     _ => {
-                        self.shelf()
-                            .draw(self.canvas(), self.shelf_shake(), self.slot_now(), out);
+                        if !self.draw_unwrap(out) {
+                            self.shelf()
+                                .draw(self.canvas(), self.shelf_shake(), self.slot_now(), out);
+                        }
                         slot_ui::draw_slot_title(
                             self.canvas(),
                             self.shelf_platform,
@@ -5813,6 +6076,10 @@ impl App {
             }
             Phase::Networks { .. } | Phase::NetworkScan { .. } | Phase::NetworkPage { .. } => {
                 self.draw_networks(out);
+                return self.hud.draw(self.canvas(), self.now(), out);
+            }
+            Phase::RommPair => {
+                self.draw_pair(out);
                 return self.hud.draw(self.canvas(), self.now(), out);
             }
             Phase::Inserting { .. } if self.powering_up() && self.framed_panel() => {
@@ -5925,6 +6192,7 @@ impl App {
                 clock: None,
                 wallpaper: None,
                 networks: None,
+                romm: [None; 4],
                 faces: self.quick_menu_faces.as_ref(),
                 ground: None,
                 palette: self.quick_palette_faces,
@@ -6310,7 +6578,22 @@ impl App {
         self.core_chip_shadow_face = Some(shadow);
     }
 
-    pub fn set_core_legend_faces(&mut self, dark: Vec<(TexId, u32)>, light: Vec<(TexId, u32)>) {
+    pub fn set_core_gb_part_faces(
+        &mut self,
+        sockets: Vec<TexId>,
+        chips: Vec<TexId>,
+        blank: TexId,
+    ) {
+        self.core_gb_socket_faces = sockets;
+        self.core_gb_chip_faces = chips;
+        self.core_gb_blank_chip_face = Some(blank);
+    }
+
+    pub fn set_core_legend_faces(
+        &mut self,
+        dark: Vec<(TexId, u32)>,
+        light: Vec<(TexId, u32)>,
+    ) {
         self.core_legend_faces = [dark, light];
     }
 
@@ -6490,12 +6773,18 @@ impl App {
         });
     }
 
-    fn draw_lid_shadow(&self, shelf: Placed, progress: f32, out: &mut Vec<Draw>) {
+    fn draw_lid_shadow(
+        &self,
+        shell: Option<GbShell>,
+        shelf: Placed,
+        progress: f32,
+        out: &mut Vec<Draw>,
+    ) {
         let Some(tex) = self.core_chip_shadow_face else {
             return;
         };
         let lift = lift_of(progress);
-        let (lid, _) = lid_from(self.canvas(), shelf, progress);
+        let (lid, _) = lid_from_shaped(self.canvas(), shell, shelf, progress);
         let k = lid.w / lid_at(self.canvas(), 1.0).0.w;
         let (w, h) = (LID_SHADOW_W * k, LID_SHADOW_H * k);
         out.push(Draw::Tex {
@@ -6512,6 +6801,8 @@ impl App {
     fn draw_board_chip(
         &self,
         board: Placed,
+        seats: Seats,
+        pair: [Core; 2],
         sockets: &[TexId],
         chip: Chip,
         faces: &[TexId],
@@ -6519,22 +6810,26 @@ impl App {
         lift: f32,
         out: &mut Vec<Draw>,
     ) {
-        let zoom = board_zoom(board);
-        for (i, tex) in sockets.iter().copied().enumerate().take(SOCKET_U.len()) {
-            let (x, y) = on_board(board, SOCKET_U[i], SOCKET_V);
+        let zoom = seats.zoom(board);
+        for (place, core) in pair.into_iter().enumerate() {
+            let Some(tex) = sockets.get(core.index()).copied() else {
+                continue;
+            };
+            let (x, y) = seats.at(board, seats.socket_u[place], seats.socket_v);
             out.push(Draw::Tex {
                 x: x.round(),
                 y: y.round(),
-                w: SOCKET_W as f32 * zoom,
-                h: SOCKET_H as f32 * zoom,
+                w: seats.socket_size.0 * zoom,
+                h: seats.socket_size.1 * zoom,
                 tex,
                 alpha: 1.0,
             });
         }
-        let u = CHIP_U[0] + (CHIP_U[1] - CHIP_U[0]) * chip.across;
+        let u = seats.chip_u[0] + (seats.chip_u[1] - seats.chip_u[0]) * chip.across;
         if chip.lift > 0.0 {
             if let Some(tex) = self.core_chip_shadow_face {
-                let (cx, cy) = on_board(board, u + 19.0, CHIP_V + 29.4);
+                let (du, dv) = seats.shadow_uv;
+                let (cx, cy) = seats.at(board, u + du, seats.chip_v + dv);
                 let (w, h) = (SHADOW_W as f32 * zoom, SHADOW_H as f32 * zoom);
                 out.push(Draw::Tex {
                     x: cx - w / 2.0,
@@ -6551,12 +6846,12 @@ impl App {
             None => blank,
         };
         if let Some(tex) = face {
-            let (x, y) = on_board(board, u, CHIP_V - HOP_LIFT * chip.lift);
+            let (x, y) = seats.at(board, u, seats.chip_v - HOP_LIFT * chip.lift);
             let body = Placed {
                 x: x + chip.shake,
                 y,
-                w: CHIP_W as f32 * zoom,
-                h: CHIP_H as f32 * zoom,
+                w: seats.chip_size.0 * zoom,
+                h: seats.chip_size.1 * zoom,
             };
             let at = grown(body, TURN_PAD as f32 * zoom);
             out.push(Draw::Turned {
@@ -6576,8 +6871,9 @@ impl App {
         let progress = picker.openness(now);
         let lift = lift_of(progress);
         let (rest, scale) = self.shelf().selected_at(self.canvas());
-        let shelf = shelf_cart_at(rest, scale);
-        let board = board_from(self.canvas(), shelf, progress);
+        let shell = self.shelf().selected_shell();
+        let shelf = shelf_cart_shaped(shell, rest, scale);
+        let board = board_from_shaped(self.canvas(), shell, shelf, progress);
         let ready = self.core_faces_ready();
 
         if ready {
@@ -6601,22 +6897,36 @@ impl App {
                     alpha: 1.0,
                 });
             }
+            let (sockets, chips, blank) = match shell {
+                Some(_) => (
+                    &self.core_gb_socket_faces,
+                    &self.core_gb_chip_faces,
+                    self.core_gb_blank_chip_face,
+                ),
+                None => (
+                    &self.core_socket_faces,
+                    &self.core_chip_faces,
+                    self.core_blank_chip_face,
+                ),
+            };
             self.draw_board_chip(
                 board,
-                &self.core_socket_faces,
+                seats(shell),
+                picker.pair(),
+                sockets,
                 picker.chip(now),
-                &self.core_chip_faces,
-                self.core_blank_chip_face,
+                chips,
+                blank,
                 lift,
                 out,
             );
         }
 
-        self.draw_lid_shadow(shelf, progress, out);
+        self.draw_lid_shadow(shell, shelf, progress, out);
 
         if ready {
             if let Some(tex) = self.core_lid_face {
-                let (lid, turn) = lid_from(self.canvas(), shelf, progress);
+                let (lid, turn) = lid_from_shaped(self.canvas(), shell, shelf, progress);
                 let at = grown(lid, TURN_PAD as f32 * lid.w / CART_W as f32);
                 out.push(Draw::Turned {
                     x: at.x,
@@ -6632,7 +6942,7 @@ impl App {
             .selected_stem()
             .and_then(|stem| self.shelf().find(stem))
         {
-            let (lid, turn) = lid_from(self.canvas(), shelf, progress);
+            let (lid, turn) = lid_from_shaped(self.canvas(), shell, shelf, progress);
             out.push(Draw::Turned {
                 x: lid.x,
                 y: lid.y,
@@ -6804,6 +7114,7 @@ impl App {
         self.refusal = None;
         self.refused_from = None;
         self.sunlight_manual = None;
+        self.stop_romm();
         if let Some(mark) = &self.loading {
             mark.set(&cart);
             self.marked = true;
@@ -6835,7 +7146,7 @@ impl App {
             self.play_held = None;
             return;
         }
-        if self.now().saturating_sub(at) >= PLAY_HOLD_MS {
+        if self.now().saturating_sub(at) >= PLAY_HOLD_MS && !self.unwrap_seated() {
             self.insert(true);
         }
     }
@@ -6914,6 +7225,7 @@ impl App {
 
     fn doze(&mut self) {
         self.cancel_fetch_art();
+        self.stop_romm();
         self.abandon_server();
         if !self.updating() {
             self.release_radio();
@@ -7029,12 +7341,14 @@ impl App {
             self.play_held = None;
             return;
         }
-        if cart.platform.hardware() != Platform::Gba {
+        // slotPlus: a system with one core has nothing to pick.
+        if Core::choices(cart.platform).len() < 2 {
             return;
         }
-        let seat = slot_store::core_for(&root, &cart.stem);
+        let seat =
+            slot_store::core_for_platform(&root, &cart.stem, cart.platform, self.state.gb_core);
         let now = self.now();
-        let mut picker = CorePicker::open(seat, now);
+        let mut picker = CorePicker::open(Core::pair(cart.platform), seat, now);
         if self.core_faces_ready() {
             picker.start(now);
         }
@@ -7117,6 +7431,10 @@ impl App {
         }
         if !self.has_wifi_hardware() {
             self.hud.toast(Toast::NoWifi, self.now());
+            return;
+        }
+        if self.core == Core::Gambatte {
+            self.hud.toast(Toast::NeedsMgba, self.now());
             return;
         }
         if self.core == Core::Mgba {
@@ -7294,11 +7612,20 @@ impl App {
             self.wifi_wanted_at = Some(now + WIFI_RETRY_MS);
         }
         if let Phase::QuickMenu { row } = self.phase {
-            if NET_TOOLS.contains(&row) && self.hidden_rows().contains(&row) {
+            if (row.page() == QuickRow::NETWORK || row.page() == QuickRow::ROMM) && self.update.is_none() && !self.wifi_up() {
+                self.keyboard = None;
                 self.phase = Phase::QuickMenu {
-                    row: QuickRow::Networks,
+                    row: QuickRow::Network,
                 };
+                self.set_update(Some(UpdateState::Notice(NetNotice::NoNetwork)));
             }
+        }
+        if matches!(self.phase, Phase::RommPair) && self.update.is_none() && !self.wifi_up() {
+            self.romm_jobs.ask(RommJob::CancelPair);
+            self.phase = Phase::QuickMenu {
+                row: QuickRow::Network,
+            };
+            self.set_update(Some(UpdateState::Notice(NetNotice::NoNetwork)));
         }
     }
 
@@ -7340,6 +7667,8 @@ impl App {
                 | Phase::Networks { .. }
                 | Phase::NetworkScan { .. }
                 | Phase::NetworkPage { .. }
+                | Phase::RommPair
+                | Phase::Unwrap { .. }
         ) && self.seated_cart().is_none()
             && !self.link_active()
             && !self.shutting_down()
@@ -7349,6 +7678,10 @@ impl App {
                     self.phase,
                     Phase::Networks { .. } | Phase::NetworkScan { .. } | Phase::NetworkPage { .. }
                 ))
+    }
+
+    pub fn gb_core(&self) -> Core {
+        self.state.gb_core
     }
 
     pub fn wifi_is_off(&self) -> bool {
@@ -8365,6 +8698,13 @@ impl App {
         self.art_jobs = jobs;
     }
 
+    pub fn set_romm_jobs(&mut self, jobs: Box<dyn RommJobs>) {
+        self.romm_jobs = jobs;
+        if self.romm.paired() {
+            self.romm_jobs.ask(RommJob::Start(self.romm.clone()));
+        }
+    }
+
     pub fn fetch_art(&self) -> Option<&FetchArt> {
         self.fetch_art.as_ref()
     }
@@ -9117,6 +9457,9 @@ impl App {
         let rescan = server.take_rescan();
         self.server = None;
         self.reload_server_edits();
+        if let Some(root) = &self.root {
+            self.gifts = crate::romm::Gifts::load(root);
+        }
         match rescan {
             Some(rescan) => {
                 self.adopt_rescan(rescan.carts);
@@ -9166,6 +9509,10 @@ impl App {
     }
 
     fn adopt_rescan(&mut self, carts: Vec<Cart>) {
+        retain_headers(&carts);
+        if let Some(root) = self.root.clone() {
+            self.gifts.retain_games(&root, &carts);
+        }
         let seats: Vec<(usize, Option<(Platform, String)>)> = self
             .shelves
             .iter()
@@ -9388,15 +9735,343 @@ impl App {
                     ssid: n.ssid.clone(),
                     hidden: false,
                 },
+                slot_ui::Layout::General,
+                "",
             ),
             NetRow::Nearby(n) => self.join_network(n.ssid, String::new(), false),
-            NetRow::Other => self.open_keyboard(NAME_TITLE, None, KeyboardFor::NetworkName),
+            NetRow::Other => self.open_keyboard(
+                NAME_TITLE,
+                None,
+                KeyboardFor::NetworkName,
+                slot_ui::Layout::General,
+                "",
+            ),
         }
     }
 
-    fn open_keyboard(&mut self, title: &str, subtitle: Option<&str>, task: KeyboardFor) {
-        let kb = slot_ui::Keyboard::new(slot_ui::Layout::General, title, subtitle, "");
+    fn open_keyboard(
+        &mut self,
+        title: &str,
+        subtitle: Option<&str>,
+        task: KeyboardFor,
+        layout: slot_ui::Layout,
+        text: &str,
+    ) {
+        let kb = slot_ui::Keyboard::new(layout, title, subtitle, text);
         self.keyboard = Some((kb, task));
+    }
+
+    fn save_romm(&self) {
+        if let Some(root) = &self.root {
+            let _ = self.romm.save(root);
+        }
+    }
+
+    fn pair_romm(&mut self) {
+        if self.romm.server.trim().is_empty() {
+            self.set_update(Some(UpdateState::Notice(NetNotice::RommNoServer)));
+            return;
+        }
+        self.start_pairing();
+    }
+
+    fn start_pairing(&mut self) {
+        if let Some(root) = &self.root {
+            if self.romm.save(root).is_ok() {
+                self.romm = crate::romm::RommConf::load(root);
+            }
+        }
+        self.pair_screen = PairScreen::Starting;
+        self.phase = Phase::RommPair;
+        self.romm_jobs.ask(RommJob::Pair(self.romm.clone()));
+    }
+
+    fn leave_pairing(&mut self) {
+        self.romm_jobs.ask(RommJob::CancelPair);
+        self.phase = Phase::QuickMenu {
+            row: QuickRow::RommPair,
+        };
+    }
+
+    fn pair_retryable(&self) -> bool {
+        matches!(
+            self.pair_screen,
+            PairScreen::Failed(PairFail::Offline | PairFail::Denied | PairFail::Expired)
+        )
+    }
+
+    fn pair_input(&mut self, action: Action) {
+        match action {
+            Action::GbaDown(Btn::B) | Action::QuickMenu => self.leave_pairing(),
+            Action::GbaDown(Btn::A) if self.pair_retryable() => self.start_pairing(),
+            _ => {}
+        }
+    }
+
+    fn romm_busy(&self) -> bool {
+        self.romm.paired()
+    }
+
+    fn stop_romm(&mut self) {
+        self.romm_open = false;
+        if self.romm_busy() {
+            self.romm_jobs.ask(RommJob::Stop);
+        }
+    }
+
+    fn romm_quiet(&self) -> bool {
+        self.seated_cart().is_none() && !matches!(self.phase, Phase::Doze { .. })
+    }
+
+    fn romm_tick(&mut self, now: Millis) {
+        if !self.romm_quiet() {
+            if self.romm_open {
+                self.stop_romm();
+            }
+            return;
+        }
+        for (platform, stem) in std::mem::take(&mut self.romm_gifts) {
+            self.gift_arrived(platform, &stem);
+        }
+        if !matches!(self.phase, Phase::Unwrap { .. }) {
+            if let Some(carts) = self.romm_carts.take() {
+                self.adopt_rescan(carts);
+            }
+        }
+        if !self.romm.paired() || !self.wifi_up() {
+            if self.romm_open {
+                self.stop_romm();
+            }
+            return;
+        }
+        if !self.romm_open {
+            self.romm_open = true;
+            self.romm_poll_at = now;
+        }
+        if now >= self.romm_poll_at {
+            self.romm_poll_at = now + ROMM_POLL_MS;
+            self.romm_jobs.ask(RommJob::Claim);
+        }
+    }
+
+    fn gift_arrived(&mut self, platform: Platform, stem: &str) {
+        if let Some(root) = self.root.clone() {
+            self.gifts.add(&root, platform, stem);
+        }
+    }
+
+    fn seated_gift(&self) -> Option<(Platform, String)> {
+        let shelf = self.shelf();
+        let cart = shelf.carts.get(shelf.index)?;
+        self.gifts
+            .holds(cart.platform, &cart.stem)
+            .then(|| (cart.platform, cart.stem.clone()))
+    }
+
+    fn unwrap_seated(&mut self) -> bool {
+        if !self.on_shelf() {
+            return false;
+        }
+        let Some((_, stem)) = self.seated_gift() else {
+            return false;
+        };
+        self.play_held = None;
+        self.unwrap_scene = self.unwrap_tex.map(|_| UnwrapScene::new(self.now()));
+        self.phase = Phase::Unwrap { stem };
+        true
+    }
+
+    fn draw_unwrap(&self, out: &mut Vec<Draw>) -> bool {
+        let (Phase::Unwrap { stem }, Some(scene), Some(tex)) =
+            (&self.phase, &self.unwrap_scene, &self.unwrap_tex)
+        else {
+            return false;
+        };
+        let shelf = self.shelf();
+        let Some(cart) = shelf.carts.get(shelf.index) else {
+            return false;
+        };
+        let canvas = self.canvas();
+        shelf.draw_row(canvas, Some(stem), 0.0, 0.0, 1.0, out);
+        unwrap_draws(
+            &scene.frame(self.now()),
+            tex,
+            (cart.platform, stem),
+            |rect, out| shelf.draw_cart_at(shelf.index, rect, out),
+            canvas,
+            out,
+        );
+        draw_empty_slot(canvas, self.slot_faces, out);
+        true
+    }
+
+    pub fn set_unwrap_tex(&mut self, tex: UnwrapTextures) {
+        self.unwrap_tex = Some(tex);
+    }
+
+    pub fn has_gifts(&self) -> bool {
+        !self.gifts.is_empty()
+    }
+
+    pub fn gift_held(&self, platform: Platform, stem: &str) -> bool {
+        self.gifts.holds(platform, stem)
+    }
+
+    pub fn gift_wants(&self) -> Vec<(usize, (Platform, String))> {
+        let shelf = self.shelf();
+        shelf
+            .around(GIFT_REACH)
+            .into_iter()
+            .filter(|i| shelf.wrapped(*i).is_none())
+            .filter_map(|i| {
+                let cart = shelf.carts.get(i)?;
+                self.gifts
+                    .holds(cart.platform, &cart.stem)
+                    .then(|| (i, (cart.platform, cart.stem.clone())))
+            })
+            .collect()
+    }
+
+    pub fn set_gift_box(&mut self, i: usize, tex: TexId) {
+        self.shelf_mut().set_wrapped(i, Some(tex));
+    }
+
+    fn finish_unwrap(&mut self, stem: &str) {
+        let platform = self
+            .shelf()
+            .carts
+            .get(self.shelf().index)
+            .filter(|c| c.stem == stem)
+            .map(|c| c.platform);
+        if let (Some(root), Some(platform)) = (self.root.clone(), platform) {
+            self.gifts.remove(&root, platform, stem);
+        }
+        for (_, shelf) in &mut self.shelves {
+            for i in 0..shelf.carts.len() {
+                if shelf.carts[i].stem == stem && platform.is_none_or(|p| shelf.carts[i].platform == p) {
+                    shelf.set_wrapped(i, None);
+                }
+            }
+        }
+        self.unwrap_scene = None;
+        self.phase = Phase::Shelf;
+    }
+
+    fn romm_unpaired(&mut self) {
+        self.romm.unpair();
+        self.romm_note = None;
+        self.romm_online = false;
+        self.save_romm();
+        if let Phase::QuickMenu { row } = self.phase {
+            if row.page() == QuickRow::ROMM {
+                let hidden = self.hidden_rows();
+                self.phase = Phase::QuickMenu {
+                    row: QuickRow::ROMM[0].shown(&hidden)[0],
+                };
+            }
+        }
+    }
+
+    fn take_romm_events(&mut self) {
+        while let Some(event) = self.romm_jobs.take() {
+            match event {
+                RommEvent::Paired { token, device_id } => {
+                    self.romm.token = Some(token);
+                    self.romm.device_id = Some(device_id);
+                    self.romm_online = false;
+                    self.save_romm();
+                    self.romm_jobs.ask(RommJob::Start(self.romm.clone()));
+                    if matches!(self.phase, Phase::RommPair) {
+                        let hidden = self.hidden_rows();
+                        self.phase = Phase::QuickMenu {
+                            row: QuickRow::ROMM[0].shown(&hidden)[0],
+                        };
+                    }
+                }
+                RommEvent::Unpaired => self.romm_unpaired(),
+                RommEvent::Installed {
+                    carts,
+                    platform,
+                    stem,
+                } => {
+                    self.romm_carts = Some(carts);
+                    self.romm_gifts.push((platform, stem));
+                }
+                RommEvent::Note(note) => self.romm_note = Some(note),
+                RommEvent::NoteCleared => self.romm_note = None,
+                RommEvent::Online(up) => self.romm_online = up,
+                RommEvent::PairShow { url, code } if matches!(self.phase, Phase::RommPair) => {
+                    self.pair_screen = PairScreen::Show { url, code };
+                }
+                RommEvent::PairFailed(fail) if matches!(self.phase, Phase::RommPair) => {
+                    self.pair_screen = PairScreen::Failed(fail);
+                }
+                RommEvent::PairShow { .. } | RommEvent::PairFailed(_) => {}
+            }
+        }
+    }
+
+    pub fn pair_view(&self) -> Option<PairView> {
+        use slot_ui::PairSlot::*;
+        if !matches!(self.phase, Phase::RommPair) {
+            return None;
+        }
+        let words = |slots: [(slot_ui::PairSlot, &str); 2]| {
+            slots.into_iter().map(|(s, t)| (s, t.to_string())).collect()
+        };
+        Some(match &self.pair_screen {
+            PairScreen::Starting => PairView {
+                url: None,
+                lines: vec![(Scan, "Connecting".into())],
+            },
+            PairScreen::Show { url, code } => PairView {
+                url: Some(url.clone()),
+                lines: vec![
+                    (Scan, "Scan with".into()),
+                    (Phone, "Your phone".into()),
+                    (Enter, "Or enter".into()),
+                    (Code, code.clone()),
+                    (Status, "Waiting".into()),
+                ],
+            },
+            PairScreen::Failed(fail) => PairView {
+                url: None,
+                lines: match fail {
+                    PairFail::Offline => words([(Scan, "Can't reach"), (Phone, "the server")]),
+                    PairFail::TooOld => words([(Scan, "RomM 5.4.0"), (Phone, "or later needed")]),
+                    PairFail::Denied => words([(Scan, "Pairing"), (Phone, "was denied")]),
+                    PairFail::Expired => words([(Scan, "Pairing"), (Phone, "expired")]),
+                },
+            },
+        })
+    }
+
+    pub fn set_pair_faces(&mut self, faces: Option<PairFaces>) {
+        self.pair_faces = faces;
+    }
+
+    fn draw_pair(&self, out: &mut Vec<Draw>) {
+        let empty = [];
+        let (qr, lines) = match &self.pair_faces {
+            Some(f) => (f.qr, f.lines.as_slice()),
+            None => (None, empty.as_slice()),
+        };
+        slot_ui::PairScreen {
+            qr,
+            lines,
+            ground: self.menu_ground(),
+            canvas: self.canvas(),
+        }
+        .draw(out);
+        draw_empty_slot(self.canvas(), self.slot_faces, out);
+        let Some(net) = self.net_legends.as_ref() else {
+            return;
+        };
+        let light = self.light() as usize;
+        self.draw_side_legend(net.cancel[light], false, LINK_LEGEND_Y, out);
+        if self.pair_retryable() {
+            self.draw_side_legend(net.retry[light], true, LINK_LEGEND_Y, out);
+        }
     }
 
     fn join_network(&mut self, ssid: String, password: String, hidden: bool) {
@@ -9444,7 +10119,28 @@ impl App {
                     ssid: text,
                     hidden: true,
                 },
+                slot_ui::Layout::General,
+                "",
             ),
+            KeyboardFor::RommServer => {
+                self.romm.server = text.trim().to_string();
+                self.keyboard = None;
+                self.save_romm();
+            }
+            KeyboardFor::RommPort => {
+                let port = match text.trim() {
+                    "" => None,
+                    t => match t.parse::<u16>() {
+                        Ok(p) if p > 0 => Some(p),
+                        _ => {
+                            return self.set_update(Some(UpdateState::Notice(NetNotice::RommPort)))
+                        }
+                    },
+                };
+                self.romm.port = port;
+                self.keyboard = None;
+                self.save_romm();
+            }
             KeyboardFor::Password { ssid, hidden } => {
                 if !password_ok(&text, !hidden) {
                     return refuse(self);
@@ -9500,7 +10196,13 @@ impl App {
                         ssid: ssid.clone(),
                         hidden,
                     };
-                    return self.open_keyboard(crate::networks::PASSWORD_TITLE, Some(&ssid), task);
+                    return self.open_keyboard(
+                        crate::networks::PASSWORD_TITLE,
+                        Some(&ssid),
+                        task,
+                        slot_ui::Layout::General,
+                        "",
+                    );
                 }
                 let Some(saved) = saved else {
                     return;
@@ -9802,6 +10504,15 @@ impl App {
                 format!("{running} is the latest version."),
             ),
             UpdateState::Notice(NetNotice::Password) => ("Invalid Password".into(), String::new()),
+            UpdateState::Notice(NetNotice::RommPort) => ("Invalid Port".into(), String::new()),
+            UpdateState::Notice(NetNotice::NoNetwork) => (
+                "You must be connected to a network to use tools".into(),
+                String::new(),
+            ),
+            UpdateState::Notice(NetNotice::RommNoServer) => (
+                "Enter a server first".into(),
+                "Set Server before pairing.".into(),
+            ),
             UpdateState::Notice(NetNotice::ServerFailed) => {
                 ("Gamebit failed".into(), "Gamebit has stopped.".into())
             }
@@ -9812,7 +10523,7 @@ impl App {
                 let (title, detail) = match f {
                     UpdateFail::NoWifi => (
                         "Could not join Wi-Fi",
-                        "Check Network in the Wireless menu.",
+                        "Check Wi-Fi in the General menu.",
                     ),
                     UpdateFail::Offline => (
                         "Could not connect",
@@ -9889,7 +10600,7 @@ impl App {
         self.hold_wifi();
         self.update_jobs.ask(UpdateJob::Install(r.clone()));
         self.update_busy = true;
-        let mut picker = CorePicker::open(Core::Mgba, self.now());
+        let mut picker = CorePicker::open(Core::pair(Platform::Gba), Core::Mgba, self.now());
         picker.start(self.now());
         self.update_picker = Some(picker);
         self.update_seat_at = None;
@@ -10216,6 +10927,8 @@ impl App {
         if let Some(picker) = &self.update_picker {
             self.draw_board_chip(
                 board,
+                GBA_SEATS,
+                picker.pair(),
                 &self.update_sockets,
                 picker.chip(self.now()),
                 &self.update_chips,
@@ -10240,7 +10953,7 @@ impl App {
                 colour: [r, g, b, TARNISH_ALPHA * (1.0 - clean)],
             });
         }
-        self.draw_lid_shadow(slot_ui::shelf_cart(canvas), open, out);
+        self.draw_lid_shadow(None, slot_ui::shelf_cart(canvas), open, out);
         let (lid, turn) = lid_at(canvas, open);
         self.draw_update_cart(cart, lid, turn, 1.0, out);
     }
@@ -10392,6 +11105,7 @@ impl App {
         if self.art_busy() {
             return self.refuse();
         }
+        self.stop_romm();
         self.release_radio();
         if let Some(mut old) = self.starting.replace(LinkStarting { starter, client_id }) {
             old.starter.cancel();

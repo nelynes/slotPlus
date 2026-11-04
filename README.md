@@ -6,6 +6,12 @@
 
 ---
 
+# New on 2.6
+
+- **Retroachievements come to SlotPlus. (Beta)** With Slot's integration of wifi, Retro achievements are now enabled.
+- RA sets are cached while on the shelf menu, or upon a game boot. Since Slot turns wifi off while in a game, all your achievements earned are cached until you go back online next time you are on the shelf.
+- RAs can be earned for the Game Boy family of games while in beta.
+
 # What is slotPlus?
 
 A slightly modified Slot. Alongside Slot's Game Boy Advance, Game Boy and Game Boy Color, it plays more handhelds, each on its own shelf with its own cart, and it can play on a TV over HDMI.

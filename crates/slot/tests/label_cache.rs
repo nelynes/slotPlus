@@ -1,6 +1,8 @@
 use std::path::Path;
 
-use slot::label_cache::{cache_path, fresh, label_art, stale, Rebuild, SCREEN_FROM};
+use slot::label_cache::{
+    cache_path, fresh, label_art, learn_stamps, relearn_stamps, stale, Rebuild, SCREEN_FROM,
+};
 use slot_store::{Cart, Platform};
 use slot_ui::label_size;
 
@@ -184,4 +186,122 @@ fn only_a_big_rebuild_takes_the_screen() {
     let batch = |n: usize| Rebuild::start(d.path(), vec![cart.clone(); n]);
     assert!(!batch(SCREEN_FROM - 1).on_screen());
     assert!(batch(SCREEN_FROM).on_screen());
+}
+
+#[test]
+fn the_cache_holds_compressed_rgb_and_reads_back_opaque() {
+    let d = tempfile::tempdir().unwrap();
+    let cart = cart_with_label(d.path(), [200, 10, 10]);
+    let art = label_art(d.path(), &cart).unwrap();
+    let (w, h) = label_size(&cart);
+    assert_eq!(art.len(), (w * h * 4) as usize);
+    assert!(
+        art.chunks_exact(4).all(|p| p == [200, 10, 10, 255]),
+        "the label came back changed"
+    );
+    let size = std::fs::metadata(cache_path(d.path(), &cart))
+        .unwrap()
+        .len();
+    assert!(
+        size < u64::from(w * h),
+        "a flat label cached at {size} bytes for {w}x{h}"
+    );
+    assert_eq!(label_art(d.path(), &cart), Some(art));
+}
+
+#[test]
+fn an_old_raw_cache_file_is_rebuilt_and_removed() {
+    let d = tempfile::tempdir().unwrap();
+    let cart = cart_with_label(d.path(), [200, 10, 10]);
+    let old = d.path().join("Cache/Labels/GBA/Emerald.rgba");
+    std::fs::create_dir_all(old.parent().unwrap()).unwrap();
+    std::fs::write(&old, vec![0u8; 4096]).unwrap();
+    assert_eq!(
+        stale(d.path(), [&cart].into_iter()).len(),
+        1,
+        "an old raw cache counted as current"
+    );
+    assert!(label_art(d.path(), &cart).is_some());
+    assert!(!old.exists(), "the old raw cache file was left behind");
+    assert!(stale(d.path(), [&cart].into_iter()).is_empty());
+}
+
+#[test]
+fn a_label_changed_between_boots_is_redrawn_from_the_learned_stamps() {
+    let d = tempfile::tempdir().unwrap();
+    let cart = cart_with_label(d.path(), [200, 10, 10]);
+    label_art(d.path(), &cart).unwrap();
+    label_png(cart.label.as_ref().unwrap(), 600, 330, [10, 10, 200]);
+    learn_stamps(d.path());
+    assert_eq!(&label_art(d.path(), &cart).unwrap()[..3], &[10, 10, 200]);
+}
+
+#[test]
+fn a_label_changed_after_a_rescan_is_redrawn() {
+    let d = tempfile::tempdir().unwrap();
+    let cart = cart_with_label(d.path(), [200, 10, 10]);
+    learn_stamps(d.path());
+    label_art(d.path(), &cart).unwrap();
+    label_png(cart.label.as_ref().unwrap(), 600, 330, [10, 10, 200]);
+    relearn_stamps(d.path());
+    assert_eq!(&label_art(d.path(), &cart).unwrap()[..3], &[10, 10, 200]);
+}
+
+#[test]
+fn a_label_changed_again_after_the_refresh_lands_is_redrawn() {
+    let d = tempfile::tempdir().unwrap();
+    let cart = cart_with_label(d.path(), [200, 10, 10]);
+    learn_stamps(d.path());
+    label_art(d.path(), &cart).unwrap();
+    label_png(cart.label.as_ref().unwrap(), 600, 330, [10, 10, 200]);
+    relearn_stamps(d.path()).unwrap().join().unwrap();
+    assert_eq!(&label_art(d.path(), &cart).unwrap()[..3], &[10, 10, 200]);
+}
+
+fn old_cache(root: &Path, cart: &Cart, rgb: [u8; 3]) -> std::path::PathBuf {
+    let src = cart.label.as_ref().unwrap();
+    let meta = std::fs::metadata(src).unwrap();
+    let mtime = meta
+        .modified()
+        .unwrap()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    let (w, h) = label_size(cart);
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(&meta.len().to_le_bytes());
+    bytes.extend_from_slice(&mtime.to_le_bytes());
+    bytes.extend_from_slice(&w.to_le_bytes());
+    bytes.extend_from_slice(&h.to_le_bytes());
+    for _ in 0..w * h {
+        bytes.extend_from_slice(&[rgb[0], rgb[1], rgb[2], 255]);
+    }
+    let path = root.join("Cache/Labels/GBA/Emerald.rgba");
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(&path, bytes).unwrap();
+    path
+}
+
+#[test]
+fn a_current_old_cache_is_converted_without_decoding_the_label() {
+    let d = tempfile::tempdir().unwrap();
+    let cart = cart_with_label(d.path(), [200, 10, 10]);
+    let old = old_cache(d.path(), &cart, [10, 10, 200]);
+    let art = label_art(d.path(), &cart).unwrap();
+    assert_eq!(
+        &art[..4],
+        &[10, 10, 200, 255],
+        "the label was decoded instead of converted"
+    );
+    assert!(!old.exists(), "the old cache was left behind");
+    assert_eq!(label_art(d.path(), &cart), Some(art));
+}
+
+#[test]
+fn an_out_of_date_old_cache_is_not_converted() {
+    let d = tempfile::tempdir().unwrap();
+    let cart = cart_with_label(d.path(), [200, 10, 10]);
+    old_cache(d.path(), &cart, [10, 10, 200]);
+    label_png(cart.label.as_ref().unwrap(), 600, 330, [10, 200, 10]);
+    assert_eq!(&label_art(d.path(), &cart).unwrap()[..3], &[10, 200, 10]);
 }

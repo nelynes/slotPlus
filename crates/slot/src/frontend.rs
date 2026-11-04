@@ -64,11 +64,13 @@ pub struct Frontend {
     fetch_sync: FetchSync,
     studio_sync: StudioSync,
     print_tex: Option<crate::print_scene::PrintTextures>,
+    gift_boxes: crate::unwrap_scene::GiftBoxes,
     print_stage: Option<std::sync::mpsc::Receiver<Option<crate::print_scene::StageArt>>>,
     print_stage_asked: bool,
     quick_clock: QuickClock,
     quick_network: QuickClock,
     quick_achievements: [QuickClock; 3],
+    quick_romm: [QuickClock; 4],
     networks: crate::network_faces::NetworkSync,
     quick_palette: QuickPalette,
     wallpaper: WallpaperSync,
@@ -516,6 +518,19 @@ struct Switcher {
     prompt_detail: Option<TexId>,
 }
 
+fn save_headers_when_changed(root: std::path::PathBuf) {
+    let _ = std::thread::Builder::new()
+        .name("slot-headers".into())
+        .spawn(move || loop {
+            std::thread::sleep(std::time::Duration::from_secs(10));
+            if slot_store::header_index::dirty() {
+                if let Err(e) = slot_store::header_index::save(&root) {
+                    eprintln!("slot: header index: {e}");
+                }
+            }
+        });
+}
+
 impl Frontend {
     pub fn boot(platform: Box<dyn Platform>) -> Self {
         Self::boot_with(platform, crate::audio::opened_sink())
@@ -524,6 +539,8 @@ impl Frontend {
     pub fn boot_with(platform: Box<dyn Platform>, sink: Box<dyn crate::audio::AudioSink>) -> Self {
         let now = Instant::now();
         let cart_faces = CartFaces::spawn(platform.root().to_path_buf());
+        save_headers_when_changed(platform.root().to_path_buf());
+        let lid_root = platform.root().to_path_buf();
         let mut session = Session::boot_with(platform.root().to_path_buf(), sink);
         session
             .app_mut()
@@ -531,6 +548,10 @@ impl Frontend {
         session
             .app_mut()
             .set_art_jobs(crate::art::jobs::art_jobs(platform.root().to_path_buf()));
+        #[cfg(feature = "romm")]
+        session
+            .app_mut()
+            .set_romm_jobs(crate::romm::romm_jobs(platform.root().to_path_buf(), crate::romm::http_api));
         session.app_mut().set_wifi(wifi_worker(platform.root()));
         #[cfg(feature = "device")]
         session
@@ -558,7 +579,7 @@ impl Frontend {
             draws: Vec::new(),
             polaroid_texes: Vec::new(),
             title_tex: None,
-            faces: FaceBuilder::spawn(),
+            faces: FaceBuilder::spawn(lid_root),
             cart_faces,
             rebuild: None,
             stale_check,
@@ -578,11 +599,13 @@ impl Frontend {
             fetch_sync: FetchSync::new(),
             studio_sync: StudioSync::new(),
             print_tex: None,
+            gift_boxes: Default::default(),
             print_stage: None,
             print_stage_asked: false,
             quick_clock: QuickClock::default(),
             quick_network: QuickClock::default(),
             quick_achievements: Default::default(),
+            quick_romm: Default::default(),
             networks: Default::default(),
             quick_palette: QuickPalette::default(),
             wallpaper: WallpaperSync::default(),
@@ -899,6 +922,9 @@ impl Frontend {
         let sockets = faces.sockets.into_iter().map(&mut cart).collect();
         let chips = faces.chips.into_iter().map(&mut cart).collect();
         let blank = cart(faces.blank_chip);
+        let gb_sockets = faces.gb_sockets.into_iter().map(&mut cart).collect();
+        let gb_chips = faces.gb_chips.into_iter().map(&mut cart).collect();
+        let gb_blank = cart(faces.gb_blank_chip);
         let shadow = cart(faces.chip_shadow);
         let mut up = |f: UndoFace| (compositor.create_texture(f.w, f.h, &f.rgba), f.w, f.h);
         let lines = faces.shutdown.into_iter().map(&mut up).collect();
@@ -969,6 +995,7 @@ impl Frontend {
             descriptions,
         });
         app.set_core_part_faces(sockets, chips, blank, shadow);
+        app.set_core_gb_part_faces(gb_sockets, gb_chips, gb_blank);
         app.set_core_legend_faces(core_legend, core_legend_light);
         app.set_link_menu_faces(roles);
         app.set_link_linked_face(linked);
@@ -1043,6 +1070,7 @@ impl Frontend {
 
     pub fn compose(&mut self, compositor: &mut Compositor) {
         compositor.set_blue_light(self.session.app().blue_light());
+        compositor.set_dim(self.session.app().dim());
         compositor.set_saturation(self.session.app().saturation());
         compositor.set_contrast(self.session.app().contrast());
         compositor.set_picture(self.session.app().picture_rect());
@@ -1087,6 +1115,7 @@ impl Frontend {
         sync_studio(self.session.app_mut(), compositor, &mut self.studio_sync);
         self.step_print_stage(compositor);
         sync_server(self.session.app_mut(), compositor, self.print_tex);
+        self.gift_boxes.sync(self.session.app_mut(), compositor);
         let stale = self.session.app_mut().take_stale_labels();
         if !stale.is_empty() {
             if let Some(root) = self.session.app().root().map(|r| r.to_path_buf()) {
@@ -1094,6 +1123,9 @@ impl Frontend {
             }
         }
         if self.session.app_mut().take_rescanned() {
+            if let Some(root) = self.session.app().root() {
+                label_cache::relearn_stamps(root);
+            }
             self.wallpaper.image = None;
             self.wallpaper.label.clear();
             self.wallpaper.shelf_asked.clear();
@@ -1103,6 +1135,7 @@ impl Frontend {
         sync_quick_clock(self.session.app_mut(), compositor, &mut self.quick_clock);
         sync_quick_network(self.session.app_mut(), compositor, &mut self.quick_network);
         sync_quick_achievements(self.session.app_mut(), compositor, &mut self.quick_achievements);
+        sync_quick_romm(self.session.app_mut(), compositor, &mut self.quick_romm);
         self.networks.sync(self.session.app_mut(), compositor);
         sync_quick_palette(self.session.app_mut(), compositor, &mut self.quick_palette);
         sync_wallpaper(self.session.app_mut(), compositor, &mut self.wallpaper);
@@ -1202,6 +1235,7 @@ impl Frontend {
             .name("slot-label-check".into())
             .spawn(move || {
                 let _ = tx.send(label_cache::stale(&root, carts.iter()));
+                label_cache::learn_stamps(&root);
             })
             .ok()
             .map(|_| rx)
@@ -1309,6 +1343,10 @@ impl Frontend {
 
     pub fn set_art_jobs(&mut self, jobs: Box<dyn crate::art::jobs::ArtJobs>) {
         self.session.app_mut().set_art_jobs(jobs);
+    }
+
+    pub fn set_romm_jobs(&mut self, jobs: Box<dyn crate::romm::RommJobs>) {
+        self.session.app_mut().set_romm_jobs(jobs);
     }
 
     pub fn set_left_stick(&mut self, present: bool) {
@@ -1419,6 +1457,9 @@ struct UiFaces {
     sockets: Vec<CartFace>,
     chips: Vec<CartFace>,
     blank_chip: CartFace,
+    gb_sockets: Vec<CartFace>,
+    gb_chips: Vec<CartFace>,
+    gb_blank_chip: CartFace,
     chip_shadow: CartFace,
     core_legend: Vec<UndoFace>,
     core_legend_light: Vec<UndoFace>,
@@ -1484,6 +1525,15 @@ impl UiFaces {
                 .map(|c| chip_face(Some(*c)))
                 .collect(),
             blank_chip: chip_face(None),
+            gb_sockets: slot_store::Core::ALL
+                .iter()
+                .map(|c| slot_ui::gb_socket_face(*c))
+                .collect(),
+            gb_chips: slot_store::Core::ALL
+                .iter()
+                .map(|c| slot_ui::gb_chip_face(Some(*c)))
+                .collect(),
+            gb_blank_chip: slot_ui::gb_chip_face(None),
             chip_shadow: chip_shadow_face(),
             core_legend: core_button_legends(footer_ink(false)),
             core_legend_light: core_button_legends(footer_ink(true)),
@@ -2099,6 +2149,36 @@ fn sync_quick_achievements(
         state.shown = text;
     }
     app.set_quick_achievement_faces(faces);
+}
+
+fn sync_quick_romm(app: &mut App, compositor: &mut Compositor, state: &mut [QuickClock; 4]) {
+    if app.quick_menu().is_none() {
+        return;
+    }
+    let texts = app.romm_texts();
+    if texts.iter().zip(state.iter()).all(|(t, s)| *t == s.shown) {
+        return;
+    }
+    let mut faces = [None; 4];
+    for ((text, slot), face) in texts.into_iter().zip(state.iter_mut()).zip(faces.iter_mut()) {
+        if text.is_empty() {
+            slot.shown = text;
+            continue;
+        }
+        let (dim, lit) = (
+            quick_value_face(&text, false),
+            quick_value_face(&text, true),
+        );
+        let (dim_size, lit_size) = ((dim.w, dim.h), (lit.w, lit.h));
+        let dim = upload(compositor, &mut slot.dim, dim);
+        let lit = upload(compositor, &mut slot.lit, lit);
+        *face = Some([
+            (dim, dim_size.0, dim_size.1),
+            (lit, lit_size.0, lit_size.1),
+        ]);
+        slot.shown = text;
+    }
+    app.set_quick_romm_faces(faces);
 }
 
 fn sync_quick_palette(app: &mut App, compositor: &mut Compositor, state: &mut QuickPalette) {

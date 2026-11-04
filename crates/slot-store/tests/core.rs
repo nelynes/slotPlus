@@ -1,7 +1,9 @@
-use slot_store::{
-    core_for, core_for_platform, read_selected_cores, write_selected_core, Core, Platform,
-};
+use slot_store::{core_for_platform, read_selected_cores, write_selected_core, Core, Platform};
 use tempfile::tempdir;
+
+fn core_for(root: &std::path::Path, stem: &str) -> Core {
+    core_for_platform(root, stem, Platform::Gba, Core::Mgba)
+}
 
 fn root_with(ini: Option<&str>) -> tempfile::TempDir {
     let d = tempdir().unwrap();
@@ -157,29 +159,87 @@ fn writing_the_default_still_records_it() {
 }
 
 #[test]
-fn every_platform_defaults_to_mgba() {
-    let d = tempfile::tempdir().unwrap();
+fn an_unlisted_gb_stem_takes_the_card_default() {
+    let d = tempdir().unwrap();
     assert_eq!(
-        core_for_platform(d.path(), "Tetris", Platform::Gb),
+        core_for_platform(d.path(), "Tetris", Platform::Gb, Core::Gambatte),
+        Core::Gambatte
+    );
+    assert_eq!(
+        core_for_platform(d.path(), "Tetris Chromatic", Platform::Gbc, Core::Gambatte),
+        Core::Gambatte
+    );
+    assert_eq!(
+        core_for_platform(d.path(), "Tetris", Platform::Gb, Core::Mgba),
+        Core::Mgba
+    );
+}
+
+#[test]
+fn an_unlisted_gba_stem_stays_mgba() {
+    let d = tempdir().unwrap();
+    assert_eq!(
+        core_for_platform(d.path(), "Emerald", Platform::Gba, Core::Gambatte),
         Core::Mgba
     );
     assert_eq!(
-        core_for_platform(d.path(), "Tetris Chromatic", Platform::Gbc),
+        core_for_platform(d.path(), "Emerald", Platform::Gbav, Core::Gambatte),
         Core::Mgba
     );
+}
+
+#[test]
+fn a_gb_stem_listed_gpsp_takes_the_card_default() {
+    let d = tempdir().unwrap();
+    write_selected_core(d.path(), "Tetris", Core::Gpsp).unwrap();
     assert_eq!(
-        core_for_platform(d.path(), "Emerald", Platform::Gba),
+        core_for_platform(d.path(), "Tetris", Platform::Gb, Core::Gambatte),
+        Core::Gambatte
+    );
+}
+
+#[test]
+fn a_gb_stem_listed_mgba_keeps_mgba() {
+    let d = tempdir().unwrap();
+    write_selected_core(d.path(), "Tetris", Core::Mgba).unwrap();
+    assert_eq!(
+        core_for_platform(d.path(), "Tetris", Platform::Gb, Core::Gambatte),
         Core::Mgba
     );
+}
+
+#[test]
+fn gambatte_round_trips() {
+    let d = root_with(None);
+    write_selected_core(d.path(), "Tetris", Core::Gambatte).unwrap();
+    assert_eq!(
+        read_selected_cores(d.path()).get("Tetris"),
+        Some(&Core::Gambatte)
+    );
+    assert_eq!(Core::parse("gambatte"), Some(Core::Gambatte));
+    assert_eq!(Core::Gambatte.as_str(), "gambatte");
+    assert_eq!(Core::Gambatte.text(), "Gambatte");
+    assert!(Core::Gambatte.runs(Platform::Gb));
+    assert!(Core::Gambatte.runs(Platform::Gbc));
+    assert!(!Core::Gambatte.runs(Platform::Gba));
+    assert!(!Core::Gambatte.runs(Platform::Gbav));
+}
+
+#[test]
+fn pairs_by_platform() {
+    assert_eq!(Core::pair(Platform::Gba), [Core::Mgba, Core::Gpsp]);
+    assert_eq!(Core::pair(Platform::Gbav), [Core::Mgba, Core::Gpsp]);
+    assert_eq!(Core::pair(Platform::Gb), [Core::Mgba, Core::Gambatte]);
+    assert_eq!(Core::pair(Platform::Gbc), [Core::Mgba, Core::Gambatte]);
 }
 
 #[test]
 fn a_cart_can_ask_for_a_non_default_core_by_hand() {
     let d = tempfile::tempdir().unwrap();
     write_selected_core(d.path(), "Emerald", Core::Gpsp).unwrap();
-    assert_ne!(Core::default_for(Platform::Gba), Core::Gpsp);
+    assert_ne!(Core::Mgba, Core::Gpsp);
     assert_eq!(
-        core_for_platform(d.path(), "Emerald", Platform::Gba),
+        core_for_platform(d.path(), "Emerald", Platform::Gba, Core::Mgba),
         Core::Gpsp
     );
 }
@@ -189,48 +249,41 @@ fn a_line_naming_a_core_the_platform_cannot_run_is_dropped() {
     let d = tempfile::tempdir().unwrap();
     write_selected_core(d.path(), "Tetris", Core::Gpsp).unwrap();
     assert_eq!(
-        core_for_platform(d.path(), "Tetris", Platform::Gb),
+        core_for_platform(d.path(), "Tetris", Platform::Gb, Core::Mgba),
         Core::Mgba
     );
     assert_eq!(
-        core_for_platform(d.path(), "Tetris", Platform::Gbc),
+        core_for_platform(d.path(), "Tetris", Platform::Gbc, Core::Mgba),
         Core::Mgba
     );
 }
 
 #[test]
-fn the_picker_board_has_one_socket_per_core_that_runs_the_cart() {
-    assert_eq!(Core::choices(Platform::Gba), vec![Core::Mgba, Core::Gpsp]);
-    assert_eq!(Core::choices(Platform::Gb), vec![Core::Mgba]);
-    assert_eq!(Core::choices(Platform::Gbc), vec![Core::Mgba]);
-    assert_eq!(Core::choices(Platform::Ws), vec![Core::Cygne]);
-    assert_eq!(Core::choices(Platform::Lynx), vec![Core::Lynx]);
-    assert_eq!(Core::choices(Platform::Gg), vec![Core::Gearsystem]);
-}
-#[test]
-fn the_picker_board_has_exactly_two_sockets() {
-    assert_eq!(Core::choices(Platform::Gba).len(), 2);
+fn the_core_list_has_nine_entries() {
+    // slotPlus: Slot's three, then slotPlus's six.
+    assert_eq!(Core::ALL.len(), 9);
 }
 
 #[test]
-fn only_gba_carts_have_a_core_choice() {
-    assert_eq!(Core::choices(Platform::Gb), vec![Core::Mgba]);
-    assert_eq!(Core::choices(Platform::Gbc), vec![Core::Mgba]);
+fn slotplus_systems_have_one_core_each() {
+    assert_eq!(Core::choices(Platform::Gba), vec![Core::Mgba, Core::Gpsp]);
+    assert_eq!(Core::choices(Platform::Gb), vec![Core::Mgba, Core::Gambatte]);
     assert_eq!(Core::choices(Platform::Ws), vec![Core::Cygne]);
     assert_eq!(Core::choices(Platform::Lynx), vec![Core::Lynx]);
     assert_eq!(Core::choices(Platform::Gg), vec![Core::Gearsystem]);
+    assert_eq!(Core::pair(Platform::Ws), [Core::Cygne, Core::Cygne]);
 }
 
 #[test]
 fn a_lynx_cart_always_gets_beetle_lynx_whatever_the_card_says() {
     let d = root_with(Some("Chips Challenge = mgba\n"));
     assert_eq!(
-        core_for_platform(d.path(), "Chips Challenge", Platform::Lynx),
+        core_for_platform(d.path(), "Chips Challenge", Platform::Lynx, Core::Gambatte),
         Core::Lynx
     );
     assert_eq!(Core::default_for(Platform::Lynx), Core::Lynx);
     assert!(!Core::Mgba.runs(Platform::Lynx));
-    assert!(!Core::Gpsp.runs(Platform::Lynx));
+    assert!(!Core::Gambatte.runs(Platform::Ws));
     assert!(!Core::Lynx.runs(Platform::Gba));
 }
 
@@ -238,7 +291,7 @@ fn a_lynx_cart_always_gets_beetle_lynx_whatever_the_card_says() {
 fn a_game_gear_cart_always_gets_gearsystem_whatever_the_card_says() {
     let d = root_with(Some("Sonic Chaos = mgba\n"));
     assert_eq!(
-        core_for_platform(d.path(), "Sonic Chaos", Platform::Gg),
+        core_for_platform(d.path(), "Sonic Chaos", Platform::Gg, Core::Gambatte),
         Core::Gearsystem
     );
     assert_eq!(Core::default_for(Platform::Gg), Core::Gearsystem);
@@ -259,7 +312,7 @@ fn gearsystem_is_named_and_parsed_the_way_its_library_is() {
 fn a_hucard_always_gets_beetle_pce_fast() {
     let d = root_with(Some("Bonk = mgba\n"));
     assert_eq!(
-        core_for_platform(d.path(), "Bonk", Platform::Tg16),
+        core_for_platform(d.path(), "Bonk", Platform::Tg16, Core::Gambatte),
         Core::Pce
     );
     assert_eq!(Core::default_for(Platform::Tg16), Core::Pce);
@@ -275,7 +328,7 @@ fn a_hucard_always_gets_beetle_pce_fast() {
 fn a_neogeo_pocket_cart_always_gets_beetle_neopop() {
     let d = root_with(Some("Metal Slug = mgba\n"));
     assert_eq!(
-        core_for_platform(d.path(), "Metal Slug", Platform::Ngp),
+        core_for_platform(d.path(), "Metal Slug", Platform::Ngp, Core::Gambatte),
         Core::Ngp
     );
     assert_eq!(Core::default_for(Platform::Ngp), Core::Ngp);
