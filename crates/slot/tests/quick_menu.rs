@@ -1057,8 +1057,10 @@ fn the_legend_says_change_on_a_value_row_and_open_on_a_row_that_opens() {
         assert_eq!(a.quick_menu(), Some(row));
         let out = frame(&a);
         assert!(drawn(&out, 400), "no B BACK on {row:?}");
-        assert_eq!(drawn(&out, 401), !row.opens(), "CHANGE on {row:?}");
-        assert_eq!(drawn(&out, 402), row.opens(), "OPEN on {row:?}");
+        // A greyed-out row (RetroAchievements, switched off) has neither.
+        let live = !a.disabled_rows().contains(&row);
+        assert_eq!(drawn(&out, 401), live && !row.opens(), "CHANGE on {row:?}");
+        assert_eq!(drawn(&out, 402), live && row.opens(), "OPEN on {row:?}");
         press(&mut a, Btn::Down);
     }
 }
@@ -1111,7 +1113,9 @@ fn the_pointer_stands_left_of_the_selected_row_and_only_it_is_lit() {
             .collect();
         assert_eq!(pointers.len(), 1, "{row:?}: {} pointers", pointers.len());
         let [px, py, pw, ph] = placed(&out, 700).expect("the pointer");
-        let [lx, ly, _, lh] = placed(&out, label(row, true)).expect("the lit label");
+        // A greyed-out row keeps its dim label under the pointer.
+        let lit = !a.disabled_rows().contains(&row);
+        let [lx, ly, _, lh] = placed(&out, label(row, lit)).expect("the lit label");
         assert!(
             px + pw <= lx + MENU_PAD as f32,
             "{row:?}: the pointer runs into its label"
@@ -2014,6 +2018,9 @@ fn ra_file(d: &TempDir) -> String {
 
 #[test]
 fn the_retroachievements_page_holds_the_account_mode_and_encore() {
+    if !slot::ACHIEVEMENTS {
+        return; // switched off in this build: see retroachievements_are_greyed_out
+    }
     assert_eq!(
         QuickRow::ACHIEVEMENTS.map(QuickRow::label),
         ["Username", "Password", "Cheevo Mode", "Encore"]
@@ -2030,6 +2037,9 @@ fn the_retroachievements_page_holds_the_account_mode_and_encore() {
 
 #[test]
 fn the_username_is_typed_on_the_keyboard_and_reaches_the_file() {
+    if !slot::ACHIEVEMENTS {
+        return; // switched off in this build: see retroachievements_are_greyed_out
+    }
     let (d, mut a, _) = on_carousel();
     std::fs::write(
         d.path().join("Config/retroachievements.toml"),
@@ -2052,6 +2062,9 @@ fn the_username_is_typed_on_the_keyboard_and_reaches_the_file() {
 
 #[test]
 fn a_password_is_never_shown_and_turns_achievements_on() {
+    if !slot::ACHIEVEMENTS {
+        return; // switched off in this build: see retroachievements_are_greyed_out
+    }
     let (d, mut a, _) = on_carousel();
     open_at(&mut a, QuickRow::RaPassword);
     press(&mut a, Btn::A);
@@ -2067,6 +2080,9 @@ fn a_password_is_never_shown_and_turns_achievements_on() {
 
 #[test]
 fn encore_flips_with_a_or_left_and_right() {
+    if !slot::ACHIEVEMENTS {
+        return; // switched off in this build: see retroachievements_are_greyed_out
+    }
     let (d, mut a, _) = on_carousel();
     open_at(&mut a, QuickRow::RaEncore);
     press(&mut a, Btn::A);
@@ -2081,4 +2097,27 @@ fn encore_flips_with_a_or_left_and_right() {
     press(&mut a, Btn::A);
     press(&mut a, Btn::Right);
     assert_eq!(a.achievements_values()[2], "Casual");
+}
+
+#[test]
+fn retroachievements_are_greyed_out_while_switched_off() {
+    if slot::ACHIEVEMENTS {
+        return;
+    }
+    let (d, mut a, _) = on_carousel();
+    assert_eq!(a.disabled_rows(), &[QuickRow::Achievements]);
+    open_at(&mut a, QuickRow::Achievements);
+    assert_eq!(a.quick_menu(), Some(QuickRow::Achievements), "the row can be reached");
+    press(&mut a, Btn::A);
+    assert_eq!(
+        a.quick_menu(),
+        Some(QuickRow::Achievements),
+        "but A doesn't open its page"
+    );
+    press(&mut a, Btn::Right);
+    assert!(a.keyboard().is_none());
+    assert!(
+        !d.path().join("Config/retroachievements.toml").exists(),
+        "nothing is written for it"
+    );
 }

@@ -59,7 +59,7 @@ impl Session {
 
     pub fn boot_with(root: PathBuf, sink: Box<dyn AudioSink>) -> Self {
         let mut session = Session {
-            achievements: slot_achievements::Service::start(root.clone()),
+            achievements: crate::achievement_service(&root),
             wifi_up: false,
             app: App::boot(&root),
             root,
@@ -509,7 +509,7 @@ impl Session {
         if self.app.take_achievements_changed() {
             // The account or Encore changed in Settings: start again with the new file.
             // Unlocks are already on the card, so nothing is lost.
-            self.achievements = slot_achievements::Service::start(self.root.clone());
+            self.achievements = crate::achievement_service(&self.root);
         }
         self.sink.hold_open(self.app.headphones());
         if let Some(emu) = &self.emu {
@@ -845,10 +845,12 @@ impl Session {
         let resume = self.app.card_read("resume", loaded.resume);
         let (sav_unread, resume_unread) = (sav.is_none(), resume.is_none());
         // Tracked only for the Game Boy family, and never over a link cable.
-        let tracked = matches!(
-            loaded.platform,
-            Platform::Gb | Platform::Gbc | Platform::Gba
-        ) && loaded.player.is_none();
+        let tracked = crate::ACHIEVEMENTS
+            && matches!(
+                loaded.platform,
+                Platform::Gb | Platform::Gbc | Platform::Gba
+            )
+            && loaded.player.is_none();
         let core = if tracked {
             self.achievements.wrap(loaded.opened.core)
         } else {
