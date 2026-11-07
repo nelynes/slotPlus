@@ -77,6 +77,7 @@ pub use clock::{
 };
 pub use draw::{Canvas, Draw, TexId, OUT_H, OUT_W};
 pub use footer::{
+    trophy_spot, TROPHY_PX,
     draw_corners, draw_footer, draw_footer_sync, draw_wifi_icon, sync_icon_face, Printed,
     SyncIndicator, FOOTER_Y, SYNC_PX,
 };
@@ -89,7 +90,7 @@ pub use hud::{
     HUD_ICON_PX, HUD_INK, HUD_MS, LINK_HOST_INK, LINK_JOIN_INK, PLATE_H,
 };
 pub use icon::{
-    achievement_icon_face, badge_face, heart_face, icon_box, icon_face, ra_wait_face, warm_fonts,
+    achievement_icon_face, badge_face, heart_face, icon_box, icon_face, ra_trophy_face, warm_fonts,
     Badge, Icon,
 };
 pub use keyboard::{

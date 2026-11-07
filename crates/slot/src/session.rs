@@ -24,6 +24,8 @@ pub struct Session {
     achievements: slot_achievements::Service,
     /// Slot's Wi-Fi was up last frame, so RetroAchievements hears when it comes back.
     wifi_up: bool,
+    /// slotPlus: the last list of ROMs with a set handed to the shelf.
+    achievement_sets_seen: Option<u64>,
     root: PathBuf,
     app: App,
     emu: Option<EmuHandle>,
@@ -61,6 +63,7 @@ impl Session {
         let mut session = Session {
             achievements: crate::achievement_service(&root),
             wifi_up: false,
+            achievement_sets_seen: None,
             app: App::boot(&root),
             root,
             emu: None,
@@ -170,9 +173,9 @@ impl Session {
         self.achievements.take_notice()
     }
 
-    /// The game in play can't earn achievements yet: its set hasn't loaded.
-    pub fn achievement_waiting(&self) -> bool {
-        self.achievements.waiting_for_set()
+    /// slotPlus: true once, as the game in play's achievement set comes ready.
+    pub fn take_achievements_ready(&self) -> bool {
+        self.achievements.take_set_ready()
     }
 
     pub fn achievement_flush_ready(&self) -> bool {
@@ -411,21 +414,31 @@ impl Session {
 
     pub fn update(&mut self, dt: f32) {
         self.bridge_link(|app| app.update(dt));
-        // Background preparation only runs while the shelf sits idle, so it never competes
-        // with booting, opening a game or playing one for the card.
-        let idle = self.opening.is_none() && matches!(self.app.phase(), Phase::Shelf);
-        self.achievements.set_busy(!idle);
         // Slot's Wi-Fi is up on the shelf; unlocks earned in a game wait for it.
         let up = self.app.wifi_up();
         if up && !self.wifi_up {
             self.achievements.network_available();
         }
         self.wifi_up = up;
-        self.app.set_achievements_want_wifi(self.achievements.wants_network());
         if self.app.take_achievements_changed() {
             // The account or Encore changed in Settings: start again with the new file.
             // Unlocks are already on the card, so nothing is lost.
             self.achievements = crate::achievement_service(&self.root);
+            self.achievement_sets_seen = None;
+        }
+        // slotPlus: Download Achievement Sets runs on the achievements worker.
+        match self.app.take_ra_scan_command() {
+            Some(true) => self.achievements.start_scan(),
+            Some(false) => self.achievements.stop_scan(),
+            None => {}
+        }
+        if self.app.ra_scan_started() {
+            self.app.set_ra_scan_report(self.achievements.scan_report());
+        }
+        let (changed, sets) = self.achievements.achievement_sets();
+        if self.achievement_sets_seen != Some(changed) {
+            self.achievement_sets_seen = Some(changed);
+            self.app.set_achievement_sets(sets);
         }
         self.sink.hold_open(self.app.headphones());
         if let Some(emu) = &self.emu {

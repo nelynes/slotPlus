@@ -1909,13 +1909,13 @@ fn the_retroachievements_page_holds_the_account_mode_and_encore() {
     }
     assert_eq!(
         QuickRow::ACHIEVEMENTS.map(QuickRow::label),
-        ["Username", "Password", "Cheevo Mode", "Encore"]
+        ["Username", "Password", "Cheevo Mode", "Encore", "Download Achievement Sets"]
     );
     let (_d, mut a, _) = on_carousel();
     open_at(&mut a, QuickRow::Achievements);
     press(&mut a, Btn::A);
     assert_eq!(a.quick_menu(), Some(QuickRow::RaUsername));
-    assert_eq!(a.achievements_values(), ["Not Set", "Not Set", "Casual"]);
+    assert_eq!(a.achievements_values()[..3], ["Not Set", "Not Set", "Casual"]);
     assert_eq!(a.quick_value(QuickRow::RaEncore), Some(QuickValue::Off));
     press(&mut a, Btn::B);
     assert_eq!(a.quick_menu(), Some(QuickRow::Achievements));
@@ -1983,6 +1983,58 @@ fn encore_flips_with_a_or_left_and_right() {
     press(&mut a, Btn::A);
     press(&mut a, Btn::Right);
     assert_eq!(a.achievements_values()[2], "Casual");
+}
+
+#[test]
+fn download_achievement_sets_reads_out_the_scan_and_b_stops_it() {
+    use slot_achievements::{ScanReport, ScanState};
+    if !slot::ACHIEVEMENTS {
+        return; // switched off in this build: see retroachievements_are_greyed_out
+    }
+    assert_eq!(
+        QuickRow::ACHIEVEMENT_SETS.map(QuickRow::label),
+        ["Status", "Systems", "Sets", "No Achievements", "Badges"]
+    );
+    let (_d, mut a, _) = on_carousel();
+    open_at(&mut a, QuickRow::RaDownload);
+    press(&mut a, Btn::A);
+    assert_eq!(a.quick_menu(), Some(QuickRow::RaSetsStatus));
+    // No Wi-Fi here, so nothing is asked of the worker.
+    assert_eq!(
+        a.achievements_values()[3..],
+        ["Wi-Fi Is Off", "-", "0 new, 0 already", "0", "0 new"]
+    );
+    assert_eq!(a.take_ra_scan_command(), None);
+    // The pointer stays put: the page is read, not chosen from.
+    press(&mut a, Btn::Down);
+    press(&mut a, Btn::A);
+    assert_eq!(a.quick_menu(), Some(QuickRow::RaSetsStatus));
+    a.set_ra_scan_report(ScanReport {
+        state: ScanState::Running,
+        game: "Pokemon - Crystal Version (USA, Europe) (Rev 1)".into(),
+        system: 2,
+        systems: 3,
+        new: 100,
+        already: 1,
+        none: 61,
+        failed: 0,
+        badges: 1200,
+    });
+    let values = a.achievements_values();
+    assert_eq!(values[4..], ["2 of 3", "100 new, 1 already", "61", "1200 new"]);
+    assert!(values[3].starts_with("Pokemon") && values[3].chars().count() <= 26, "{}", values[3]);
+    // B stops it and stays to show what was saved; B again goes back.
+    press(&mut a, Btn::B);
+    assert_eq!(a.take_ra_scan_command(), Some(false));
+    assert_eq!(a.quick_menu(), Some(QuickRow::RaSetsStatus));
+    a.set_ra_scan_report(ScanReport {
+        state: ScanState::Stopped,
+        ..ScanReport::default()
+    });
+    assert_eq!(a.achievements_values()[3], "Stopped");
+    press(&mut a, Btn::B);
+    assert_eq!(a.quick_menu(), Some(QuickRow::RaDownload));
+    assert_eq!(a.take_ra_scan_command(), None);
 }
 
 #[test]

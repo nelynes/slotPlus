@@ -139,6 +139,12 @@ pub enum QuickRow {
     RaPassword,
     RaMode,
     RaEncore,
+    RaDownload,
+    RaSetsStatus,
+    RaSetsSystems,
+    RaSetsFound,
+    RaSetsNone,
+    RaSetsBadges,
     Romm,
     RommProtocol,
     RommServer,
@@ -151,7 +157,7 @@ pub enum QuickRow {
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 139] = [
+    pub const ALL: [QuickRow; 145] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -282,6 +288,12 @@ impl QuickRow {
         QuickRow::RaPassword,
         QuickRow::RaMode,
         QuickRow::RaEncore,
+        QuickRow::RaDownload,
+        QuickRow::RaSetsStatus,
+        QuickRow::RaSetsSystems,
+        QuickRow::RaSetsFound,
+        QuickRow::RaSetsNone,
+        QuickRow::RaSetsBadges,
         QuickRow::Romm,
         QuickRow::RommProtocol,
         QuickRow::RommServer,
@@ -305,11 +317,22 @@ impl QuickRow {
 
     /// slotPlus: the RetroAchievements page. Hardcore needs a live connection and no save
     /// states, so Cheevo Mode is fixed at Casual.
-    pub const ACHIEVEMENTS: [QuickRow; 4] = [
+    pub const ACHIEVEMENTS: [QuickRow; 5] = [
         QuickRow::RaUsername,
         QuickRow::RaPassword,
         QuickRow::RaMode,
         QuickRow::RaEncore,
+        QuickRow::RaDownload,
+    ];
+
+    /// slotPlus: Download Achievement Sets, as it runs. Read-only: no pointer, every row
+    /// lit, and B stops it.
+    pub const ACHIEVEMENT_SETS: [QuickRow; 5] = [
+        QuickRow::RaSetsStatus,
+        QuickRow::RaSetsSystems,
+        QuickRow::RaSetsFound,
+        QuickRow::RaSetsNone,
+        QuickRow::RaSetsBadges,
     ];
 
     pub const GENERAL: [QuickRow; 9] = [
@@ -571,9 +594,16 @@ impl QuickRow {
             | QuickRow::FetchArt
             | QuickRow::Romm
             | QuickRow::Server => &QuickRow::NETWORK,
-            QuickRow::RaUsername | QuickRow::RaPassword | QuickRow::RaMode | QuickRow::RaEncore => {
-                &QuickRow::ACHIEVEMENTS
-            }
+            QuickRow::RaUsername
+            | QuickRow::RaPassword
+            | QuickRow::RaMode
+            | QuickRow::RaEncore
+            | QuickRow::RaDownload => &QuickRow::ACHIEVEMENTS,
+            QuickRow::RaSetsStatus
+            | QuickRow::RaSetsSystems
+            | QuickRow::RaSetsFound
+            | QuickRow::RaSetsNone
+            | QuickRow::RaSetsBadges => &QuickRow::ACHIEVEMENT_SETS,
             QuickRow::RommProtocol
             | QuickRow::RommServer
             | QuickRow::RommPort
@@ -631,6 +661,7 @@ impl QuickRow {
             QuickRow::RommProtocol => Some(QuickRow::Romm),
             QuickRow::WifiPower => Some(QuickRow::Wifi),
             QuickRow::RaUsername => Some(QuickRow::Achievements),
+            QuickRow::RaSetsStatus => Some(QuickRow::RaDownload),
             QuickRow::ControlsShelf => Some(QuickRow::Controls),
             QuickRow::ShelfPrev => Some(QuickRow::ControlsShelf),
             _ => None,
@@ -669,6 +700,7 @@ impl QuickRow {
             QuickRow::General => Some(QuickRow::GENERAL[0]),
             QuickRow::Network => Some(QuickRow::NETWORK[0]),
             QuickRow::Achievements => Some(QuickRow::ACHIEVEMENTS[0]),
+            QuickRow::RaDownload => Some(QuickRow::ACHIEVEMENT_SETS[0]),
             QuickRow::Romm => Some(QuickRow::ROMM[0]),
             QuickRow::Wifi => Some(QuickRow::WIFI[0]),
             QuickRow::Controls => Some(QuickRow::CONTROL_PAGES[0]),
@@ -752,6 +784,12 @@ impl QuickRow {
             QuickRow::RaPassword => "Password",
             QuickRow::RaMode => "Cheevo Mode",
             QuickRow::RaEncore => "Encore",
+            QuickRow::RaDownload => "Download Achievement Sets",
+            QuickRow::RaSetsStatus => "Status",
+            QuickRow::RaSetsSystems => "Systems",
+            QuickRow::RaSetsFound => "Sets",
+            QuickRow::RaSetsNone => "No Achievements",
+            QuickRow::RaSetsBadges => "Badges",
             QuickRow::CheckUpdates => "Check for Updates",
             QuickRow::Server => "Gamebit",
             QuickRow::Romm => "RomM",
@@ -875,6 +913,7 @@ impl QuickRow {
                 | QuickRow::Achievements
                 | QuickRow::RaUsername
                 | QuickRow::RaPassword
+                | QuickRow::RaDownload
                 | QuickRow::Romm
                 | QuickRow::RommServer
                 | QuickRow::RommPort
@@ -1767,8 +1806,9 @@ pub struct QuickMenu<'a> {
     pub clock: Option<[(TexId, u32, u32); 2]>,
     pub wallpaper: Option<[(TexId, u32, u32); 2]>,
     pub networks: Option<[(TexId, u32, u32); 2]>,
-    /// slotPlus: the RetroAchievements page's Username, Password and Cheevo Mode values.
-    pub achievements: [Option<[(TexId, u32, u32); 2]>; 3],
+    /// slotPlus: the RetroAchievements page's Username, Password and Cheevo Mode values, then
+    /// Download Achievement Sets' five.
+    pub achievements: [Option<[(TexId, u32, u32); 2]>; 8],
     pub romm: [Option<[(TexId, u32, u32); 2]>; 4],
     pub faces: Option<&'a QuickMenuFaces>,
     pub ground: Option<(TexId, u32)>,
@@ -1828,7 +1868,10 @@ impl QuickMenu<'_> {
         let (start, len) = quick_window(self.row, self.hidden);
         for row in shown.into_iter().skip(start).take(len) {
             let y = quick_row_top_at(row, self.row, self.hidden) + TYPE_DROP;
-            let lit = row == self.row;
+            // slotPlus: Download Achievement Sets is read out, not chosen from: all lit, no
+            // pointer.
+            let report = row.page() == QuickRow::ACHIEVEMENT_SETS;
+            let lit = row == self.row || report;
             // slotPlus: a greyed-out row keeps its dim face, faded, even under the pointer.
             let greyed = self.disabled.contains(&row);
             let mut label_end = QUICK_LABEL_X;
@@ -1846,7 +1889,7 @@ impl QuickMenu<'_> {
                     tex,
                     alpha: if greyed { GREYED_ALPHA } else { 1.0 },
                 });
-                if lit {
+                if lit && !report {
                     let (tex, pw, ph) = faces.pointer;
                     let px = x + pad - POINTER_GAP - pw as f32;
                     push(out, tex, px, y - POINTER_BLEED as f32, pw, ph);
@@ -1866,6 +1909,11 @@ impl QuickMenu<'_> {
                 QuickRow::RaPassword => self.achievements[1].map(|c| c[lit as usize]),
                 // Casual is the only mode, so its value stays dim even when lit.
                 QuickRow::RaMode => self.achievements[2].map(|c| c[0]),
+                QuickRow::RaSetsStatus => self.achievements[3].map(|c| c[1]),
+                QuickRow::RaSetsSystems => self.achievements[4].map(|c| c[1]),
+                QuickRow::RaSetsFound => self.achievements[5].map(|c| c[1]),
+                QuickRow::RaSetsNone => self.achievements[6].map(|c| c[1]),
+                QuickRow::RaSetsBadges => self.achievements[7].map(|c| c[1]),
                 QuickRow::Palette | QuickRow::GbPalette => self.palette.map(|c| c[lit as usize]),
                 QuickRow::GbaBezel => self.gba_bezel.map(|c| c[lit as usize]),
                 QuickRow::GbBezel => self.gb_bezel.map(|c| c[lit as usize]),

@@ -69,7 +69,7 @@ pub struct Frontend {
     print_stage_asked: bool,
     quick_clock: QuickClock,
     quick_network: QuickClock,
-    quick_achievements: [QuickClock; 3],
+    quick_achievements: [QuickClock; 8],
     quick_romm: [QuickClock; 4],
     networks: crate::network_faces::NetworkSync,
     quick_palette: QuickPalette,
@@ -2116,11 +2116,12 @@ fn sync_quick_network(app: &mut App, compositor: &mut Compositor, state: &mut Qu
     state.shown = text;
 }
 
-/// slotPlus: the RetroAchievements page's Username, Password and Cheevo Mode values.
+/// slotPlus: the RetroAchievements page's Username, Password and Cheevo Mode values, and
+/// Download Achievement Sets' five.
 fn sync_quick_achievements(
     app: &mut App,
     compositor: &mut Compositor,
-    states: &mut [QuickClock; 3],
+    states: &mut [QuickClock; 8],
 ) {
     if app.quick_menu().is_none() {
         return;
@@ -2129,7 +2130,7 @@ fn sync_quick_achievements(
     if states.iter().zip(&texts).all(|(s, t)| s.dim.is_some() && s.shown == *t) {
         return;
     }
-    let mut faces = [None; 3];
+    let mut faces = [None; 8];
     for ((state, text), out) in states.iter_mut().zip(texts).zip(faces.iter_mut()) {
         let (dim, lit) = (quick_value_face(&text, false), quick_value_face(&text, true));
         let (dim_size, lit_size) = ((dim.w, dim.h), (lit.w, lit.h));

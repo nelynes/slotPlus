@@ -1,12 +1,11 @@
-//! Badge files are downloaded/validated by HTTP's worker and decoded by the UI raster
+//! Badge files are downloaded/validated by Download Achievement Sets and decoded by the UI raster
 //! worker. Neither operation touches the emulator or render thread.
 use std::collections::{BTreeSet, VecDeque};
 use std::io::{Cursor, Read};
 use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
 
 use crate::network::{Failure, Transport};
-use crate::storage::{self, Game};
+use crate::storage::Game;
 
 pub(crate) const MAX_BYTES: u64 = 128 * 1024;
 
@@ -69,30 +68,21 @@ fn decode(bytes: &[u8]) -> Option<BadgeImage> {
     })
 }
 
+/// slotPlus: the badges still to fetch, filled one game at a time by Download Achievement
+/// Sets. A badge already on the card (and readable) is never fetched again.
 pub(crate) struct Queue {
     dir: PathBuf,
     names: BTreeSet<String>,
-    known: BTreeSet<String>,
     pending: VecDeque<String>,
-    // slotPlus: the game in play's badges, fetched even while slot is busy.
-    urgent: BTreeSet<String>,
-    retry: Instant,
-    pub waiting: bool,
 }
 
 impl Queue {
-    pub fn new(dir: &Path) -> Self {
-        let mut queue = Self {
+    pub fn empty(dir: &Path) -> Self {
+        Self {
             dir: dir.into(),
             names: BTreeSet::new(),
-            known: BTreeSet::new(),
             pending: VecDeque::new(),
-            urgent: BTreeSet::new(),
-            retry: Instant::now(),
-            waiting: false,
-        };
-        queue.scan();
-        queue
+        }
     }
 
     pub fn enqueue(&mut self, game: &Game) {
@@ -103,7 +93,6 @@ impl Queue {
             let Some(path) = path(&self.dir, &achievement.badge) else {
                 continue;
             };
-            self.known.insert(achievement.badge.clone());
             if !self.names.contains(&achievement.badge) && load_badge(&path).is_none() {
                 self.names.insert(achievement.badge.clone());
                 self.pending.push_back(achievement.badge.clone());
@@ -111,92 +100,29 @@ impl Queue {
         }
     }
 
-    /// The game in play: its badges go first, and are fetched without waiting for the shelf
-    /// to settle, so an unlock shows its own badge rather than the trophy.
-    pub fn enqueue_first(&mut self, game: &Game) {
-        self.urgent.clear();
-        for achievement in &game.achievements {
-            if achievement.flags != 3 {
-                continue;
-            }
-            let Some(path) = path(&self.dir, &achievement.badge) else {
-                continue;
-            };
-            self.known.insert(achievement.badge.clone());
-            if load_badge(&path).is_some() {
-                continue;
-            }
-            self.names.insert(achievement.badge.clone());
-            self.pending.retain(|n| *n != achievement.badge);
-            self.pending.push_front(achievement.badge.clone());
-            self.urgent.insert(achievement.badge.clone());
-        }
-    }
-
-    /// The next badge to fetch belongs to the game in play.
-    pub fn urgent(&self) -> bool {
-        self.pending
-            .front()
-            .is_some_and(|n| self.urgent.contains(n))
-    }
-
-    pub fn scan(&mut self) {
-        for entry in std::fs::read_dir(&self.dir).into_iter().flatten().flatten() {
-            let path = entry.path();
-            let hash = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
-            if hash.len() == 32
-                && hash.bytes().all(|b| b.is_ascii_hexdigit())
-                && path.extension().is_some_and(|e| e == "json")
-            {
-                if let Ok((game, _)) = storage::read::<(Game, BTreeSet<u32>)>(&path) {
-                    self.enqueue(&game);
-                }
-            }
-        }
-    }
-
-    pub fn percent(&self) -> u8 {
-        if self.known.is_empty() {
-            return 100;
-        }
-        ((self.known.len().saturating_sub(self.pending.len())) as u64 * 100
-            / self.known.len() as u64) as u8
-    }
-
+    #[cfg(test)]
     pub fn pending(&self) -> bool {
         !self.pending.is_empty()
     }
 
-    /// At most one bounded HTTP request per pass. Award uploads and game setup go first.
-    /// Badge failures never invalidate authentication or delay achievement evaluation.
-    pub fn step(&mut self, http: &mut impl Transport) {
-        if Instant::now() < self.retry {
-            return;
-        }
-        let Some(name) = self.pending.pop_front() else {
-            return;
-        };
-        let target = path(&self.dir, &name).unwrap();
-        let result = if load_badge(&target).is_some() {
-            Ok(())
-        } else {
-            http.badge(&name).and_then(|bytes| {
-                decode(&bytes).ok_or(Failure::Invalid)?;
-                std::fs::create_dir_all(target.parent().unwrap()).map_err(|_| Failure::Invalid)?;
-                slot_store::atomic_write(&target, &bytes).map_err(|_| Failure::Invalid)
-            })
-        };
-        if result.is_ok() {
-            self.names.remove(&name);
-            self.urgent.remove(&name);
-            if self.pending.is_empty() {
-                self.waiting = false;
+    /// Fetch the next missing badge straight away; `None` once there are none left. A
+    /// network failure keeps the badge for next time; anything else (a bad image, a server
+    /// refusal) drops it until a later scan.
+    pub fn fetch_next(&mut self, http: &mut impl Transport) -> Option<Result<(), Failure>> {
+        let name = self.pending.pop_front()?;
+        let target = path(&self.dir, &name)?;
+        let result = http.badge(&name).and_then(|bytes| {
+            decode(&bytes).ok_or(Failure::Invalid)?;
+            std::fs::create_dir_all(target.parent().unwrap()).map_err(|_| Failure::Invalid)?;
+            slot_store::atomic_write(&target, &bytes).map_err(|_| Failure::Invalid)
+        });
+        match result {
+            Err(Failure::Network) => self.pending.push_front(name),
+            _ => {
+                self.names.remove(&name);
             }
-        } else {
-            self.pending.push_back(name);
-            self.waiting = true;
-            self.retry = Instant::now() + Duration::from_secs(30);
         }
+        Some(result)
     }
 }
 
