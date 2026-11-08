@@ -428,8 +428,9 @@ impl Session {
         }
         // slotPlus: Download Achievement Sets runs on the achievements worker.
         match self.app.take_ra_scan_command() {
-            Some(true) => self.achievements.start_scan(),
-            Some(false) => self.achievements.stop_scan(),
+            Some(crate::app::RaScanCommand::Start) => self.achievements.start_scan(),
+            Some(crate::app::RaScanCommand::Refresh) => self.achievements.start_refresh(),
+            Some(crate::app::RaScanCommand::Stop) => self.achievements.stop_scan(),
             None => {}
         }
         if self.app.ra_scan_started() {

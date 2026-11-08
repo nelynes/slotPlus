@@ -334,6 +334,9 @@ fn sync_fetch_art(app: &mut App, compositor: &mut Compositor, st: &mut FetchSync
         };
         let legends = [set(footer_ink(false)), set(footer_ink(true))];
         app.set_fetch_legends(legends);
+        let mut refresh = |ink| up(slot_ui::ra_refresh_legend(ink));
+        let refresh = [refresh(footer_ink(false)), refresh(footer_ink(true))];
+        app.set_ra_refresh_legend(refresh);
         let paper = compositor.create_texture(1, 1, &[0xf6, 0xf4, 0xef, 255]);
         app.set_fetch_paper(paper);
     }

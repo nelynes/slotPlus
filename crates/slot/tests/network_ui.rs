@@ -1070,3 +1070,58 @@ fn wifi_stays_off_in_a_game_even_with_achievements() {
     settle(&mut a);
     assert!(!a.wifi().held, "Slot keeps Wi-Fi off in a game");
 }
+
+#[test]
+fn download_achievement_sets_starts_once_wifi_is_up_and_x_refreshes_all() {
+    use slot::app::RaScanCommand;
+    use slot_achievements::{ScanReport, ScanState};
+    if !slot::ACHIEVEMENTS {
+        return;
+    }
+    let _g = serial();
+    let (_d, mut a, _log) = booted(Fake::joined());
+    a.apply(Action::QuickMenu);
+    let mut path = vec![QuickRow::RaDownload];
+    while let Some(parent) = path.last().and_then(|r| r.parent()) {
+        path.push(parent);
+    }
+    for (depth, step) in path.iter().rev().enumerate() {
+        if depth > 0 {
+            press(&mut a, Btn::A);
+        }
+        for _ in 0..step.position(&a.hidden_rows()) {
+            press(&mut a, Btn::Down);
+        }
+    }
+    press(&mut a, Btn::A);
+    assert_eq!(a.quick_menu(), Some(QuickRow::RaSetsStatus));
+    settle(&mut a);
+    assert_eq!(a.take_ra_scan_command(), Some(RaScanCommand::Start));
+    // While it runs, X does nothing.
+    a.set_ra_scan_report(ScanReport {
+        state: ScanState::Running,
+        ..ScanReport::default()
+    });
+    press(&mut a, Btn::X);
+    assert_eq!(a.take_ra_scan_command(), None);
+    // Once it's done, X asks for every set again.
+    a.set_ra_scan_report(ScanReport {
+        state: ScanState::Done,
+        new: 2,
+        already: 99,
+        ..ScanReport::default()
+    });
+    assert_eq!(a.achievements_values()[5], "2 new, 99 already");
+    press(&mut a, Btn::X);
+    assert_eq!(a.take_ra_scan_command(), Some(RaScanCommand::Refresh));
+    assert_eq!(a.achievements_values()[5], "0 new, 0 refreshed");
+    a.set_ra_scan_report(ScanReport {
+        state: ScanState::Running,
+        refresh: true,
+        refreshed: 40,
+        ..ScanReport::default()
+    });
+    assert_eq!(a.achievements_values()[5], "0 new, 40 refreshed");
+    press(&mut a, Btn::B);
+    assert_eq!(a.take_ra_scan_command(), Some(RaScanCommand::Stop));
+}

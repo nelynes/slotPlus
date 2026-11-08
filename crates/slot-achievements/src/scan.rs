@@ -40,11 +40,13 @@ pub(crate) fn run(
     http: &mut impl Transport,
 ) {
     let stopped = || status.scan_stop.load(Ordering::Acquire);
+    let refresh = status.scan_refresh.load(Ordering::Acquire);
     let systems = library::roms(root);
     update(status, |r| {
         *r = ScanReport {
             state: ScanState::SigningIn,
             systems: systems.len(),
+            refresh,
             ..ScanReport::default()
         }
     });
@@ -85,6 +87,10 @@ pub(crate) fn run(
                 .ok()
                 .map(|(game, _)| game)
                 .filter(|game| game.id == 0 || game.supported_console());
+            // A refresh asks again even for a set on the card, for changes to the set and
+            // for what has been earned elsewhere since.
+            let had = cached.is_some();
+            let cached = cached.filter(|_| !refresh);
             let (game, fresh) = match cached {
                 Some(game) => (game, false),
                 None => match network::prefetch(http, &auth, dir, &hash) {
@@ -102,9 +108,10 @@ pub(crate) fn run(
                 update(status, |r| r.none += 1);
                 continue;
             }
-            update(status, |r| match fresh {
-                true => r.new += 1,
-                false => r.already += 1,
+            update(status, |r| match (fresh, had) {
+                (true, true) => r.refreshed += 1,
+                (true, false) => r.new += 1,
+                (false, _) => r.already += 1,
             });
             status.add_set(path);
             // The game's badges come with it, so a stop part way leaves whole games.

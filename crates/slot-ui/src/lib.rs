@@ -120,7 +120,7 @@ pub use polaroids::{
 pub use power_menu::{heading_face, menu_detail_face, menu_face, PowerChoice, MENU_PAD};
 pub use quick_menu::{
     clock_legend_faces, core_button_legends, delete_legends, draw_menu_ground,
-    fetch_choice_legends, fetch_legends, fetch_skip_legend, link_button_legends, pm_button_label_faces,
+    fetch_choice_legends, fetch_legends, fetch_skip_legend, ra_refresh_legend, link_button_legends, pm_button_label_faces,
     print_stop_legend,
     prompt_legends, quick_description_face, quick_label_face, quick_legend_faces,
     quick_pointer_face, quick_row_top, quick_row_top_at, quick_scroll, quick_value_face,

@@ -1539,6 +1539,11 @@ pub fn fetch_skip_legend(ink: [u8; 3]) -> UndoFace {
     with_hint(button_face(ButtonLegend::X), "Skip", Some(ink), false)
 }
 
+/// slotPlus: Download Achievement Sets' X, which downloads every set again.
+pub fn ra_refresh_legend(ink: [u8; 3]) -> UndoFace {
+    with_hint(button_face(ButtonLegend::X), "Refresh All", Some(ink), false)
+}
+
 const PRINT_STOP_BUTTON: u32 = 24;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

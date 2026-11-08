@@ -425,6 +425,20 @@ fn download_achievement_sets_prepares_the_library_without_starting_sessions() {
     let report = service.scan_report();
     assert_eq!((report.new, report.already, report.badges), (0, 1, 0));
     assert!(!requests.try_iter().any(|c| c == "gameid" || c.starts_with("badge")));
+    // Refresh All Sets asks again for the set on the card, and its earned list, but leaves
+    // the badges already there.
+    service.start_refresh();
+    wait_for(|| service.scan_report().state == ScanState::Done);
+    let report = service.scan_report();
+    assert!(report.refresh);
+    assert_eq!((report.new, report.refreshed, report.already, report.badges), (0, 1, 0, 0));
+    let calls: Vec<_> = requests.try_iter().collect();
+    assert!(calls.iter().any(|c| c == "patch") && calls.iter().any(|c| c == "unlocks"));
+    assert!(!calls.iter().any(|c| c.starts_with("badge")));
+    // And a plain run afterwards is a plain run again.
+    service.start_scan();
+    wait_for(|| service.scan_report().state == ScanState::Done);
+    assert_eq!(service.scan_report().already, 1);
     // A changed ROM is a different dump: no trophy until it's scanned again.
     std::fs::write(&rom, b"changed content, different size").unwrap();
     assert!(library::with_sets(&store.dir).is_empty());

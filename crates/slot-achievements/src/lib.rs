@@ -54,6 +54,8 @@ struct Status {
     // slotPlus: Download Achievement Sets: asked for, asked to stop, and how it's going.
     scan_request: AtomicBool,
     scan_stop: AtomicBool,
+    // slotPlus: the scan asked for downloads every set again (Refresh All Sets).
+    scan_refresh: AtomicBool,
     scan: Mutex<ScanReport>,
     // slotPlus: the ROMs with a downloaded set, for the shelf's trophy, and a count bumped
     // whenever that list changes.
@@ -108,6 +110,10 @@ pub struct ScanReport {
     pub failed: usize,
     /// Badge images downloaded this time.
     pub badges: usize,
+    /// slotPlus: Refresh All Sets: every set downloaded again, not only new ones.
+    pub refresh: bool,
+    /// Sets already on the card that a refresh downloaded again.
+    pub refreshed: usize,
 }
 
 impl Status {
@@ -302,14 +308,26 @@ impl Service {
     /// slotPlus: start Download Achievement Sets. It runs on the network worker while slot
     /// sits on the shelf; [`Service::scan_report`] says how it's going.
     pub fn start_scan(&self) {
+        self.begin_scan(false);
+    }
+
+    /// slotPlus: Refresh All Sets: download every set again, earned lists too, rather than
+    /// skipping the ones already on the card. Badges already on the card stay.
+    pub fn start_refresh(&self) {
+        self.begin_scan(true);
+    }
+
+    fn begin_scan(&self, refresh: bool) {
         let state = match self.enabled.load(Ordering::Acquire) {
             true => ScanState::SigningIn,
             false => ScanState::NoAccount,
         };
         *self.status.scan.lock().unwrap_or_else(|e| e.into_inner()) = ScanReport {
             state,
+            refresh,
             ..ScanReport::default()
         };
+        self.status.scan_refresh.store(refresh, Ordering::Release);
         self.status.scan_stop.store(false, Ordering::Release);
         self.status
             .scan_request

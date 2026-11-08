@@ -511,6 +511,16 @@ const UPDATE_HOLD_MS: Millis = 300;
 const UPDATE_SWAP_PAUSE_MS: Millis = 1000;
 const UPDATE_BLINK_MS: Millis = 400;
 
+/// slotPlus: what Download Achievement Sets asks of the achievements worker.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RaScanCommand {
+    /// Sets for games without one on the card.
+    Start,
+    /// Every set again (X, Refresh All).
+    Refresh,
+    Stop,
+}
+
 pub struct App {
     phase: Phase,
     shelves: Vec<(Rack, Shelf)>,
@@ -697,7 +707,9 @@ pub struct App {
     /// asked to start, and the start (true) or stop (false) waiting for the session.
     ra_scan: slot_achievements::ScanReport,
     ra_scan_started: bool,
-    ra_scan_command: Option<bool>,
+    ra_scan_command: Option<RaScanCommand>,
+    /// slotPlus: X "Refresh All", in footer ink for dark and light shelves.
+    ra_refresh_legend: Option<[(TexId, u32); 2]>,
     /// slotPlus: the ROMs with a downloaded set, and the gold trophy shown over them.
     achievement_sets: std::sync::Arc<std::collections::HashSet<PathBuf>>,
     trophy_face: Option<(TexId, u32, u32)>,
@@ -896,6 +908,7 @@ impl App {
             ra_scan: slot_achievements::ScanReport::default(),
             ra_scan_started: false,
             ra_scan_command: None,
+            ra_refresh_legend: None,
             achievement_sets: Default::default(),
             trophy_face: None,
             achievement_settings: slot_achievements::Settings::default(),
@@ -2388,12 +2401,26 @@ impl App {
     }
 
     /// slotPlus: start (true) or stop (false) Download Achievement Sets, for the session.
-    pub fn take_ra_scan_command(&mut self) -> Option<bool> {
+    pub fn take_ra_scan_command(&mut self) -> Option<RaScanCommand> {
         self.ra_scan_command.take()
     }
 
+    pub fn set_ra_refresh_legend(&mut self, legend: [(TexId, u32); 2]) {
+        self.ra_refresh_legend = Some(legend);
+    }
+
     fn ra_scan_running(&self) -> bool {
-        self.ra_scan.state.running() || self.ra_scan_command == Some(true)
+        self.ra_scan.state.running()
+            || matches!(
+                self.ra_scan_command,
+                Some(RaScanCommand::Start | RaScanCommand::Refresh)
+            )
+    }
+
+    /// X asks for every set again; only once a run has been asked for (Wi-Fi is up) and none
+    /// is going.
+    fn ra_can_refresh(&self) -> bool {
+        self.ra_scan_started && !self.ra_scan_running()
     }
 
     /// slotPlus: starts once Wi-Fi is up, and stops if the page is left any other way.
@@ -2401,10 +2428,10 @@ impl App {
         let open = self.ra_scan_open();
         if open && !self.ra_scan_started && self.wifi_up() {
             self.ra_scan_started = true;
-            self.ra_scan_command = Some(true);
+            self.ra_scan_command = Some(RaScanCommand::Start);
         }
         if !open && self.ra_scan_running() {
-            self.ra_scan_command = Some(false);
+            self.ra_scan_command = Some(RaScanCommand::Stop);
         }
     }
 
@@ -2418,12 +2445,20 @@ impl App {
     }
 
     fn ra_scan_input(&mut self, action: Action) {
+        if action == Action::GbaDown(Btn::X) && self.ra_can_refresh() {
+            self.ra_scan = slot_achievements::ScanReport {
+                refresh: true,
+                ..Default::default()
+            };
+            self.ra_scan_command = Some(RaScanCommand::Refresh);
+            return;
+        }
         if !matches!(action, Action::GbaDown(Btn::B) | Action::QuickMenu) {
             return;
         }
         if self.ra_scan_running() {
             // B stops it; the counts stay up so the player sees what was saved.
-            self.ra_scan_command = Some(false);
+            self.ra_scan_command = Some(RaScanCommand::Stop);
             return;
         }
         self.phase = Phase::QuickMenu {
@@ -2465,7 +2500,10 @@ impl App {
         [
             status,
             systems,
-            format!("{} new, {} already", r.new, r.already),
+            match r.refresh {
+                true => format!("{} new, {} refreshed", r.new, r.refreshed),
+                false => format!("{} new, {} already", r.new, r.already),
+            },
             r.none.to_string(),
             format!("{} new", r.badges),
         ]
@@ -5048,7 +5086,6 @@ impl App {
 
     pub fn update(&mut self, dt: f32) {
         self.clock += dt as f64 * 1000.0;
-        self.step_ra_scan();
         if self.name_pending && self.shelf_platform.face.is_some() {
             self.name_pending = false;
             self.shelf_named = Some(self.now());
@@ -5380,6 +5417,7 @@ impl App {
     }
 
     fn timers(&mut self) {
+        self.step_ra_scan();
         self.step_server();
         self.step_net_time();
         self.take_art_events();
@@ -6240,7 +6278,15 @@ impl App {
                 .fetch_legends
                 .map(|l| l[usize::from(self.legends_light())][2])
                 .filter(|_| self.ra_scan_running());
-            return self.draw_side_legend(stop.unwrap_or(back), false, y, out);
+            self.draw_side_legend(stop.unwrap_or(back), false, y, out);
+            if let Some(refresh) = self
+                .ra_refresh_legend
+                .map(|l| l[usize::from(self.legends_light())])
+                .filter(|_| self.ra_can_refresh())
+            {
+                self.draw_side_legend(refresh, true, y, out);
+            }
+            return;
         }
         let left = match row.page() == QuickRow::PLAY {
             true => resume,

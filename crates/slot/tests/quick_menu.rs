@@ -2019,19 +2019,23 @@ fn download_achievement_sets_reads_out_the_scan_and_b_stops_it() {
         none: 61,
         failed: 0,
         badges: 1200,
+        ..ScanReport::default()
     });
     let values = a.achievements_values();
     assert_eq!(values[4..], ["2 of 3", "100 new, 1 already", "61", "1200 new"]);
     assert!(values[3].starts_with("Pokemon") && values[3].chars().count() <= 26, "{}", values[3]);
     // B stops it and stays to show what was saved; B again goes back.
     press(&mut a, Btn::B);
-    assert_eq!(a.take_ra_scan_command(), Some(false));
+    assert_eq!(a.take_ra_scan_command(), Some(slot::app::RaScanCommand::Stop));
     assert_eq!(a.quick_menu(), Some(QuickRow::RaSetsStatus));
     a.set_ra_scan_report(ScanReport {
         state: ScanState::Stopped,
         ..ScanReport::default()
     });
     assert_eq!(a.achievements_values()[3], "Stopped");
+    // X does nothing before a run has been asked for (no Wi-Fi here)...
+    press(&mut a, Btn::X);
+    assert_eq!(a.take_ra_scan_command(), None);
     press(&mut a, Btn::B);
     assert_eq!(a.quick_menu(), Some(QuickRow::RaDownload));
     assert_eq!(a.take_ra_scan_command(), None);
