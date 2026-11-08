@@ -4135,7 +4135,7 @@ impl App {
             return self.top_slot_faces();
         }
         let _ = stem;
-        self.slot_faces
+        self.slot_now()
     }
 
     pub fn set_shelf_platform_face(&mut self, face: TexId, w: u32) {
@@ -8259,7 +8259,7 @@ impl App {
             game: false,
             over: true,
             behind: self.shelf().behind(stem),
-            slot: self.slot_now(),
+            slot: self.slot_faces_for(stem),
             canvas: self.canvas(),
         }
         .draw(out);
@@ -9428,7 +9428,7 @@ impl App {
                         | Phase::Ejecting { .. }
                 ),
             behind: self.shelf().behind(stem),
-            slot: self.slot_now(),
+            slot: self.slot_faces_for(stem),
             canvas: self.canvas(),
         }
         .draw(out);
