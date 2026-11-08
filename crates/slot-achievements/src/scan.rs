@@ -10,9 +10,10 @@ use crate::network::{self, Failure, Transport};
 use crate::storage::{self, Auth, Config, Game};
 use crate::{badges, library, ScanReport, ScanState, Status};
 
-/// A set slot can use: a known game on a tracked system with at least one core achievement.
+/// A set slot can use: a real game on a tracked system with at least one official
+/// achievement that isn't one of RetroAchievements' notices.
 pub(crate) fn has_set(game: &Game) -> bool {
-    game.id != 0 && game.supported_console() && game.achievements.iter().any(|a| a.flags == 3)
+    game.supported_console() && game.earnable().next().is_some()
 }
 
 fn update(status: &Status, f: impl FnOnce(&mut ScanReport)) {

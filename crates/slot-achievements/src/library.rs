@@ -185,16 +185,40 @@ pub(crate) fn checked(dir: &Path, path: &Path, now: u64, has_set: bool) {
     with_index(dir, |index, changed| {
         if let Some(entry) = index.get_mut(path) {
             entry.checked_at = now;
-            entry.badge_version = 2;
+            entry.badge_version = SET_RULES;
             entry.has_set = has_set;
             *changed = true;
         }
     });
 }
 
+/// slotPlus: which rules an entry's `has_set` was judged by. 3: RetroAchievements' notices
+/// and stand-in games don't count.
+const SET_RULES: u8 = 3;
+
 /// ROMs whose last scan found a set, still unchanged on the card, with the set still cached.
+/// A verdict from older rules is judged again from the cached set, once.
 pub(crate) fn with_sets(dir: &Path) -> HashSet<PathBuf> {
-    let index = with_index(dir, |index, _| index.clone());
+    let (index, rejudged) = with_index(dir, |index, changed| {
+        let mut rejudged = false;
+        for entry in index
+            .values_mut()
+            .filter(|e| e.has_set && e.badge_version < SET_RULES)
+        {
+            entry.has_set = crate::storage::read::<(
+                crate::storage::Game,
+                std::collections::BTreeSet<u32>,
+            )>(&dir.join(format!("{}.json", entry.hash)))
+            .is_ok_and(|(game, _)| crate::scan::has_set(&game));
+            entry.badge_version = SET_RULES;
+            *changed = true;
+            rejudged = true;
+        }
+        (index.clone(), rejudged)
+    });
+    if rejudged {
+        flush();
+    }
     index
         .into_iter()
         .filter(|(path, e)| {
@@ -226,4 +250,20 @@ pub(crate) fn content_hash(path: &Path) -> Result<String, String> {
         md5.consume(&buffer[..n]);
     }
     Ok(format!("{:x}", md5.compute()))
+}
+
+/// Test hooks: an entry's trophy verdict and the rules it was judged by.
+#[cfg(test)]
+pub(crate) fn set_verdict(dir: &Path, path: &Path, has_set: bool, rules: u8) {
+    with_index(dir, |index, changed| {
+        let entry = index.get_mut(path).expect("indexed");
+        entry.has_set = has_set;
+        entry.badge_version = rules;
+        *changed = true;
+    });
+}
+
+#[cfg(test)]
+pub(crate) fn verdict(dir: &Path, path: &Path) -> Option<(bool, u8)> {
+    with_index(dir, |index, _| index.get(path).map(|e| (e.has_set, e.badge_version)))
 }

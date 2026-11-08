@@ -111,6 +111,30 @@ fn call(
     success(http.call(&fields)?)
 }
 
+/// slotPlus: rcheevos, as `startsession` names the client's achievement runtime.
+const RCHEEVOS: &str = "12.2.1";
+
+/// slotPlus: tell RetroAchievements a game was played, from the shelf afterwards. Casual
+/// (`h=0`), as slot always is.
+pub(crate) fn report_played(
+    http: &mut impl Transport,
+    auth: &Auth,
+    played: &crate::played::Played,
+) -> Result<(), Failure> {
+    call(
+        http,
+        auth,
+        "startsession",
+        &[
+            ("g", played.game.to_string()),
+            ("h", "0".into()),
+            ("m", played.hash.clone()),
+            ("l", RCHEEVOS.into()),
+        ],
+    )
+    .map(|_| ())
+}
+
 pub(crate) fn login(
     http: &mut impl Transport,
     config: &Config,
@@ -299,7 +323,8 @@ pub(crate) fn run(
             continue;
         }
         crate::library::flush_due();
-        if !verified || unsynced() {
+        let played = crate::played::queued(&dir);
+        if !verified || unsynced() || !played.is_empty() {
             status.set(SyncStatus::Syncing);
         }
         let result = (|| -> Result<(), Failure> {
@@ -316,6 +341,19 @@ pub(crate) fn run(
                 verified = true;
             }
             let auth = auth.as_ref().ok_or(Failure::Invalid)?;
+            // Games played since the last sync, one per pass, so they show as played.
+            if let Some(game) = played.first() {
+                match report_played(&mut http, auth, game) {
+                    Ok(()) => eprintln!("slot: achievements: reported playing game {}", game.game),
+                    // Turned down for good (a game RetroAchievements no longer has): drop it.
+                    Err(Failure::Rejected) => {
+                        eprintln!("slot: achievements: game {} not taken", game.game)
+                    }
+                    Err(e) => return Err(e),
+                }
+                crate::played::done(&dir, game);
+                return Ok(());
+            }
             // Rotate through pending awards so one rejected/deleted achievement does not
             // prevent other games from syncing.
             let pending = {
@@ -334,6 +372,7 @@ pub(crate) fn run(
             if let Some(unlock) = pending {
                 last_award = unlock.id;
                 award(&mut http, auth, &unlock, now())?;
+                eprintln!("slot: achievements: sent achievement {}", unlock.id);
                 let mut store = store.lock().unwrap();
                 store.ack(unlock.id).map_err(|_| Failure::Invalid)?;
                 if store.unlocks.values().all(|u| u.synced) {

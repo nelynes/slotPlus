@@ -1180,3 +1180,84 @@ fn a_game_says_ready_once_its_cached_set_is_active() {
     assert!(!service.take_set_ready());
     drop(core);
 }
+
+fn notice(id: u32, title: &str) -> Achievement {
+    Achievement {
+        id,
+        title: title.into(),
+        badge: "00000".into(),
+        description: "A notice from RetroAchievements".into(),
+        points: 0,
+        flags: 3,
+        definition: "0=1".into(),
+    }
+}
+
+#[test]
+fn retroachievements_notices_and_stand_in_games_are_not_sets() {
+    // A real set with the "Unknown Emulator" notice still counts...
+    let mut real = game();
+    real.achievements.push(notice(101000001, "Warning: Unknown Emulator"));
+    assert!(scan::has_set(&real));
+    assert_eq!(real.earnable().map(|a| a.id).collect::<Vec<_>>(), [7]);
+    // ...one with only unofficial achievements beside the notice doesn't (Tetris today)...
+    let mut unofficial = real.clone();
+    unofficial.achievements[0].flags = 5;
+    assert!(!scan::has_set(&unofficial));
+    // ...nor does the stand-in RetroAchievements sends for a dump it doesn't support.
+    let stand_in = Game {
+        id: 1100002506,
+        title: "Unsupported Game Version (TwinBee Da!!)".into(),
+        achievements: vec![notice(101000001, "Unsupported Game Version")],
+        ..game()
+    };
+    assert!(stand_in.stand_in() && !scan::has_set(&stand_in));
+}
+
+#[test]
+fn a_trophy_judged_by_older_rules_is_judged_again_from_the_cached_set() {
+    let root = configured();
+    let rom = root.path().join("Games/GBA/TwinBee.gba");
+    std::fs::write(&rom, b"twinbee").unwrap();
+    let store = Store::open(root.path(), "Player").unwrap();
+    let hash = library::hash(&store.dir, &rom).unwrap();
+    let stand_in = Game {
+        id: 1100002506,
+        title: "Unsupported Game Version (TwinBee Da!!)".into(),
+        achievements: vec![notice(101000001, "Unsupported Game Version")],
+        ..game()
+    };
+    storage::write(
+        &store.dir.join(format!("{hash}.json")),
+        &(&stand_in, std::collections::BTreeSet::<u32>::new()),
+    )
+    .unwrap();
+    // As the 2026-11-07 scan left it: a trophy, under the old rules (2).
+    library::set_verdict(&store.dir, &rom, true, 2);
+    assert!(library::with_sets(&store.dir).is_empty());
+    assert_eq!(library::verdict(&store.dir, &rom), Some((false, 3)));
+}
+
+#[test]
+fn a_played_game_is_reported_from_the_shelf_afterwards() {
+    let root = configured();
+    let rom = root.path().join("Games/GBA/Test.gba");
+    std::fs::write(&rom, b"fixture ROM").unwrap();
+    let (calls, requests) = mpsc::channel();
+    let service = Service::start_with(root.path().into(), Server { calls });
+    wait_for(|| service.enabled.load(Ordering::Acquire));
+    service.start_scan();
+    wait_for(|| service.scan_report().state == ScanState::Done);
+    wait_for(|| service.sync_status() == SyncStatus::Ready);
+    let _ = requests.try_iter().count();
+    let mut core = service.wrap(Box::<TestCore>::default());
+    core.load(&rom).unwrap();
+    wait_for(|| tracked(&service));
+    let dir = Store::open(root.path(), "Player").unwrap().dir;
+    assert_eq!(played::queued(&dir).len(), 1);
+    std::thread::sleep(Duration::from_millis(300));
+    assert!(!requests.try_iter().any(|r| r == "startsession"), "not while it plays");
+    drop(core);
+    wait_for(|| played::queued(&dir).is_empty());
+    assert!(requests.try_iter().any(|r| r == "startsession"));
+}

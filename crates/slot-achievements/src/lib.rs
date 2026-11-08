@@ -5,6 +5,7 @@ mod core;
 mod library;
 mod network;
 mod ready;
+mod played;
 mod runtime;
 mod scan;
 mod settings;
@@ -116,9 +117,18 @@ impl Status {
     }
 
     fn add_set(&self, path: &Path) {
+        self.mark_set(path, true);
+    }
+
+    /// The shelf's trophy for `path`, on or off.
+    fn mark_set(&self, path: &Path, has_set: bool) {
         let mut sets = self.sets.lock().unwrap_or_else(|e| e.into_inner());
-        if !sets.contains(path) {
-            Arc::make_mut(&mut sets).insert(path.to_path_buf());
+        if sets.contains(path) != has_set {
+            let sets = Arc::make_mut(&mut sets);
+            match has_set {
+                true => sets.insert(path.to_path_buf()),
+                false => sets.remove(path),
+            };
             self.sets_changed.fetch_add(1, Ordering::AcqRel);
         }
     }
@@ -483,15 +493,45 @@ fn run(
                     if let Ok(hash) = library::hash(&dir, &load.path) {
                         // This may have indexed a renamed ROM; the shelf can seal it.
                         status.cached.fetch_add(1, Ordering::AcqRel);
-                        if let Ok((game, unlocked)) =
-                            storage::read::<(storage::Game, std::collections::BTreeSet<u32>)>(
-                                &dir.join(format!("{hash}.json")),
-                            )
-                        {
-                            if scan::has_set(&game) {
-                                // A renamed ROM gets its trophy back on the shelf.
-                                library::checked(&dir, &load.path, network::now(), true);
-                                status.add_set(&load.path);
+                        let name = load
+                            .path
+                            .file_name()
+                            .map(|n| n.to_string_lossy().into_owned())
+                            .unwrap_or_default();
+                        let cached = storage::read::<(
+                            storage::Game,
+                            std::collections::BTreeSet<u32>,
+                        )>(&dir.join(format!("{hash}.json")));
+                        match &cached {
+                            Err(_) => eprintln!(
+                                "slot: achievements: no set on the card for {name} \
+                                 (Download Achievement Sets looks it up)"
+                            ),
+                            Ok((game, _)) if game.stand_in() => eprintln!(
+                                "slot: achievements: RetroAchievements doesn't support this \
+                                 version of {name} ({})",
+                                game.title
+                            ),
+                            Ok((game, _)) if game.id == 0 => eprintln!(
+                                "slot: achievements: RetroAchievements has no game for {name}"
+                            ),
+                            Ok(_) => {}
+                        }
+                        if let Ok((game, unlocked)) = cached {
+                            // The cached set has the last word on the trophy: a renamed ROM
+                            // gets it back, and a stand-in or notice-only set loses it.
+                            let found = scan::has_set(&game);
+                            library::checked(&dir, &load.path, network::now(), found);
+                            status.mark_set(&load.path, found);
+                            if game.id != 0 && !game.stand_in() {
+                                // Reported from the shelf, so it shows as played.
+                                played::push(
+                                    &dir,
+                                    played::Played {
+                                        game: game.id,
+                                        hash: hash.clone(),
+                                    },
+                                );
                             }
                             if game.supported_console() {
                                 let _ = prepared_tx.send(network::Prepared {
@@ -531,8 +571,9 @@ fn run(
                 let store = store.lock().unwrap();
                 let mut updated = BTreeMap::new();
                 let mut again = std::collections::BTreeSet::new();
+                let real = prepared.game.id != 0 && !prepared.game.stand_in();
                 for achievement in prepared.game.achievements {
-                    if achievement.flags != 3 {
+                    if !real || achievement.flags != 3 || achievement.id >= storage::NOTICE_IDS {
                         continue;
                     }
                     let done = prepared.unlocked.contains(&achievement.id)
@@ -575,12 +616,22 @@ fn run(
             let mut achievements = BTreeMap::new();
             let mut again = std::collections::BTreeSet::new();
             let mut unsupported = 0;
+            let mut set_aside = 0;
+            let mut earned_before = 0;
+            let real = prepared.game.id != 0 && !prepared.game.stand_in();
+            let game_id = prepared.game.id;
+            let game_title = prepared.game.title.clone();
             for achievement in prepared.game.achievements {
-                if achievement.flags != 3 {
+                // Unofficial ones, and RetroAchievements' own notices, can't be earned.
+                if !real || achievement.flags != 3 || achievement.id >= storage::NOTICE_IDS {
+                    set_aside += 1;
                     continue;
                 }
                 let done = prepared.unlocked.contains(&achievement.id)
                     || store.unlocks.contains_key(&achievement.id);
+                if done {
+                    earned_before += 1;
+                }
                 if done && !encore {
                     continue;
                 }
@@ -595,7 +646,13 @@ fn run(
             }
             drop(store);
             let state = if prepared.cached { "cached" } else { "online" };
-            let title = if prepared.game.id == 0 {
+            eprintln!(
+                "slot: achievements: game {game_id} \"{game_title}\": {} active, {earned_before} \
+                 earned before{}, {set_aside} unofficial or notices, {unsupported} unsupported",
+                achievements.len(),
+                if encore { " (encore)" } else { "" },
+            );
+            let title = if !real {
                 "No achievements for this ROM".into()
             } else {
                 let encore = if encore { ", encore" } else { "" };
@@ -623,7 +680,7 @@ fn run(
                 warned_gap: false,
             });
             tracking.store(generation, Ordering::Release);
-            if prepared.game.id != 0 && !playing.as_ref().is_some_and(|g| g.achievements.is_empty()) {
+            if real && !playing.as_ref().is_some_and(|g| g.achievements.is_empty()) {
                 status.set_ready.store(true, Ordering::Release);
             }
         }
@@ -693,6 +750,14 @@ fn evaluate(
                         detail: achievement.description.clone(),
                         kind: NoticeKind::Earned,
                     };
+                    let how = match game.encore.contains(&id) {
+                        true => "again (encore, not sent)",
+                        false => "and saved for the next sync",
+                    };
+                    eprintln!(
+                        "slot: achievements: earned {id} \"{}\" {how}",
+                        achievement.title
+                    );
                     if game.encore.remove(&id) {
                         // Encore: already on the account, so shown and nothing more.
                         let _ = notices.send(notice);
