@@ -9,6 +9,7 @@
 # New on 2.8
 
 - **RetroAchievements for WonderSwan, WonderSwan Color and Atari Lynx.** Download Achievement Sets now checks those games too, and they earn achievements just like the Game Boy family.
+- RA support for ultra systems planned for next release.
 
 # New on 2.7
 
