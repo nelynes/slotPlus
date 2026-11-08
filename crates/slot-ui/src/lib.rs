@@ -37,6 +37,10 @@ mod shell;
 mod shot_viewer;
 mod silhouette;
 mod slot_chrome;
+#[cfg(feature = "nds")]
+mod box_screen;
+#[cfg(feature = "nds")]
+pub use box_screen::BoxScreen;
 mod sticker;
 pub mod sticker_curl;
 pub mod text;
@@ -88,6 +92,10 @@ pub use cart::{
     tg16_label_panel, TG16_CART_H, TG16_CART_W, TG16_LABEL_H, TG16_LABEL_W, TG16_LABEL_X,
     TG16_LABEL_Y,
 };
+#[cfg(feature = "nds")]
+pub use cart::{DS_LABEL_H, DS_LABEL_W, DS_LABEL_X, DS_LABEL_Y};
+#[cfg(feature = "nds")]
+pub use bitmaps::{ds_slot_back, ds_slot_back_light, ds_slot_front, ds_slot_front_light, DS_CART_H, DS_CART_W, DS_MOUTH_W};
 pub use clock::{
     clock_label, date_time_text, hhmm, time_text, ClockFaceSet, ClockFaces, ClockPicker, ClockRow,
     ClockScreen, Part,
@@ -163,7 +171,7 @@ pub use shot_viewer::{
 pub use silhouette::{gb_silhouette, silhouette, GbShell};
 pub use slot_chrome::{
     draw_empty_slot, draw_plugged_slot, draw_slot_back, draw_slot_front, draw_slot_title, ease,
-    band_y, edge, housing, opening, recess, slot_name_y, SlotChrome, ALERT_PX, LIP_H, MOUTH_H,
+    band_y, edge, housing, opening, recess, seated_rect, slot_name_y, SlotChrome, ALERT_PX, LIP_H, MOUTH_H,
     MOUTH_W,
 };
 pub use sticker::{

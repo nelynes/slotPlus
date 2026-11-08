@@ -112,6 +112,8 @@ pub enum QuickRow {
     ScReset,
     LidOff,
     FetchArt,
+    #[cfg(feature = "nds")]
+    FetchBoxArt,
     Controls,
     ControlsShelf,
     ControlsCollections,
@@ -175,7 +177,7 @@ pub enum QuickRow {
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 163] = [
+    pub const ALL: [QuickRow; 163 + cfg!(feature = "nds") as usize] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -279,6 +281,8 @@ impl QuickRow {
         QuickRow::ScReset,
         QuickRow::LidOff,
         QuickRow::FetchArt,
+        #[cfg(feature = "nds")]
+        QuickRow::FetchBoxArt,
         QuickRow::Controls,
         QuickRow::ControlsShelf,
         QuickRow::ControlsCollections,
@@ -388,10 +392,12 @@ impl QuickRow {
 
     pub const WIFI: [QuickRow; 2] = [QuickRow::WifiPower, QuickRow::Networks];
 
-    pub const NETWORK: [QuickRow; 4] = [
+    pub const NETWORK: [QuickRow; 4 + cfg!(feature = "nds") as usize] = [
         QuickRow::Server,
         QuickRow::Romm,
         QuickRow::FetchArt,
+        #[cfg(feature = "nds")]
+        QuickRow::FetchBoxArt,
         QuickRow::CheckUpdates,
     ];
 
@@ -670,6 +676,8 @@ impl QuickRow {
             | QuickRow::RaSetsFound
             | QuickRow::RaSetsNone
             | QuickRow::RaSetsBadges => &QuickRow::ACHIEVEMENT_SETS,
+            #[cfg(feature = "nds")]
+            QuickRow::FetchBoxArt => &QuickRow::NETWORK,
             QuickRow::RommProtocol
             | QuickRow::RommServer
             | QuickRow::RommPort
@@ -832,8 +840,8 @@ impl QuickRow {
             QuickRow::GbColourCorrection => "Color Correction",
             QuickRow::GbcColourCorrection => "Color Correction",
             QuickRow::Game => "Gameplay",
-            QuickRow::AutoLoad => "Load State on Insert",
-            QuickRow::EjectSave => "Save State on Eject",
+            QuickRow::AutoLoad => "Auto Load State",
+            QuickRow::EjectSave => "Eject Save State",
             QuickRow::Turbo => "Turbo Buttons",
             QuickRow::Rewind => "Rewind",
             QuickRow::GbPalette => "Palette",
@@ -858,6 +866,8 @@ impl QuickRow {
             QuickRow::KidMode => "Kid Mode",
             QuickRow::KidShelf => "Kid Shelf",
             QuickRow::FetchArt => "Fetch Missing Art",
+            #[cfg(feature = "nds")]
+            QuickRow::FetchBoxArt => "Fetch Box Art",
             QuickRow::Network => "Tools",
             QuickRow::Wifi | QuickRow::WifiPower => "Wi-Fi",
             QuickRow::Networks => "Network",
@@ -971,6 +981,10 @@ impl QuickRow {
     }
 
     pub fn opens(self) -> bool {
+        #[cfg(feature = "nds")]
+        if self == QuickRow::FetchBoxArt {
+            return true;
+        }
         matches!(
             self,
             QuickRow::DateTime
@@ -1154,10 +1168,13 @@ pub enum QuickValue {
     Collections,
     OneShelf,
     Shelves,
+    Always,
+    PowerOn,
+    Never,
 }
 
 impl QuickValue {
-    pub const ALL: [QuickValue; 57] = [
+    pub const ALL: [QuickValue; 60] = [
         QuickValue::Speed1_5,
         QuickValue::Speed2,
         QuickValue::Speed3,
@@ -1215,6 +1232,9 @@ impl QuickValue {
         QuickValue::Collections,
         QuickValue::OneShelf,
         QuickValue::Shelves,
+        QuickValue::Always,
+        QuickValue::PowerOn,
+        QuickValue::Never,
     ];
 
     pub const LEVELS: [QuickValue; 16] = [
@@ -1272,6 +1292,9 @@ impl QuickValue {
             QuickValue::Collections => "Collections",
             QuickValue::OneShelf => "One Shelf",
             QuickValue::Shelves => "Shelves",
+            QuickValue::Always => "Always",
+            QuickValue::PowerOn => "Power On",
+            QuickValue::Never => "Never",
             QuickValue::Low => "25%",
             QuickValue::Medium => "45%",
             QuickValue::High => "65%",

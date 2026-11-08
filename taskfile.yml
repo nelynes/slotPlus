@@ -249,6 +249,22 @@ tasks:
       - cp -R web/dist/. "$SLOT_ROOT/System/web/"
       - cargo run --release -p slot
 
+  run:ds:
+    desc: >-
+      Run slot as the RG DS+ on the Mac: the nds build in two 1024x768 windows, the top
+      screen and the bottom screen below it. Click in the bottom window to touch the DS
+      bottom screen. DS games run on DSperate built for the Mac, without its JIT.
+    deps: [ core, core:dsperate:host, web ]
+    env:
+      SLOT_ROOT: '{{.SLOT_ROOT | default "./sdcard"}}'
+      SLOT_SILENT: '0'
+      SLOT_WIFI: '1'
+      SLOT_DUAL: '1'
+    cmds:
+      - mkdir -p "$SLOT_ROOT/System/web"
+      - cp -R web/dist/. "$SLOT_ROOT/System/web/"
+      - cargo run --release -p slot --features nds
+
   run:debug:
     desc: Run an unoptimised build, for a debugger. Will not hold 60 fps.
     deps: [ core, web ]

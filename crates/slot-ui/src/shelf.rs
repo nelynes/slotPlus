@@ -698,7 +698,7 @@ impl Shelf {
                 turn_about(&mut out[start..], centre, deg);
                 continue;
             }
-            if alpha < 1.0 {
+            if alpha < 1.0 && !is_ds(cart.platform) {
                 let backing = self.shadows[self.mould(i).index()];
                 if let Some(tex) = backing {
                     out.push(Draw::Tex {
@@ -781,4 +781,16 @@ fn shrink(offset: f32) -> f32 {
 
 fn recede_alpha(face_alpha: f32) -> f32 {
     (face_alpha / SIDE_ALPHA).clamp(0.0, 1.0)
+}
+
+fn is_ds(platform: slot_store::Platform) -> bool {
+    #[cfg(feature = "nds")]
+    {
+        platform == slot_store::Platform::Nds
+    }
+    #[cfg(not(feature = "nds"))]
+    {
+        let _ = platform;
+        false
+    }
 }
