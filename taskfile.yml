@@ -244,6 +244,22 @@ tasks:
       - cp -R web/dist/. "$SLOT_ROOT/System/web/"
       - cargo run --release -p slot
 
+  run:ds:
+    desc: >-
+      Run slot as the RG DS+ on the Mac: the nds build in two 1024x768 windows, the top
+      screen and the bottom screen below it. Click in the bottom window to touch the DS
+      bottom screen. DS games run on DSperate built for the Mac, without its JIT.
+    deps: [ core, core:dsperate:host, web ]
+    env:
+      SLOT_ROOT: '{{.SLOT_ROOT | default "./sdcard"}}'
+      SLOT_SILENT: '0'
+      SLOT_WIFI: '1'
+      SLOT_DUAL: '1'
+    cmds:
+      - mkdir -p "$SLOT_ROOT/System/web"
+      - cp -R web/dist/. "$SLOT_ROOT/System/web/"
+      - cargo run --release -p slot --features nds
+
   run:debug:
     desc: Run an unoptimised build, for a debugger. Will not hold 60 fps.
     deps: [ core, web ]
@@ -426,6 +442,27 @@ tasks:
       - echo "{{.POKEMINI_COMMIT}}" > vendor/pokemini-src.sha
       - cp vendor/pokemini_libretro.so.meta vendor/pokemini-src.meta
       - 'echo "built vendor/pokemini_libretro.so from vendor/pokemini-src.tar.gz @ {{.POKEMINI_COMMIT}}"'
+
+  core:dsperate:host:
+    desc: >-
+      Build DSperate for the Mac as vendor/slot_ds.dylib, from the same pinned source with
+      the macOS patches and without the JIT, so task run:ds plays DS games
+    platforms: [darwin]
+    status:
+      - test -f vendor/slot_ds.dylib
+      - test "$(cat vendor/slot_ds.dylib.meta 2>/dev/null)" = "$(sh cores/dsperate/build.sh host-stamp {{.DSPERATE_COMMIT}})"
+    cmds:
+      - |
+        set -euo pipefail
+        mkdir -p vendor
+        if [ "$(cat vendor/dsperate-src.sha 2>/dev/null)" != "{{.DSPERATE_COMMIT}}" ] || [ ! -f vendor/dsperate-src.tar.gz ]; then
+          curl -fsSL -o vendor/dsperate-src.tar.gz \
+            "https://github.com/beebono/DSperate/archive/{{.DSPERATE_COMMIT}}.tar.gz"
+        fi
+        tar -tzf vendor/dsperate-src.tar.gz | grep -q "^DSperate-{{.DSPERATE_COMMIT}}/src/core/nds.h$"
+        sh cores/dsperate/build.sh build-host {{.DSPERATE_COMMIT}} vendor/dsperate-src.tar.gz target-host/dsperate vendor
+      - file vendor/slot_ds.dylib | grep -q "Mach-O"
+      - 'echo "built vendor/slot_ds.dylib for the Mac @ {{.DSPERATE_COMMIT}}"'
 
   core:dsperate:
     desc: >-

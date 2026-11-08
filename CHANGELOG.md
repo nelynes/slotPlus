@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.15.2-plus2.7](https://github.com/nelynes/slotPlus/releases/tag/v1.15.2-plus2.7)
+
+slotPlus brought up to Slot 1.15.2. See [Slot's 1.15.2 notes](https://github.com/slot-cfw/slot/releases/tag/v1.15.2).
+
+To upgrade, use Settings → Tools → Check for Updates, or replace the `System` folder on your card with the one from the zip.
+
+- Load State on Insert is now Auto Load State, with a new Power On option: carts you insert start fresh, but powering on still picks up the game you were playing. On and Off are now Always and Never. Save State on Eject is now Eject Save State.
+- With Wallpaper set to None, Cart Studio's cutting mat now slides in once instead of appearing twice.
+- When the update check can't reach the update info, it now says so and asks you to try again later.
+
 ## [1.15.1-plus2.7](https://github.com/nelynes/slotPlus/releases/tag/v1.15.1-plus2.7)
 
 slotPlus brought up to Slot 1.15.1: Collections, Kid Mode, Game Boy Advance Video behind Game Boy Advance, cart clocks in your own time zone, rumble in Gambatte, ROM names with a trailing space or dot fixed at boot, slot.local, the LCD shader that fits 4:3 screens, Pikachu's voice back in Pokémon Yellow, and game titles that fade behind the collection screens. See [Slot's 1.15.0](https://github.com/slot-cfw/slot/releases/tag/v1.15.0) and [1.15.1](https://github.com/slot-cfw/slot/releases/tag/v1.15.1) notes.

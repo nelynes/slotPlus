@@ -141,6 +141,8 @@ enum Shape {
     Gba,
     Gb(GbShell),
     Extra(Mould),
+    #[cfg(feature = "nds")]
+    Ds,
 }
 
 impl Shape {
@@ -180,6 +182,17 @@ pub fn mould_for(platform: Platform) -> Mould {
         Platform::Pm => Mould::Pm,
     }
 }
+
+#[cfg(feature = "nds")]
+pub const DS_LABEL_X: u32 = 15;
+#[cfg(feature = "nds")]
+pub const DS_LABEL_Y: u32 = 23;
+#[cfg(feature = "nds")]
+pub const DS_LABEL_W: u32 = 170;
+#[cfg(feature = "nds")]
+pub const DS_LABEL_H: u32 = 184;
+#[cfg(feature = "nds")]
+const DS_LABEL: (u32, u32, u32, u32) = (DS_LABEL_X, DS_LABEL_Y, DS_LABEL_W, DS_LABEL_H);
 
 pub fn folder_gb_shell(cart: &Cart) -> Option<GbShell> {
     match cart.platform {
@@ -318,6 +331,15 @@ fn spec(shape: Shape) -> Spec {
                 paint: bitmaps::extra_cart(mould),
             }
         }
+        #[cfg(feature = "nds")]
+        Shape::Ds => Spec {
+            w: bitmaps::DS_CART_W,
+            h: bitmaps::DS_CART_H,
+            label: DS_LABEL,
+            mask: bitmaps::ds_cart_mask(),
+            mould: Mould::Ds,
+            paint: bitmaps::ds_cart(),
+        },
     }
 }
 
@@ -329,7 +351,7 @@ pub fn seated_box(platform: Platform) -> (u32, u32) {
     match platform {
         Platform::Gba | Platform::Gbav => (SEATED_W, SEATED_H),
         #[cfg(feature = "nds")]
-        Platform::Nds => (SEATED_W, SEATED_H),
+        Platform::Nds => ((SEATED_H * bitmaps::DS_CART_W + bitmaps::DS_CART_H / 2) / bitmaps::DS_CART_H, SEATED_H),
         Platform::Gb | Platform::Gbc => (SEATED_W, GB_SEATED_H),
         // The others are drawn at the seated width already scaled, so their seated
         // height follows from their own aspect.
@@ -486,6 +508,8 @@ pub fn cart_face_with(cart: &Cart, art: Option<Vec<u8>>) -> CartFace {
     let mut face = shell_face(&s, &shell_for(cart));
     let label = match art {
         Some(rgba) => rgba,
+        #[cfg(feature = "nds")]
+        None if cart.platform == Platform::Nds => banner_label(&s, cart),
         None => {
             let title = label_text(cart);
             generated_label(&s, &title, label_colour(&title))
@@ -716,6 +740,8 @@ fn dress(s: &Spec, rgba: &mut [u8]) {
         Mould::Rounded => "GAME BOY COLOR",
         // The slotPlus moulds carry their markings in their art.
         Mould::Ws | Mould::Lynx | Mould::Pm => return,
+        #[cfg(feature = "nds")]
+        Mould::Ds => "NINTENDO DS",
     };
     stamp_console(rgba, s.w, s.h, title, y0);
 }
@@ -901,6 +927,45 @@ fn generated_label(s: &Spec, title: &str, bg: [u8; 3]) -> Vec<u8> {
             MIN_PX,
         );
         text::draw_centred(&mut rgba, lw, lh, &layout, ink(bg));
+    }
+    rgba
+}
+
+#[cfg(feature = "nds")]
+fn banner_label(s: &Spec, cart: &Cart) -> Vec<u8> {
+    let banner = slot_store::read_banner(&cart.rom);
+    let title = banner
+        .as_ref()
+        .map(|b| b.title.clone())
+        .filter(|t| !t.is_empty())
+        .unwrap_or_else(|| label_text(cart));
+    let bg = label_colour(&title);
+    let (_, _, lw, lh) = s.label;
+    let icon_room = lh * 3 / 5;
+    let top = Spec {
+        label: (0, 0, lw, lh - icon_room),
+        ..spec(Shape::Ds)
+    };
+    let text = generated_label(&top, &title, bg);
+    let mut rgba = Vec::with_capacity((lw * lh * 4) as usize);
+    for _ in 0..lw * icon_room {
+        rgba.extend_from_slice(&[bg[0], bg[1], bg[2], 255]);
+    }
+    rgba.extend_from_slice(&text);
+    if let Some(b) = banner {
+        let scale = ((icon_room - PAD) / 32).min((lw - 2 * PAD) / 32).max(1);
+        let (x0, y0) = ((lw - 32 * scale) / 2, (icon_room - 32 * scale) / 2 + PAD / 2);
+        for y in 0..32 * scale {
+            for x in 0..32 * scale {
+                let src = (((y / scale) * 32 + x / scale) * 4) as usize;
+                let px = &b.icon_rgba[src..src + 4];
+                if px[3] == 0 {
+                    continue;
+                }
+                let dst = (((y0 + y) * lw + x0 + x) * 4) as usize;
+                rgba[dst..dst + 4].copy_from_slice(px);
+            }
+        }
     }
     rgba
 }
