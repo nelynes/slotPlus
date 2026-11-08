@@ -1,8 +1,8 @@
 # Changelog
 
-## [1.15.0-plus2.7](https://github.com/nelynes/slotPlus/releases/tag/v1.15.0-plus2.7)
+## [1.15.1-plus2.7](https://github.com/nelynes/slotPlus/releases/tag/v1.15.1-plus2.7)
 
-slotPlus brought up to Slot 1.15.0: Collections, Kid Mode, Game Boy Advance Video behind Game Boy Advance, cart clocks in your own time zone, rumble in Gambatte, ROM names with a trailing space or dot fixed at boot, slot.local, the LCD shader that fits 4:3 screens, and Pikachu's voice back in Pokémon Yellow. See [Slot's 1.15.0 notes](https://github.com/slot-cfw/slot/releases/tag/v1.15.0).
+slotPlus brought up to Slot 1.15.1: Collections, Kid Mode, Game Boy Advance Video behind Game Boy Advance, cart clocks in your own time zone, rumble in Gambatte, ROM names with a trailing space or dot fixed at boot, slot.local, the LCD shader that fits 4:3 screens, Pikachu's voice back in Pokémon Yellow, and game titles that fade behind the collection screens. See [Slot's 1.15.0](https://github.com/slot-cfw/slot/releases/tag/v1.15.0) and [1.15.1](https://github.com/slot-cfw/slot/releases/tag/v1.15.1) notes.
 
 To upgrade, use Settings → Tools → Check for Updates, or replace the `System` folder on your card with the one from the zip.
 
