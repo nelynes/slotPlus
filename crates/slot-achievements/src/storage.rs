@@ -69,9 +69,28 @@ pub(crate) struct Game {
     pub achievements: Vec<Achievement>,
 }
 
+/// slotPlus: RetroAchievements puts its own notices in a set as achievements ("Warning:
+/// Unknown Emulator", "Unsupported Game Version"), and answers an unsupported dump with a
+/// stand-in game. Both have IDs far above any real one; neither can be earned.
+pub(crate) const NOTICE_IDS: u32 = 100_000_000;
+
 impl Game {
     pub fn supported_console(&self) -> bool {
         matches!(self.console, 4..=6) // Game Boy, Game Boy Advance, Game Boy Color
+    }
+
+    /// slotPlus: RetroAchievements doesn't know this dump and sent a stand-in game.
+    pub fn stand_in(&self) -> bool {
+        self.id >= NOTICE_IDS || self.title.starts_with("Unsupported Game Version")
+    }
+
+    /// slotPlus: the achievements this ROM can really earn: official ones of a real game,
+    /// without RetroAchievements' notices.
+    pub fn earnable(&self) -> impl Iterator<Item = &Achievement> {
+        let real = self.id != 0 && !self.stand_in();
+        self.achievements
+            .iter()
+            .filter(move |a| real && a.flags == 3 && a.id < NOTICE_IDS)
     }
 }
 

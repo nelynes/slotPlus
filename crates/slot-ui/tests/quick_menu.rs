@@ -227,6 +227,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::Achievements,
             QuickRow::RaUsername,
             QuickRow::RaPassword,
+            QuickRow::RaDownload,
             QuickRow::Romm,
             QuickRow::RommServer,
             QuickRow::RommPort,

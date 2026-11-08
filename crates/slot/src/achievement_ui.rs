@@ -37,8 +37,9 @@ pub(crate) struct Notifications {
     requested_progress: Option<u8>,
     displayed_progress: Option<u8>,
     progress: Option<[TexId; 2]>,
-    /// The RA stop sign, over a game whose set hasn't loaded yet.
-    sign: Option<TexId>,
+    /// slotPlus: "Achievements Ready" with its gold trophy, and when it was last shown.
+    ready: Option<(TexId, u32, u32)>,
+    ready_since: Option<Instant>,
 }
 
 enum Request {
@@ -49,7 +50,8 @@ enum Request {
 enum Built {
     Progress(u8, [CartFace; 2]),
     Sync([CartFace; 2]),
-    Sign(CartFace),
+    /// The shelf's trophy, and the in-game "Achievements Ready" plate.
+    Trophy(CartFace, CartFace),
     Banner(CartFace, CartFace, Vec<i16>),
 }
 
@@ -63,7 +65,12 @@ impl Notifications {
                 if outbox
                     .send(Built::Sync([false, true].map(slot_ui::sync_icon_face)))
                     .is_err()
-                    || outbox.send(Built::Sign(slot_ui::ra_wait_face(SIGN_PX))).is_err()
+                    || outbox
+                        .send(Built::Trophy(
+                            slot_ui::ra_trophy_face(slot_ui::TROPHY_PX),
+                            ready_face(),
+                        ))
+                        .is_err()
                 {
                     return;
                 }
@@ -108,7 +115,8 @@ impl Notifications {
             requested_progress: None,
             displayed_progress: None,
             progress: None,
-            sign: None,
+            ready: None,
+            ready_since: None,
         }
     }
 
@@ -142,8 +150,11 @@ impl Notifications {
                     });
                     self.displayed_progress = Some(percent);
                 }
-                Built::Sign(face) => {
-                    self.sign = Some(compositor.create_texture(face.w, face.h, &face.rgba));
+                Built::Trophy(trophy, ready) => {
+                    let tex = compositor.create_texture(trophy.w, trophy.h, &trophy.rgba);
+                    session.app_mut().set_trophy_face((tex, trophy.w, trophy.h));
+                    let tex = compositor.create_texture(ready.w, ready.h, &ready.rgba);
+                    self.ready = Some((tex, ready.w, ready.h));
                 }
                 Built::Sync(face) => {
                     self.sync = Some(
@@ -170,6 +181,9 @@ impl Notifications {
                     session.mix_sfx(sound);
                 }
             }
+        }
+        if session.take_achievements_ready() {
+            self.ready_since = Some(Instant::now());
         }
         let status = session.achievement_sync_status();
         let visible = status == SyncStatus::Syncing || session.achievement_sync_pending();
@@ -216,14 +230,19 @@ impl Notifications {
                 }
             }
         }
-        if let Some(sign) = self.sign.filter(|_| sign_shown(session)) {
+        let ready = self.ready_since.map(|t| t.elapsed().as_secs_f32());
+        if ready.is_some_and(|t| t >= READY_S) {
+            self.ready_since = None;
+        }
+        if let (Some((tex, w, h)), Some(t)) = (self.ready, ready.filter(|_| ready_shown(session))) {
+            let alpha = (t / 0.25).min(1.0) * ((READY_S - t) / 0.4).clamp(0.0, 1.0);
             draws.push(Draw::Tex {
-                x: SIGN_MARGIN,
-                y: slot_gfx::OUT_H as f32 - SIGN_MARGIN - SIGN_PX as f32,
-                w: SIGN_PX as f32,
-                h: SIGN_PX as f32,
-                tex: sign,
-                alpha: 0.92,
+                x: READY_MARGIN,
+                y: slot_gfx::OUT_H as f32 - READY_MARGIN - h as f32,
+                w: w as f32,
+                h: h as f32,
+                tex,
+                alpha,
             });
         }
         if let (Some(tex), Some(badge), Some(shown)) = (self.texture, self.badge, self.shown) {
@@ -238,17 +257,75 @@ impl Notifications {
     }
 }
 
-/// slotPlus: the RA stop sign's size and its gap from the screen's bottom-left corner.
-const SIGN_PX: u32 = 28;
-const SIGN_MARGIN: f32 = 10.0;
+/// slotPlus: "Achievements Ready" shows this long as a game with a downloaded set starts,
+/// at this gap from the screen's bottom-left corner.
+const READY_S: f32 = 3.0;
+const READY_MARGIN: f32 = 10.0;
+const READY_H: u32 = 40;
+const READY_TROPHY: u32 = 28;
+const READY_PX: f32 = 15.0;
 
-/// The sign shows while a game runs that can't earn yet, and not over the in-game menu,
-/// whose legends sit in that corner.
-fn sign_shown(session: &Session) -> bool {
+/// Shown over the game itself, not over the in-game menu, whose legends sit in that corner.
+fn ready_shown(session: &Session) -> bool {
     let app = session.app();
-    matches!(app.phase(), Phase::Playing { .. })
-        && app.in_game_menu().is_none()
-        && session.achievement_waiting()
+    matches!(app.phase(), Phase::Playing { .. }) && app.in_game_menu().is_none()
+}
+
+/// The gold trophy and "ACHIEVEMENTS READY" on Slot's dark HUD plate.
+fn ready_face() -> CartFace {
+    const PAD: u32 = 8;
+    const GAP: u32 = 8;
+    let label = "Achievements Ready";
+    let text_w = text::label_font().map_or(150.0, |font| {
+        text::line_width(font, &label.to_uppercase(), READY_PX, tracking(READY_PX))
+    });
+    let w = PAD + READY_TROPHY + GAP + text_w.ceil() as u32 + PAD + 4;
+    let h = READY_H;
+    let mut rgba = vec![0; (w * h * 4) as usize];
+    // A pill: the HUD plate with round ends.
+    let r = h as f32 / 2.0;
+    for y in 0..h {
+        for x in 0..w {
+            let cx = (x as f32 + 0.5).clamp(r, w as f32 - r);
+            let d = ((x as f32 + 0.5 - cx).powi(2) + (y as f32 + 0.5 - r).powi(2)).sqrt();
+            let cover = (r - d + 0.5).clamp(0.0, 1.0);
+            let at = ((y * w + x) * 4) as usize;
+            rgba[at..at + 3].copy_from_slice(&PLATE[..3]);
+            rgba[at + 3] = (PLATE[3] as f32 * cover) as u8;
+        }
+    }
+    let trophy = slot_ui::ra_trophy_face(READY_TROPHY);
+    let top = (h - READY_TROPHY) / 2;
+    for y in 0..READY_TROPHY {
+        for x in 0..READY_TROPHY {
+            let src = ((y * READY_TROPHY + x) * 4) as usize;
+            let dst = (((y + top) * w + x + PAD) * 4) as usize;
+            let a = trophy.rgba[src + 3] as f32 / 255.0;
+            for c in 0..3 {
+                rgba[dst + c] =
+                    (trophy.rgba[src + c] as f32 * a + rgba[dst + c] as f32 * (1.0 - a)) as u8;
+            }
+            rgba[dst + 3] = (a * 255.0 + rgba[dst + 3] as f32 * (1.0 - a)) as u8;
+        }
+    }
+    if let Some(font) = text::label_font() {
+        let cap = font
+            .horizontal_line_metrics(READY_PX)
+            .map_or(READY_PX * 0.8, |m| m.ascent)
+            * 0.72;
+        print(
+            &mut rgba,
+            w,
+            h,
+            font,
+            &label.to_uppercase(),
+            READY_PX,
+            (PAD + READY_TROPHY + GAP) as f32,
+            ((h as f32 + cap) / 2.0).round(),
+            TITLE_INK,
+        );
+    }
+    CartFace { rgba, w, h }
 }
 
 fn progress_face(percent: u8, light: bool) -> CartFace {

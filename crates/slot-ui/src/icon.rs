@@ -331,28 +331,34 @@ pub fn achievement_icon_face(px: u32) -> CartFace {
     }
 }
 
-/// slotPlus: a small red stop sign reading "RA", shown over a game whose achievement set
-/// hasn't loaded yet, so nothing it does can count.
-pub fn ra_wait_face(px: u32) -> CartFace {
-    // A regular octagon, white-rimmed like a road sign.
-    let (a, b) = (7.03, 16.97); // 24 * (1 - 1/sqrt 2) / 2 and its mirror
-    let points = |inset: f64| {
-        let (lo, hi) = (a + inset * 0.414, b - inset * 0.414);
-        let (n, f) = (inset, 24.0 - inset);
-        format!("{lo},{n} {hi},{n} {f},{lo} {f},{hi} {hi},{f} {lo},{f} {n},{hi} {n},{lo}")
-    };
-    let svg = format!(
-        r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-      <polygon points="{}" fill="#ffffff"/>
-      <polygon points="{}" fill="#c8202a"/>
-    </svg>"##,
-        points(0.6),
-        points(1.9)
-    );
-    let mut rgba = crate::art::render_svg(&svg, px, px).unwrap_or_else(|| vec![0; (px * px * 4) as usize]);
-    if let Some(font) = crate::text::label_font() {
-        let layout = crate::text::fit(font, "RA", px as f32 * 0.66, 1, px as f32 * 0.5, 6.0);
-        crate::text::draw_centred(&mut rgba, px, px, &layout, [255, 255, 255]);
+/// slotPlus: a solid gold trophy: on the shelf over a game with a downloaded
+/// RetroAchievements set, and in a game as its set comes ready. A dark rim keeps it clear on
+/// pale wallpaper and on bright game screens alike.
+pub fn ra_trophy_face(px: u32) -> CartFace {
+    let svg = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="1.5 1.5 21 21">
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#fff0a8"/>
+          <stop offset="0.45" stop-color="#f2c230"/>
+          <stop offset="1" stop-color="#b8820e"/>
+        </linearGradient>
+      </defs>
+      <g stroke="#4a3306" stroke-width="1.1" stroke-linejoin="round">
+        <path d="M6.6 5.6H3.4v1.6a4.4 4.4 0 0 0 4.2 4.4M17.4 5.6h3.2v1.6a4.4 4.4 0 0 1-4.2 4.4"
+              fill="none" stroke-width="3.2" stroke-linecap="round"/>
+        <path d="M6.6 5.6H3.4v1.6a4.4 4.4 0 0 0 4.2 4.4M17.4 5.6h3.2v1.6a4.4 4.4 0 0 1-4.2 4.4"
+              fill="none" stroke="#e0aa1c" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M6.2 2.8h11.6v5.4a5.8 5.8 0 0 1-11.6 0z" fill="url(#g)"/>
+        <path d="M10.8 13.6h2.4v3.6h-2.4z" fill="#d79f18"/>
+        <rect x="6.8" y="17.2" width="10.4" height="3.6" rx="1" fill="url(#g)"/>
+      </g>
+      <path d="M8.4 4.4v3.6a3.6 3.6 0 0 0 1.4 2.9" fill="none" stroke="#fffbe0"
+            stroke-width="1" stroke-linecap="round" opacity="0.8"/>
+    </svg>"##;
+    CartFace {
+        rgba: crate::art::render_svg(svg, px, px)
+            .unwrap_or_else(|| vec![0; (px * px * 4) as usize]),
+        w: px,
+        h: px,
     }
-    CartFace { rgba, w: px, h: px }
 }

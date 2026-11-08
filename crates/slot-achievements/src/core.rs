@@ -86,7 +86,6 @@ impl RetroCore for Tracked {
         let _ = self.controls.send(Control::Load(network::Load {
             generation: self.generation,
             path: rom.to_path_buf(),
-            hash: None,
         }));
         Ok(())
     }

@@ -5,14 +5,16 @@ mod core;
 mod library;
 mod network;
 mod ready;
+mod played;
 mod runtime;
+mod scan;
 mod settings;
 mod storage;
 #[cfg(test)]
 mod tests;
 
-use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::collections::{BTreeMap, HashSet};
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -49,59 +51,92 @@ struct Status {
     cached: AtomicU64,
     // Shared only by the evaluator and HTTP workers, never gameplay/UI.
     presence: Mutex<Option<(u64, String)>>,
-    // slotPlus: whether slot is booting, opening a game or in a menu, and when that last
-    // changed (milliseconds since `EPOCH`). Background library work waits for quiet.
-    busy: AtomicBool,
-    changed_ms: AtomicU64,
-    // slotPlus: the game in play has no cached achievement set (or its badges) yet, so
-    // slot keeps Wi-Fi up for it rather than dropping it for play.
-    wants_network: AtomicBool,
-    // slotPlus: a game is loaded but its achievement set isn't active yet, so nothing it
-    // does can count. The game shows the RA sign while this holds.
-    waiting: AtomicBool,
+    // slotPlus: Download Achievement Sets: asked for, asked to stop, and how it's going.
+    scan_request: AtomicBool,
+    scan_stop: AtomicBool,
+    // slotPlus: the scan asked for downloads every set again (Refresh All Sets).
+    scan_refresh: AtomicBool,
+    scan: Mutex<ScanReport>,
+    // slotPlus: the ROMs with a downloaded set, for the shelf's trophy, and a count bumped
+    // whenever that list changes.
+    sets: Mutex<Arc<HashSet<PathBuf>>>,
+    sets_changed: AtomicU64,
+    // slotPlus: the game just loaded has its set active; the game shows "Achievements
+    // Ready" once.
+    set_ready: AtomicBool,
 }
 
-/// When the service started; background work is measured from here.
-static EPOCH: std::sync::LazyLock<Instant> = std::sync::LazyLock::new(Instant::now);
-
-/// Background library work waits this long after start, and this long after slot was last
-/// busy, so it never competes with booting or opening a game for the card.
-#[cfg(not(test))]
-const SETTLE_AFTER_START: Duration = Duration::from_secs(60);
-#[cfg(not(test))]
-const SETTLE_AFTER_BUSY: Duration = Duration::from_secs(20);
-// Tests drive the library worker directly; the settle windows are covered on their own.
-#[cfg(test)]
-const SETTLE_AFTER_START: Duration = Duration::ZERO;
-#[cfg(test)]
-const SETTLE_AFTER_BUSY: Duration = Duration::ZERO;
-
-fn since_epoch_ms() -> u64 {
-    EPOCH.elapsed().as_millis() as u64
+/// slotPlus: where a Download Achievement Sets run is up to.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ScanState {
+    /// Not started (or the service isn't running at all).
+    #[default]
+    Idle,
+    SigningIn,
+    Running,
+    Done,
+    Stopped,
+    /// The connection dropped part way.
+    Offline,
+    /// The server turned the account down.
+    SignInFailed,
+    /// No account is set up, so there is nothing to sign in with.
+    NoAccount,
+    /// The card couldn't be written.
+    CardError,
 }
 
-impl library::Gate for Status {
-    fn busy(&self) -> bool {
-        !self.settled()
+impl ScanState {
+    pub fn running(self) -> bool {
+        matches!(self, ScanState::SigningIn | ScanState::Running)
     }
+}
+
+/// slotPlus: the counts Download Achievement Sets shows while it runs.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ScanReport {
+    pub state: ScanState,
+    /// The ROM being looked at, by file name.
+    pub game: String,
+    /// The system being scanned (from 1), and how many have games on the card.
+    pub system: usize,
+    pub systems: usize,
+    /// Sets downloaded this time, and ones already on the card.
+    pub new: usize,
+    pub already: usize,
+    /// ROMs the server has no achievements for.
+    pub none: usize,
+    /// ROMs that couldn't be read or looked up.
+    pub failed: usize,
+    /// Badge images downloaded this time.
+    pub badges: usize,
+    /// slotPlus: Refresh All Sets: every set downloaded again, not only new ones.
+    pub refresh: bool,
+    /// Sets already on the card that a refresh downloaded again.
+    pub refreshed: usize,
 }
 
 impl Status {
-    fn set_busy(&self, busy: bool) {
-        if self.busy.swap(busy, Ordering::AcqRel) != busy {
-            self.changed_ms.store(since_epoch_ms(), Ordering::Release);
-        }
+    fn publish_sets(&self, sets: HashSet<PathBuf>) {
+        *self.sets.lock().unwrap_or_else(|e| e.into_inner()) = Arc::new(sets);
+        self.sets_changed.fetch_add(1, Ordering::AcqRel);
     }
 
-    /// Whether background library work may run: slot has been up a while and quiet.
-    fn settled(&self) -> bool {
-        if self.busy.load(Ordering::Acquire) {
-            return false;
+    fn add_set(&self, path: &Path) {
+        self.mark_set(path, true);
+    }
+
+    /// The shelf's trophy for `path`, on or off.
+    fn mark_set(&self, path: &Path, has_set: bool) {
+        let mut sets = self.sets.lock().unwrap_or_else(|e| e.into_inner());
+        if sets.contains(path) != has_set {
+            let sets = Arc::make_mut(&mut sets);
+            match has_set {
+                true => sets.insert(path.to_path_buf()),
+                false => sets.remove(path),
+            };
+            self.sets_changed.fetch_add(1, Ordering::AcqRel);
         }
-        let now = since_epoch_ms();
-        let changed = self.changed_ms.load(Ordering::Acquire);
-        now >= SETTLE_AFTER_START.as_millis() as u64
-            && now.saturating_sub(changed) >= SETTLE_AFTER_BUSY.as_millis() as u64
     }
 
     fn set(&self, value: SyncStatus) {
@@ -191,7 +226,6 @@ impl Service {
         let (controls, control_rx) = mpsc::channel();
         let (frames, frame_rx) = mpsc::sync_channel(QUEUE_SIZE);
         let (notice_tx, notices) = mpsc::channel();
-        std::sync::LazyLock::force(&EPOCH);
         let enabled = Arc::new(AtomicBool::new(false));
         let current = Arc::new(AtomicU64::new(0));
         let tracking = Arc::new(AtomicU64::new(0));
@@ -254,12 +288,6 @@ impl Service {
         }
     }
 
-    /// slotPlus: slot is booting, opening or closing a game, or in a menu. Background
-    /// library work pauses, and resumes once slot has been quiet for a while.
-    pub fn set_busy(&self, busy: bool) {
-        self.status.set_busy(busy);
-    }
-
     pub fn sync_progress(&self) -> Option<u8> {
         self.status.progress.load(Ordering::Acquire).checked_sub(1)
     }
@@ -277,16 +305,60 @@ impl Service {
         self.status.get()
     }
 
-    /// slotPlus: the game in play is still waiting on its achievement set, or the badges
-    /// for it, from the server. Slot keeps Wi-Fi up while this holds.
-    pub fn wants_network(&self) -> bool {
-        self.status.wants_network.load(Ordering::Acquire)
+    /// slotPlus: start Download Achievement Sets. It runs on the network worker while slot
+    /// sits on the shelf; [`Service::scan_report`] says how it's going.
+    pub fn start_scan(&self) {
+        self.begin_scan(false);
     }
 
-    /// slotPlus: the game in play can't earn yet: its set hasn't loaded. Clears once the
-    /// set is active, or once the server says the ROM has none.
-    pub fn waiting_for_set(&self) -> bool {
-        self.status.waiting.load(Ordering::Acquire)
+    /// slotPlus: Refresh All Sets: download every set again, earned lists too, rather than
+    /// skipping the ones already on the card. Badges already on the card stay.
+    pub fn start_refresh(&self) {
+        self.begin_scan(true);
+    }
+
+    fn begin_scan(&self, refresh: bool) {
+        let state = match self.enabled.load(Ordering::Acquire) {
+            true => ScanState::SigningIn,
+            false => ScanState::NoAccount,
+        };
+        *self.status.scan.lock().unwrap_or_else(|e| e.into_inner()) = ScanReport {
+            state,
+            refresh,
+            ..ScanReport::default()
+        };
+        self.status.scan_refresh.store(refresh, Ordering::Release);
+        self.status.scan_stop.store(false, Ordering::Release);
+        self.status
+            .scan_request
+            .store(state == ScanState::SigningIn, Ordering::Release);
+    }
+
+    /// slotPlus: stop Download Achievement Sets after the request in hand. What it has
+    /// saved so far stays.
+    pub fn stop_scan(&self) {
+        self.status.scan_stop.store(true, Ordering::Release);
+        // Not picked up yet: it never starts.
+        if self.status.scan_request.swap(false, Ordering::AcqRel) {
+            self.status.scan.lock().unwrap_or_else(|e| e.into_inner()).state = ScanState::Stopped;
+        }
+    }
+
+    pub fn scan_report(&self) -> ScanReport {
+        self.status.scan.lock().unwrap_or_else(|e| e.into_inner()).clone()
+    }
+
+    /// slotPlus: the ROMs with a set on the card, and a count that changes with the list.
+    pub fn achievement_sets(&self) -> (u64, Arc<HashSet<PathBuf>>) {
+        (
+            self.status.sets_changed.load(Ordering::Acquire),
+            self.status.sets.lock().unwrap_or_else(|e| e.into_inner()).clone(),
+        )
+    }
+
+    /// slotPlus: true once after a game's achievement set becomes active.
+    pub fn take_set_ready(&self) -> bool {
+        self.status.set_ready.swap(false, Ordering::AcqRel)
     }
 
     /// The Wi-Fi worker observed a new connection. Wake retries without blocking the UI.
@@ -381,7 +453,6 @@ fn run(
     let (prepared_tx, prepared_rx) = mpsc::channel();
     let network_store = store.clone();
     let network_notices = notices.clone();
-    let cached_prepared = prepared_tx.clone();
     let network_status = status.clone();
     status.set(SyncStatus::Syncing);
     if std::thread::Builder::new()
@@ -392,7 +463,6 @@ fn run(
                 config,
                 network_store,
                 load_rx,
-                prepared_tx,
                 network_notices,
                 network_status,
                 transport,
@@ -429,47 +499,79 @@ fn run(
                     library::flush();
                     done.store(true, Ordering::Release);
                 }
-                Ok(Control::Load(mut load)) => {
+                Ok(Control::Load(load)) => {
                     generation = load.generation;
-                    status.waiting.store(true, Ordering::Release);
+                    status.set_ready.store(false, Ordering::Release);
                     playing = None;
                     tracking.store(0, Ordering::Release);
                     *status.presence.lock().unwrap() = None;
-                    // Cached games can start evaluating even while the HTTP worker is
-                    // waiting on a timeout or preparing another ROM in the library.
+                    // A game earns from the set Download Achievement Sets saved; nothing is
+                    // fetched for it while it plays.
                     let dir = store.lock().unwrap().dir.clone();
-                    if storage::read::<storage::Auth>(&dir.join("auth.json")).is_ok() {
-                        if let Ok(hash) = library::hash(&dir, &load.path) {
-                            // Hashed once: the network worker uses this one.
-                            load.hash = Some(hash.clone());
-                            // This may have indexed a renamed ROM; the shelf can seal it.
-                            status.cached.fetch_add(1, Ordering::AcqRel);
-                            if let Ok((game, unlocked)) =
-                                storage::read::<(storage::Game, std::collections::BTreeSet<u32>)>(
-                                    &dir.join(format!("{hash}.json")),
-                                )
-                            {
-                                if game.supported_console() {
-                                    let _ = cached_prepared.send(network::Prepared {
-                                        generation,
-                                        hash,
-                                        game,
-                                        unlocked,
-                                        cached: true,
-                                    });
-                                }
+                    if let Ok(hash) = library::hash(&dir, &load.path) {
+                        // This may have indexed a renamed ROM; the shelf can seal it.
+                        status.cached.fetch_add(1, Ordering::AcqRel);
+                        let name = load
+                            .path
+                            .file_name()
+                            .map(|n| n.to_string_lossy().into_owned())
+                            .unwrap_or_default();
+                        let cached = storage::read::<(
+                            storage::Game,
+                            std::collections::BTreeSet<u32>,
+                        )>(&dir.join(format!("{hash}.json")));
+                        match &cached {
+                            Err(_) => eprintln!(
+                                "slot: achievements: no set on the card for {name} \
+                                 (Download Achievement Sets looks it up)"
+                            ),
+                            Ok((game, _)) if game.stand_in() => eprintln!(
+                                "slot: achievements: RetroAchievements doesn't support this \
+                                 version of {name} ({})",
+                                game.title
+                            ),
+                            Ok((game, _)) if game.id == 0 => eprintln!(
+                                "slot: achievements: RetroAchievements has no game for {name}"
+                            ),
+                            Ok(_) => {}
+                        }
+                        if let Ok((game, unlocked)) = cached {
+                            // The cached set has the last word on the trophy: a renamed ROM
+                            // gets it back, and a stand-in or notice-only set loses it.
+                            let found = scan::has_set(&game);
+                            library::checked(&dir, &load.path, network::now(), found);
+                            status.mark_set(&load.path, found);
+                            if game.id != 0 && !game.stand_in() {
+                                // Reported from the shelf, so it shows as played.
+                                played::push(
+                                    &dir,
+                                    played::Played {
+                                        game: game.id,
+                                        hash: hash.clone(),
+                                    },
+                                );
+                            }
+                            if game.supported_console() {
+                                let _ = prepared_tx.send(network::Prepared {
+                                    generation,
+                                    hash,
+                                    game,
+                                    unlocked,
+                                    cached: true,
+                                });
                             }
                         }
                     }
-                    let _ = loads.send(Some(load));
+                    // Only whether a game is in play: the network waits for the shelf.
+                    let _ = loads.send(true);
                 }
                 Ok(Control::Unload(id)) if id == generation => {
                     generation = 0;
-                    status.waiting.store(false, Ordering::Release);
+                    status.set_ready.store(false, Ordering::Release);
                     playing = None;
                     tracking.store(0, Ordering::Release);
                     *status.presence.lock().unwrap() = None;
-                    let _ = loads.send(None);
+                    let _ = loads.send(false);
                 }
                 Ok(_) => {}
                 Err(mpsc::TryRecvError::Disconnected) => return,
@@ -487,8 +589,9 @@ fn run(
                 let store = store.lock().unwrap();
                 let mut updated = BTreeMap::new();
                 let mut again = std::collections::BTreeSet::new();
+                let real = prepared.game.id != 0 && !prepared.game.stand_in();
                 for achievement in prepared.game.achievements {
-                    if achievement.flags != 3 {
+                    if !real || achievement.flags != 3 || achievement.id >= storage::NOTICE_IDS {
                         continue;
                     }
                     let done = prepared.unlocked.contains(&achievement.id)
@@ -521,7 +624,6 @@ fn run(
                 }
                 game.achievements = updated;
                 game.encore = again;
-                status.waiting.store(false, Ordering::Release);
                 continue;
             }
             let Some(mut runtime) = runtime::Runtime::new() else {
@@ -532,12 +634,22 @@ fn run(
             let mut achievements = BTreeMap::new();
             let mut again = std::collections::BTreeSet::new();
             let mut unsupported = 0;
+            let mut set_aside = 0;
+            let mut earned_before = 0;
+            let real = prepared.game.id != 0 && !prepared.game.stand_in();
+            let game_id = prepared.game.id;
+            let game_title = prepared.game.title.clone();
             for achievement in prepared.game.achievements {
-                if achievement.flags != 3 {
+                // Unofficial ones, and RetroAchievements' own notices, can't be earned.
+                if !real || achievement.flags != 3 || achievement.id >= storage::NOTICE_IDS {
+                    set_aside += 1;
                     continue;
                 }
                 let done = prepared.unlocked.contains(&achievement.id)
                     || store.unlocks.contains_key(&achievement.id);
+                if done {
+                    earned_before += 1;
+                }
                 if done && !encore {
                     continue;
                 }
@@ -552,7 +664,13 @@ fn run(
             }
             drop(store);
             let state = if prepared.cached { "cached" } else { "online" };
-            let title = if prepared.game.id == 0 {
+            eprintln!(
+                "slot: achievements: game {game_id} \"{game_title}\": {} active, {earned_before} \
+                 earned before{}, {set_aside} unofficial or notices, {unsupported} unsupported",
+                achievements.len(),
+                if encore { " (encore)" } else { "" },
+            );
+            let title = if !real {
                 "No achievements for this ROM".into()
             } else {
                 let encore = if encore { ", encore" } else { "" };
@@ -580,7 +698,9 @@ fn run(
                 warned_gap: false,
             });
             tracking.store(generation, Ordering::Release);
-            status.waiting.store(false, Ordering::Release);
+            if real && !playing.as_ref().is_some_and(|g| g.achievements.is_empty()) {
+                status.set_ready.store(true, Ordering::Release);
+            }
         }
         match frames.recv_timeout(Duration::from_millis(5)) {
             Ok(frame) => {
@@ -648,6 +768,14 @@ fn evaluate(
                         detail: achievement.description.clone(),
                         kind: NoticeKind::Earned,
                     };
+                    let how = match game.encore.contains(&id) {
+                        true => "again (encore, not sent)",
+                        false => "and saved for the next sync",
+                    };
+                    eprintln!(
+                        "slot: achievements: earned {id} \"{}\" {how}",
+                        achievement.title
+                    );
                     if game.encore.remove(&id) {
                         // Encore: already on the account, so shown and nothing more.
                         let _ = notices.send(notice);

@@ -41,40 +41,48 @@ from the file, since a token would otherwise win over the password just typed.
 Treat the file and the token as credentials. Neither is logged. Like Slot's own Wi-Fi
 password, they are on the card, so anyone you let into Gamebit can reach them.
 
+## Downloading sets
+
+A game earns from its achievement set, which has to be on the card first. In Settings →
+RetroAchievements, **Download Achievement Sets** checks every `.gb`, `.gbc` and `.gba` game on
+the card while you watch: the game it's on, the systems done, sets downloaded and already on
+the card, games RetroAchievements has no achievements for, and badges downloaded. Each game's
+badges come straight after its set, so stopping with B leaves whole games.
+
+Games whose set is already on the card are counted without asking the server. **X (Refresh
+All)** asks again for every game, for sets that changed and for achievements earned elsewhere
+since. Run it after adding games. Only ROM versions RetroAchievements knows can earn
+achievements; for a version it doesn't support it sends a stand-in, which isn't counted.
+
+A gold trophy on the shelf marks a game with a downloaded set, and **Achievements Ready**
+shows with it for three seconds when that game starts.
+
 ## Wi-Fi and offline play
 
-slotPlus uses Slot's Wi-Fi, which is up on the shelf and off while a game runs. So:
+slotPlus uses Slot's Wi-Fi, which is up on the shelf and off while a game runs, and nothing is
+fetched during play. So:
 
-- When a game starts whose achievement set isn't on the card yet, Wi-Fi stays up (or comes
-  back) while that game's set and badges download, ahead of everything else, then goes off.
-  It gives up after two minutes if the network never answers. Tracking starts the moment the
-  set arrives, usually within seconds; anything earned before that can't be counted.
-- While a game can't earn yet, a small red stop sign reading **RA** sits in the bottom-left
-  corner of the screen. It goes as soon as the set is active, or when the server says the ROM
-  has no achievements. If it stays, nothing in that session will count; go back to the shelf
-  with Wi-Fi and let the set download.
-- While the shelf sits idle with Wi-Fi up, slotPlus logs in and quietly prepares every
-  `.gb`, `.gbc` and `.gba` game on the card (achievement sets and badges), a little at a time,
-  so games start tracking straight away even with no network.
 - Achievements earned in a game are saved on the card at once, survive ejects and power-offs,
-  and are sent the next time Wi-Fi is up on the shelf. Network failures back off from 30
-  seconds to five minutes and retry on their own.
-- The shelf's footer shows a small sync mark left of the clock while it prepares or sends,
-  with progress while caching, and an amber dot when something is waiting for the internet or
-  needs attention. It is absent when the feature is off.
+  and are sent the next time Wi-Fi is up on the shelf. So are the games you played (with a
+  downloaded set), so they show on your RetroAchievements profile. Network failures back off
+  from 30 seconds to five minutes and retry on their own.
+- A game with no set on the card earns nothing that session; download its set from Settings.
+- The shelf's footer shows a small sync mark left of the clock while it sends, and an amber
+  dot when something is waiting for the internet or needs attention. It is absent when the
+  feature is off.
+- `Logs/slot.log` has a `slot: achievements:` line for each set loaded (how many are active),
+  each achievement earned, and each unlock and played game sent.
 
-A newly added game needs its set downloaded once, so leave slotPlus on the shelf with Wi-Fi
-for a while after adding games. Only ROM versions RetroAchievements knows can earn
-achievements. Keep `Saves/RetroAchievements` when backing up the card: it holds unsent
-unlocks and the prepared sets.
+Keep `Saves/RetroAchievements` when backing up the card: it holds unsent unlocks and the
+downloaded sets.
 
 ## How it works
 
-Hashing, library preparation, HTTPS and banner drawing run on background threads, and
-background work only runs while the shelf is idle. The emulator copies the game's memory
-after each frame into a bounded queue and never waits on the evaluator; if evaluation falls
-behind, partial progress is reset rather than risking a false unlock, as it is after a state
-load or rewind. Games on mGBA, gpSP and Gambatte are tracked, never over a link cable.
+Hashing, downloads, HTTPS and banner drawing run on background threads. The emulator copies
+the game's memory after each frame into a bounded queue and never waits on the evaluator; if
+evaluation falls behind, partial progress is reset rather than risking a false unlock, as it
+is after a state load or rewind. Games on mGBA, gpSP and Gambatte are tracked, never over a
+link cable.
 
 ```sh
 cargo test -p slot-achievements -p slot-retro

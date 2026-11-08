@@ -1,14 +1,16 @@
 <div align="center">
 
-<img src=".github/resources/banner.png" width="100%" alt="slot. A bespoke, Game Boy-centric frontend for the Anbernic RG SP. slot plays Game Boy Advance, Game Boy Color and Game Boy. slotPlus, for the 3:2 fan, adds WonderSwan, WonderSwan Color and Atari Lynx. slotPlusUltra, for the ultimate handheld, adds Game Gear, NeoGeo Pocket, TurboGrafx-16 and Nintendo DS on top of that. Every version adds HDMI out to your TV and pixel transparency for GB and GBC.">
+<img src=".github/resources/banner.png" width="100%" alt="slot. A bespoke, Game Boy-centric frontend for the Anbernic RG SP. slot plays Game Boy Advance, Game Boy Color and Game Boy. slotPlus, for the 3:2 fan, adds WonderSwan, WonderSwan Color and Atari Lynx. slotPlusUltra, for the ultimate handheld, adds Game Gear, NeoGeo Pocket, TurboGrafx-16 and Nintendo DS on top of that. Every version adds HDMI out to your TV, pixel transparency for GB and GBC, and RetroAchievements.">
 
 </div>
 
 ---
 
-# RetroAchievements: on hold
+# New on 2.7
 
-RetroAchievements arrived in 1.13.0-plus2.6 as a beta. Unfortunately I was not happy with the performance and have pulled it from 1.14.0-plus2.6 and it's switched off while the rough edges are worked out: Settings → RetroAchievements is greyed out, no game is tracked and nothing is sent. Your unlocks already on the card are left as they are, ready for when it comes back.
+- **RetroAchievements are back,** reworked. Enter your account in Settings → RetroAchievements, then pick **Download Achievement Sets**: it checks every Game Boy, Game Boy Color and Game Boy Advance game on the card and downloads their sets and badges while you watch, with B to stop. It only fetches what's new; X refreshes them all.
+- A gold trophy on the shelf marks a game with a set, and **Achievements Ready** shows for a moment when one starts.
+- Wi-Fi stays off while you play, as in Slot. What you earn is kept on the card and sent when you're back on the shelf, along with the games you played.
 
 # What is slotPlus?
 
@@ -37,6 +39,7 @@ Each release comes in two versions. Pick the one you want from the [releases pag
 
 - **Folders:** each system's folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
 - **Carts:** each system has its own cart, drawn in Slot's look. WonderSwan games get a black cart, WonderSwan Color games a frosted clear one, and a HuCard turns over to go into the slot contacts first.
+- **RetroAchievements:** Game Boy, Game Boy Color and Game Boy Advance games earn softcore achievements, with a banner in Slot's style. Enter your account in Settings → RetroAchievements and download the sets for your games from there. Achievements earned with Wi-Fi off are sent from the shelf. [More](crates/slot-achievements/README.md).
 - **Cart Slot:** set Settings > General > Cart Slot to Bespoke and the slot on each shelf becomes the back of that system's handheld: a pearl WonderSwan and a Lynx II, plus a Game Gear, a carbon NeoGeo Pocket Color, a TurboExpress and a silver DS Lite in Ultra. The Game Boy shelves keep Slot's own.
 
 **Controls, label art sizes, bezels, saves, the DS's screen layouts and stylus, and how Lynx and WonderSwan games that turn sideways work are all in the [systems guide](SYSTEMS.md).**

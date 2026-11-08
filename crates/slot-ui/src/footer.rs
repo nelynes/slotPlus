@@ -171,3 +171,15 @@ pub fn draw_footer_sync(canvas: Canvas, clock: Printed, icon: SyncIndicator, out
         });
     }
 }
+
+/// slotPlus: where the shelf's gold RetroAchievements trophy sits: over the wallpaper at the
+/// left, lined up with the battery and just clear of the slot.
+pub const TROPHY_PX: u32 = 34;
+const TROPHY_GAP: f32 = 10.0;
+
+pub fn trophy_spot(_w: u32, h: u32) -> (f32, f32) {
+    (
+        FOOTER_MARGIN,
+        (OUT_H as f32 - crate::slot_chrome::MOUTH_H - TROPHY_GAP - h as f32).round(),
+    )
+}

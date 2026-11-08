@@ -170,20 +170,20 @@ fn badge_cache_survives_restart_and_repairs_corrupt_images() {
     let path = badges::path(&store.dir, "12345").unwrap();
     let (calls, requests) = mpsc::channel();
     let mut http = Server { calls };
-    let mut queue = badges::Queue::new(&store.dir);
+    let mut queue = badges::Queue::empty(&store.dir);
     queue.enqueue(&game());
     queue.enqueue(&game());
-    queue.step(&mut http);
-    assert!(!queue.pending());
+    assert_eq!(queue.fetch_next(&mut http), Some(Ok(())));
+    assert_eq!(queue.fetch_next(&mut http), None);
     assert_eq!(requests.try_iter().count(), 1);
-    let mut restarted = badges::Queue::new(&store.dir);
+    let mut restarted = badges::Queue::empty(&store.dir);
     restarted.enqueue(&game());
     assert!(!restarted.pending());
     // Notifications carry a local path even offline, with no network dependency.
     assert_eq!(load_badge(&path).unwrap().width, 2);
     std::fs::write(&path, b"corrupted PNG").unwrap();
     restarted.enqueue(&game());
-    restarted.step(&mut http);
+    assert_eq!(restarted.fetch_next(&mut http), Some(Ok(())));
     assert!(load_badge(&path).is_some());
     assert!(badges::path(&store.dir, "../../auth").is_none());
     assert!(badges::path(&store.dir, "https://example.org/badge").is_none());
@@ -210,9 +210,13 @@ fn a_badge_failure_does_not_hold_up_awards_or_cached_game_data() {
         .unwrap();
     let (calls, _) = mpsc::channel();
     let service = Service::start_with(root.path().into(), NoBadges(Server { calls }));
-    wait_for(|| service.sync_status() == SyncStatus::Attention);
+    wait_for(|| service.enabled.load(Ordering::Acquire));
+    service.start_scan();
+    wait_for(|| service.scan_report().state == ScanState::Done);
+    let report = service.scan_report();
+    assert_eq!((report.new, report.badges), (1, 0));
+    wait_for(|| Store::open(root.path(), "Player").unwrap().unlocks[&7].synced);
     let store = Store::open(root.path(), "Player").unwrap();
-    assert!(store.unlocks[&7].synced);
     let hash = format!("{:x}", md5::compute(b"fixture"));
     assert!(store.dir.join(format!("{hash}.json")).exists());
     assert!(load_badge(&badges::path(&store.dir, "12345").unwrap()).is_none());
@@ -383,7 +387,7 @@ fn offline_unlock_for(console: u32, shelf: &str, ext: &str) {
 }
 
 #[test]
-fn an_unopened_library_is_prepared_automatically_without_starting_sessions() {
+fn download_achievement_sets_prepares_the_library_without_starting_sessions() {
     let root = configured();
     let rom = root.path().join("Games/GBA/Unopened.gba");
     std::fs::write(&rom, b"unopened ROM").unwrap();
@@ -391,8 +395,19 @@ fn an_unopened_library_is_prepared_automatically_without_starting_sessions() {
     let service = Service::start_with(root.path().into(), Server { calls });
     let store = Store::open(root.path(), "Player").unwrap();
     let hash = format!("{:x}", md5::compute(b"unopened ROM"));
-    wait_for(|| store.dir.join(format!("{hash}.json")).exists());
     wait_for(|| service.sync_status() == SyncStatus::Ready);
+    // Nothing is fetched until the player asks.
+    std::thread::sleep(Duration::from_millis(300));
+    assert!(!store.dir.join(format!("{hash}.json")).exists());
+    assert!(service.achievement_sets().1.is_empty());
+    service.start_scan();
+    wait_for(|| service.scan_report().state == ScanState::Done);
+    let report = service.scan_report();
+    assert_eq!(
+        (report.systems, report.system, report.new, report.already, report.none, report.badges),
+        (1, 1, 1, 0, 0, 1)
+    );
+    assert!(service.achievement_sets().1.contains(&rom));
     let badge = badges::path(&store.dir, "12345").unwrap();
     assert_eq!(
         load_badge(&badge).unwrap().rgba,
@@ -404,13 +419,76 @@ fn an_unopened_library_is_prepared_automatically_without_starting_sessions() {
     let calls: Vec<_> = requests.try_iter().collect();
     assert!(calls.iter().any(|c| c == "unlocks"));
     assert!(!calls.iter().any(|c| c == "startsession"));
-    wait_for(|| library::pending(root.path(), &store.dir, network::now()).is_empty());
+    // A second run counts it from the card and asks the server nothing about it.
+    service.start_scan();
+    wait_for(|| service.scan_report().state == ScanState::Done);
+    let report = service.scan_report();
+    assert_eq!((report.new, report.already, report.badges), (0, 1, 0));
+    assert!(!requests.try_iter().any(|c| c == "gameid" || c.starts_with("badge")));
+    // Refresh All Sets asks again for the set on the card, and its earned list, but leaves
+    // the badges already there.
+    service.start_refresh();
+    wait_for(|| service.scan_report().state == ScanState::Done);
+    let report = service.scan_report();
+    assert!(report.refresh);
+    assert_eq!((report.new, report.refreshed, report.already, report.badges), (0, 1, 0, 0));
+    let calls: Vec<_> = requests.try_iter().collect();
+    assert!(calls.iter().any(|c| c == "patch") && calls.iter().any(|c| c == "unlocks"));
+    assert!(!calls.iter().any(|c| c.starts_with("badge")));
+    // And a plain run afterwards is a plain run again.
+    service.start_scan();
+    wait_for(|| service.scan_report().state == ScanState::Done);
+    assert_eq!(service.scan_report().already, 1);
+    // A changed ROM is a different dump: no trophy until it's scanned again.
     std::fs::write(&rom, b"changed content, different size").unwrap();
-    assert_eq!(
-        library::pending(root.path(), &store.dir, network::now()).len(),
-        1
-    );
+    assert!(library::with_sets(&store.dir).is_empty());
     assert_ne!(library::hash(&store.dir, &rom).unwrap(), hash);
+}
+
+#[test]
+fn a_scan_counts_roms_without_achievements_and_stops_when_asked() {
+    struct Mixed(Server);
+    impl network::Transport for Mixed {
+        fn badge(&mut self, name: &str) -> Result<Vec<u8>, network::Failure> {
+            self.0.badge(name)
+        }
+        fn call(&mut self, fields: &[(&str, String)]) -> Result<Value, network::Failure> {
+            let none = fields.iter().any(|(k, v)| *k == "m" && v == &format!("{:x}", md5::compute(b"homebrew")));
+            match none {
+                true => Ok(json!({"Success":true,"GameID":0})),
+                false => self.0.call(fields),
+            }
+        }
+    }
+    let root = configured();
+    std::fs::create_dir_all(root.path().join("Games/GB")).unwrap();
+    std::fs::write(root.path().join("Games/GB/Homebrew.gb"), b"homebrew").unwrap();
+    std::fs::write(root.path().join("Games/GBA/Game.gba"), b"a game").unwrap();
+    let (calls, _) = mpsc::channel();
+    let service = Service::start_with(root.path().into(), Mixed(Server { calls }));
+    wait_for(|| service.enabled.load(Ordering::Acquire));
+    service.start_scan();
+    wait_for(|| service.scan_report().state == ScanState::Done);
+    let report = service.scan_report();
+    assert_eq!((report.systems, report.new, report.none), (2, 1, 1));
+    // Asked to stop before the worker picks it up: it never starts.
+    service.start_scan();
+    service.stop_scan();
+    assert_eq!(service.scan_report().state, ScanState::Stopped);
+}
+
+#[test]
+fn a_scan_without_an_account_says_so() {
+    let root = tempfile::tempdir().unwrap();
+    let service = Service::start_with(root.path().into(), Offline);
+    service.start_scan();
+    assert_eq!(service.scan_report().state, ScanState::NoAccount);
+    let root = configured();
+    std::fs::write(root.path().join("Games/GBA/Game.gba"), b"a game").unwrap();
+    let service = Service::start_with(root.path().into(), Offline);
+    wait_for(|| service.enabled.load(Ordering::Acquire));
+    service.start_scan();
+    wait_for(|| service.scan_report().state == ScanState::Offline);
 }
 
 #[test]
@@ -429,13 +507,13 @@ fn library_preparation_includes_game_boy_and_color_shelves() {
     }
     std::fs::write(root.path().join("Games/GB/.hidden.gb"), b"hidden").unwrap();
     std::fs::write(root.path().join("Games/GB/Notes.txt"), b"notes").unwrap();
-    let store = Store::open(root.path(), "Player").unwrap();
-    let pending = library::pending(root.path(), &store.dir, network::now());
-    assert_eq!(pending.len(), 5);
+    let roms = library::roms(root.path());
+    assert_eq!(roms.len(), 3);
+    assert_eq!(roms.iter().map(|(_, paths)| paths.len()).sum::<usize>(), 5);
 }
 
 #[test]
-fn game_boy_consoles_prepare_offline_caches_and_start_online_sessions() {
+fn game_boy_consoles_prepare_offline_caches_and_play_without_the_network() {
     struct ConsoleServer {
         server: Server,
         console: u32,
@@ -466,10 +544,12 @@ fn game_boy_consoles_prepare_offline_caches_and_start_online_sessions() {
                 console,
             },
         );
+        wait_for(|| service.enabled.load(Ordering::Acquire));
+        service.start_scan();
+        wait_for(|| service.scan_report().state == ScanState::Done);
         let store = Store::open(root.path(), "Player").unwrap();
         let hash = library::content_hash(&rom).unwrap();
         let cache = store.dir.join(format!("{hash}.json"));
-        wait_for(|| cache.exists() && service.sync_status() == SyncStatus::Ready);
         let (data, _): (Game, std::collections::BTreeSet<u32>) = storage::read(&cache).unwrap();
         assert_eq!(data.console, console);
         assert_eq!(
@@ -479,7 +559,10 @@ fn game_boy_consoles_prepare_offline_caches_and_start_online_sessions() {
         assert!(!requests.try_iter().any(|r| r == "startsession"));
         let mut core = service.wrap(Box::<TestCore>::default());
         core.load(&rom).unwrap();
-        wait_for(|| requests.try_iter().any(|r| r == "ping"));
+        wait_for(|| tracked(&service));
+        wait_for(|| service.take_set_ready());
+        std::thread::sleep(Duration::from_millis(500));
+        assert_eq!(requests.try_iter().count(), 0, "a game in play never calls out");
     }
 }
 
@@ -742,32 +825,6 @@ fn unsaved_unlocks_retry_with_the_original_time_after_storage_recovers() {
     assert!(received.try_iter().any(|n| n.kind == NoticeKind::Earned));
 }
 
-#[test]
-fn cache_percentage_counts_unique_badges_and_resumes_from_disk() {
-    let root = configured();
-    let store = Store::open(root.path(), "Player").unwrap();
-    let mut data = game();
-    let mut second = achievement("0xH000000=2");
-    second.id = 8;
-    second.badge = "00002".into();
-    data.achievements.push(second);
-    let (calls, _) = mpsc::channel();
-    let mut http = Server { calls };
-    let mut queue = badges::Queue::new(&store.dir);
-    queue.enqueue(&data);
-    queue.enqueue(&data);
-    assert_eq!(queue.percent(), 0);
-    queue.step(&mut http);
-    assert_eq!(queue.percent(), 50);
-    queue.step(&mut Offline);
-    assert_eq!(queue.percent(), 50); // Failures never count as completed downloads.
-    let mut restarted = badges::Queue::new(&store.dir);
-    restarted.enqueue(&data);
-    assert_eq!(restarted.percent(), 50);
-    restarted.step(&mut http);
-    assert_eq!(restarted.percent(), 100);
-    assert!(!restarted.pending());
-}
 
 #[test]
 fn rich_presence_tracks_memory_and_clears_invalid_replacements() {
@@ -813,19 +870,6 @@ fn rich_presence_cache_accepts_old_data_and_retains_new_scripts() {
 }
 
 #[test]
-fn loading_a_game_sends_presence_without_waiting_for_heartbeat() {
-    let root = configured();
-    let rom = root.path().join("Games/GBA/Test.gba");
-    std::fs::write(&rom, b"fixture ROM").unwrap();
-    let (calls, requests) = mpsc::channel();
-    let service = Service::start_with(root.path().into(), Server { calls });
-    wait_for(|| service.enabled.load(Ordering::Acquire));
-    let mut core = service.wrap(Box::<TestCore>::default());
-    core.load(&rom).unwrap();
-    wait_for(|| requests.try_iter().any(|request| request == "ping"));
-}
-
-#[test]
 fn null_rich_presence_from_the_service_is_an_empty_script() {
     let mut value = serde_json::to_value(game()).unwrap();
     value["RichPresencePatch"] = Value::Null;
@@ -862,7 +906,7 @@ fn artwork_identity_follows_rom_bytes_instead_of_its_filename() {
 }
 
 #[test]
-fn a_rom_is_ready_offline_once_the_library_worker_caches_it() {
+fn a_rom_is_ready_offline_once_a_scan_caches_it() {
     let root = configured();
     let rom = root.path().join("Games/GBA/Prepared.gba");
     std::fs::write(&rom, b"prepared ROM").unwrap();
@@ -870,7 +914,8 @@ fn a_rom_is_ready_offline_once_the_library_worker_caches_it() {
     assert!(readiness.scan(root.path()).is_empty());
     let (calls, _) = mpsc::channel();
     let service = Service::start_with(root.path().into(), Server { calls });
-    wait_for(|| service.cache_generation() > 0);
+    wait_for(|| service.enabled.load(Ordering::Acquire));
+    service.start_scan();
     wait_for(|| readiness.scan(root.path()).contains(&rom));
 }
 
@@ -1043,16 +1088,6 @@ fn indexing_a_renamed_rom_is_announced_while_https_is_stalled() {
 
 // slotPlus: the costs kept off boot and game loading.
 
-#[test]
-fn background_library_work_waits_while_slot_is_busy() {
-    let status = Status::default();
-    assert!(status.settled());
-    status.set_busy(true);
-    assert!(!status.settled());
-    assert!(library::Gate::busy(&status));
-    status.set_busy(false);
-    assert!(status.settled());
-}
 
 #[test]
 fn no_ram_is_copied_until_the_game_is_being_tracked() {
@@ -1097,22 +1132,6 @@ fn the_library_index_reaches_the_card_on_flush() {
     assert!(written.contains(&hash));
 }
 
-#[test]
-fn a_gentle_hash_matches_the_plain_one() {
-    struct Idle;
-    impl library::Gate for Idle {
-        fn busy(&self) -> bool {
-            false
-        }
-    }
-    let root = tempfile::tempdir().unwrap();
-    let rom = root.path().join("game.gba");
-    std::fs::write(&rom, (0..600_000u32).map(|i| i as u8).collect::<Vec<_>>()).unwrap();
-    assert_eq!(
-        library::content_hash_gently(&rom, &Idle).unwrap(),
-        library::content_hash(&rom).unwrap()
-    );
-}
 
 #[test]
 fn an_encore_unlock_is_shown_but_never_recorded_again() {
@@ -1142,64 +1161,117 @@ fn an_encore_unlock_is_shown_but_never_recorded_again() {
     );
 }
 
-#[test]
-fn an_uncached_game_wants_the_network_until_its_set_arrives() {
-    // Offline: the set can't come, so the game keeps asking.
-    let root = configured();
-    let rom = root.path().join("Games/GBA/Test.gba");
-    std::fs::write(&rom, b"fixture ROM").unwrap();
-    let service = Service::start_with(root.path().into(), Offline);
-    wait_for(|| service.enabled.load(Ordering::Acquire));
-    assert!(!service.wants_network(), "nothing is playing");
-    let mut core = service.wrap(Box::<TestCore>::default());
-    core.load(&rom).unwrap();
-    wait_for(|| service.wants_network());
-    drop(core);
-    wait_for(|| !service.wants_network());
-
-    // Online: it stops asking once the set (and its badges) are in.
-    let root = configured();
-    let rom = root.path().join("Games/GBA/Test.gba");
-    std::fs::write(&rom, b"fixture ROM").unwrap();
-    let (calls, _requests) = mpsc::channel();
-    let service = Service::start_with(root.path().into(), Server { calls });
-    wait_for(|| service.enabled.load(Ordering::Acquire));
-    let mut core = service.wrap(Box::<TestCore>::default());
-    core.load(&rom).unwrap();
-    wait_for(|| tracked(&service));
-    wait_for(|| !service.wants_network());
-}
 
 fn tracked(service: &Service) -> bool {
     service.tracking.load(Ordering::Acquire) != 0
 }
 
 #[test]
-fn a_game_waits_for_its_set_and_stops_waiting_once_it_is_active() {
-    // Offline with nothing cached: the game can't earn, and says so.
+fn a_game_says_ready_once_its_cached_set_is_active() {
+    // Nothing cached: nothing to say, and nothing fetched while it plays.
     let root = configured();
     let rom = root.path().join("Games/GBA/Test.gba");
     std::fs::write(&rom, b"fixture ROM").unwrap();
-    let service = Service::start_with(root.path().into(), Offline);
-    wait_for(|| service.enabled.load(Ordering::Acquire));
-    assert!(!service.waiting_for_set(), "no game, no sign");
+    let (calls, requests) = mpsc::channel();
+    let service = Service::start_with(root.path().into(), Server { calls });
+    wait_for(|| service.sync_status() == SyncStatus::Ready);
+    let _ = requests.try_iter().count();
     let mut core = service.wrap(Box::<TestCore>::default());
     core.load(&rom).unwrap();
-    wait_for(|| service.waiting_for_set());
-    std::thread::sleep(Duration::from_millis(50));
-    assert!(service.waiting_for_set(), "still nothing to track offline");
+    std::thread::sleep(Duration::from_millis(500));
+    assert!(!tracked(&service));
+    assert!(!service.take_set_ready());
+    assert_eq!(requests.try_iter().count(), 0, "a game in play never calls out");
     drop(core);
-    wait_for(|| !service.waiting_for_set());
 
-    // Online: the sign goes once the set is active.
-    let root = configured();
-    let rom = root.path().join("Games/GBA/Test.gba");
-    std::fs::write(&rom, b"fixture ROM").unwrap();
-    let (calls, _requests) = mpsc::channel();
-    let service = Service::start_with(root.path().into(), Server { calls });
-    wait_for(|| service.enabled.load(Ordering::Acquire));
+    // Cached by a scan: ready, said once.
+    service.start_scan();
+    wait_for(|| service.scan_report().state == ScanState::Done);
     let mut core = service.wrap(Box::<TestCore>::default());
     core.load(&rom).unwrap();
     wait_for(|| tracked(&service));
-    wait_for(|| !service.waiting_for_set());
+    wait_for(|| service.take_set_ready());
+    assert!(!service.take_set_ready());
+    drop(core);
+}
+
+fn notice(id: u32, title: &str) -> Achievement {
+    Achievement {
+        id,
+        title: title.into(),
+        badge: "00000".into(),
+        description: "A notice from RetroAchievements".into(),
+        points: 0,
+        flags: 3,
+        definition: "0=1".into(),
+    }
+}
+
+#[test]
+fn retroachievements_notices_and_stand_in_games_are_not_sets() {
+    // A real set with the "Unknown Emulator" notice still counts...
+    let mut real = game();
+    real.achievements.push(notice(101000001, "Warning: Unknown Emulator"));
+    assert!(scan::has_set(&real));
+    assert_eq!(real.earnable().map(|a| a.id).collect::<Vec<_>>(), [7]);
+    // ...one with only unofficial achievements beside the notice doesn't (Tetris today)...
+    let mut unofficial = real.clone();
+    unofficial.achievements[0].flags = 5;
+    assert!(!scan::has_set(&unofficial));
+    // ...nor does the stand-in RetroAchievements sends for a dump it doesn't support.
+    let stand_in = Game {
+        id: 1100002506,
+        title: "Unsupported Game Version (TwinBee Da!!)".into(),
+        achievements: vec![notice(101000001, "Unsupported Game Version")],
+        ..game()
+    };
+    assert!(stand_in.stand_in() && !scan::has_set(&stand_in));
+}
+
+#[test]
+fn a_trophy_judged_by_older_rules_is_judged_again_from_the_cached_set() {
+    let root = configured();
+    let rom = root.path().join("Games/GBA/TwinBee.gba");
+    std::fs::write(&rom, b"twinbee").unwrap();
+    let store = Store::open(root.path(), "Player").unwrap();
+    let hash = library::hash(&store.dir, &rom).unwrap();
+    let stand_in = Game {
+        id: 1100002506,
+        title: "Unsupported Game Version (TwinBee Da!!)".into(),
+        achievements: vec![notice(101000001, "Unsupported Game Version")],
+        ..game()
+    };
+    storage::write(
+        &store.dir.join(format!("{hash}.json")),
+        &(&stand_in, std::collections::BTreeSet::<u32>::new()),
+    )
+    .unwrap();
+    // As the 2026-11-07 scan left it: a trophy, under the old rules (2).
+    library::set_verdict(&store.dir, &rom, true, 2);
+    assert!(library::with_sets(&store.dir).is_empty());
+    assert_eq!(library::verdict(&store.dir, &rom), Some((false, 3)));
+}
+
+#[test]
+fn a_played_game_is_reported_from_the_shelf_afterwards() {
+    let root = configured();
+    let rom = root.path().join("Games/GBA/Test.gba");
+    std::fs::write(&rom, b"fixture ROM").unwrap();
+    let (calls, requests) = mpsc::channel();
+    let service = Service::start_with(root.path().into(), Server { calls });
+    wait_for(|| service.enabled.load(Ordering::Acquire));
+    service.start_scan();
+    wait_for(|| service.scan_report().state == ScanState::Done);
+    wait_for(|| service.sync_status() == SyncStatus::Ready);
+    let _ = requests.try_iter().count();
+    let mut core = service.wrap(Box::<TestCore>::default());
+    core.load(&rom).unwrap();
+    wait_for(|| tracked(&service));
+    let dir = Store::open(root.path(), "Player").unwrap().dir;
+    assert_eq!(played::queued(&dir).len(), 1);
+    std::thread::sleep(Duration::from_millis(300));
+    assert!(!requests.try_iter().any(|r| r == "startsession"), "not while it plays");
+    drop(core);
+    wait_for(|| played::queued(&dir).is_empty());
+    assert!(requests.try_iter().any(|r| r == "startsession"));
 }
