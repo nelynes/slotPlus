@@ -620,7 +620,7 @@ fn network_sits_between_controls_and_about() {
         ]
     );
     assert_eq!(QuickRow::WIFI, [QuickRow::WifiPower, QuickRow::Networks]);
-    assert_eq!(QuickRow::GENERAL.last(), Some(&QuickRow::Wifi));
+    assert_eq!(QuickRow::GENERAL.last(), Some(&QuickRow::DateTime));
     let (_d, mut a, _) = on_carousel();
     common::connect(&mut a);
     open_at(&mut a, QuickRow::Network);
@@ -658,7 +658,7 @@ fn tools_holds_the_network_tools() {
     }
 }
 
-const NO_NETWORK: &str = "You must be connected to a network to use tools";
+const NO_NETWORK: &str = "Not connected";
 
 #[test]
 fn tools_shows_the_message_when_not_connected() {
@@ -1099,7 +1099,7 @@ fn only_the_selected_rows_value_is_lit() {
         press(&mut a, Btn::Up);
     }
     press(&mut a, Btn::A);
-    for _ in 0..QuickRow::LidOff.position(&a.hidden_rows()) {
+    for _ in 0..QuickRow::Wifi.position(&a.hidden_rows()) {
         press(&mut a, Btn::Down);
     }
     let out = frame(&a);
@@ -1311,6 +1311,7 @@ fn the_game_boy_page_steps_the_palette_from_auto() {
         QuickRow::SCREEN_GB,
         [
             QuickRow::GbShader,
+            QuickRow::GbOverlay,
             QuickRow::GbColourCorrection,
             QuickRow::GbBlending,
             QuickRow::GbPalette,
@@ -1483,7 +1484,7 @@ fn wallpaper_tint_hides_until_a_wallpaper_of_your_own_is_picked() {
     press(&mut a, Btn::Down);
     assert_eq!(
         a.quick_menu(),
-        Some(QuickRow::Recents),
+        Some(QuickRow::ShelfMode),
         "the tint row showed on the default wallpaper"
     );
     press(&mut a, Btn::Up);
@@ -1501,7 +1502,7 @@ fn wallpaper_tint_hides_until_a_wallpaper_of_your_own_is_picked() {
         let below = if shown {
             QuickRow::WallpaperTint
         } else {
-            QuickRow::Recents
+            QuickRow::ShelfMode
         };
         assert_eq!(a.quick_menu(), Some(below), "below {pick:?}");
         press(&mut a, Btn::Up);
@@ -2062,4 +2063,64 @@ fn retroachievements_are_greyed_out_while_switched_off() {
         !d.path().join("Config/retroachievements.toml").exists(),
         "nothing is written for it"
     );
+}
+
+fn overlay_png(root: &std::path::Path, dir: &str, name: &str, w: u32, h: u32) {
+    let dir = root.join("Overlays").join(dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let mut out = Vec::new();
+    let mut enc = png::Encoder::new(&mut out, w, h);
+    enc.set_color(png::ColorType::Rgba);
+    let mut writer = enc.write_header().unwrap();
+    writer.write_image_data(&vec![0u8; (w * h * 4) as usize]).unwrap();
+    drop(writer);
+    std::fs::write(dir.join(name), out).unwrap();
+}
+
+#[test]
+fn the_overlay_rows_hide_while_the_folders_are_empty() {
+    let (_d, a, _) = on_carousel();
+    let hidden = a.hidden_rows();
+    for row in [QuickRow::GbaOverlay, QuickRow::GbOverlay, QuickRow::GbcOverlay] {
+        assert!(hidden.contains(&row), "{row:?} shown with nothing to pick");
+    }
+}
+
+#[test]
+fn the_overlay_row_cycles_off_then_each_file_and_saves() {
+    let (d, mut a, _) = on_carousel();
+    overlay_png(d.path(), "GBC", "a_tile.png", 3, 3);
+    overlay_png(d.path(), "GBC", "b_tile.png", 3, 3);
+    assert!(!a.hidden_rows().contains(&QuickRow::GbcOverlay));
+    open_at(&mut a, QuickRow::GbcOverlay);
+    for want in [Some("a"), Some("b"), None] {
+        press(&mut a, Btn::Right);
+        assert_eq!(a.resolved_overlay(Platform::Gbc).map(|e| e.name).as_deref(), want);
+    }
+    press(&mut a, Btn::Left);
+    assert_eq!(read_slot_state(d.path()).overlay_gbc.as_deref(), Some("b"));
+    assert_eq!(a.resolved_overlay(Platform::Gb), None);
+}
+
+#[test]
+fn an_overlay_that_does_not_fit_this_screen_draws_nothing_and_stays_saved() {
+    let (d, a, _) = on_carousel_with(SlotState {
+        overlay_gba: Some("glass".into()),
+        ..SlotState::default()
+    });
+    overlay_png(d.path(), "GBA", "glass.png", 9999, 9);
+    assert_eq!(a.resolved_overlay(Platform::Gba), None);
+    assert_eq!(read_slot_state(d.path()).overlay_gba.as_deref(), Some("glass"));
+}
+
+#[cfg(feature = "nds")]
+#[test]
+fn ds_keeps_its_own_overlay_pick() {
+    let (d, a, _) = on_carousel_with(SlotState {
+        overlay_nds: Some("grid".into()),
+        ..SlotState::default()
+    });
+    overlay_png(d.path(), "NDS", "grid_tile.png", 4, 4);
+    assert_eq!(a.resolved_overlay(Platform::Nds).map(|e| e.name).as_deref(), Some("grid"));
+    assert_eq!(a.resolved_overlay(Platform::Gba), None);
 }

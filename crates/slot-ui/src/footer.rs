@@ -9,6 +9,10 @@ use crate::CartFace;
 
 pub const FOOTER_Y: f32 = OUT_H as f32 - MOUTH_H + (MOUTH_H - HINT_H as f32) / 2.0;
 const FOOTER_MARGIN: f32 = 24.0;
+
+pub fn footer_y(canvas: Canvas) -> f32 {
+    FOOTER_Y + canvas.h - OUT_H as f32
+}
 const CORNER_MARGIN: f32 = 16.0;
 
 #[derive(Copy, Clone, Default, PartialEq, Eq, Debug)]
@@ -35,19 +39,50 @@ pub fn draw_footer(
     ink: [u8; 3],
     out: &mut Vec<Draw>,
 ) {
-    let y = FOOTER_Y + (HINT_H as f32 - GAUGE_H) / 2.0;
+    let y = footer_y(canvas) + (HINT_H as f32 - GAUGE_H) / 2.0;
     draw_gauge(FOOTER_MARGIN, y, battery, percent, bolt, ink, out);
-    printed(canvas.w - FOOTER_MARGIN - clock.w as f32, clock, out);
+    let x = canvas.w - FOOTER_MARGIN - clock.w as f32;
+    draw_printed(x, footer_y(canvas), clock, out);
 }
 
 const WIFI_GAP: f32 = 12.0;
 
-pub fn draw_wifi_icon(percent: Printed, face: Option<(TexId, u32, u32)>, out: &mut Vec<Draw>) {
+pub fn draw_wifi_icon(
+    canvas: Canvas,
+    percent: Printed,
+    face: Option<(TexId, u32, u32)>,
+    out: &mut Vec<Draw>,
+) {
     let Some((tex, w, h)) = face else {
         return;
     };
     let x = FOOTER_MARGIN + GAUGE_ROW_W + percent.w as f32 + WIFI_GAP;
-    let y = FOOTER_Y + (HINT_H as f32 - h as f32) / 2.0;
+    let y = footer_y(canvas) + (HINT_H as f32 - h as f32) / 2.0;
+    out.push(Draw::Tex {
+        x: x.round(),
+        y: y.round(),
+        w: w as f32,
+        h: h as f32,
+        tex,
+        alpha: 1.0,
+    });
+}
+
+pub const KID_ICON_PX: f32 = 20.0;
+
+pub fn draw_kid_icon(
+    canvas: Canvas,
+    percent: Printed,
+    wifi: Option<(TexId, u32, u32)>,
+    face: Option<(TexId, u32, u32)>,
+    out: &mut Vec<Draw>,
+) {
+    let Some((tex, w, h)) = face else {
+        return;
+    };
+    let after_wifi = wifi.map_or(0.0, |(_, ww, _)| ww as f32 + WIFI_GAP);
+    let x = FOOTER_MARGIN + GAUGE_ROW_W + percent.w as f32 + WIFI_GAP + after_wifi;
+    let y = footer_y(canvas) + (HINT_H as f32 - h as f32) / 2.0;
     out.push(Draw::Tex {
         x: x.round(),
         y: y.round(),
@@ -94,10 +129,6 @@ pub(crate) fn draw_printed(x: f32, y: f32, p: Printed, out: &mut Vec<Draw>) {
             colour: [1.0, 1.0, 1.0, 0.08],
         },
     });
-}
-
-fn printed(x: f32, p: Printed, out: &mut Vec<Draw>) {
-    draw_printed(x, FOOTER_Y, p, out);
 }
 
 // slotPlus: the sync mark beside the clock, from Prashant Vaibhav's fork of Slot.

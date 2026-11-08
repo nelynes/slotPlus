@@ -106,6 +106,7 @@ fn screen_shows_the_palette_only_when_palettes_are_live() {
             &[
                 QuickRow::Palette,
                 QuickRow::Bezel,
+                QuickRow::Overlay,
                 QuickRow::Scale,
                 QuickRow::Stretch,
                 QuickRow::LeftStick
@@ -120,6 +121,7 @@ fn screen_shows_the_palette_only_when_palettes_are_live() {
         [
             &[
                 QuickRow::Bezel,
+                QuickRow::Overlay,
                 QuickRow::Scale,
                 QuickRow::Stretch,
                 QuickRow::LeftStick
@@ -513,7 +515,7 @@ fn the_menu_waits_for_the_screen_to_finish_powering_on() {
     let mut out = Vec::new();
     a.draw(&mut out);
     let scrim = out.iter().any(
-        |d| matches!(d, slot_ui::Draw::Rect { colour, .. } if (colour[3] - 0.65).abs() < 0.001),
+        |d| matches!(d, slot_ui::Draw::Rect { colour, .. } if (colour[3] - 0.8).abs() < 0.001),
     );
     assert!(
         !scrim,
@@ -525,7 +527,7 @@ fn the_menu_waits_for_the_screen_to_finish_powering_on() {
     let mut out = Vec::new();
     a.draw(&mut out);
     assert!(out.iter().any(|d| {
-        matches!(d, slot_ui::Draw::Rect { colour, .. } if (colour[3] - 0.65).abs() < 0.001)
+        matches!(d, slot_ui::Draw::Rect { colour, .. } if (colour[3] - 0.8).abs() < 0.001)
     }));
 }
 
