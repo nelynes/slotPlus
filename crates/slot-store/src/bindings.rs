@@ -558,14 +558,18 @@ pub enum CarouselAction {
     NextShelf,
     Favorite,
     ForgetRecent,
+    PreviousCollection,
+    NextCollection,
 }
 
 impl CarouselAction {
-    pub const ALL: [CarouselAction; 4] = [
+    pub const ALL: [CarouselAction; 6] = [
         CarouselAction::PreviousShelf,
         CarouselAction::NextShelf,
         CarouselAction::Favorite,
         CarouselAction::ForgetRecent,
+        CarouselAction::PreviousCollection,
+        CarouselAction::NextCollection,
     ];
 
     pub fn label(self) -> &'static str {
@@ -574,6 +578,8 @@ impl CarouselAction {
             CarouselAction::NextShelf => "Next Shelf",
             CarouselAction::Favorite => "Favorite",
             CarouselAction::ForgetRecent => "Remove Recent",
+            CarouselAction::PreviousCollection => "Previous",
+            CarouselAction::NextCollection => "Next",
         }
     }
 
@@ -583,6 +589,8 @@ impl CarouselAction {
             CarouselAction::NextShelf => "next_shelf",
             CarouselAction::Favorite => "favorite",
             CarouselAction::ForgetRecent => "remove_recent",
+            CarouselAction::PreviousCollection => "previous_collection",
+            CarouselAction::NextCollection => "next_collection",
         }
     }
 
@@ -593,7 +601,7 @@ impl CarouselAction {
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct CarouselKeys {
-    keys: [Option<Binding>; 4],
+    keys: [Option<Binding>; 6],
 }
 
 impl Default for CarouselKeys {
@@ -604,6 +612,8 @@ impl Default for CarouselKeys {
                 Binding::plain(Device::R1),
                 Binding::plain(Device::Y),
                 Binding::plain(Device::X),
+                Binding::plain(Device::L2),
+                Binding::plain(Device::R2),
             ],
         }
     }
@@ -618,6 +628,18 @@ impl CarouselKeys {
         self.keys[action.index()] = binding;
     }
 }
+
+pub const SHELF_ACTIONS: [CarouselAction; 4] = [
+    CarouselAction::PreviousShelf,
+    CarouselAction::NextShelf,
+    CarouselAction::Favorite,
+    CarouselAction::ForgetRecent,
+];
+
+pub const COLLECTION_ACTIONS: [CarouselAction; 2] = [
+    CarouselAction::PreviousCollection,
+    CarouselAction::NextCollection,
+];
 
 pub fn read_carousel(root: &Path) -> CarouselKeys {
     let mut keys = CarouselKeys::default();

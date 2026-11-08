@@ -28,6 +28,16 @@ impl Platform {
         Platform::Tg16,
         Platform::Nds,
     ];
+    #[cfg(feature = "nds")]
+    pub const ALL: [Platform; 7] = [
+        Platform::Nds,
+        Platform::Gba,
+        Platform::Gbav,
+        Platform::Gbc,
+        Platform::Gb,
+        Platform::Ws,
+        Platform::Lynx,
+    ];
 
     pub fn name(self) -> &'static str {
         match self {
@@ -41,6 +51,8 @@ impl Platform {
             Platform::Tg16 => "TurboGrafx-16",
             Platform::Nds => "Nintendo DS",
             Platform::Gbav => "Game Boy Advance Video",
+            #[cfg(feature = "nds")]
+            Platform::Nds => "Nintendo DS",
         }
     }
 
@@ -56,6 +68,8 @@ impl Platform {
             Platform::Tg16 => "TG16",
             Platform::Nds => "NDS",
             Platform::Gbav => "GBAV",
+            #[cfg(feature = "nds")]
+            Platform::Nds => "NDS",
         }
     }
 

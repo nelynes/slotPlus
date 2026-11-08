@@ -231,6 +231,8 @@ pub fn mould_for(platform: Platform) -> Mould {
 
 pub fn folder_gb_shell(cart: &Cart) -> Option<GbShell> {
     match cart.platform {
+        #[cfg(feature = "nds")]
+        Platform::Nds => None,
         Platform::Gb | Platform::Gbc => Some(match cart.shell.map(|c| c.outline) {
             Some(Outline::Notched) => GbShell::Notched,
             Some(Outline::Rounded) => GbShell::Rounded,
@@ -384,6 +386,8 @@ pub const NDS_SEATED_W: u32 = 168;
 pub fn seated_box(platform: Platform) -> (u32, u32) {
     match platform {
         Platform::Gba | Platform::Gbav => (SEATED_W, SEATED_H),
+        #[cfg(feature = "nds")]
+        Platform::Nds => (SEATED_W, SEATED_H),
         Platform::Gb | Platform::Gbc => (SEATED_W, GB_SEATED_H),
         // A DS card is far smaller than the others, so it seats narrower, in a
         // DS Lite slot narrowed to match.

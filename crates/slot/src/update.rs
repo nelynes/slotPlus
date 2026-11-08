@@ -54,9 +54,32 @@ pub enum UpdateFail {
     Rejected(String),
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Device {
+    H700,
+    RgDsPlus,
+}
+
+impl Device {
+    pub fn of_target(target: &str) -> Device {
+        match target {
+            "rgdsplus" => Device::RgDsPlus,
+            _ => Device::H700,
+        }
+    }
+
+    #[allow(dead_code)] // slotPlus picks its zip by edition
+    fn zip_suffix(self) -> &'static str {
+        match self {
+            Device::H700 => "h700",
+            Device::RgDsPlus => "rgdsplus",
+        }
+    }
+}
+
 /// slotPlus: the release is slotPlus's, with one zip for each edition, and this build takes
-/// its own edition's (`crate::edition`).
-pub fn parse_release(json: &str) -> Result<Release, UpdateFail> {
+/// its own edition's (`crate::edition`). `device` is Slot's; slotPlus ships only the H700.
+pub fn parse_release(json: &str, _device: Device) -> Result<Release, UpdateFail> {
     let v: serde_json::Value = serde_json::from_str(json).map_err(|_| UpdateFail::Bad)?;
     let stable = &v["stable"];
     let version = stable["version"]
@@ -349,7 +372,8 @@ pub fn check_with(
         Ok(body) => body,
         Err(e) => return UpdateEvent::Failed(e),
     };
-    let slot = match parse_release(&body) {
+    let device = Device::of_target(running.baseos.map_or("", |(target, _)| target));
+    let slot = match parse_release(&body, device) {
         Ok(r) => Release {
             running: running.slot.to_string(),
             ..r

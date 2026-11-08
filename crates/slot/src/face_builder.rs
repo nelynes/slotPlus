@@ -8,6 +8,7 @@ use slot_ui::{board_face, cart_face_with, cart_interior, lynx_back_face, padded,
 use crate::label_cache::label_art;
 
 pub struct BuiltFaces {
+    pub platform: Platform,
     pub stem: String,
     pub interior: CartFace,
     pub board: CartFace,
@@ -31,6 +32,7 @@ impl FaceBuilder {
                         cart = newer;
                     }
                     let faces = BuiltFaces {
+                        platform: cart.platform,
                         stem: cart.stem.clone(),
                         interior: cart_interior(&cart),
                         // A Lynx cart has no board to show: the hold picker

@@ -1,5 +1,6 @@
 use slot_store::Platform;
 
+#[cfg(not(feature = "nds"))]
 #[test]
 fn every_platform_has_a_directory() {
     let names: Vec<&str> = Platform::ALL.iter().map(|p| p.dir_name()).collect();
@@ -9,6 +10,7 @@ fn every_platform_has_a_directory() {
     );
 }
 
+#[cfg(not(feature = "nds"))]
 #[test]
 fn every_platform_is_a_shelf_of_its_own() {
     assert_eq!(

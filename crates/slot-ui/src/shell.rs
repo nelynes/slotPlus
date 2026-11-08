@@ -154,6 +154,8 @@ pub fn indexed_shell(cart: &Cart) -> Option<Shell> {
             false => Some(gba_shell_for(&cart.code)),
             true => slot_store::header_index::peek_gba_code(&cart.rom).map(|c| gba_shell_for(&c)),
         },
+        #[cfg(feature = "nds")]
+        Platform::Nds => None,
         Platform::Gb | Platform::Gbc => slot_store::header_index::peek_gb_header(&cart.rom)
             .map(|h| gb_shell_from(h.as_ref(), &cart.rom)),
         // slotPlus's systems need no header.

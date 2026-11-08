@@ -166,6 +166,13 @@ pub enum WsLayout {
     Sideways,
 }
 
+pub fn mask_for(core_takes_xy: bool, mask: ButtonMask, frame: u32) -> ButtonMask {
+    match core_takes_xy {
+        true => mask,
+        false => mask.turbo(frame),
+    }
+}
+
 #[derive(Copy, Clone, Debug)]
 pub struct AvInfo {
     pub fps: f64,
@@ -225,6 +232,11 @@ pub trait RetroCore: Send {
     /// Called only on the emulator thread, between frames.
     fn achievement_memory(&self, _ram: &mut [u8]) -> crate::AchievementMemory {
         crate::AchievementMemory::default()
+    }
+    fn set_touch(&mut self, _at: Option<(u8, u8)>) {}
+    fn set_lid(&mut self, _shut: bool) {}
+    fn takes_xy(&self) -> bool {
+        false
     }
     fn video_xrgb8888(&self) -> &[u8];
     /// Width and height of the buffer `video_xrgb8888` returns.
