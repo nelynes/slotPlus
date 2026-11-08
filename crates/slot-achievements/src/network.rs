@@ -9,13 +9,10 @@ use crate::storage::{self, Auth, Config, Game, Store, Unlock};
 use crate::{Notice, Status, SyncStatus};
 
 const API: &str = "https://retroachievements.org/dorequest.php";
-const VERSION: &str = "12.2.1";
 
 pub(crate) struct Load {
     pub generation: u64,
     pub path: PathBuf,
-    /// The evaluator's hash of `path`, when it has one, so a game is read once on load.
-    pub hash: Option<String>,
 }
 
 pub(crate) struct Prepared {
@@ -114,7 +111,31 @@ fn call(
     success(http.call(&fields)?)
 }
 
-fn login(
+/// slotPlus: rcheevos, as `startsession` names the client's achievement runtime.
+const RCHEEVOS: &str = "12.2.1";
+
+/// slotPlus: tell RetroAchievements a game was played, from the shelf afterwards. Casual
+/// (`h=0`), as slot always is.
+pub(crate) fn report_played(
+    http: &mut impl Transport,
+    auth: &Auth,
+    played: &crate::played::Played,
+) -> Result<(), Failure> {
+    call(
+        http,
+        auth,
+        "startsession",
+        &[
+            ("g", played.game.to_string()),
+            ("h", "0".into()),
+            ("m", played.hash.clone()),
+            ("l", RCHEEVOS.into()),
+        ],
+    )
+    .map(|_| ())
+}
+
+pub(crate) fn login(
     http: &mut impl Transport,
     config: &Config,
     remembered: Option<&Auth>,
@@ -201,34 +222,7 @@ pub(crate) fn award(
     }
 }
 
-fn unlocked(response: &Value) -> Result<BTreeSet<u32>, Failure> {
-    let mut ids = BTreeSet::new();
-    for field in ["Unlocks", "HardcoreUnlocks"] {
-        // Like rc_api_process_start_session_response, accept omitted empty lists.
-        if response[field].is_null() {
-            continue;
-        }
-        let entries = response[field].as_array().ok_or(Failure::Invalid)?;
-        for entry in entries {
-            let id = entry["ID"]
-                .as_u64()
-                .and_then(|n| u32::try_from(n).ok())
-                .ok_or(Failure::Invalid)?;
-            ids.insert(id);
-        }
-    }
-    Ok(ids)
-}
-
-struct Active {
-    generation: u64,
-    hash: String,
-    ready: bool,
-    online: bool,
-    last_ping: Instant,
-}
-
-fn prefetch(
+pub(crate) fn prefetch(
     http: &mut impl Transport,
     auth: &Auth,
     dir: &std::path::Path,
@@ -269,13 +263,15 @@ fn prefetch(
     Ok(game)
 }
 
-#[allow(clippy::too_many_arguments)]
+/// slotPlus: the network worker. It only talks to the server while slot is on the shelf:
+/// Wi-Fi goes down for play, as in Slot, and a game earns from its downloaded set. Earned
+/// unlocks queue on the card and are sent from the shelf; sets come from Download
+/// Achievement Sets (`crate::scan`).
 pub(crate) fn run(
     root: PathBuf,
     config: Config,
     store: Arc<Mutex<Store>>,
-    loads: mpsc::Receiver<Option<Load>>,
-    prepared: mpsc::Sender<Prepared>,
+    playing: mpsc::Receiver<bool>,
     notices: mpsc::Sender<Notice>,
     status: Arc<Status>,
     mut http: impl Transport,
@@ -283,93 +279,40 @@ pub(crate) fn run(
     let dir = store.lock().unwrap().dir.clone();
     let mut auth: Option<Auth> = storage::read(&dir.join("auth.json")).ok();
     let mut verified = false;
-    let mut active: Option<Active> = None;
+    let mut in_game = false;
     let mut next_attempt = Instant::now();
     let mut delay = 30;
     let mut warned = false;
     let mut last_award = 0;
-    // slotPlus: the library is first scanned once slot has settled after boot, not at start.
-    let mut library = std::collections::VecDeque::new();
-    let mut library_total = 0;
-    let mut library_failed = false;
-    let mut scanned = false;
-    let mut rescanned = Instant::now();
-    let mut badges = crate::badges::Queue::new(&dir);
+    // The shelf's trophies: read from the library index once, then kept by scans.
+    status.publish_sets(crate::library::with_sets(&dir));
     loop {
-        match loads.recv_timeout(Duration::from_millis(200)) {
-            Ok(mut load) => {
-                while let Ok(newer) = loads.try_recv() {
-                    load = newer;
+        match playing.recv_timeout(Duration::from_millis(200)) {
+            Ok(mut now_playing) => {
+                while let Ok(newer) = playing.try_recv() {
+                    now_playing = newer;
                 }
-                active = load.and_then(|load| {
-                    // GB/GBC/GBA identification is the MD5 of the uncompressed ROM.
-                    // File I/O and hashing happen here, never on the emulator/UI threads.
-                    let hash = match load.hash {
-                        Some(hash) => hash,
-                        None => crate::library::hash(&dir, &load.path).ok()?,
-                    };
-                    // This may have indexed a renamed ROM; the shelf can seal it.
-                    status
-                        .cached
-                        .fetch_add(1, std::sync::atomic::Ordering::AcqRel);
-                    let mut game = Active {
-                        generation: load.generation,
-                        hash,
-                        ready: false,
-                        online: false,
-                        last_ping: Instant::now(),
-                    };
-                    if auth.is_some() {
-                        let cache = dir.join(format!("{}.json", game.hash));
-                        if let Ok((data, ids)) = storage::read::<(Game, BTreeSet<u32>)>(&cache) {
-                            if data.supported_console() {
-                                badges.enqueue_first(&data);
-                                let _ = prepared.send(Prepared {
-                                    generation: game.generation,
-                                    hash: game.hash.clone(),
-                                    game: data,
-                                    unlocked: ids,
-                                    cached: true,
-                                });
-                                game.ready = true;
-                            }
-                        }
-                    }
-                    Some(game)
-                });
-                next_attempt = Instant::now();
-                warned = false;
+                in_game = now_playing;
             }
             Err(mpsc::RecvTimeoutError::Disconnected) => return,
             Err(mpsc::RecvTimeoutError::Timeout) => {}
         }
-        // slotPlus: the game in play isn't cached yet, or its badges are still to come, so
-        // slot holds Wi-Fi for it. A badge download that failed waits for the shelf.
-        status.wants_network.store(
-            active
-                .as_ref()
-                .is_some_and(|game| (!game.ready && !game.online) || (badges.urgent() && !badges.waiting)),
-            std::sync::atomic::Ordering::Release,
-        );
-        // Metadata preparation and badge downloads each occupy half of a cache refresh.
-        status.pending.store(
-            !library.is_empty()
-                || library_failed
-                || badges.pending()
-                || store.lock().unwrap().unlocks.values().any(|u| !u.synced)
-                || active.as_ref().is_some_and(|game| !game.ready),
-            std::sync::atomic::Ordering::Release,
-        );
-        status.progress.store(
-            cache_progress(
-                library_total,
-                library.len(),
-                badges.pending(),
-                badges.percent(),
-            )
-            .map_or(0, |percent| percent + 1),
-            std::sync::atomic::Ordering::Release,
-        );
+        let unsynced = || store.lock().unwrap().unlocks.values().any(|u| !u.synced);
+        status
+            .pending
+            .store(unsynced(), std::sync::atomic::Ordering::Release);
+        if in_game {
+            continue;
+        }
+        if status
+            .scan_request
+            .swap(false, std::sync::atomic::Ordering::AcqRel)
+        {
+            crate::scan::run(&root, &dir, &config, &mut auth, &mut verified, &status, &mut http);
+            // Signed in or not, the scan has just tried: unlocks go next, straight away.
+            next_attempt = Instant::now();
+            continue;
+        }
         if status
             .reconnect
             .swap(false, std::sync::atomic::Ordering::AcqRel)
@@ -380,23 +323,8 @@ pub(crate) fn run(
             continue;
         }
         crate::library::flush_due();
-        let settled = status.settled();
-        if settled && (!scanned || rescanned.elapsed() >= Duration::from_secs(300)) {
-            scanned = true;
-            library = crate::library::pending(&root, &dir, now());
-            library_total = library.len();
-            library_failed = false;
-            badges.scan();
-            rescanned = Instant::now();
-        }
-        if !verified
-            || !library.is_empty()
-            || (badges.pending() && !badges.waiting)
-            || store.lock().unwrap().unlocks.values().any(|u| !u.synced)
-            || active.as_ref().is_some_and(|game| {
-                !game.online || (game.ready && game.last_ping.elapsed() >= Duration::from_secs(120))
-            })
-        {
+        let played = crate::played::queued(&dir);
+        if !verified || unsynced() || !played.is_empty() {
             status.set(SyncStatus::Syncing);
         }
         let result = (|| -> Result<(), Failure> {
@@ -413,9 +341,21 @@ pub(crate) fn run(
                 verified = true;
             }
             let auth = auth.as_ref().ok_or(Failure::Invalid)?;
+            // Games played since the last sync, one per pass, so they show as played.
+            if let Some(game) = played.first() {
+                match report_played(&mut http, auth, game) {
+                    Ok(()) => eprintln!("slot: achievements: reported playing game {}", game.game),
+                    // Turned down for good (a game RetroAchievements no longer has): drop it.
+                    Err(Failure::Rejected) => {
+                        eprintln!("slot: achievements: game {} not taken", game.game)
+                    }
+                    Err(e) => return Err(e),
+                }
+                crate::played::done(&dir, game);
+                return Ok(());
+            }
             // Rotate through pending awards so one rejected/deleted achievement does not
-            // prevent other games from syncing or the library from being prepared.
-            let mut deferred_error = None;
+            // prevent other games from syncing.
             let pending = {
                 let store = store.lock().unwrap();
                 store
@@ -431,139 +371,22 @@ pub(crate) fn run(
             };
             if let Some(unlock) = pending {
                 last_award = unlock.id;
-                match award(&mut http, auth, &unlock, now()) {
-                    Ok(()) => {
-                        let mut store = store.lock().unwrap();
-                        store.ack(unlock.id).map_err(|_| Failure::Invalid)?;
-                        if store.unlocks.values().all(|u| u.synced) {
-                            let _ = notices.send(Notice::status(0, "Achievements synced"));
-                        }
-                    }
-                    Err(Failure::Network) => return Err(Failure::Network),
-                    Err(error) => deferred_error = Some(error),
+                award(&mut http, auth, &unlock, now())?;
+                eprintln!("slot: achievements: sent achievement {}", unlock.id);
+                let mut store = store.lock().unwrap();
+                store.ack(unlock.id).map_err(|_| Failure::Invalid)?;
+                if store.unlocks.values().all(|u| u.synced) {
+                    let _ = notices.send(Notice::status(0, "Achievements synced"));
                 }
             }
-            if let Some(game) = active.as_mut() {
-                if !game.online {
-                    let resolved = call(&mut http, auth, "gameid", &[("m", game.hash.clone())])?;
-                    let id = resolved["GameID"].as_u64().ok_or(Failure::Invalid)?;
-                    if id == 0 {
-                        let _ = notices.send(Notice::status(
-                            game.generation,
-                            "No achievements for this ROM",
-                        ));
-                        game.online = true;
-                        game.ready = false;
-                        // Nothing to earn, so nothing to wait for.
-                        status
-                            .waiting
-                            .store(false, std::sync::atomic::Ordering::Release);
-                    } else {
-                        let patch = call(&mut http, auth, "patch", &[("g", id.to_string())])?;
-                        let data: Game = serde_json::from_value(patch["PatchData"].clone())
-                            .map_err(|_| Failure::Invalid)?;
-                        if !data.supported_console() || u64::from(data.id) != id {
-                            return Err(Failure::Invalid);
-                        }
-                        let session = call(
-                            &mut http,
-                            auth,
-                            "startsession",
-                            &[
-                                ("g", id.to_string()),
-                                ("h", "0".into()),
-                                ("m", game.hash.clone()),
-                                ("l", VERSION.into()),
-                            ],
-                        )?;
-                        let ids = unlocked(&session)?;
-                        storage::write(&dir.join(format!("{}.json", game.hash)), &(&data, &ids))
-                            .map_err(|_| Failure::Invalid)?;
-                        status
-                            .cached
-                            .fetch_add(1, std::sync::atomic::Ordering::AcqRel);
-                        badges.enqueue_first(&data);
-                        ping(&mut http, auth, &status, game, &data)?;
-                        let _ = prepared.send(Prepared {
-                            generation: game.generation,
-                            hash: game.hash.clone(),
-                            game: data,
-                            unlocked: ids,
-                            cached: false,
-                        });
-                        game.ready = true;
-                        game.online = true;
-                        game.last_ping = Instant::now();
-                    }
-                } else if game.ready && game.last_ping.elapsed() >= Duration::from_secs(120) {
-                    let cached: (Game, BTreeSet<u32>) =
-                        storage::read(&dir.join(format!("{}.json", game.hash)))
-                            .map_err(|_| Failure::Invalid)?;
-                    ping(&mut http, auth, &status, game, &cached.0)?;
-                    game.last_ping = Instant::now();
-                }
-            }
-            // One ROM per pass, with a one-second gap. Prefetch uses `unlocks`, not
-            // `startsession`, so preparing a library doesn't claim the user played it.
-            if let Some(path) = library.front().filter(|_| settled) {
-                if let Ok(hash) = crate::library::hash_gently(&dir, path, &*status) {
-                    status
-                        .cached
-                        .fetch_add(1, std::sync::atomic::Ordering::AcqRel);
-                    match prefetch(&mut http, auth, &dir, &hash) {
-                        Ok(game) => {
-                            crate::library::checked(&dir, path, now());
-                            status
-                                .cached
-                                .fetch_add(1, std::sync::atomic::Ordering::AcqRel);
-                            badges.enqueue(&game);
-                        }
-                        Err(Failure::Network) => return Err(Failure::Network),
-                        Err(error) => {
-                            library_failed = true;
-                            deferred_error = Some(error);
-                        }
-                    }
-                } else {
-                    library_failed = true;
-                }
-                // Removed/unreadable ROMs are reconsidered on the next library scan.
-                library.pop_front();
-                if library.is_empty() && !library_failed && !badges.pending() {
-                    let _ = notices.send(Notice::status(0, "Offline achievement cache ready"));
-                }
-            }
-            if settled || badges.urgent() {
-                badges.step(&mut http);
-            }
-            deferred_error.map_or(Ok(()), Err)
+            Ok(())
         })();
-        status.pending.store(
-            !library.is_empty()
-                || library_failed
-                || badges.pending()
-                || store.lock().unwrap().unlocks.values().any(|u| !u.synced)
-                || active.as_ref().is_some_and(|game| !game.ready),
-            std::sync::atomic::Ordering::Release,
-        );
-        status.progress.store(
-            cache_progress(
-                library_total,
-                library.len(),
-                badges.pending(),
-                badges.percent(),
-            )
-            .map_or(0, |percent| percent + 1),
-            std::sync::atomic::Ordering::Release,
-        );
+        status
+            .pending
+            .store(unsynced(), std::sync::atomic::Ordering::Release);
         match result {
             Ok(()) => {
-                status.set(if library_failed || badges.waiting {
-                    SyncStatus::Attention
-                } else if !library.is_empty()
-                    || badges.pending()
-                    || store.lock().unwrap().unlocks.values().any(|u| !u.synced)
-                {
+                status.set(if unsynced() {
                     SyncStatus::Syncing
                 } else {
                     SyncStatus::Ready
@@ -580,21 +403,15 @@ pub(crate) fn run(
                 });
                 // Reauthenticate after errors. No rejected or malformed response consumes an award.
                 verified = false;
-                let quiet_offline = error == Failure::Network
-                    && (active.as_ref().is_some_and(|g| g.ready)
-                        || (active.is_none() && auth.is_some()));
+                let quiet_offline = error == Failure::Network && auth.is_some();
                 if !warned && !quiet_offline {
-                    let generation = active.as_ref().map_or(0, |g| g.generation);
                     let title = match error {
-                        Failure::Network if active.as_ref().is_some_and(|g| g.ready) => {
-                            "Achievements offline - sync later"
-                        }
                         Failure::Network => "Achievements need internet once",
                         Failure::Rejected => "Achievement sync needs attention",
                         Failure::Authentication => "Achievements: check account config",
                         Failure::Invalid => "Achievements: data or storage error",
                     };
-                    let _ = notices.send(Notice::status(generation, title));
+                    let _ = notices.send(Notice::status(0, title));
                     warned = true;
                 }
                 next_attempt = Instant::now() + Duration::from_secs(delay);
@@ -609,15 +426,6 @@ mod tests {
     use super::*;
     use serde_json::json;
 
-    #[test]
-    fn empty_session_unlock_lists_may_be_omitted() {
-        assert!(unlocked(&json!({"Success":true})).unwrap().is_empty());
-        assert_eq!(
-            unlocked(&json!({"Unlocks":[{"ID":7,"When":123}]})).unwrap(),
-            [7].into()
-        );
-        assert!(unlocked(&json!({"Unlocks":"invalid"})).is_err());
-    }
     struct Fake {
         reply: Value,
         fields: Vec<(String, String)>,
@@ -676,117 +484,5 @@ mod tests {
             assert_eq!(award(&mut http, &auth, &unlock, 50), Err(Failure::Rejected));
             assert!(!http.fields.iter().any(|(k, _)| k == "o"));
         }
-    }
-}
-
-fn ping(
-    http: &mut impl Transport,
-    auth: &Auth,
-    status: &Status,
-    active: &Active,
-    game: &Game,
-) -> Result<(), Failure> {
-    let presence = status
-        .presence
-        .lock()
-        .unwrap()
-        .as_ref()
-        .filter(|(generation, text)| *generation == active.generation && !text.is_empty())
-        .map(|(_, text)| text.clone())
-        .unwrap_or_else(|| format!("Playing {}", game.title));
-    call(
-        http,
-        auth,
-        "ping",
-        &[
-            ("g", game.id.to_string()),
-            ("h", "0".into()),
-            ("x", active.hash.clone()),
-            ("m", presence),
-        ],
-    )?;
-    Ok(())
-}
-
-#[cfg(test)]
-mod presence_tests {
-    use super::*;
-    #[test]
-    fn heartbeat_uses_current_generation_and_separate_hash_field() {
-        struct Capture(Vec<(String, String)>);
-        impl Transport for Capture {
-            fn call(&mut self, fields: &[(&str, String)]) -> Result<Value, Failure> {
-                self.0 = fields
-                    .iter()
-                    .map(|(k, v)| (k.to_string(), v.clone()))
-                    .collect();
-                Ok(serde_json::json!({"Success":true}))
-            }
-        }
-        let mut http = Capture(vec![]);
-        let auth = Auth {
-            username: "test".into(),
-            token: "fixture".into(),
-        };
-        let status = Status::default();
-        let active = Active {
-            generation: 2,
-            hash: "rom-hash".into(),
-            ready: true,
-            online: true,
-            last_ping: Instant::now(),
-        };
-        let game = Game {
-            id: 1,
-            console: 5,
-            title: "Test".into(),
-            presence: String::new(),
-            achievements: vec![],
-        };
-        for (generation, text, expected) in [
-            (1, "Old game", "Playing Test"),
-            (2, "Level 3", "Level 3"),
-            (2, "", "Playing Test"),
-        ] {
-            *status.presence.lock().unwrap() = Some((generation, text.into()));
-            ping(&mut http, &auth, &status, &active, &game).unwrap();
-            assert!(http.0.contains(&("m".into(), expected.into())));
-            assert!(http.0.contains(&("x".into(), "rom-hash".into())));
-        }
-    }
-}
-
-// A fixed phase split keeps newly discovered badges from moving progress backwards.
-fn cache_progress(
-    total: usize,
-    remaining: usize,
-    badges_pending: bool,
-    badge_percent: u8,
-) -> Option<u8> {
-    if remaining > 0 {
-        Some((total.saturating_sub(remaining) as u64 * 50 / total.max(1) as u64) as u8)
-    } else if badges_pending {
-        Some(if total > 0 {
-            50 + badge_percent / 2
-        } else {
-            badge_percent
-        })
-    } else {
-        None
-    }
-}
-
-#[cfg(test)]
-mod cache_progress_tests {
-    use super::cache_progress;
-    #[test]
-    fn progress_covers_metadata_then_badges_and_hides_when_finished() {
-        assert_eq!(cache_progress(10, 10, false, 100), Some(0));
-        assert_eq!(cache_progress(10, 5, true, 20), Some(25));
-        assert_eq!(cache_progress(10, 1, true, 10), Some(45));
-        assert_eq!(cache_progress(10, 0, true, 20), Some(60));
-        assert_eq!(cache_progress(10, 0, false, 100), None);
-        assert_eq!(cache_progress(0, 0, true, 62), Some(62));
-        assert_eq!(cache_progress(0, 0, false, 100), None);
     }
 }

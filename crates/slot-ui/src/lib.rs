@@ -91,6 +91,7 @@ pub use clock::{
 };
 pub use draw::{Canvas, Draw, TexId, OUT_H, OUT_W};
 pub use footer::{
+    trophy_spot, TROPHY_PX,
     draw_corners, draw_footer, draw_footer_sync, draw_wifi_icon, sync_icon_face, Printed,
     SyncIndicator, FOOTER_Y, SYNC_PX,
 };
@@ -103,7 +104,7 @@ pub use hud::{
     HUD_ICON_PX, HUD_INK, HUD_MS, LINK_HOST_INK, LINK_JOIN_INK, PLATE_H,
 };
 pub use icon::{
-    achievement_icon_face, badge_face, heart_face, icon_box, icon_face, ra_wait_face, warm_fonts,
+    achievement_icon_face, badge_face, heart_face, icon_box, icon_face, ra_trophy_face, warm_fonts,
     Badge, Icon,
 };
 pub use keyboard::{
@@ -134,6 +135,7 @@ pub use power_menu::{heading_face, menu_detail_face, menu_face, PowerChoice, MEN
 pub use quick_menu::{
     clock_legend_faces, core_button_legends, delete_legends, draw_menu_ground,
     fetch_choice_legends, fetch_legends, fetch_skip_legend, link_button_legends, print_stop_legend,
+    ra_refresh_legend,
     prompt_legends, quick_description_face, quick_label_face, quick_legend_faces,
     quick_pointer_face, quick_row_top, quick_row_top_at, quick_scroll, quick_value_face,
     quick_warning_value_face, quick_window, repair_legends, studio_legend, update_legends,

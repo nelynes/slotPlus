@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.14.0-plus2.7](https://github.com/nelynes/slotPlus/releases/tag/v1.14.0-plus2.7)
+
+**RetroAchievements are back,** reworked so nothing happens behind your back and Wi-Fi stays off while you play, as in Slot.
+
+To upgrade, use Settings → Tools → Check for Updates, or replace the `System` folder on your card with the one from the zip.
+
+- **Download Achievement Sets,** in Settings → RetroAchievements, checks every Game Boy, Game Boy Color and Game Boy Advance game on the card and downloads its set and badges while you watch: the game it's on, systems done, sets new and already on the card, games with no achievements, and badges. B stops it, keeping what it has. Games already on the card are skipped; X (Refresh All) asks again for every one, picking up changed sets and achievements earned elsewhere.
+- **A gold trophy** on the shelf marks a game with a downloaded set, and **Achievements Ready** shows with it for three seconds when that game starts. The red RA stop sign is gone.
+- **Wi-Fi stays off in games.** A game earns from its downloaded set; what you earn is kept on the card and sent from the shelf, along with the games you played, so they show on your RetroAchievements profile.
+- RetroAchievements' own notices ("Unknown Emulator", "Unsupported Game Version") are no longer counted as achievements, so a ROM version RetroAchievements doesn't support gets no trophy.
+- `Logs/slot.log` notes each set loaded, achievement earned and unlock sent.
+
 ## [1.14.0-plus2.6](https://github.com/nelynes/slotPlus/releases/tag/v1.14.0-plus2.6)
 
 slotPlus brought up to Slot 1.14.0: Gambatte for Game Boy and Game Boy Color (the default on new cards; existing cards stay on mGBA, and START on a Game Boy cart switches), Game Boy audio without pops, six extra dim steps below the lowest brightness, X to take a game off Recents, smoother scrolling on big shelves, and a Tools page in Settings. See [Slot's 1.14.0 notes](https://github.com/BrandonKowalski/slot/releases/tag/v1.14.0).

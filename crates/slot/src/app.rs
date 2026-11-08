@@ -136,9 +136,6 @@ const WIFI_SETTLE_MS: Millis = 2_000;
 const STUDIO_SLIDE_MS: f32 = 240.0;
 const WIFI_SAMPLE_MS: Millis = 5000;
 const WIFI_RETRY_MS: Millis = 60_000;
-/// slotPlus: how long Wi-Fi may stay up in a game for its achievement set, so a network
-/// that never answers can't keep the radio on for the whole session.
-const ACHIEVEMENT_WIFI_MS: Millis = 120_000;
 const WIFI_PROBE_MS: Millis = 1_000;
 const SUMMARY_WAIT_MS: f64 = 1500.0;
 const SLIP_SHUFFLE_PX: f32 = 28.0;
@@ -518,6 +515,16 @@ const UPDATE_HOLD_MS: Millis = 300;
 const UPDATE_SWAP_PAUSE_MS: Millis = 1000;
 const UPDATE_BLINK_MS: Millis = 400;
 
+/// slotPlus: what Download Achievement Sets asks of the achievements worker.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RaScanCommand {
+    /// Sets for games without one on the card.
+    Start,
+    /// Every set again (X, Refresh All).
+    Refresh,
+    Stop,
+}
+
 pub struct App {
     phase: Phase,
     shelves: Vec<(Rack, Shelf)>,
@@ -707,12 +714,20 @@ pub struct App {
     wifi_faces: Option<[[slot_ui::NetFace; 4]; 2]>,
     /// The RetroAchievements sync mark beside the shelf's clock.
     achievement_sync: Option<slot_ui::SyncIndicator>,
-    /// Since when the game in play has wanted Wi-Fi for its achievement set.
-    achievement_wifi: Option<Millis>,
+    /// slotPlus: Download Achievement Sets: the worker's last report, whether it has been
+    /// asked to start, and the start (true) or stop (false) waiting for the session.
+    ra_scan: slot_achievements::ScanReport,
+    ra_scan_started: bool,
+    ra_scan_command: Option<RaScanCommand>,
+    /// slotPlus: X "Refresh All", in footer ink for dark and light shelves.
+    ra_refresh_legend: Option<[(TexId, u32); 2]>,
+    /// slotPlus: the ROMs with a downloaded set, and the gold trophy shown over them.
+    achievement_sets: std::sync::Arc<std::collections::HashSet<PathBuf>>,
+    trophy_face: Option<(TexId, u32, u32)>,
     /// The RetroAchievements page's view of the card's settings.
     achievement_settings: slot_achievements::Settings,
     achievements_changed: bool,
-    quick_achievement_faces: [Option<[(TexId, u32, u32); 2]>; 3],
+    quick_achievement_faces: [Option<[(TexId, u32, u32); 2]>; 8],
     wifi_sampled: Millis,
     wifi_scanning: bool,
     keyboard: Option<(slot_ui::Keyboard, KeyboardFor)>,
@@ -901,10 +916,15 @@ impl App {
             wifi_bars: 3,
             wifi_faces: None,
             achievement_sync: None,
-            achievement_wifi: None,
+            ra_scan: slot_achievements::ScanReport::default(),
+            ra_scan_started: false,
+            ra_scan_command: None,
+            ra_refresh_legend: None,
+            achievement_sets: Default::default(),
+            trophy_face: None,
             achievement_settings: slot_achievements::Settings::default(),
             achievements_changed: false,
-            quick_achievement_faces: [None; 3],
+            quick_achievement_faces: [None; 8],
             wifi_sampled: 0,
             wifi_scanning: false,
             keyboard: None,
@@ -1797,6 +1817,12 @@ impl App {
             | QuickRow::RaUsername
             | QuickRow::RaPassword
             | QuickRow::RaMode
+            | QuickRow::RaDownload
+            | QuickRow::RaSetsStatus
+            | QuickRow::RaSetsSystems
+            | QuickRow::RaSetsFound
+            | QuickRow::RaSetsNone
+            | QuickRow::RaSetsBadges
             | QuickRow::Romm
             | QuickRow::RommServer
             | QuickRow::RommPort
@@ -2377,20 +2403,164 @@ impl App {
         self.achievement_sync = icon;
     }
 
-    /// The game in play is still fetching its achievement set or badges.
-    pub fn set_achievements_want_wifi(&mut self, want: bool) {
-        match (want, self.achievement_wifi) {
-            (true, None) => self.achievement_wifi = Some(self.now()),
-            (false, Some(_)) => self.achievement_wifi = None,
-            _ => {}
+    /// slotPlus: the ROMs with a downloaded RetroAchievements set.
+    pub fn set_achievement_sets(
+        &mut self,
+        sets: std::sync::Arc<std::collections::HashSet<PathBuf>>,
+    ) {
+        self.achievement_sets = sets;
+    }
+
+    pub fn set_trophy_face(&mut self, face: (TexId, u32, u32)) {
+        self.trophy_face = Some(face);
+    }
+
+    /// slotPlus: the cart under the shelf's pointer has a downloaded set.
+    fn selected_has_set(&self) -> bool {
+        self.shelf()
+            .carts
+            .get(self.shelf().index)
+            .is_some_and(|c| self.achievement_sets.contains(&c.rom))
+    }
+
+    /// slotPlus: the gold trophy, at the left over the wallpaper, just above the slot.
+    fn draw_trophy(&self, out: &mut Vec<Draw>) {
+        let Some((tex, w, h)) = self.trophy_face.filter(|_| self.selected_has_set()) else {
+            return;
+        };
+        let (x, y) = slot_ui::trophy_spot(w, h);
+        out.push(Draw::Tex {
+            x,
+            y,
+            w: w as f32,
+            h: h as f32,
+            tex,
+            alpha: 1.0,
+        });
+    }
+
+    /// slotPlus: Download Achievement Sets is on screen.
+    fn ra_scan_open(&self) -> bool {
+        matches!(self.phase, Phase::QuickMenu { row } if row.page() == QuickRow::ACHIEVEMENT_SETS)
+    }
+
+    pub fn set_ra_scan_report(&mut self, report: slot_achievements::ScanReport) {
+        self.ra_scan = report;
+    }
+
+    /// slotPlus: this visit to Download Achievement Sets has asked the worker to start, so
+    /// its report is this run's and not one left from before.
+    pub fn ra_scan_started(&self) -> bool {
+        self.ra_scan_started
+    }
+
+    /// slotPlus: start (true) or stop (false) Download Achievement Sets, for the session.
+    pub fn take_ra_scan_command(&mut self) -> Option<RaScanCommand> {
+        self.ra_scan_command.take()
+    }
+
+    pub fn set_ra_refresh_legend(&mut self, legend: [(TexId, u32); 2]) {
+        self.ra_refresh_legend = Some(legend);
+    }
+
+    fn ra_scan_running(&self) -> bool {
+        self.ra_scan.state.running()
+            || matches!(
+                self.ra_scan_command,
+                Some(RaScanCommand::Start | RaScanCommand::Refresh)
+            )
+    }
+
+    /// X asks for every set again; only once a run has been asked for (Wi-Fi is up) and none
+    /// is going.
+    fn ra_can_refresh(&self) -> bool {
+        self.ra_scan_started && !self.ra_scan_running()
+    }
+
+    /// slotPlus: starts once Wi-Fi is up, and stops if the page is left any other way.
+    fn step_ra_scan(&mut self) {
+        let open = self.ra_scan_open();
+        if open && !self.ra_scan_started && self.wifi_up() {
+            self.ra_scan_started = true;
+            self.ra_scan_command = Some(RaScanCommand::Start);
+        }
+        if !open && self.ra_scan_running() {
+            self.ra_scan_command = Some(RaScanCommand::Stop);
         }
     }
 
-    /// Wi-Fi stays up in a game only while its achievement set is on the way.
-    fn achievements_hold_wifi(&self) -> bool {
-        self.achievement_wifi
-            .is_some_and(|since| self.now().saturating_sub(since) < ACHIEVEMENT_WIFI_MS)
-            && self.seated_cart().is_some()
+    fn open_ra_scan(&mut self) {
+        self.ra_scan = slot_achievements::ScanReport::default();
+        self.ra_scan_started = false;
+        self.ra_scan_command = None;
+        self.phase = Phase::QuickMenu {
+            row: QuickRow::ACHIEVEMENT_SETS[0],
+        };
+    }
+
+    fn ra_scan_input(&mut self, action: Action) {
+        if action == Action::GbaDown(Btn::X) && self.ra_can_refresh() {
+            self.ra_scan = slot_achievements::ScanReport {
+                refresh: true,
+                ..Default::default()
+            };
+            self.ra_scan_command = Some(RaScanCommand::Refresh);
+            return;
+        }
+        if !matches!(action, Action::GbaDown(Btn::B) | Action::QuickMenu) {
+            return;
+        }
+        if self.ra_scan_running() {
+            // B stops it; the counts stay up so the player sees what was saved.
+            self.ra_scan_command = Some(RaScanCommand::Stop);
+            return;
+        }
+        self.phase = Phase::QuickMenu {
+            row: QuickRow::RaDownload,
+        };
+    }
+
+    /// The Download Achievement Sets values: Status, Systems, Sets, No Achievements, Badges.
+    fn ra_scan_values(&self) -> [String; 5] {
+        use slot_achievements::ScanState;
+        let r = &self.ra_scan;
+        let status = match r.state {
+            ScanState::Idle if !self.ra_scan_started => {
+                match self.state.wifi_off || !self.wifi_configured() {
+                    true => "Wi-Fi Is Off".into(),
+                    false => "Connecting to Wi-Fi".into(),
+                }
+            }
+            ScanState::Idle | ScanState::SigningIn => "Signing In".into(),
+            ScanState::Running => {
+                let name = slot_ui::clean_label(&r.game);
+                match name.chars().count() > 26 {
+                    true => format!("{}…", name.chars().take(25).collect::<String>().trim_end()),
+                    false => name,
+                }
+            }
+            ScanState::Done => "All Done".into(),
+            ScanState::Stopped => "Stopped".into(),
+            ScanState::Offline => "Wi-Fi Lost".into(),
+            ScanState::SignInFailed => "Check Username and Password".into(),
+            ScanState::NoAccount => "Sign In First".into(),
+            ScanState::CardError => "Card Can't Be Written".into(),
+        };
+        let systems = match r.systems {
+            0 if r.state == ScanState::Done => "None on Card".into(),
+            0 => "-".into(),
+            n => format!("{} of {n}", r.system.max(1).min(n)),
+        };
+        [
+            status,
+            systems,
+            match r.refresh {
+                true => format!("{} new, {} refreshed", r.new, r.refreshed),
+                false => format!("{} new, {} already", r.new, r.already),
+            },
+            r.none.to_string(),
+            format!("{} new", r.badges),
+        ]
     }
 
     fn read_achievement_settings(&self) -> slot_achievements::Settings {
@@ -2419,8 +2589,9 @@ impl App {
         self.save_achievements(slot_achievements::Change::Encore(on));
     }
 
-    /// The RetroAchievements page's Username, Password and Cheevo Mode values.
-    pub fn achievements_values(&self) -> [String; 3] {
+    /// The RetroAchievements page's Username, Password and Cheevo Mode values, then Download
+    /// Achievement Sets' five.
+    pub fn achievements_values(&self) -> [String; 8] {
         let s = &self.achievement_settings;
         let name = match s.username.is_empty() {
             true => "Not Set".to_string(),
@@ -2431,10 +2602,11 @@ impl App {
             (false, true) => "Token",
             (false, false) => "Not Set",
         };
-        [name, password.into(), "Casual".into()]
+        let [status, systems, sets, none, badges] = self.ra_scan_values();
+        [name, password.into(), "Casual".into(), status, systems, sets, none, badges]
     }
 
-    pub fn set_quick_achievement_faces(&mut self, faces: [Option<[(TexId, u32, u32); 2]>; 3]) {
+    pub fn set_quick_achievement_faces(&mut self, faces: [Option<[(TexId, u32, u32); 2]>; 8]) {
         self.quick_achievement_faces = faces;
     }
 
@@ -4181,6 +4353,9 @@ impl App {
     }
 
     fn quick_menu_input(&mut self, row: QuickRow, action: Action) {
+        if row.page() == QuickRow::ACHIEVEMENT_SETS {
+            return self.ra_scan_input(action);
+        }
         if row.binds() {
             match action {
                 Action::GbaDown(Btn::A) => return self.start_capture(row),
@@ -4337,6 +4512,12 @@ impl App {
             ),
             QuickRow::RaEncore => self.set_encore(!self.achievement_settings.encore),
             QuickRow::RaMode => {}
+            QuickRow::RaDownload => self.open_ra_scan(),
+            QuickRow::RaSetsStatus
+            | QuickRow::RaSetsSystems
+            | QuickRow::RaSetsFound
+            | QuickRow::RaSetsNone
+            | QuickRow::RaSetsBadges => {}
             QuickRow::RommProtocol | QuickRow::RommSelfSigned => self.change_setting(row, true),
             QuickRow::RommServer => {
                 let text = self.romm.server.clone();
@@ -4867,6 +5048,12 @@ impl App {
             | QuickRow::RaPassword
             | QuickRow::RaMode
             | QuickRow::RaEncore
+            | QuickRow::RaDownload
+            | QuickRow::RaSetsStatus
+            | QuickRow::RaSetsSystems
+            | QuickRow::RaSetsFound
+            | QuickRow::RaSetsNone
+            | QuickRow::RaSetsBadges
             | QuickRow::Romm
             | QuickRow::RommProtocol
             | QuickRow::RommServer
@@ -5540,6 +5727,7 @@ impl App {
     }
 
     fn timers(&mut self) {
+        self.step_ra_scan();
         self.step_server();
         self.step_net_time();
         self.take_art_events();
@@ -6074,6 +6262,9 @@ impl App {
                 if let Some(icon) = self.achievement_sync {
                     slot_ui::draw_footer_sync(self.canvas(), self.shelf_clock, icon, out);
                 }
+                if self.core_picker_shown().is_none() && self.hold_picker_shown().is_none() {
+                    self.draw_trophy(out);
+                }
                 if let Some(picker) = self.core_picker_shown() {
                     let lift = lift_of(picker.openness(self.now()));
                     slot_ui::draw_plugged_slot(self.canvas(), self.plugged_face, lift, out);
@@ -6200,7 +6391,7 @@ impl App {
                 disabled: &[],
                 ws_buttons: self.ws_buttons(),
                 values: QuickRow::ALL.map(|r| self.quick_value(r)),
-                achievements: [None; 3],
+                achievements: [None; 8],
                 clock: None,
                 wallpaper: None,
                 networks: None,
@@ -6419,6 +6610,22 @@ impl App {
                 false => vec![back, reset, clear, set],
             };
             self.draw_spread_legends(&legends, y, 1.0, out);
+            return;
+        }
+        if row.page() == QuickRow::ACHIEVEMENT_SETS {
+            // While it runs, B stops it; after, B goes back. Nothing to open or change.
+            let stop = self
+                .fetch_legends
+                .map(|l| l[usize::from(self.legends_light())][2])
+                .filter(|_| self.ra_scan_running());
+            self.draw_side_legend(stop.unwrap_or(back), false, y, out);
+            if let Some(refresh) = self
+                .ra_refresh_legend
+                .map(|l| l[usize::from(self.legends_light())])
+                .filter(|_| self.ra_can_refresh())
+            {
+                self.draw_side_legend(refresh, true, y, out);
+            }
             return;
         }
         let left = match row.page() == QuickRow::PLAY {
@@ -7663,14 +7870,6 @@ impl App {
     }
 
     fn wifi_wanted(&self) -> bool {
-        if self.achievements_hold_wifi()
-            && !self.link_active()
-            && !self.shutting_down()
-            && !self.state.wifi_off
-            && self.has_saved()
-        {
-            return true;
-        }
         matches!(
             self.phase,
             Phase::Shelf

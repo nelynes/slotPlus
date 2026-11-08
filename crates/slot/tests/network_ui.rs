@@ -1060,7 +1060,8 @@ fn b_held_to_close_the_help_does_not_delete() {
 }
 
 #[test]
-fn a_game_waiting_on_its_achievements_keeps_wifi_up_for_a_while() {
+fn wifi_stays_off_in_a_game_even_with_achievements() {
+    // slotPlus: sets are downloaded beforehand from Settings, so a game never holds Wi-Fi.
     let _g = serial();
     let d = tmp_root_with_carts(&["Emerald", "Fusion"]);
     std::fs::write(d.path().join("Config/wifi.conf"), b"network={}\n").unwrap();
@@ -1068,18 +1069,59 @@ fn a_game_waiting_on_its_achievements_keeps_wifi_up_for_a_while() {
     a.set_wifi(Wifi::inline(Box::new(Fake::joined())));
     settle(&mut a);
     assert!(!a.wifi().held, "Slot keeps Wi-Fi off in a game");
-    a.set_achievements_want_wifi(true);
-    settle(&mut a);
-    assert!(a.wifi().held, "a game still fetching its achievement set keeps Wi-Fi");
-    a.set_achievements_want_wifi(false);
-    settle(&mut a);
-    assert!(!a.wifi().held, "and lets it go once the set is in");
-    a.set_achievements_want_wifi(true);
-    settle(&mut a);
-    assert!(a.wifi().held);
-    for _ in 0..130 {
-        let t = a.now();
-        a.tick_ms(t + 1_000);
+}
+
+#[test]
+fn download_achievement_sets_starts_once_wifi_is_up_and_x_refreshes_all() {
+    use slot::app::RaScanCommand;
+    use slot_achievements::{ScanReport, ScanState};
+    if !slot::ACHIEVEMENTS {
+        return;
     }
-    assert!(!a.wifi().held, "a network that never answers can't hold Wi-Fi all game");
+    let _g = serial();
+    let (_d, mut a, _log) = booted(Fake::joined());
+    a.apply(Action::QuickMenu);
+    let mut path = vec![QuickRow::RaDownload];
+    while let Some(parent) = path.last().and_then(|r| r.parent()) {
+        path.push(parent);
+    }
+    for (depth, step) in path.iter().rev().enumerate() {
+        if depth > 0 {
+            press(&mut a, Btn::A);
+        }
+        for _ in 0..step.position(&a.hidden_rows()) {
+            press(&mut a, Btn::Down);
+        }
+    }
+    press(&mut a, Btn::A);
+    assert_eq!(a.quick_menu(), Some(QuickRow::RaSetsStatus));
+    settle(&mut a);
+    assert_eq!(a.take_ra_scan_command(), Some(RaScanCommand::Start));
+    // While it runs, X does nothing.
+    a.set_ra_scan_report(ScanReport {
+        state: ScanState::Running,
+        ..ScanReport::default()
+    });
+    press(&mut a, Btn::X);
+    assert_eq!(a.take_ra_scan_command(), None);
+    // Once it's done, X asks for every set again.
+    a.set_ra_scan_report(ScanReport {
+        state: ScanState::Done,
+        new: 2,
+        already: 99,
+        ..ScanReport::default()
+    });
+    assert_eq!(a.achievements_values()[5], "2 new, 99 already");
+    press(&mut a, Btn::X);
+    assert_eq!(a.take_ra_scan_command(), Some(RaScanCommand::Refresh));
+    assert_eq!(a.achievements_values()[5], "0 new, 0 refreshed");
+    a.set_ra_scan_report(ScanReport {
+        state: ScanState::Running,
+        refresh: true,
+        refreshed: 40,
+        ..ScanReport::default()
+    });
+    assert_eq!(a.achievements_values()[5], "0 new, 40 refreshed");
+    press(&mut a, Btn::B);
+    assert_eq!(a.take_ra_scan_command(), Some(RaScanCommand::Stop));
 }
