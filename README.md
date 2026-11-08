@@ -6,6 +6,10 @@
 
 ---
 
+# New on 2.8
+
+- **RetroAchievements for WonderSwan, WonderSwan Color and Atari Lynx.** Download Achievement Sets now checks those games too, and they earn achievements just like the Game Boy family.
+
 # New on 2.7
 
 - **Now built on Slot 1.15,** with Collections, Kid Mode and the rest of [Slot's 1.15 changes](https://github.com/slot-cfw/slot/releases/tag/v1.15.2).
@@ -40,7 +44,7 @@ Each release comes in two versions. Pick the one you want from the [releases pag
 
 - **Folders:** each system's folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
 - **Carts:** each system has its own cart, drawn in Slot's look. WonderSwan games get a black cart, WonderSwan Color games a frosted clear one, and a HuCard turns over to go into the slot contacts first.
-- **RetroAchievements:** Game Boy, Game Boy Color and Game Boy Advance games earn softcore achievements, with a banner in Slot's style. Enter your account in Settings → RetroAchievements and download the sets for your games from there. Achievements earned with Wi-Fi off are sent from the shelf. [More](crates/slot-achievements/README.md).
+- **RetroAchievements:** Game Boy, Game Boy Color, Game Boy Advance, WonderSwan and Atari Lynx games earn softcore achievements, with a banner in Slot's style. Enter your account in Settings → RetroAchievements and download the sets for your games from there. Achievements earned with Wi-Fi off are sent from the shelf. [More](crates/slot-achievements/README.md).
 - **Cart Slot:** set Settings > General > Cart Slot to Bespoke and the slot on each shelf becomes the back of that system's handheld: a pearl WonderSwan and a Lynx II, plus a Game Gear, a carbon NeoGeo Pocket Color, a TurboExpress and a silver DS Lite in Ultra. The Game Boy shelves keep Slot's own.
 
 **Controls, label art sizes, bezels, saves, the DS's screen layouts and stylus, and how Lynx and WonderSwan games that turn sideways work are all in the [systems guide](SYSTEMS.md).**

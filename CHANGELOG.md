@@ -1,11 +1,12 @@
 # Changelog
 
-## [1.15.2-plus2.7](https://github.com/nelynes/slotPlus/releases/tag/v1.15.2-plus2.7)
+## [1.15.2-plus2.8](https://github.com/nelynes/slotPlus/releases/tag/v1.15.2-plus2.8)
 
-slotPlus brought up to Slot 1.15.2. See [Slot's 1.15.2 notes](https://github.com/slot-cfw/slot/releases/tag/v1.15.2).
+RetroAchievements for WonderSwan, WonderSwan Color and Atari Lynx games, and slotPlus brought up to Slot 1.15.2. See [Slot's 1.15.2 notes](https://github.com/slot-cfw/slot/releases/tag/v1.15.2).
 
 To upgrade, use Settings → Tools → Check for Updates, or replace the `System` folder on your card with the one from the zip.
 
+- **RetroAchievements for WonderSwan and Lynx.** Download Achievement Sets now checks `.ws`, `.wsc`, `.lnx` and `.lyx` games too, a gold trophy marks the ones with a set, and they earn softcore achievements like the Game Boy family. The WonderSwan's save RAM is included, and a `.lnx` game is matched without its header, as RetroAchievements does.
 - Load State on Insert is now Auto Load State, with a new Power On option: carts you insert start fresh, but powering on still picks up the game you were playing. On and Off are now Always and Never. Save State on Eject is now Eject Save State.
 - With Wallpaper set to None, Cart Studio's cutting mat now slides in once instead of appearing twice.
 - When the update check can't reach the update info, it now says so and asks you to try again later.
