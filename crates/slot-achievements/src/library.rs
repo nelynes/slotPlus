@@ -152,7 +152,13 @@ pub(crate) fn indexed(dir: &Path) -> Vec<(PathBuf, String)> {
 }
 
 /// The systems slot tracks achievements for, in the order a scan visits them.
-pub(crate) const SYSTEMS: [Platform; 3] = [Platform::Gb, Platform::Gbc, Platform::Gba];
+pub(crate) const SYSTEMS: [Platform; 5] = [
+    Platform::Gb,
+    Platform::Gbc,
+    Platform::Gba,
+    Platform::Ws,
+    Platform::Lynx,
+];
 
 /// Each tracked system that has games on the card, with its ROMs in name order. Hidden
 /// files and anything the shelf wouldn't show are left out.
@@ -242,6 +248,13 @@ pub(crate) fn content_hash(path: &Path) -> Result<String, String> {
     let mut file = std::fs::File::open(path).map_err(|_| "Cannot open ROM")?;
     let mut buffer = [0; 64 * 1024];
     let mut md5 = md5::Context::new();
+    // slotPlus: RetroAchievements hashes a Lynx game without its 64-byte "LYNX" header
+    // (rcheevos rc_hash), which .lnx files carry and .lyx ones don't.
+    let mut head = [0; 64];
+    let read = file.read(&mut head).map_err(|_| "Cannot read ROM")?;
+    if !(read == 64 && head.starts_with(b"LYNX\0")) {
+        md5.consume(&head[..read]);
+    }
     loop {
         let n = file.read(&mut buffer).map_err(|_| "Cannot read ROM")?;
         if n == 0 {

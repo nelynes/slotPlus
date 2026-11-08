@@ -1,7 +1,7 @@
 # RetroAchievements
 
-slotPlus earns **softcore RetroAchievements for Game Boy, Game Boy Color and Game Boy
-Advance games**. Earning one shows a short banner in Slot's style, the achievement's title and
+slotPlus earns **softcore RetroAchievements for Game Boy, Game Boy Color, Game Boy
+Advance, WonderSwan, WonderSwan Color and Atari Lynx games**. Earning one shows a short banner in Slot's style, the achievement's title and
 points on one line and its description below, with its own badge, and plays a quiet chime that
 follows the game's volume. There is no achievement browser, leaderboards or hardcore mode.
 Save states, resume, rewind and fast-forward all still work.
@@ -41,10 +41,17 @@ from the file, since a token would otherwise win over the password just typed.
 Treat the file and the token as credentials. Neither is logged. Like Slot's own Wi-Fi
 password, they are on the card, so anyone you let into Gamebit can reach them.
 
+## WonderSwan and Lynx
+
+Neither core publishes a memory map, so slotPlus lays their memory out the way RetroAchievements
+expects: the 64 KB of system RAM at 0x0000, and for the WonderSwan the cart's save RAM or
+EEPROM from 0x10000. A `.lnx` game is hashed without its 64-byte header, as RetroAchievements
+does; `.lyx`, `.ws` and `.wsc` games are hashed whole.
+
 ## Downloading sets
 
 A game earns from its achievement set, which has to be on the card first. In Settings →
-RetroAchievements, **Download Achievement Sets** checks every `.gb`, `.gbc` and `.gba` game on
+RetroAchievements, **Download Achievement Sets** checks every `.gb`, `.gbc`, `.gba`, `.ws`, `.wsc`, `.lnx` and `.lyx` game on
 the card while you watch: the game it's on, the systems done, sets downloaded and already on
 the card, games RetroAchievements has no achievements for, and badges downloaded. Each game's
 badges come straight after its set, so stopping with B leaves whole games.
@@ -81,7 +88,7 @@ downloaded sets.
 Hashing, downloads, HTTPS and banner drawing run on background threads. The emulator copies
 the game's memory after each frame into a bounded queue and never waits on the evaluator; if
 evaluation falls behind, partial progress is reset rather than risking a false unlock, as it
-is after a state load or rewind. Games on mGBA, gpSP and Gambatte are tracked, never over a
+is after a state load or rewind. Games on mGBA, gpSP, Gambatte, Cygne (WonderSwan) and the Lynx core are tracked, never over a
 link cable.
 
 ```sh

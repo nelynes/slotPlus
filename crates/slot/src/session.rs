@@ -867,11 +867,11 @@ impl Session {
         let sav = self.app.card_read("save", loaded.sav);
         let resume = self.app.card_read("resume", loaded.resume);
         let (sav_unread, resume_unread) = (sav.is_none(), resume.is_none());
-        // Tracked only for the Game Boy family, and never over a link cable.
+        // Tracked for the Game Boy family, the WonderSwan and the Lynx, never over a link cable.
         let tracked = crate::ACHIEVEMENTS
             && matches!(
                 loaded.platform,
-                Platform::Gb | Platform::Gbc | Platform::Gba
+                Platform::Gb | Platform::Gbc | Platform::Gba | Platform::Ws | Platform::Lynx
             )
             && loaded.player.is_none();
         let core = if tracked {

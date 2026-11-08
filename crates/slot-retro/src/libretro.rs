@@ -811,6 +811,14 @@ impl RetroCore for LibretroCore {
         if !self.loaded || ram.len() < ACHIEVEMENT_RAM_SIZE {
             return valid;
         }
+        // slotPlus: a core with no memory map (the WonderSwan's and the Lynx's) hands over its
+        // RAM whole. rcheevos consoleinfo.c: the Lynx's 64 KB is addresses 0x0000-0xffff; the
+        // WonderSwan's internal RAM starts at 0x00000 and its cartridge RAM at 0x10000.
+        if self.host.memory.is_empty() {
+            let system = self.memory(MEMORY_SYSTEM_RAM);
+            let save = self.memory(MEMORY_SAVE_RAM);
+            return plain_layout(system, save, ram);
+        }
         let game_boy = self.host.memory.iter().any(|d| d.start == 0xc000);
         // rcheevos consoleinfo.c: GB/GBC use native addresses plus fixed banks;
         // GBA uses IWRAM, EWRAM, then SRAM. Echo RAM aliases the fixed WRAM banks.
@@ -1048,8 +1056,42 @@ impl RetroCore for LibretroCore {
     }
 }
 
+/// slotPlus: RetroAchievements addresses for a core that publishes no memory map: system RAM
+/// from 0 (at most 64 KB) and save RAM from 0x10000, as rcheevos lays out the WonderSwan, and
+/// the Lynx, which has no save RAM to give.
+fn plain_layout(system: Option<&[u8]>, save: Option<&[u8]>, ram: &mut [u8]) -> AchievementMemory {
+    let mut valid = AchievementMemory::default();
+    for (src, offset, size) in [
+        (system, 0, 0x10000),
+        (save, 0x10000, ACHIEVEMENT_RAM_SIZE - 0x10000),
+    ] {
+        if let Some(src) = src {
+            let n = src.len().min(size);
+            ram[offset..offset + n].copy_from_slice(&src[..n]);
+            valid.push(offset..offset + n);
+        }
+    }
+    valid
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_core_without_a_memory_map_lays_out_system_then_save_ram() {
+        let mut ram = vec![0u8; crate::ACHIEVEMENT_RAM_SIZE];
+        let system = vec![1u8; 0x4000];
+        let save = vec![2u8; 0x8000];
+        let valid = super::plain_layout(Some(&system), Some(&save), &mut ram);
+        let spans: Vec<_> = valid.regions().iter().map(|r| (r.start, r.len)).collect();
+        assert_eq!(spans, [(0, 0x4000), (0x10000, 0x8000)]);
+        assert_eq!((ram[0x3fff], ram[0x4000], ram[0x10000]), (1, 0, 2));
+        // The Lynx: 64 KB of RAM and nothing else.
+        let lynx = vec![3u8; 0x10000];
+        let valid = super::plain_layout(Some(&lynx), None, &mut ram);
+        assert_eq!(valid.regions().len(), 1);
+        assert_eq!(valid.regions()[0].len, 0x10000);
+    }
+
     use super::*;
     use std::cell::RefCell;
     use std::collections::HashMap;

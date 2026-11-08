@@ -1275,3 +1275,39 @@ fn a_played_game_is_reported_from_the_shelf_afterwards() {
     wait_for(|| played::queued(&dir).is_empty());
     assert!(requests.try_iter().any(|r| r == "startsession"));
 }
+
+#[test]
+fn a_lynx_game_is_hashed_without_its_header_as_retroachievements_does() {
+    let d = tempfile::tempdir().unwrap();
+    let body = b"the game itself".repeat(100);
+    let mut lnx = b"LYNX\0".to_vec();
+    lnx.resize(64, 7);
+    lnx.extend_from_slice(&body);
+    std::fs::write(d.path().join("Game.lnx"), &lnx).unwrap();
+    std::fs::write(d.path().join("Game.lyx"), &body).unwrap();
+    let want = format!("{:x}", md5::compute(&body));
+    assert_eq!(library::content_hash(&d.path().join("Game.lnx")).unwrap(), want);
+    assert_eq!(library::content_hash(&d.path().join("Game.lyx")).unwrap(), want);
+    // Anything else is hashed whole, a 64-byte one included.
+    std::fs::write(d.path().join("Tiny.ws"), [9u8; 64]).unwrap();
+    assert_eq!(
+        library::content_hash(&d.path().join("Tiny.ws")).unwrap(),
+        format!("{:x}", md5::compute([9u8; 64]))
+    );
+}
+
+#[test]
+fn wonderswan_and_lynx_shelves_are_scanned_after_the_game_boys() {
+    let root = configured();
+    for (shelf, name) in [("WS", "Swan.wsc"), ("Lynx", "Cat.lnx"), ("GB", "Boy.gb")] {
+        let dir = root.path().join("Games").join(shelf);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join(name), name).unwrap();
+    }
+    let systems: Vec<_> = library::roms(root.path()).into_iter().map(|(p, _)| p).collect();
+    use slot_store::Platform;
+    assert_eq!(systems, [Platform::Gb, Platform::Ws, Platform::Lynx]);
+    let lynx = Game { console: 13, ..game() };
+    let swan = Game { console: 53, ..game() };
+    assert!(scan::has_set(&lynx) && scan::has_set(&swan));
+}

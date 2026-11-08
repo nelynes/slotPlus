@@ -54,6 +54,8 @@ pub const POINTER_X: c_uint = 0;
 pub const POINTER_Y: c_uint = 1;
 pub const POINTER_PRESSED: c_uint = 2;
 pub const MEMORY_SAVE_RAM: c_uint = 0;
+/// The console's main RAM, for a core that publishes no memory map.
+pub const MEMORY_SYSTEM_RAM: c_uint = 2;
 pub const MEMORY_RTC: c_uint = 1;
 pub const JOYPAD_MASK: c_uint = 256;
 
