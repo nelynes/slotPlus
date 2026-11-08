@@ -92,8 +92,9 @@ pub fn layout(canvas_w: f32, platform: Platform) -> Layout {
         ),
         #[cfg(feature = "nds")]
         Platform::Nds => (
-            if narrow { 268.0 } else { slot_ui::CART_W as f32 },
-            slot_ui::CART_H as f32 / slot_ui::CART_W as f32,
+            (if narrow { 268.0 } else { slot_ui::CART_W as f32 }) * slot_ui::DS_CART_W as f32
+                / slot_ui::CART_W as f32,
+            slot_ui::DS_CART_H as f32 / slot_ui::DS_CART_W as f32,
         ),
         Platform::Gb | Platform::Gbc => (
             if narrow { 248.0 } else { GB_CART_W as f32 },
@@ -123,7 +124,7 @@ pub fn layout(canvas_w: f32, platform: Platform) -> Layout {
     let sticker = match platform {
         Platform::Gba | Platform::Gbav => slot_ui::LABEL_W as f32 / slot_ui::CART_W as f32,
         #[cfg(feature = "nds")]
-        Platform::Nds => slot_ui::LABEL_W as f32 / slot_ui::CART_W as f32,
+        Platform::Nds => slot_ui::DS_LABEL_W as f32 / slot_ui::DS_CART_W as f32,
         Platform::Gb | Platform::Gbc => slot_ui::GB_LABEL_W as f32 / GB_CART_W as f32,
         other => {
             slot_ui::platform_label_well(other)[2] as f32
@@ -611,6 +612,10 @@ pub fn tray(canvas_w: f32, cart: &slot_store::Cart) -> Tray {
 }
 
 pub fn well_of(cart: &slot_store::Cart) -> [u32; 4] {
+    #[cfg(feature = "nds")]
+    if cart.platform == Platform::Nds {
+        return [slot_ui::DS_LABEL_X, slot_ui::DS_LABEL_Y, slot_ui::DS_LABEL_W, slot_ui::DS_LABEL_H];
+    }
     if !matches!(
         cart.platform,
         Platform::Gba | Platform::Gbav | Platform::Gb | Platform::Gbc
@@ -643,7 +648,7 @@ pub fn shelf_rect(canvas: slot_gfx::Canvas, cart: &slot_store::Cart) -> [f32; 4]
     let (w, h) = match cart.platform {
         Platform::Gba | Platform::Gbav => (slot_ui::CART_W as f32, slot_ui::CART_H as f32),
         #[cfg(feature = "nds")]
-        Platform::Nds => (slot_ui::CART_W as f32, slot_ui::CART_H as f32),
+        Platform::Nds => (slot_ui::DS_CART_W as f32, slot_ui::DS_CART_H as f32),
         Platform::Gb | Platform::Gbc => (GB_CART_W as f32, GB_CART_H as f32),
         other => {
             let (w, h) = slot_ui::cart_box(other);

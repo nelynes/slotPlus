@@ -18,6 +18,8 @@ mod gba;
 mod guides;
 pub mod ini;
 pub mod overlay;
+#[cfg(feature = "nds")]
+mod nds_header;
 mod platform;
 mod ring;
 mod scan;
@@ -48,14 +50,16 @@ pub use guides::{
     GUIDE_SPOTS_FILE,
 };
 pub use overlay::{overlay_entries, OverlayEntry, OverlayPart};
+#[cfg(feature = "nds")]
+pub use nds_header::{read_banner, NdsBanner};
 pub use platform::Platform;
 pub use ring::{is_stamp, StateEntry, StateRing, RING_MAX};
 pub use scan::{initial, is_hidden, listing, scan, scan_platform, sort_key, Cart, StoreError};
 pub use shots::{shot_stamp, ShotDir, ShotEntry, SCREENSHOTS_DIR};
 pub use slot_state::{
-    bezel_for_scale, bezel_scale, read_slot_state, write_slot_state, Appearance, BezelPick,
-    Blending, KidMode, Recent, Scale, Shader, ShelfMode, SlotState, Stretch, WallpaperPick,
-    WallpaperTint, BLUE_LIGHT_MAX, BRIGHTNESS_MAX, CONTRAST_MAX, DIM_MAX, FF_SPEEDS,
+    bezel_for_scale, bezel_scale, read_slot_state, write_slot_state, Appearance, AutoLoad,
+    BezelPick, Blending, KidMode, Recent, Scale, Shader, ShelfMode, SlotState, Stretch,
+    WallpaperPick, WallpaperTint, BLUE_LIGHT_MAX, BRIGHTNESS_MAX, CONTRAST_MAX, DIM_MAX, FF_SPEEDS,
     FF_SPEED_DEFAULT, KID_SHELF_ALL, LID_OFF_MIN, RECENTS_MAX, SATURATION_MAX, SUNLIGHT_MAX,
     VOLUME_MAX,
 };

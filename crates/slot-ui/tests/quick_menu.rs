@@ -110,8 +110,8 @@ fn the_rows_run_in_the_order_the_user_chose() {
         ]
     );
     assert_eq!(
-        QuickRow::NETWORK.map(QuickRow::label),
-        ["Gamebit", "RomM", "Fetch Missing Art", "Check for Updates"]
+        QuickRow::NETWORK.map(QuickRow::label).to_vec(),
+        tools_labels()
     );
     assert_eq!(
         QuickRow::CONTROL_PAGES.map(QuickRow::label),
@@ -189,8 +189,8 @@ fn the_rows_run_in_the_order_the_user_chose() {
             "Turbo Buttons",
             "Rumble",
             "Left Stick as D-Pad",
-            "Load State on Insert",
-            "Save State on Eject"
+            "Auto Load State",
+            "Eject Save State"
         ]
     );
     let opens: Vec<QuickRow> = QuickRow::ALL.into_iter().filter(|r| r.opens()).collect();
@@ -218,6 +218,8 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::PlayControls,
             QuickRow::Shortcuts,
             QuickRow::FetchArt,
+            #[cfg(feature = "nds")]
+            QuickRow::FetchBoxArt,
             QuickRow::Controls,
             QuickRow::ControlsShelf,
             QuickRow::ControlsCollections,
@@ -343,6 +345,9 @@ fn the_values_read_as_the_menu_prints_them() {
             "Collections",
             "One Shelf",
             "Shelves",
+            "Always",
+            "Power On",
+            "Never",
         ]
     );
     assert_eq!(QuickValue::flag(true), QuickValue::On);
@@ -690,7 +695,7 @@ fn server_sits_first_on_the_tools_page() {
     assert!(!QuickRow::MAIN.contains(&QuickRow::Server));
     assert_eq!(QuickRow::Server.parent(), Some(QuickRow::Network));
     assert_eq!(QuickRow::MAIN.len(), 7);
-    assert_eq!(QuickRow::NETWORK.len(), 4);
+    assert_eq!(QuickRow::NETWORK.len(), tools_labels().len());
     assert_eq!(QuickRow::Server.label(), "Gamebit");
     assert!(QuickRow::Server.opens());
     assert!(QuickRow::Server.page() == QuickRow::NETWORK);
@@ -763,4 +768,13 @@ fn a_taller_canvas_shows_more_rows_at_the_same_height() {
     });
     assert_eq!(short, slot_ui::QUICK_VISIBLE);
     assert!(tall > short && ds > tall, "{short} {tall} {ds}");
+}
+
+fn tools_labels() -> Vec<&'static str> {
+    let mut labels = vec!["Gamebit", "RomM", "Fetch Missing Art"];
+    if cfg!(feature = "nds") {
+        labels.push("Fetch Box Art");
+    }
+    labels.push("Check for Updates");
+    labels
 }
