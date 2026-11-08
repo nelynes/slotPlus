@@ -10,6 +10,8 @@ mod barcode;
 mod battery;
 mod board;
 mod cart;
+mod checkbox;
+mod edit_text;
 mod clock;
 mod draw;
 mod footer;
@@ -42,7 +44,8 @@ mod toast;
 
 pub use art::decode as decode_png;
 pub use backdrop::{
-    bezel_face, blur_background, default_background, default_game_bezel_face, draw_backdrop,
+    bezel_face, blur_background, blur_background_at, default_background, default_background_at,
+    default_game_bezel_face, draw_backdrop, reference_ground_covers,
     draw_ground, game_bezel_face, wallpaper_face, BezelArt,
 };
 pub use barcode::{code39, CODE39_NARROW, CODE39_WIDE};
@@ -76,9 +79,8 @@ pub use clock::{
 };
 pub use draw::{Canvas, Draw, TexId, OUT_H, OUT_W};
 pub use footer::{
-    trophy_spot, TROPHY_PX,
-    draw_corners, draw_footer, draw_footer_sync, draw_wifi_icon, sync_icon_face, Printed,
-    SyncIndicator, FOOTER_Y, SYNC_PX,
+    draw_corners, draw_footer, draw_footer_sync, draw_kid_icon, draw_wifi_icon, footer_y,
+    sync_icon_face, trophy_spot, Printed, SyncIndicator, FOOTER_Y, KID_ICON_PX, SYNC_PX, TROPHY_PX,
 };
 pub use guide::{
     cell, fitting_zoom, guide_help_face, mono_font, page_box, Guide, GuideGlyphs, GuideView,
@@ -88,6 +90,8 @@ pub use hud::{
     badge_at, ff_badge, footer_ink, FfState, Hud, HudKind, LinkBadge, Millis, ALARM_BAND_H,
     HUD_ICON_PX, HUD_INK, HUD_MS, LINK_HOST_INK, LINK_JOIN_INK, PLATE_H,
 };
+pub use checkbox::count_badge_face;
+pub use edit_text::{heading_text_face, stack_name_face};
 pub use icon::{
     achievement_icon_face, badge_face, heart_face, icon_box, icon_face, ra_trophy_face, warm_fonts,
     Badge, Icon,
@@ -118,19 +122,19 @@ pub use polaroids::{
 };
 pub use power_menu::{heading_face, menu_detail_face, menu_face, PowerChoice, MENU_PAD};
 pub use quick_menu::{
-    clock_legend_faces, core_button_legends, delete_legends, draw_menu_ground,
-    fetch_choice_legends, fetch_legends, fetch_skip_legend, link_button_legends, print_stop_legend,
-    ra_refresh_legend,
+    add_legend, clock_legend_faces, core_button_legends, delete_legends, draw_menu_ground,
+    fetch_choice_legends, fetch_legends, fetch_skip_legend, link_button_legends, picking_legend_faces,
+    print_stop_legend, ra_refresh_legend,
     prompt_legends, quick_description_face, quick_label_face, quick_legend_faces,
     quick_pointer_face, quick_row_top, quick_row_top_at, quick_scroll, quick_value_face,
     quick_warning_value_face, quick_window, repair_legends, studio_legend, update_legends,
-    ws_turbo_label_faces, QuickMenu, QuickMenuFaces, QuickRow, QuickScroll, QuickValue,
+    visible_rows, ws_turbo_label_faces, QuickMenu, QuickMenuFaces, QuickRow, QuickScroll, QuickValue,
     StudioGlyph, QUICK_EDGE, QUICK_LABEL_X, QUICK_PITCH, QUICK_VISIBLE, WS_TURBO_LABELS,
 };
 pub use rebuild::{headline_face, rebuild_count_face, rebuild_title_face, RebuildScreen};
 pub use receipt::{receipt_blank, receipt_face, ReceiptText};
 pub use refusal::Refusal;
-pub use shelf::{box_size, foot_y, repeat_gap, rest_y, Shelf, HEART_INK, HEART_SCALE, REPEAT_DELAY_MS};
+pub use shelf::{box_size, foot_y, turn_about, repeat_gap, rest_y, Shelf, HEART_INK, HEART_SCALE, REPEAT_DELAY_MS};
 pub use shell::{
     gb_plastics, gb_table_shells, gba_plastics, gba_shell_for,
     indexed_shell, lookup_order_is_exact_then_family_then_default, shell_for, shell_presets, table_keys, Finish,
@@ -143,10 +147,12 @@ pub use shot_viewer::{
 pub use silhouette::{gb_silhouette, silhouette, GbShell};
 pub use slot_chrome::{
     draw_empty_slot, draw_plugged_slot, draw_slot_back, draw_slot_front, draw_slot_title, ease,
-    edge, housing, opening, recess, slot_name_y, SlotChrome, ALERT_PX, LIP_H, MOUTH_H, MOUTH_W,
+    band_y, edge, housing, opening, recess, slot_name_y, SlotChrome, ALERT_PX, LIP_H, MOUTH_H,
+    MOUTH_W,
 };
 pub use sticker::{
-    draw_sticker, head_rows, sticker_face, sticker_lines, sticker_rect, StickerFields, COPYRIGHT,
-    CREDITS, DC, HOME, ORIGIN, STICKER_H, STICKER_W,
+    draw_sticker, ds_head_rows, ds_sticker_face, ds_sticker_lines, head_rows, sticker_face,
+    sticker_lines, sticker_rect, sticker_rect_sized, StickerFields, COPYRIGHT, CREDITS, DC,
+    DS_CREDITS, DS_STICKER_H, DS_STICKER_W, HOME, ORIGIN, STICKER_H, STICKER_W,
 };
 pub use toast::{toast_box, toast_face, toast_face_text, toast_rect, Toast};

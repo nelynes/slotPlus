@@ -18,11 +18,20 @@ pub enum ScreenEffect {
     Simpletex,
     Shimmerless,
     Transparent,
+    LcdGrid,
 }
 
 impl ScreenEffect {
     pub fn mode(self) -> f32 {
         self as u8 as f32
+    }
+
+    pub fn lcd_for(panel: (u32, u32)) -> ScreenEffect {
+        let (w, h) = panel;
+        match w > 0 && w * 2 == h * 3 {
+            true => ScreenEffect::Lcd3x,
+            false => ScreenEffect::LcdGrid,
+        }
     }
 }
 
@@ -50,6 +59,8 @@ mod tests {
         assert_eq!(ScreenEffect::Simpletex.mode(), 4.0);
         assert_eq!(ScreenEffect::Shimmerless.mode(), 5.0);
         assert_eq!(ScreenEffect::Transparent.mode(), 6.0);
+        assert_eq!(ScreenEffect::LcdGrid.mode(), 7.0);
+        assert!(crate::shaders::GAME_FRAG.contains("u_mode > 6.5"));
         assert!(crate::shaders::GAME_FRAG.contains("u_mode > 4.5"));
         assert!(crate::shaders::GAME_FRAG.contains("u_mode > 5.5"));
     }

@@ -34,6 +34,59 @@ pub struct Recent {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
+pub enum ShelfMode {
+    #[default]
+    All,
+    Collections,
+}
+
+impl ShelfMode {
+    pub fn key(self) -> &'static str {
+        match self {
+            ShelfMode::All => "all",
+            ShelfMode::Collections => "collections",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<ShelfMode> {
+        match value {
+            "all" => Some(ShelfMode::All),
+            "collections" => Some(ShelfMode::Collections),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
+pub enum KidMode {
+    #[default]
+    Off,
+    OneShelf,
+    Shelves,
+}
+
+impl KidMode {
+    pub fn key(self) -> &'static str {
+        match self {
+            KidMode::Off => "off",
+            KidMode::OneShelf => "one",
+            KidMode::Shelves => "shelves",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<KidMode> {
+        match value {
+            "off" => Some(KidMode::Off),
+            "one" => Some(KidMode::OneShelf),
+            "shelves" => Some(KidMode::Shelves),
+            _ => None,
+        }
+    }
+}
+
+pub const KID_SHELF_ALL: &str = "all";
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
 pub enum Appearance {
     #[default]
     Dark,
@@ -303,6 +356,8 @@ impl Blending {
             Core::Mgba => &Blending::MGBA,
             Core::Gpsp => &Blending::GPSP,
             Core::Gambatte => &Blending::MGBA,
+            #[cfg(feature = "nds")]
+            Core::Dsperate => &[Blending::Off],
             // slotPlus's other cores have no frame blending of their own.
             _ => &[Blending::Off],
         }
@@ -389,6 +444,11 @@ pub struct SlotState {
     pub bezel_gbc: BezelPick,
     pub bezel_ws: BezelPick,
     pub bezel_lynx: BezelPick,
+    pub overlay_gba: Option<String>,
+    pub overlay_gb: Option<String>,
+    pub overlay_gbc: Option<String>,
+    #[cfg(feature = "nds")]
+    pub overlay_nds: Option<String>,
     pub scale_gba: Scale,
     pub scale_gb: Scale,
     pub scale_gbc: Scale,
@@ -401,6 +461,11 @@ pub struct SlotState {
     pub favorites: Vec<Recent>,
     pub shelf: Option<String>,
     pub shelf_cart: Option<Recent>,
+    pub shelf_mode: ShelfMode,
+    pub collection: Option<String>,
+    pub gba_video: bool,
+    pub kid_mode: KidMode,
+    pub kid_shelf: String,
 }
 
 impl SlotState {
@@ -586,6 +651,11 @@ impl Default for SlotState {
             bezel_gbc: BezelPick::Ags102,
             bezel_ws: BezelPick::None,
             bezel_lynx: BezelPick::None,
+            overlay_gba: None,
+            overlay_gb: None,
+            overlay_gbc: None,
+            #[cfg(feature = "nds")]
+            overlay_nds: None,
             scale_gba: Scale::Fit,
             scale_gb: Scale::SpFrame,
             scale_gbc: Scale::SpFrame,
@@ -598,6 +668,11 @@ impl Default for SlotState {
             favorites: Vec::new(),
             shelf: None,
             shelf_cart: None,
+            shelf_mode: ShelfMode::All,
+            collection: None,
+            gba_video: false,
+            kid_mode: KidMode::Off,
+            kid_shelf: KID_SHELF_ALL.to_string(),
         }
     }
 }
@@ -706,6 +781,11 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     text.push_str(&format!("bezel_gbc={}\n", s.bezel_gbc.key()));
     text.push_str(&format!("bezel_ws={}\n", s.bezel_ws.key()));
     text.push_str(&format!("bezel_lynx={}\n", s.bezel_lynx.key()));
+    text.push_str(&format!("overlay_gba={}\n", s.overlay_gba.as_deref().unwrap_or_default()));
+    text.push_str(&format!("overlay_gb={}\n", s.overlay_gb.as_deref().unwrap_or_default()));
+    text.push_str(&format!("overlay_gbc={}\n", s.overlay_gbc.as_deref().unwrap_or_default()));
+    #[cfg(feature = "nds")]
+    text.push_str(&format!("overlay_nds={}\n", s.overlay_nds.as_deref().unwrap_or_default()));
     text.push_str(&format!("scale_gba={}\n", s.scale_gba.name()));
     text.push_str(&format!("scale_gb={}\n", s.scale_gb.name()));
     text.push_str(&format!("scale_gbc={}\n", s.scale_gbc.name()));
@@ -723,6 +803,14 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
             r.stem
         ))
     ));
+    text.push_str(&format!("shelf_mode={}\n", s.shelf_mode.key()));
+    text.push_str(&format!("kid_mode={}\n", s.kid_mode.key()));
+    text.push_str(&format!("kid_shelf={}\n", s.kid_shelf));
+    text.push_str(&format!(
+        "collection={}\n",
+        s.collection.as_deref().unwrap_or("")
+    ));
+    text.push_str(&format!("gba_video={}\n", s.gba_video as u8));
     atomic_write(&state_path(root), text.as_bytes())?;
     write_list(root, RECENTS_FILE, &s.recents)?;
     write_list(root, FAVORITES_FILE, &s.favorites)
@@ -778,6 +866,11 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut bezel_gbc = None;
     let mut bezel_ws = None;
     let mut bezel_lynx = None;
+    let mut overlay_gba = None;
+    let mut overlay_gb = None;
+    let mut overlay_gbc = None;
+    #[cfg(feature = "nds")]
+    let mut overlay_nds = None;
     let mut scale_gba = None;
     let mut scale_gb = None;
     let mut scale_gbc = None;
@@ -788,6 +881,11 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut blending_gbc = None;
     let mut shelf = None;
     let mut shelf_cart = None;
+    let mut shelf_mode = None;
+    let mut kid_mode = None;
+    let mut kid_shelf = None;
+    let mut collection = None;
+    let mut gba_video = None;
     for line in text.lines().filter(|l| !l.is_empty()) {
         let Some((key, value)) = line.split_once('=') else {
             continue;
@@ -838,6 +936,11 @@ fn parse(text: &str) -> Option<SlotState> {
             "bezel_gbc" => bezel_gbc = Some(BezelPick::parse(value)),
             "bezel_ws" => bezel_ws = Some(BezelPick::parse(value)),
             "bezel_lynx" => bezel_lynx = Some(BezelPick::parse(value)),
+            "overlay_gba" => overlay_gba = overlay_name(value),
+            "overlay_gb" => overlay_gb = overlay_name(value),
+            "overlay_gbc" => overlay_gbc = overlay_name(value),
+            #[cfg(feature = "nds")]
+            "overlay_nds" => overlay_nds = overlay_name(value),
             "scale_gba" => scale_gba = Scale::parse(value),
             "scale_gb" => scale_gb = Scale::parse(value),
             "scale_gbc" => scale_gbc = Scale::parse(value),
@@ -848,6 +951,11 @@ fn parse(text: &str) -> Option<SlotState> {
             "blending_gbc" => blending_gbc = Blending::parse(value),
             "shelf" => shelf = Some(value.to_string()).filter(|v| !v.is_empty()),
             "shelf_cart" => shelf_cart = recent_value(value),
+            "shelf_mode" => shelf_mode = ShelfMode::parse(value),
+            "kid_mode" => kid_mode = KidMode::parse(value),
+            "kid_shelf" => kid_shelf = Some(value.to_string()).filter(|v| !v.is_empty()),
+            "collection" => collection = Some(value.to_string()).filter(|v| !v.is_empty()),
+            "gba_video" => gba_video = flag(value),
             "shader_gb" => shader_gb = Shader::parse(value).filter(|s| Shader::GB.contains(s)),
             "shader_gbc" => shader_gbc = Shader::parse(value).filter(|s| Shader::GB.contains(s)),
             "shader_ws" => shader_ws = Shader::parse(value).filter(|s| Shader::WS.contains(s)),
@@ -918,6 +1026,11 @@ fn parse(text: &str) -> Option<SlotState> {
         bezel_gbc: bezel_gbc.unwrap_or(fallback.bezel_gbc),
         bezel_ws: bezel_ws.unwrap_or(fallback.bezel_ws),
         bezel_lynx: bezel_lynx.unwrap_or(fallback.bezel_lynx),
+        overlay_gba,
+        overlay_gb,
+        overlay_gbc,
+        #[cfg(feature = "nds")]
+        overlay_nds,
         scale_gba: scale_gba.unwrap_or(fallback.scale_gba),
         scale_gb: scale_gb.unwrap_or(fallback.scale_gb),
         scale_gbc: scale_gbc.unwrap_or(fallback.scale_gbc),
@@ -930,14 +1043,19 @@ fn parse(text: &str) -> Option<SlotState> {
         favorites: Vec::new(),
         shelf,
         shelf_cart,
+        shelf_mode: shelf_mode.unwrap_or(fallback.shelf_mode),
+        kid_mode: kid_mode.unwrap_or(KidMode::Off),
+        kid_shelf: kid_shelf.unwrap_or_else(|| KID_SHELF_ALL.to_string()),
+        collection,
+        gba_video: gba_video.unwrap_or(false),
     })
 }
 
-fn platform_key(platform: Platform) -> String {
+pub(crate) fn platform_key(platform: Platform) -> String {
     platform.dir_name().to_ascii_lowercase()
 }
 
-fn recent_value(value: &str) -> Option<Recent> {
+pub(crate) fn recent_value(value: &str) -> Option<Recent> {
     let (platform, stem) = value.split_once('/')?;
     Some(Recent {
         platform: platform_value(platform)?,
@@ -973,6 +1091,10 @@ fn ff_speed_text(speed: u8) -> &'static str {
 
 fn level(value: &str, max: u8) -> Option<u8> {
     value.parse().ok().filter(|n| *n <= max)
+}
+
+fn overlay_name(value: &str) -> Option<String> {
+    (!value.is_empty()).then(|| value.to_string())
 }
 
 fn flag(value: &str) -> Option<bool> {

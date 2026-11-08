@@ -91,6 +91,10 @@ pub fn picture_for(
     scale: Scale,
     stretch: Stretch,
 ) -> (Sizing, [f32; 4]) {
+    #[cfg(feature = "nds")]
+    if platform == Platform::Nds {
+        return (Sizing::Fit, WHOLE_TEXTURE);
+    }
     if !matches!(
         platform.hardware(),
         Platform::Gba | Platform::Gb | Platform::Gbc

@@ -1151,7 +1151,7 @@ fn only_a_hearted_cart_wears_the_heart_in_its_label_top_right_corner() {
     assert_eq!(hearts.len(), 1, "{out:?}");
     let (right, top) = hearts[0];
     let x0 = 360.0 - CART_W as f32 / 2.0;
-    let y0 = rest_y(CART_H as f32);
+    let y0 = rest_y(slot_ui::Canvas::FRAMED, CART_H as f32);
     let (lx, ly) = (x0 + LABEL_X as f32, y0 + LABEL_Y as f32);
     let label_right = lx + LABEL_W as f32;
     assert!(
@@ -1304,7 +1304,7 @@ fn a_wrapped_cart_stands_on_the_cart_foot_with_no_cart_parts_around_it() {
     assert_eq!(tex, TexId::from_raw(7));
     assert_eq!((w, h), (bw as f32, bh as f32));
     assert_eq!(x + w / 2.0, Canvas::FRAMED.w / 2.0);
-    assert_eq!(y + h, slot_ui::foot_y(CART_H as f32));
+    assert_eq!(y + h, slot_ui::foot_y(slot_ui::Canvas::FRAMED, CART_H as f32));
 }
 
 #[test]
@@ -1323,4 +1323,19 @@ fn a_wrapped_cart_draws_its_box_and_an_unwrapped_one_draws_its_cart() {
     s.draw_row(Canvas::FRAMED, None, 0.0, 0.0, 1.0, &mut after);
     assert_eq!(after.len(), plain.len());
     assert!(after.iter().all(|d| matches!(d, Draw::Rect { .. })));
+}
+
+#[test]
+fn restocking_keeps_the_faces_of_carts_that_stay() {
+    let mut s = shelf_with(4);
+    for i in 0..4 {
+        s.set_face(i, TexId::from_raw(100 + i));
+        s.set_interior(i, TexId::from_raw(200 + i));
+    }
+    let kept: Vec<Cart> = [0, 2, 3].iter().map(|&i| s.carts[i].clone()).collect();
+    let freed = s.restock(kept);
+    assert_eq!(freed, [TexId::from_raw(101), TexId::from_raw(201)]);
+    assert_eq!(s.face(0), Some(TexId::from_raw(100)));
+    assert_eq!(s.face(1), Some(TexId::from_raw(102)));
+    assert_eq!(s.face(2), Some(TexId::from_raw(103)));
 }

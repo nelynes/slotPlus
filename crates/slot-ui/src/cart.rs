@@ -143,6 +143,8 @@ pub fn mould_for(platform: Platform) -> Mould {
 
 pub fn folder_gb_shell(cart: &Cart) -> Option<GbShell> {
     match cart.platform {
+        #[cfg(feature = "nds")]
+        Platform::Nds => None,
         Platform::Gb | Platform::Gbc => Some(match cart.shell.map(|c| c.outline) {
             Some(Outline::Notched) => GbShell::Notched,
             Some(Outline::Rounded) => GbShell::Rounded,
@@ -183,6 +185,8 @@ pub fn shelf_shape(cart: &Cart) -> (Option<GbShell>, bool) {
 pub fn gb_shell_of(cart: &Cart) -> Option<GbShell> {
     match cart.platform {
         Platform::Gba | Platform::Gbav | Platform::Ws | Platform::Lynx => None,
+        #[cfg(feature = "nds")]
+        Platform::Nds => None,
         Platform::Gb | Platform::Gbc => Some(match cart.shell.map(|c| c.outline) {
             Some(Outline::Notched) => GbShell::Notched,
             Some(Outline::Rounded) => GbShell::Rounded,
@@ -283,6 +287,8 @@ const GB_SEATED_H: u32 = 259;
 pub fn seated_box(platform: Platform) -> (u32, u32) {
     match platform {
         Platform::Gba | Platform::Gbav => (SEATED_W, SEATED_H),
+        #[cfg(feature = "nds")]
+        Platform::Nds => (SEATED_W, SEATED_H),
         Platform::Gb | Platform::Gbc => (SEATED_W, GB_SEATED_H),
         // The others are drawn at the seated width already scaled, so their seated
         // height follows from their own aspect.

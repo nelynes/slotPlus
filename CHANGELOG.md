@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.15.0-plus2.7](https://github.com/nelynes/slotPlus/releases/tag/v1.15.0-plus2.7)
+
+slotPlus brought up to Slot 1.15.0: Collections, Kid Mode, Game Boy Advance Video behind Game Boy Advance, cart clocks in your own time zone, rumble in Gambatte, ROM names with a trailing space or dot fixed at boot, slot.local, the LCD shader that fits 4:3 screens, and Pikachu's voice back in Pokémon Yellow. See [Slot's 1.15.0 notes](https://github.com/slot-cfw/slot/releases/tag/v1.15.0).
+
+To upgrade, use Settings → Tools → Check for Updates, or replace the `System` folder on your card with the one from the zip.
+
+- Collections take WonderSwan and Lynx games too.
+- The Transparent shader stays alongside Slot's new LCD.
+- Check for Updates still only offers slotPlus's own releases, for the RG SP.
+
 ## [1.14.0-plus2.7](https://github.com/nelynes/slotPlus/releases/tag/v1.14.0-plus2.7)
 
 **RetroAchievements are back,** reworked so nothing happens behind your back and Wi-Fi stays off while you play, as in Slot.

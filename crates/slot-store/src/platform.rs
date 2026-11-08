@@ -9,10 +9,23 @@ pub enum Platform {
     Ws,
     Lynx,
     Gbav,
+    #[cfg(feature = "nds")]
+    Nds,
 }
 
 impl Platform {
+    #[cfg(not(feature = "nds"))]
     pub const ALL: [Platform; 6] = [
+        Platform::Gba,
+        Platform::Gbav,
+        Platform::Gbc,
+        Platform::Gb,
+        Platform::Ws,
+        Platform::Lynx,
+    ];
+    #[cfg(feature = "nds")]
+    pub const ALL: [Platform; 7] = [
+        Platform::Nds,
         Platform::Gba,
         Platform::Gbav,
         Platform::Gbc,
@@ -29,6 +42,8 @@ impl Platform {
             Platform::Ws => "WonderSwan",
             Platform::Lynx => "Atari Lynx",
             Platform::Gbav => "Game Boy Advance Video",
+            #[cfg(feature = "nds")]
+            Platform::Nds => "Nintendo DS",
         }
     }
 
@@ -40,6 +55,8 @@ impl Platform {
             Platform::Ws => "WS",
             Platform::Lynx => "Lynx",
             Platform::Gbav => "GBAV",
+            #[cfg(feature = "nds")]
+            Platform::Nds => "NDS",
         }
     }
 
@@ -56,6 +73,8 @@ impl Platform {
             Platform::Gb | Platform::Gbc => &["gb", "gbc"],
             Platform::Ws => &["ws", "wsc"],
             Platform::Lynx => &["lnx", "lyx"],
+            #[cfg(feature = "nds")]
+            Platform::Nds => &["nds"],
         }
     }
 
@@ -63,6 +82,8 @@ impl Platform {
         match self {
             Platform::Gba | Platform::Gbav => (240, 160),
             Platform::Gb | Platform::Gbc => (160, 144),
+            #[cfg(feature = "nds")]
+            Platform::Nds => (256, 192),
             Platform::Ws => (224, 144),
             Platform::Lynx => (160, 102),
         }

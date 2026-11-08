@@ -14,10 +14,22 @@ pub enum Core {
     // slotPlus's systems, one core each.
     Cygne,
     Lynx,
+    #[cfg(feature = "nds")]
+    Dsperate,
 }
 
 impl Core {
+    #[cfg(not(feature = "nds"))]
     pub const ALL: [Core; 5] = [Core::Mgba, Core::Gpsp, Core::Gambatte, Core::Cygne, Core::Lynx];
+    #[cfg(feature = "nds")]
+    pub const ALL: [Core; 6] = [
+        Core::Mgba,
+        Core::Gpsp,
+        Core::Gambatte,
+        Core::Cygne,
+        Core::Lynx,
+        Core::Dsperate,
+    ];
 
     pub fn as_str(&self) -> &'static str {
         match self {
@@ -26,6 +38,8 @@ impl Core {
             Core::Gambatte => "gambatte",
             Core::Cygne => "cygne",
             Core::Lynx => "lynx",
+            #[cfg(feature = "nds")]
+            Core::Dsperate => "dsperate",
         }
     }
 
@@ -40,6 +54,8 @@ impl Core {
             Core::Gambatte => "Gambatte",
             Core::Cygne => "Beetle Cygne",
             Core::Lynx => "Beetle Lynx",
+            #[cfg(feature = "nds")]
+            Core::Dsperate => "DSperate",
         }
     }
 
@@ -50,12 +66,16 @@ impl Core {
             "gambatte" => Some(Core::Gambatte),
             "cygne" => Some(Core::Cygne),
             "lynx" => Some(Core::Lynx),
+            #[cfg(feature = "nds")]
+            "dsperate" => Some(Core::Dsperate),
             _ => None,
         }
     }
 
     pub fn runs(self, platform: Platform) -> bool {
         match self {
+            #[cfg(feature = "nds")]
+            _ if platform == Platform::Nds => self == Core::Dsperate,
             Core::Mgba => matches!(
                 platform,
                 Platform::Gba | Platform::Gbav | Platform::Gb | Platform::Gbc
@@ -64,6 +84,8 @@ impl Core {
             Core::Gambatte => matches!(platform, Platform::Gb | Platform::Gbc),
             Core::Cygne => platform == Platform::Ws,
             Core::Lynx => platform == Platform::Lynx,
+            #[cfg(feature = "nds")]
+            Core::Dsperate => false,
         }
     }
 
@@ -88,6 +110,8 @@ impl Core {
             Platform::Gba | Platform::Gb | Platform::Gbc | Platform::Gbav => Core::Mgba,
             Platform::Ws => Core::Cygne,
             Platform::Lynx => Core::Lynx,
+            #[cfg(feature = "nds")]
+            Platform::Nds => Core::Dsperate,
         }
     }
 }
@@ -100,7 +124,10 @@ pub fn read_selected_cores(root: &Path) -> HashMap<String, Core> {
 }
 
 pub fn core_for_platform(root: &Path, stem: &str, platform: Platform, gb_core: Core) -> Core {
-    crate::ini::value(root, SELECTED_CORE_FILE, stem)
+    let mut lines = crate::ini::read(root, SELECTED_CORE_FILE);
+    lines
+        .remove(&core_key(platform, stem))
+        .or_else(|| lines.remove(stem))
         .as_deref()
         .and_then(Core::parse)
         .filter(|core| core.runs(platform))
@@ -110,6 +137,26 @@ pub fn core_for_platform(root: &Path, stem: &str, platform: Platform, gb_core: C
         })
 }
 
-pub fn write_selected_core(root: &Path, stem: &str, core: Core) -> std::io::Result<()> {
-    crate::ini::write(root, SELECTED_CORE_FILE, stem, core.as_str())
+pub fn write_selected_core(
+    root: &Path,
+    platform: Platform,
+    stem: &str,
+    core: Core,
+) -> std::io::Result<()> {
+    let path = root.join(SELECTED_CORE_FILE);
+    let existing = match std::fs::read_to_string(&path) {
+        Ok(text) => text,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
+        Err(e) => return Err(e),
+    };
+    let bare = crate::ini::set(&existing, stem, None)?;
+    let out = crate::ini::set(&bare, &core_key(platform, stem), Some(core.as_str()))?;
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir)?;
+    }
+    crate::atomic::atomic_write(&path, out.as_bytes())
+}
+
+fn core_key(platform: Platform, stem: &str) -> String {
+    format!("{}/{stem}", platform.dir_name())
 }

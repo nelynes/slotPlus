@@ -833,7 +833,7 @@ fn start_on_the_shelf_opens_the_core_picker_on_the_carts_current_core() {
     app.apply(Action::GbaDown(Btn::B));
     let_it_close(&mut app);
 
-    slot_store::write_selected_core(d.path(), "Emerald", Core::Gpsp).unwrap();
+    slot_store::write_selected_core(d.path(), Platform::Gba, "Emerald", Core::Gpsp).unwrap();
     app.apply(Action::GbaDown(Btn::Start));
     assert_eq!(
         app.core_picker(),
@@ -1509,7 +1509,7 @@ fn the_highlighted_cart_becomes_the_lid_rather_than_a_second_cart() {
 
     let (_, lid, turn) = turned_at(&out, f.lid).expect("no lid");
     let want = grown(
-        lid_from(Canvas::FRAMED, shelf_cart_at(rest, 1.0), 0.0).0,
+        lid_from(Canvas::FRAMED, shelf_cart_at(slot_ui::Canvas::FRAMED, rest, 1.0), 0.0).0,
         TURN_PAD as f32,
     );
     assert!(
@@ -1522,7 +1522,7 @@ fn the_highlighted_cart_becomes_the_lid_rather_than_a_second_cart() {
     let slid = frame(&app);
     let (_, lid, turn) = turned_at(&slid, f.lid).expect("the lid vanished mid-slide");
     assert_eq!(turn, 0.0, "the lid turned while it slid");
-    let shelf = shelf_cart_at(rest, 1.0);
+    let shelf = shelf_cart_at(slot_ui::Canvas::FRAMED, rest, 1.0);
     let want = grown(
         Placed {
             y: shelf.y - SLIDE_UP * 0.5,
@@ -1733,7 +1733,7 @@ fn the_open_waits_on_the_shelf_for_its_faces() {
     app.set_core_board_faces(f.board, f.lid);
     app.update(0.016);
     let out = frame(&app);
-    let shelf = grown(shelf_cart_at(rest, 1.0), TURN_PAD as f32);
+    let shelf = grown(shelf_cart_at(slot_ui::Canvas::FRAMED, rest, 1.0), TURN_PAD as f32);
     let (_, lid, _) = turned_at(&out, f.lid).expect("no lid once the faces arrived");
     assert!(
         near(lid, [shelf.x, shelf.y, shelf.w, shelf.h]),
@@ -2283,7 +2283,7 @@ fn a_jumped_to_letter_is_set_at_the_titles_size_on_its_baseline() {
     assert_eq!(h, slot_ui::TITLE_LINE_H as f32);
     assert_eq!(
         y + h,
-        slot_ui::slot_name_y() + slot_ui::HINT_H as f32,
+        slot_ui::slot_name_y(slot_ui::Canvas::FRAMED) + slot_ui::HINT_H as f32,
         "the letter left the title's baseline"
     );
 }
@@ -2308,7 +2308,7 @@ fn the_shelf_name_is_set_at_the_letters_size_on_its_baseline() {
     assert_eq!(h, slot_ui::TITLE_LINE_H as f32);
     assert_eq!(
         y + h,
-        slot_ui::slot_name_y() + slot_ui::HINT_H as f32,
+        slot_ui::slot_name_y(slot_ui::Canvas::FRAMED) + slot_ui::HINT_H as f32,
         "the shelf name left the title's baseline"
     );
 }
@@ -2411,6 +2411,24 @@ fn the_shader_shortcut_steps_only_the_lynx_shader_in_a_lynx_game() {
         (Shader::Grid, Shader::Simpletex, Shader::Simpletex),
         "a Lynx game moved another system's shader"
     );
+}
+
+#[test]
+fn the_lcd_shader_draws_lcd3x_on_a_3_by_2_panel_and_the_grid_lcd_elsewhere() {
+    let d = common::tmp_root_with_carts(&["Emerald"]);
+    let (mut s, _motor) = common::session_with_platform(d.path());
+    s.app_mut().apply(slot_input::Action::Insert);
+    s.app_mut().apply(slot_input::Action::ShaderPrev);
+    assert_eq!(s.app().screen_shader(), slot_store::Shader::Lcd3x);
+    for (panel, want) in [
+        ((720, 480), slot_gfx::ScreenEffect::Lcd3x),
+        ((640, 480), slot_gfx::ScreenEffect::LcdGrid),
+        ((1024, 768), slot_gfx::ScreenEffect::LcdGrid),
+        ((720, 480), slot_gfx::ScreenEffect::Lcd3x),
+    ] {
+        s.app_mut().set_panel(panel);
+        assert_eq!(s.app().screen_effect(), want, "{panel:?}");
+    }
 }
 
 #[test]
