@@ -914,7 +914,7 @@ tasks:
         {{.ADB}} push vendor/pce-src.tar.gz "{{.SD}}/System/licenses/pce-${sha}.tar.gz"
         {{.ADB}} push vendor/pce-src.meta "{{.SD}}/System/licenses/pce-${sha}.meta"
       - "{{.ADB}} shell 'chmod +x {{.SD}}/System/slot && sync'"
-      - "{{.ADB}} reboot"
+      - "{{.ADB}} shell 'rmmod 8821cs 2>/dev/null; sync; reboot'"
       - "{{.ADB}} wait-for-device"
       - 'echo "deployed to {{.SD}}{{if .SERIAL}} on {{.SERIAL}}{{end}}, device rebooting"'
 

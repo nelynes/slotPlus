@@ -797,7 +797,7 @@ fn draw_field(canvas: Canvas, faces: &KeyboardTex, kb: &Keyboard, out: &mut Vec<
 
 pub fn draw_keyboard(
     canvas: Canvas,
-    ground: Option<(TexId, u32)>,
+    ground: Option<crate::MenuGround>,
     faces: &KeyboardTex,
     kb: &Keyboard,
     out: &mut Vec<Draw>,

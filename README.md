@@ -9,10 +9,11 @@
 # New on 2.8
 
 - **RetroAchievements for WonderSwan, WonderSwan Color and Atari Lynx.** Download Achievement Sets now checks those games too, and they earn achievements just like the Game Boy family.
+- RA support for ultra systems planned for next release.
 
 # New on 2.7
 
-- **Now built on Slot 1.15,** with Collections, Kid Mode and the rest of [Slot's 1.15 changes](https://github.com/slot-cfw/slot/releases/tag/v1.15.2).
+- **Now built on Slot 1.15,** with Collections, Kid Mode and the rest of [Slot's 1.15 changes](https://github.com/slot-cfw/slot/releases/tag/v1.15.3).
 - **RetroAchievements are back (GB/C/A),** reworked. Enter your account in Settings → RetroAchievements, then pick **Download Achievement Sets**: it checks every Game Boy, Game Boy Color and Game Boy Advance game on the card and downloads their sets and badges while you watch, with B to stop. It only fetches what's new; X refreshes them all.
 - A gold trophy on the shelf marks a game with a set, and **Achievements Ready** shows for a moment when one starts.
 - Wi-Fi stays off while you play, as in Slot. What you earn is kept on the card and sent when you're back on the shelf, along with the games you played.
