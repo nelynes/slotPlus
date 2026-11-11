@@ -326,8 +326,9 @@ pub fn option_prefix(which: Core) -> &'static str {
 
 /// Whether the core has a `<prefix>_frameskip` option to set. Beetle Lynx
 /// Gearsystem and Beetle NeoPop do not: they are cheap to run and have no
-/// frameskip setting. DSperate's is our patch onto its libretro wrapper
-/// (cores/dsperate/wrapper-0001-frameskip.patch).
+/// frameskip setting. DSperate's libretro wrapper has its own: `auto` skips
+/// the frames the frontend flags as late, `slotplus` the whole display periods
+/// our old patch onto the wrapper did.
 fn has_frameskip(which: Core) -> bool {
     !matches!(which, Core::Lynx | Core::Gearsystem | Core::Ngp | Core::Gambatte)
 }
