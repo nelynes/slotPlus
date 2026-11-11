@@ -876,15 +876,23 @@ impl Session {
         let sav = self.app.card_read("save", loaded.sav);
         let resume = self.app.card_read("resume", loaded.resume);
         let (sav_unread, resume_unread) = (sav.is_none(), resume.is_none());
-        // Tracked for the Game Boy family, the WonderSwan and the Lynx, never over a link cable.
+        // Tracked for the Game Boy family, the WonderSwan, the Lynx, the Game Gear, the
+        // NeoGeo Pocket and the TurboGrafx-16, never over a link cable.
         let tracked = crate::ACHIEVEMENTS
             && matches!(
                 loaded.platform,
-                Platform::Gb | Platform::Gbc | Platform::Gba | Platform::Ws | Platform::Lynx
+                Platform::Gb
+                    | Platform::Gbc
+                    | Platform::Gba
+                    | Platform::Ws
+                    | Platform::Lynx
+                    | Platform::Gg
+                    | Platform::Ngp
+                    | Platform::Tg16
             )
             && loaded.player.is_none();
         let core = if tracked {
-            self.achievements.wrap(loaded.opened.core)
+            self.achievements.wrap_for(loaded.opened.core, loaded.platform)
         } else {
             loaded.opened.core
         };

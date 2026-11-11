@@ -381,7 +381,17 @@ impl Service {
     }
 
     pub fn wrap(&self, core: Box<dyn RetroCore>) -> Box<dyn RetroCore> {
-        Box::new(core::Tracked::new(core, self))
+        Box::new(core::Tracked::new(core, 0, self))
+    }
+
+    /// slotPlus: track a game on `platform`'s core, laying its memory out the way
+    /// RetroAchievements numbers that system's.
+    pub fn wrap_for(
+        &self,
+        core: Box<dyn RetroCore>,
+        platform: slot_store::Platform,
+    ) -> Box<dyn RetroCore> {
+        Box::new(core::Tracked::new(core, library::console_of(platform), self))
     }
 
     pub fn take_notice(&self) -> Option<Notice> {
