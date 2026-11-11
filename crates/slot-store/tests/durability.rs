@@ -2,7 +2,7 @@ mod common;
 
 use common::tmp_root;
 use slot_store::{
-    atomic_write, read_slot_state, sweep_temps, write_slot_state, Appearance, AutoLoad, BezelPick,
+    atomic_write, read_slot_state, sweep_temps, write_slot_state, Appearance, BezelPick,
     Blending, Core, GbPalette, Platform, Recent, Scale, Shader, SlotState, Stretch, WallpaperPick,
     WallpaperTint, Zone, FF_SPEEDS, FF_SPEED_DEFAULT,
 };
@@ -253,8 +253,8 @@ fn a_card_from_before_the_settings_keeps_all_its_values() {
             shader_lynx: Shader::Grid,
             shader_pm: Shader::Grid,
             pm_full_screen: false,
-            auto_load: AutoLoad::Always,
-            eject_save: true,
+            resume_insert: true,
+            resume_power_on: true,
             turbo: true,
             rewind: true,
             gb_palettes: false,
@@ -305,8 +305,8 @@ fn the_quick_menu_settings_round_trip_as_their_own_lines() {
         colour_correction_gb: false,
         shader_gba: Shader::Dot,
         shader_gb: Shader::Off,
-        auto_load: AutoLoad::PowerOn,
-        eject_save: false,
+        resume_insert: false,
+        resume_power_on: true,
         turbo: false,
         rewind: false,
         gb_palettes: true,
@@ -343,8 +343,8 @@ fn the_quick_menu_settings_round_trip_as_their_own_lines() {
         "colour_correction_gb=0",
         "shader_gba=dot",
         "shader_gb=off",
-        "auto_load=power",
-        "eject_save=0",
+        "resume_insert=0",
+        "resume_power_on=1",
         "turbo=0",
         "rewind=0",
         "gb_palettes=1",
@@ -524,6 +524,17 @@ fn an_empty_slot_writes_an_empty_platform() {
     assert_eq!(read_slot_state(d.path()).cart_platform, None);
 }
 
+fn ds_build() -> Option<Platform> {
+    #[cfg(feature = "nds")]
+    {
+        Some(Platform::Nds)
+    }
+    #[cfg(not(feature = "nds"))]
+    {
+        None
+    }
+}
+
 #[test]
 fn an_unreadable_platform_reads_as_a_card_that_never_said() {
     let d = tmp_root();
@@ -533,7 +544,7 @@ fn an_unreadable_platform_reads_as_a_card_that_never_said() {
         ("cart_platform=nes\n", None),
         ("cart_platform=gameboy\n", None),
         ("cart_platform=0\n", None),
-        ("cart_platform=nds\n", None),
+        ("cart_platform=nds\n", ds_build()),
         ("cart_platform=GBA\n", Some(Platform::Gba)),
         ("cart_platform=Gbc\n", Some(Platform::Gbc)),
     ] {
