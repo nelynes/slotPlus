@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.15.3-plus2.8](https://github.com/nelynes/slotPlus/releases/tag/v1.15.3-plus2.8)
+
+slotPlus brought up to Slot 1.15.3. See [Slot's 1.15.3 notes](https://github.com/slot-cfw/slot/releases/tag/v1.15.3).
+
+To upgrade, use Settings → System → Check for Updates, or replace the `System` folder on your card with the one from the zip.
+
+- Auto Load State is now two settings, Resume on Insert and Resume on Power On, and a game always saves when you eject it.
+- Settings are regrouped: Shelf, Gameplay, Controls, Screen, Tools, RetroAchievements and System. Wi-Fi, Date & Time, Lid Power Off, Check for Updates and About now live under System; Cart Slot stays with the shelf settings.
+- Battery Display, under System, shows the battery as an icon, a percentage or both. The settings menu on the shelf shows the battery and clock in its top corners.
+- The Shelf wallpaper option is now Per Shelf. A shelf or collection without its own wallpaper shows `Default.png` from `Wallpapers/`, or black. The bundled wallpapers are now `Slot.png` and `Slot Blur.png` in `Wallpapers/`, so you can delete them like any other.
+- Changing Wallpaper Tint shows the shelf for a moment with the new tint.
+
 ## [1.15.2-plus2.8](https://github.com/nelynes/slotPlus/releases/tag/v1.15.2-plus2.8)
 
 RetroAchievements for WonderSwan, WonderSwan Color and Atari Lynx games, and slotPlus brought up to Slot 1.15.2. See [Slot's 1.15.2 notes](https://github.com/slot-cfw/slot/releases/tag/v1.15.2).

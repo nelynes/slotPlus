@@ -784,7 +784,7 @@ tasks:
         {{.ADB}} push vendor/lynx-src.tar.gz "{{.SD}}/System/licenses/lynx-${sha}.tar.gz"
         {{.ADB}} push vendor/lynx-src.meta "{{.SD}}/System/licenses/lynx-${sha}.meta"
       - "{{.ADB}} shell 'chmod +x {{.SD}}/System/slot && sync'"
-      - "{{.ADB}} reboot"
+      - "{{.ADB}} shell 'rmmod 8821cs 2>/dev/null; sync; reboot'"
       - "{{.ADB}} wait-for-device"
       - 'echo "deployed to {{.SD}}{{if .SERIAL}} on {{.SERIAL}}{{end}}, device rebooting"'
 

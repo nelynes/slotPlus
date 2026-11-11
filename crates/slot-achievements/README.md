@@ -12,7 +12,7 @@ official rcheevos evaluator (MIT, `vendor/rcheevos`).
 ## Setting it up
 
 The easy way: Settings → RetroAchievements. Enter your **Username** and **Password** on the
-keyboard, join Wi-Fi from Settings → General → Wi-Fi, and you're set; the service starts again with
+keyboard, join Wi-Fi from Settings → System → Wi-Fi, and you're set; the service starts again with
 the new account straight away. The page also has **Encore** and shows **Cheevo Mode**, which
 is always Casual (softcore): hardcore needs a live connection the whole time and no save
 states, rewind or fast-forward, which slotPlus doesn't do.
@@ -27,7 +27,7 @@ username = "your-ra-username"
 password = "your-ra-password"
 ```
 
-Join a Wi-Fi network from Settings → General → Wi-Fi, then restart slotPlus. After the first
+Join a Wi-Fi network from Settings → System → Wi-Fi, then restart slotPlus. After the first
 login the account's token is kept under `Saves/RetroAchievements/` and the `password` line
 can be removed. `token = "..."` works instead of a password; it is an emulator login token,
 not a Web API key. Omit the file or set `enabled = false` to turn the feature off.

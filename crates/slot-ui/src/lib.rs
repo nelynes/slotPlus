@@ -51,9 +51,10 @@ pub use backdrop::{
     bezel_face, blur_background, blur_background_at, default_background, default_background_at,
     default_game_bezel_face, draw_backdrop, reference_ground_covers,
     draw_ground, game_bezel_face, wallpaper_face, BezelArt,
+    SLOT_BLUR_WALLPAPER_PNG, SLOT_WALLPAPER_PNG,
 };
 pub use barcode::{code39, CODE39_NARROW, CODE39_WIDE};
-pub use battery::{draw_gauge, BOLT_PX, GAUGE_H, GAUGE_W, WALL};
+pub use battery::{draw_gauge, Gauge, BOLT_PX, GAUGE_H, GAUGE_W, WALL};
 pub use board::{
     bare_board_face, baseos_cart_face, board_at, board_face, board_from, board_from_shaped,
     board_in, board_x, board_zoom, chip_face, chip_face_text, chip_shadow_face, gb_chip_face,
@@ -130,7 +131,7 @@ pub use polaroids::{
 };
 pub use power_menu::{heading_face, menu_detail_face, menu_face, PowerChoice, MENU_PAD};
 pub use quick_menu::{
-    add_legend, clock_legend_faces, core_button_legends, delete_legends, draw_menu_ground,
+    add_legend, clock_legend_faces, core_button_legends, delete_legends, draw_menu_ground, MenuGround,
     fetch_choice_legends, fetch_legends, fetch_skip_legend, link_button_legends, picking_legend_faces,
     print_stop_legend, ra_refresh_legend,
     prompt_legends, quick_description_face, quick_label_face, quick_legend_faces,
