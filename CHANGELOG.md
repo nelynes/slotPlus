@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.15.3-plus2.9](https://github.com/nelynes/slotPlus/releases/tag/v1.15.3-plus2.9)
+
+A faster Nintendo DS core for slotPlusUltra. slotPlus itself is unchanged from 1.15.3-plus2.8.
+
+To upgrade, use Settings → System → Check for Updates, or replace the `System` folder on your card with the one from the zip.
+
+- **Nintendo DS, in slotPlusUltra:** DSperate moves to v3.3.0 with its latest libretro wrapper, and DS games now skip frames the way plorpOS does, one late frame at a time. Mario Kart DS holds 57 to 60 fps on the RG SP instead of sliding to about 35 after 20 seconds or so, and going back to the shelf from a DS game no longer freezes the handheld.
+
 ## [1.15.3-plus2.8](https://github.com/nelynes/slotPlus/releases/tag/v1.15.3-plus2.8)
 
 slotPlus brought up to Slot 1.15.3. See [Slot's 1.15.3 notes](https://github.com/slot-cfw/slot/releases/tag/v1.15.3).
