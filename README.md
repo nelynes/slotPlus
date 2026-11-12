@@ -6,10 +6,14 @@
 
 ---
 
+# New on 2.9
+
+- **A faster Nintendo DS core in slotPlusUltra.** DSperate v3.3.0 with its own frame skip: Mario Kart DS now holds full speed, and leaving a DS game no longer freezes the handheld.
+
 # New on 2.8
 
 - **RetroAchievements for WonderSwan, WonderSwan Color and Atari Lynx.** Download Achievement Sets now checks those games too, and they earn achievements just like the Game Boy family.
-- RA support for ultra systems planned for next release.
+- RA support for ultra systems in development.
 
 # New on 2.7
 
