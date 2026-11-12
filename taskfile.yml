@@ -31,9 +31,9 @@ vars:
     | (package(slot-retro) & (binary(options) | binary(netpacket) | binary(libretro)))
   NGP_COMMIT: a50d5ac288a81f2104ddf43195a4efdd15c72227
   PCE_COMMIT: 3f946f277aef3aa99a95551618bbcd1dd2bda0d9
-  # Nintendo DS: DSperate's libretro wrapper, and the DSperate commit it pins (v3.0.5)
-  DSPERATE_LR_COMMIT: 093d50fcbd10531273e0cc22a23c6644a26b9b71
-  DSPERATE_COMMIT: ddf2910e6d80220c6b22b4df61f0786ac9879cda
+  # Nintendo DS: DSperate's libretro wrapper, and the DSperate commit it pins (v3.3.0)
+  DSPERATE_LR_COMMIT: 27b9d76fb4c900d29f9629806f316527b5da90c2
+  DSPERATE_COMMIT: 99618eb956c66083618395dbae9bb5cbf0241d16
 
 tasks:
   default:
