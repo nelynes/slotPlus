@@ -36,7 +36,7 @@ pub fn usable(
         .collect();
     let fits = |name: &Option<String>, ok: &dyn Fn((u32, u32)) -> bool| {
         name.clone()
-            .filter(|n| png_size(&dir.join(n)).is_some_and(|size| ok(size)))
+            .filter(|n| png_size(&dir.join(n)).is_some_and(ok))
     };
     let tile_ok = |(w, h): (u32, u32)| w >= 1 && h >= 1 && w <= picture.0 && h <= picture.1;
     let full_ok = |size: (u32, u32)| size == frame;

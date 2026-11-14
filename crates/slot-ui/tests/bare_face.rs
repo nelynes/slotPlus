@@ -1,5 +1,5 @@
 use slot_store::{Cart, Outline, Platform, ShellChoice, ShellFinish};
-use slot_ui::{bare_face, cart_face};
+use slot_ui::bare_face;
 
 fn gba(finish: ShellFinish) -> Cart {
     Cart {
@@ -15,6 +15,7 @@ fn gba(finish: ShellFinish) -> Cart {
             back: None,
         }),
         title: "PROBE".into(),
+        tags: Vec::new(),
     }
 }
 
@@ -69,8 +70,16 @@ fn bare_well_on_a_clear_shell_is_see_through() {
 
 #[test]
 fn labelled_faces_keep_the_label() {
-    let face = cart_face(&gba(ShellFinish::Solid));
-    let bare = bare_face(&gba(ShellFinish::Solid));
+    let cart = gba(ShellFinish::Solid);
+    let face = slot_ui::cart_face_with(&cart, Some(sheet(&cart, [250, 250, 250])));
+    let bare = bare_face(&cart);
     assert_ne!(at(&face, 180, 118), at(&bare, 180, 118));
     assert_eq!(at(&face, 10, 100), at(&bare, 10, 100));
+}
+
+fn sheet(cart: &slot_store::Cart, rgb: [u8; 3]) -> Vec<u8> {
+    let (w, h) = slot_ui::label_size(cart);
+    (0..w * h)
+        .flat_map(|_| [rgb[0], rgb[1], rgb[2], 255])
+        .collect()
 }

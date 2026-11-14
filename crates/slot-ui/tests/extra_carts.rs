@@ -18,6 +18,7 @@ fn cart(platform: Platform, stem: &str) -> Cart {
         title: String::new(),
         code: String::new(),
         shell: None,
+        tags: Vec::new(),
     }
 }
 
@@ -98,7 +99,9 @@ fn the_label_sits_inside_the_shell_and_is_the_size_the_cart_asks_art_for() {
         ),
     ] {
         assert_eq!(label_size(&c), (lw, lh));
-        let f = cart_face(&c);
+        // With label art: a cart without any is written on by hand instead, and a
+        // clear WonderSwan Color shell shows through where no label covers it.
+        let f = slot_ui::cart_face_with(&c, Some(vec![200; (lw * lh * 4) as usize]));
         for (x, y) in [
             (lx, ly),
             (lx + lw - 1, ly),
@@ -177,7 +180,9 @@ fn the_wonderswan_is_smoke_clear_and_shows_its_board_and_the_lynx_is_solid() {
 
 #[test]
 fn a_shell_colour_tints_the_plastic_but_not_the_label() {
-    let plain = cart_face(&lynx());
+    // With label art, as a cart with none is written on by hand on the bare plastic.
+    let art = || Some(vec![200; (LYNX_LABEL_W * LYNX_LABEL_H * 4) as usize]);
+    let plain = slot_ui::cart_face_with(&lynx(), art());
     let mut tinted = lynx();
     tinted.shell = Some(slot_store::ShellChoice {
         colour: [0x20, 0x60, 0xd0],
@@ -185,7 +190,7 @@ fn a_shell_colour_tints_the_plastic_but_not_the_label() {
         outline: slot_store::Outline::Auto,
         back: None,
     });
-    let blue = cart_face(&tinted);
+    let blue = slot_ui::cart_face_with(&tinted, art());
     let (x, y) = (LYNX_CART_W / 2, LYNX_CART_H * 10 / 100);
     assert!(
         at(&blue, x, y)[2] > at(&blue, x, y)[0] + 30,

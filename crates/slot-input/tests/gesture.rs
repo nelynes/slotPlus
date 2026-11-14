@@ -1166,9 +1166,13 @@ fn a_y_hold_fires_once_at_485_and_never_favorites() {
     assert_eq!(slot_input::FAVORITE_HOLD_MS, 485);
     let mut g = carousel();
     g.feed(Down(Y), 0);
-    assert!(!g.tick(slot_input::FAVORITE_HOLD_MS - 1).contains(&FavoriteHold));
+    assert!(!g
+        .tick(slot_input::FAVORITE_HOLD_MS - 1)
+        .contains(&FavoriteHold));
     assert!(g.tick(slot_input::FAVORITE_HOLD_MS).contains(&FavoriteHold));
-    assert!(!g.tick(slot_input::FAVORITE_HOLD_MS + 50).contains(&FavoriteHold));
+    assert!(!g
+        .tick(slot_input::FAVORITE_HOLD_MS + 50)
+        .contains(&FavoriteHold));
     assert!(!g.feed(Up(Y), 900).contains(&Favorite));
 }
 

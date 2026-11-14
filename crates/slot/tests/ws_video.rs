@@ -50,7 +50,7 @@ fn frames_know_their_buffer_and_the_picture_in_it() {
     f.set_shown((144, 224));
     let mut buf = f.take_write();
     buf.resize(360 * 240 * 4, 7);
-    f.publish(buf);
+    f.publish(buf, 0);
     let frame = f.latest().expect("a frame");
     assert_eq!(frame.dims(), (360, 240));
     assert_eq!(frame.shown(), (144, 224));

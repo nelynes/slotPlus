@@ -208,6 +208,7 @@ mod tests {
             title: stem.into(),
             code: String::new(),
             shell: None,
+            tags: Vec::new(),
         }
     }
 

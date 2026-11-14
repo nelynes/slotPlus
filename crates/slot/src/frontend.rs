@@ -13,13 +13,13 @@ use slot_ui::{
     chip_shadow_face, core_button_legends, date_time_text, default_game_bezel_face, delete_legends,
     footer_ink, game_bezel_face, gb_cart_shadow, hint_face, icon_face, link_button_legends,
     menu_detail_face, menu_face, padded, photo_face, prompt_legends, quick_description_face,
-    quick_label_face, quick_legend_faces, quick_pointer_face, quick_value_face,
-    quick_warning_value_face, rebuild_count_face, rebuild_title_face, repair_legends, slot_back,
-    slot_back_light, slot_front, slot_front_light, socket_face, socket_face_text, sticker_face,
-    time_text, title_face, toast_face, update_cart_face, update_legends, wallpaper_face, word_ink,
-    BezelArt, CartFace, GbShell, Icon, LinkBadge, PowerChoice, QuickMenuFaces, QuickRow,
-    QuickValue, RebuildScreen, StickerFields, Toast, UndoFace, ALERT_PX, BOLT_PX, HUD_ICON_PX,
-    HUD_INK, LEGEND, TURN_PAD,
+    quick_label_face, quick_legend_faces, quick_placeholder_face, quick_pointer_face,
+    quick_value_face, quick_warning_value_face, rebuild_count_face, rebuild_title_face,
+    repair_legends, slot_back, slot_back_light, slot_front, slot_front_light, socket_face,
+    socket_face_text, sticker_face, time_text, title_face, toast_face, update_cart_face,
+    update_legends, wallpaper_face, word_ink, BezelArt, CartFace, GbShell, Icon, LinkBadge,
+    PowerChoice, QuickMenuFaces, QuickRow, QuickValue, RebuildScreen, StickerFields, Toast,
+    UndoFace, ALERT_PX, BOLT_PX, HUD_ICON_PX, HUD_INK, LEGEND, TURN_PAD,
 };
 
 use crate::app::{App, LinkRow, Phase, UpdateCart, UpdateScene};
@@ -29,6 +29,7 @@ use crate::cart_faces::CartFaces;
 use crate::face_builder::FaceBuilder;
 use crate::label_cache::{self, Rebuild};
 use crate::link_art_builder::LinkArtBuilder;
+use crate::link_kind::LinkKind;
 use crate::link_screen::{LinkSprites, Sprite};
 use crate::link_start::{LinkFail, LinkStep};
 use crate::session::Session;
@@ -40,10 +41,12 @@ const ALERT_INK: [u8; 3] = [0xf0, 0xb4, 0x3c];
 pub struct Frontend {
     achievements: crate::achievement_ui::Notifications,
     session: Session,
+    write_gaps: Option<(Instant, Vec<f32>)>,
     grounds: Option<(TexId, Option<TexId>, (u32, u32))>,
     start: Instant,
     last: Instant,
     draws: Vec<Draw>,
+    picture: Option<Picture>,
     ds: crate::ds_view::DsView,
     polaroid_texes: Vec<TexId>,
     title_tex: Option<TexId>,
@@ -76,6 +79,8 @@ pub struct Frontend {
     quick_achievements: [QuickClock; 8],
     quick_romm: [QuickClock; 4],
     quick_kid_shelf: QuickClock,
+    quick_nickname: QuickClock,
+    invite: InviteSync,
     networks: crate::network_faces::NetworkSync,
     quick_palette: QuickPalette,
     wallpaper: WallpaperSync,
@@ -101,6 +106,14 @@ struct QuickClock {
     dim: Option<TexId>,
     lit: Option<TexId>,
     shown: String,
+}
+
+#[derive(Default)]
+struct InviteSync {
+    statics: Option<[Sprite; 3]>,
+    one: Option<TexId>,
+    two: Option<TexId>,
+    shown: Option<(String, String)>,
 }
 
 #[derive(Default)]
@@ -165,6 +178,8 @@ struct StudioSync {
     bare: Option<TexId>,
     under: [Option<TexId>; 2],
     chips: Option<TexId>,
+    hand: [Option<TexId>; 6],
+    marker_ink: Option<[u8; 3]>,
 }
 
 impl StudioSync {
@@ -176,6 +191,8 @@ impl StudioSync {
             chips_for: None,
             gen: 0,
             last: None,
+            hand: [None; 6],
+            marker_ink: None,
             face_slots: [None; 4],
             bare: None,
             under: [None; 2],
@@ -195,6 +212,7 @@ fn sync_studio(app: &mut App, compositor: &mut Compositor, st: &mut StudioSync) 
             (Legend::Back, G::B, "Back"),
             (Legend::Open, G::A, "Open"),
             (Legend::Apply, G::A, "Apply"),
+            (Legend::Write, G::A, "Write"),
             (Legend::Change, G::LeftRight, "Change"),
             (Legend::ChangeVertical, G::UpDown, "Change"),
             (Legend::Move, G::LeftRight, "Move"),
@@ -268,7 +286,7 @@ fn sync_studio(app: &mut App, compositor: &mut Compositor, st: &mut StudioSync) 
                     LabelKind::Existing => 0,
                     LabelKind::Real => 1,
                     LabelKind::Logo => 2,
-                    LabelKind::Title => 3,
+                    LabelKind::Hand => 3,
                 };
                 let (w, h) = (faces.bare.w, faces.bare.h);
                 let mut texes = Vec::new();
@@ -287,12 +305,18 @@ fn sync_studio(app: &mut App, compositor: &mut Compositor, st: &mut StudioSync) 
                         upload_rgba(compositor, ub, b.w, b.h, &b.rgba),
                     ]
                 });
+                let hand = faces
+                    .hand
+                    .as_ref()
+                    .map(|r| upload_hand(compositor, &mut st.hand, &mut st.marker_ink, r))
+                    .or_else(|| app.studio_tex().and_then(|t| t.hand.clone()));
                 app.set_studio_tex(crate::app::StudioTex {
                     faces: texes,
                     bare,
                     under,
                     w,
                     h,
+                    hand,
                 });
             }
         }
@@ -473,6 +497,7 @@ fn sync_fetch_art(app: &mut App, compositor: &mut Compositor, st: &mut FetchSync
                         under,
                         w: set.done.w,
                         h: set.done.h,
+                        inked: set.inked,
                     },
                 );
             }
@@ -555,6 +580,12 @@ fn save_headers_when_changed(root: std::path::PathBuf) {
         });
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+enum Picture {
+    Blank,
+    Game(u64, u64),
+}
+
 impl Frontend {
     pub fn boot(platform: Box<dyn Platform>) -> Self {
         Self::boot_with(platform, crate::audio::opened_sink())
@@ -573,9 +604,10 @@ impl Frontend {
             .app_mut()
             .set_art_jobs(crate::art::jobs::art_jobs(platform.root().to_path_buf()));
         #[cfg(feature = "romm")]
-        session
-            .app_mut()
-            .set_romm_jobs(crate::romm::romm_jobs(platform.root().to_path_buf(), crate::romm::http_api));
+        session.app_mut().set_romm_jobs(crate::romm::romm_jobs(
+            platform.root().to_path_buf(),
+            crate::romm::http_api,
+        ));
         session.app_mut().set_wifi(wifi_worker(platform.root()));
         #[cfg(feature = "device")]
         session
@@ -598,9 +630,11 @@ impl Frontend {
         Frontend {
             achievements: crate::achievement_ui::Notifications::new(),
             session,
+            write_gaps: None,
             start: now,
             last: now,
             draws: Vec::new(),
+            picture: None,
             ds: Default::default(),
             polaroid_texes: Vec::new(),
             title_tex: None,
@@ -633,6 +667,8 @@ impl Frontend {
             quick_achievements: Default::default(),
             quick_romm: Default::default(),
             quick_kid_shelf: Default::default(),
+            quick_nickname: Default::default(),
+            invite: Default::default(),
             networks: Default::default(),
             quick_palette: QuickPalette::default(),
             wallpaper: WallpaperSync::default(),
@@ -814,8 +850,14 @@ impl Frontend {
             let mut upload =
                 |bytes: &[u8]| compositor.create_texture(slot_ui::SLOT_W, slot_ui::SLOT_H, bytes);
             Some([
-                [upload(slot_ui::ds_slot_back()), upload(slot_ui::ds_slot_front())],
-                [upload(slot_ui::ds_slot_back_light()), upload(slot_ui::ds_slot_front_light())],
+                [
+                    upload(slot_ui::ds_slot_back()),
+                    upload(slot_ui::ds_slot_front()),
+                ],
+                [
+                    upload(slot_ui::ds_slot_back_light()),
+                    upload(slot_ui::ds_slot_front_light()),
+                ],
             ])
         };
         #[cfg(not(feature = "nds"))]
@@ -1048,6 +1090,16 @@ impl Frontend {
         let core_legend_light = pack(faces.core_legend_light);
         let steps = faces.link_steps.into_iter().map(&mut up).collect();
         let fails = faces.link_fails.into_iter().map(&mut up).collect();
+        let fails_wireless = faces
+            .link_fails_wireless
+            .into_iter()
+            .map(|f| f.map(&mut up))
+            .collect();
+        let fail_hints = faces
+            .link_fail_hints
+            .into_iter()
+            .map(|f| f.map(&mut up))
+            .collect();
         if let Some(look) = &mut self.look {
             look.legend = [link_legend.clone(), link_legend_light];
             look.applied = None;
@@ -1079,7 +1131,8 @@ impl Frontend {
         app.set_link_linked_face(linked);
         app.set_link_legend_faces(link_legend);
         app.set_link_step_faces(steps);
-        app.set_link_fail_faces(fails);
+        app.set_link_fail_faces(fails, fail_hints);
+        app.set_link_fail_wireless_faces(fails_wireless);
         app.set_toast_faces(toasts);
     }
 
@@ -1109,10 +1162,43 @@ impl Frontend {
         compositor.fit(window);
         self.compose(compositor);
         compositor.end_frame(window);
+        self.time_write();
+    }
+
+    fn time_write(&mut self) {
+        if !crate::latency::tracing() {
+            return;
+        }
+        let writing = self.session.app().studio().is_some_and(|s| s.writing());
+        let now = Instant::now();
+        match (&mut self.write_gaps, writing) {
+            (None, true) => self.write_gaps = Some((now, Vec::new())),
+            (Some((last, gaps)), true) => {
+                gaps.push(now.duration_since(*last).as_secs_f32() * 1000.0);
+                *last = now;
+            }
+            (Some(_), false) => {
+                let (_, mut gaps) = self.write_gaps.take().unwrap();
+                if gaps.is_empty() {
+                    return;
+                }
+                gaps.sort_by(f32::total_cmp);
+                let mean = gaps.iter().sum::<f32>() / gaps.len() as f32;
+                let p95 = gaps[(gaps.len() * 95 / 100).min(gaps.len() - 1)];
+                let over = gaps.iter().filter(|g| **g > 20.0).count();
+                eprintln!(
+                    "slot: write: {} frames, mean {mean:.1} ms, p95 {p95:.1} ms, max {:.1} ms, over 20 ms {over}",
+                    gaps.len(),
+                    gaps[gaps.len() - 1]
+                );
+            }
+            (None, false) => {}
+        }
     }
 
     fn grab_link_shot(&mut self, compositor: &mut Compositor) {
-        let open = self.session.app().game_menu_open();
+        let app = self.session.app();
+        let open = app.game_menu_open() || app.invite_card().is_some();
         if !open {
             if self.link_shot_shown {
                 self.link_shot_shown = false;
@@ -1155,7 +1241,12 @@ impl Frontend {
         self.session.app_mut().set_two_panels(on);
     }
 
-    pub fn render_screen(&mut self, compositor: &mut Compositor, window: (u32, u32), screen: Screen) {
+    pub fn render_screen(
+        &mut self,
+        compositor: &mut Compositor,
+        window: (u32, u32),
+        screen: Screen,
+    ) {
         if screen == Screen::Top {
             self.render(compositor, window);
             return;
@@ -1180,13 +1271,20 @@ impl Frontend {
             self.achievements.draw(&self.session, &mut self.draws);
         }
         if screen == Screen::Top || self.draws.iter().any(|d| matches!(d, Draw::Game)) {
-            self.ds.swap_game(&mut self.draws, &self.session, compositor, screen);
+            self.ds
+                .swap_game(&mut self.draws, &self.session, compositor, screen);
         }
         compositor.draw_list(&self.draws);
         if screen == Screen::Top {
             if let Some((w, h, rgba)) = compositor.take_capture() {
                 self.session.app_mut().shot_taken(w, h, rgba);
             }
+        }
+    }
+
+    fn picture_is(&mut self, picture: Picture, compositor: &mut Compositor) {
+        if self.picture.replace(picture) != Some(picture) {
+            compositor.cut_frame_blend();
         }
     }
 
@@ -1197,6 +1295,8 @@ impl Frontend {
         compositor.set_contrast(self.session.app().contrast());
         compositor.set_picture(self.session.app().picture_rect());
         compositor.set_screen_effect(self.session.app().screen_effect());
+        compositor.set_lcd(self.session.app().lcd());
+        compositor.set_frame_blend(self.session.app().frame_blend());
         compositor.set_shake(self.session.app().screen_shake());
         compositor.set_screen_power(self.session.app().screen_power());
         compositor.set_screen_footer(self.session.app().screen_footer());
@@ -1210,12 +1310,15 @@ impl Frontend {
             return false;
         }
         if let Some([r, g, b]) = self.session.app().blank_panel() {
+            self.picture_is(Picture::Blank, compositor);
             let px = (slot_gfx::SRC_W * slot_gfx::SRC_H) as usize;
             compositor.upload_game(&[b, g, r, 0xff].repeat(px));
         } else if let Some(frame) = (!crate::ds_view::seated(&self.session))
             .then(|| self.session.frame())
             .flatten()
         {
+            let launch = self.session.launches();
+            self.picture_is(Picture::Game(launch, frame.cut()), compositor);
             let (w, h) = frame.dims();
             compositor.upload_game_sized(w, h, &frame);
             let shown = frame.shown();
@@ -1256,14 +1359,25 @@ impl Frontend {
         sync_quick_network(self.session.app_mut(), compositor, &mut self.quick_network);
         sync_quick_achievements(self.session.app_mut(), compositor, &mut self.quick_achievements);
         sync_quick_romm(self.session.app_mut(), compositor, &mut self.quick_romm);
-        sync_quick_kid_shelf(self.session.app_mut(), compositor, &mut self.quick_kid_shelf);
+        sync_quick_kid_shelf(
+            self.session.app_mut(),
+            compositor,
+            &mut self.quick_kid_shelf,
+        );
+        sync_quick_nickname(self.session.app_mut(), compositor, &mut self.quick_nickname);
+        sync_invite(self.session.app_mut(), compositor, &mut self.invite);
         self.networks.sync(self.session.app_mut(), compositor);
         sync_quick_palette(self.session.app_mut(), compositor, &mut self.quick_palette);
         sync_wallpaper(self.session.app_mut(), compositor, &mut self.wallpaper);
         sync_picking(self.session.app_mut(), compositor, &mut self.picking_faces);
         sync_game_bezel(self.session.app_mut(), compositor, &mut self.game_bezel);
         compositor.set_game_bezel(self.session.app().shown_game_bezel());
-        sync_overlay(self.session.app_mut(), compositor, &mut self.overlay, self.ds.showing_top());
+        sync_overlay(
+            self.session.app_mut(),
+            compositor,
+            &mut self.overlay,
+            self.ds.showing_top(),
+        );
         compositor.set_sp_frame(self.session.app().picture_on_top());
         sync_core_picker(
             self.session.app_mut(),
@@ -1616,6 +1730,8 @@ struct UiFaces {
     link_legend_light: Vec<UndoFace>,
     link_steps: Vec<UndoFace>,
     link_fails: Vec<UndoFace>,
+    link_fails_wireless: Vec<Option<UndoFace>>,
+    link_fail_hints: Vec<Option<UndoFace>>,
     toasts: Vec<CartFace>,
     repair: Vec<UndoFace>,
     reset: Vec<UndoFace>,
@@ -1692,7 +1808,18 @@ impl UiFaces {
             link_steps: LinkStep::ALL.iter().map(|s| menu_face(s.line())).collect(),
             link_fails: LinkFail::SHOWN
                 .iter()
-                .map(|f| menu_face(f.line()))
+                .map(|f| menu_face(f.line(LinkKind::Cable)))
+                .collect(),
+            link_fails_wireless: LinkFail::SHOWN
+                .iter()
+                .map(|f| {
+                    let line = f.line(LinkKind::Wireless);
+                    (line != f.line(LinkKind::Cable)).then(|| menu_face(line))
+                })
+                .collect(),
+            link_fail_hints: LinkFail::SHOWN
+                .iter()
+                .map(|f| f.hint().map(menu_detail_face))
                 .collect(),
             toasts: Toast::all().into_iter().map(toast_face).collect(),
             update_legends: update_legends(footer_ink(false)),
@@ -2153,7 +2280,9 @@ fn sync_overlay(app: &mut App, compositor: &mut Compositor, state: &mut OverlayS
     if state.want != want {
         state.want = want;
         state.serial += 1;
-        let dir = app.root().map(|root| crate::overlay::folder(root, platform));
+        let dir = app
+            .root()
+            .map(|root| crate::overlay::folder(root, platform));
         match (entry, dir) {
             (Some(e), Some(dir)) => {
                 let path = |name: &Option<String>| name.as_ref().map(|n| dir.join(n));
@@ -2179,18 +2308,35 @@ fn sync_overlay(app: &mut App, compositor: &mut Compositor, state: &mut OverlayS
     }
     if let Some(done) = state.loader.as_ref().and_then(|l| l.latest()) {
         if done.serial == state.serial {
-            let tile = done
-                .tile
-                .as_ref()
-                .map(|(w, h, rgba)| (upload_rgba(compositor, &mut state.tile, *w, *h, rgba), *w, *h));
+            let tile = done.tile.as_ref().map(|(w, h, rgba)| {
+                (
+                    upload_rgba(compositor, &mut state.tile, *w, *h, rgba),
+                    *w,
+                    *h,
+                )
+            });
             let two = crate::overlay::two_screens(platform);
             let (top, bottom) = match two {
-                true => (done.top.as_ref().or(done.both.as_ref()), done.bottom.as_ref().or(done.both.as_ref())),
+                true => (
+                    done.top.as_ref().or(done.both.as_ref()),
+                    done.bottom.as_ref().or(done.both.as_ref()),
+                ),
                 false => (done.both.as_ref(), None),
             };
-            let top = top.map(|(w, h, rgba)| (upload_rgba(compositor, &mut state.full, *w, *h, rgba), *w, *h));
-            let bottom = bottom
-                .map(|(w, h, rgba)| (upload_rgba(compositor, &mut state.full_bottom, *w, *h, rgba), *w, *h));
+            let top = top.map(|(w, h, rgba)| {
+                (
+                    upload_rgba(compositor, &mut state.full, *w, *h, rgba),
+                    *w,
+                    *h,
+                )
+            });
+            let bottom = bottom.map(|(w, h, rgba)| {
+                (
+                    upload_rgba(compositor, &mut state.full_bottom, *w, *h, rgba),
+                    *w,
+                    *h,
+                )
+            });
             state.shown = Some(ShownOverlay { tile, top, bottom });
             state.ds = Some(done);
         }
@@ -2215,7 +2361,10 @@ fn sync_overlay(app: &mut App, compositor: &mut Compositor, state: &mut OverlayS
         if state.labels[at] == label {
             continue;
         }
-        let (dim, lit) = (quick_value_face(&label, false), quick_value_face(&label, true));
+        let (dim, lit) = (
+            quick_value_face(&label, false),
+            quick_value_face(&label, true),
+        );
         let (dim_size, lit_size) = ((dim.w, dim.h), (lit.w, lit.h));
         let dim = upload(compositor, &mut state.faces[at].0, dim);
         let lit = upload(compositor, &mut state.faces[at].1, lit);
@@ -2499,6 +2648,81 @@ fn sync_quick_kid_shelf(app: &mut App, compositor: &mut Compositor, state: &mut 
     state.shown = text;
 }
 
+fn sync_quick_nickname(app: &mut App, compositor: &mut Compositor, state: &mut QuickClock) {
+    if app.quick_menu().is_none() {
+        return;
+    }
+    let set = app.nickname_set();
+    let text = app.nickname();
+    let key = format!("{}{text}", if set { "+" } else { "-" });
+    if key == state.shown {
+        return;
+    }
+    let face = if set {
+        quick_value_face
+    } else {
+        quick_placeholder_face
+    };
+    let (dim, lit) = (face(&text, false), face(&text, true));
+    let (dim_size, lit_size) = ((dim.w, dim.h), (lit.w, lit.h));
+    let dim = upload(compositor, &mut state.dim, dim);
+    let lit = upload(compositor, &mut state.lit, lit);
+    app.set_quick_nickname_faces((dim, dim_size.0, dim_size.1), (lit, lit_size.0, lit_size.1));
+    state.shown = key;
+}
+
+fn sync_invite(app: &mut App, compositor: &mut Compositor, state: &mut InviteSync) {
+    let Some(card) = app.invite_card() else {
+        return;
+    };
+    let key = (card.nickname().to_string(), card.title.clone());
+    if state.shown.as_ref() == Some(&key) {
+        return;
+    }
+    let mut sprite = |f: slot_ui::UndoFace| Sprite {
+        tex: compositor.create_texture(f.w, f.h, &f.rgba),
+        w: f.w,
+        h: f.h,
+    };
+    let [card_sprite, not_now, join] = match state.statics {
+        Some(statics) => statics,
+        None => {
+            let [no, yes] = crate::invite_card::legend_faces();
+            let statics = [
+                sprite(crate::invite_card::card_face()),
+                sprite(no),
+                sprite(yes),
+            ];
+            state.statics = Some(statics);
+            statics
+        }
+    };
+    let (one, two) = (
+        crate::invite_card::line_one_face(&key.0),
+        crate::invite_card::line_two_face(&key.1),
+    );
+    let (one_size, two_size) = ((one.w, one.h), (two.w, two.h));
+    let one = upload(compositor, &mut state.one, one);
+    let two = upload(compositor, &mut state.two, two);
+    app.set_invite_faces(crate::invite_card::InviteFaces {
+        card: card_sprite,
+        line_one: Sprite {
+            tex: one,
+            w: one_size.0,
+            h: one_size.1,
+        },
+        line_two: Sprite {
+            tex: two,
+            w: two_size.0,
+            h: two_size.1,
+        },
+        not_now,
+        join,
+        art: None,
+    });
+    state.shown = Some(key);
+}
+
 fn sync_quick_romm(app: &mut App, compositor: &mut Compositor, state: &mut [QuickClock; 4]) {
     if app.quick_menu().is_none() {
         return;
@@ -2508,7 +2732,11 @@ fn sync_quick_romm(app: &mut App, compositor: &mut Compositor, state: &mut [Quic
         return;
     }
     let mut faces = [None; 4];
-    for ((text, slot), face) in texts.into_iter().zip(state.iter_mut()).zip(faces.iter_mut()) {
+    for ((text, slot), face) in texts
+        .into_iter()
+        .zip(state.iter_mut())
+        .zip(faces.iter_mut())
+    {
         if text.is_empty() {
             slot.shown = text;
             continue;
@@ -2520,10 +2748,7 @@ fn sync_quick_romm(app: &mut App, compositor: &mut Compositor, state: &mut [Quic
         let (dim_size, lit_size) = ((dim.w, dim.h), (lit.w, lit.h));
         let dim = upload(compositor, &mut slot.dim, dim);
         let lit = upload(compositor, &mut slot.lit, lit);
-        *face = Some([
-            (dim, dim_size.0, dim_size.1),
-            (lit, lit_size.0, lit_size.1),
-        ]);
+        *face = Some([(dim, dim_size.0, dim_size.1), (lit, lit_size.0, lit_size.1)]);
         slot.shown = text;
     }
     app.set_quick_romm_faces(faces);
@@ -2766,6 +2991,50 @@ fn sync_box_art(app: &mut App, compositor: &mut Compositor, sync: &mut BoxArtSyn
 
 fn upload(compositor: &mut Compositor, slot: &mut Option<TexId>, face: slot_ui::UndoFace) -> TexId {
     upload_rgba(compositor, slot, face.w, face.h, &face.rgba)
+}
+
+fn upload_hand(
+    compositor: &mut Compositor,
+    slots: &mut [Option<TexId>; 6],
+    marker_ink: &mut Option<[u8; 3]>,
+    r: &slot_ui::HandReveal,
+) -> crate::app::HandTex {
+    let cols = crate::studio_faces::HAND_COLS;
+    let rows = (r.frames.len() as u32).div_ceil(cols);
+    let (aw, ah) = (r.w * cols, r.h * rows);
+    let row = (r.w * 4) as usize;
+    let mut atlas = vec![0u8; (aw * ah * 4) as usize];
+    for (i, (rgba, _)) in r.frames.iter().enumerate() {
+        let (ox, oy) = ((i as u32 % cols) * r.w, (i as u32 / cols) * r.h);
+        for y in 0..r.h {
+            let d = (((oy + y) * aw + ox) * 4) as usize;
+            let s = y as usize * row;
+            atlas[d..d + row].copy_from_slice(&rgba[s..s + row]);
+        }
+    }
+    let (mw, mh) = slot_ui::hand::marker_size();
+    let (gw, gh) = slot_ui::hand::glow_size();
+    let [blank, ink, cap, body, cap_glow, body_glow] = slots;
+    if *marker_ink != Some(r.ink) {
+        let art = slot_ui::hand::marker_art(r.ink);
+        upload_rgba(compositor, cap, mw, mh, &art.cap);
+        upload_rgba(compositor, body, mw, mh, &art.body);
+        upload_rgba(compositor, cap_glow, gw, gh, &art.cap_glow);
+        upload_rgba(compositor, body_glow, gw, gh, &art.body_glow);
+        *marker_ink = Some(r.ink);
+    }
+    let kept = |t: &Option<TexId>| t.expect("marker art uploaded");
+    crate::app::HandTex {
+        blank: upload_rgba(compositor, blank, r.blank.w, r.blank.h, &r.blank.rgba),
+        atlas: upload_rgba(compositor, ink, aw, ah, &atlas),
+        cap: kept(cap),
+        body: kept(body),
+        cap_glow: kept(cap_glow),
+        body_glow: kept(body_glow),
+        cell: (r.w, r.h),
+        size: (aw, ah),
+        pens: r.frames.iter().map(|(_, p)| *p).collect(),
+    }
 }
 
 fn upload_rgba(

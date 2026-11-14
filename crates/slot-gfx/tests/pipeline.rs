@@ -1,7 +1,7 @@
 use slot_gfx::{
     blue_light_gain, canvas_size, contrast_boost, dim_gain, game_layout, lcd3x_factors, lcd3x_mask,
-    saturation_boost, Compositor, Draw, GameLayout, HeadlessSurface, Overlay, ScreenEffect, Sizing, OUT_H,
-    OUT_W, SRC_H, SRC_W,
+    saturation_boost, Compositor, Draw, FrameBlend, GameLayout, HeadlessSurface, Lcd, Overlay,
+    ScreenEffect, Sizing, OUT_H, OUT_W, SRC_H, SRC_W,
 };
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
@@ -750,7 +750,11 @@ fn the_grid_keeps_game_boy_rows_even_when_stretched_on_a_4_by_3_panel() {
 fn lcd_is_lcd3x_on_a_3_by_2_panel_and_the_grid_lcd_on_every_other() {
     assert_eq!(ScreenEffect::lcd_for((720, 480)), ScreenEffect::Lcd3x);
     for panel in [(640, 480), (720, 720), (1024, 768)] {
-        assert_eq!(ScreenEffect::lcd_for(panel), ScreenEffect::LcdGrid, "{panel:?}");
+        assert_eq!(
+            ScreenEffect::lcd_for(panel),
+            ScreenEffect::LcdGrid,
+            "{panel:?}"
+        );
     }
 }
 
@@ -866,15 +870,17 @@ fn a_white_screen_stays_white_and_bright_under_the_grid_lcd() {
     };
     for window in [(640, 480), (OUT_W, OUT_H)] {
         let (frame, w, h) = lcd_frame(&mut c, ScreenEffect::LcdGrid, window, [0xff; 3]);
-        let mean = |ch: usize| {
-            (0..w * h).map(|i| frame[i * 4 + ch] as f32).sum::<f32>() / (w * h) as f32
-        };
+        let mean =
+            |ch: usize| (0..w * h).map(|i| frame[i * 4 + ch] as f32).sum::<f32>() / (w * h) as f32;
         let means = [mean(0), mean(1), mean(2)];
         assert!(
             means.iter().all(|m| *m > 170.0),
             "{window:?}: white came out {means:?}"
         );
-        assert!(spread(&means) < 6.0, "{window:?}: white is tinted {means:?}");
+        assert!(
+            spread(&means) < 6.0,
+            "{window:?}: white is tinted {means:?}"
+        );
     }
 }
 
@@ -1405,11 +1411,19 @@ fn full_overlay(c: &mut Compositor, rgba_px: [u8; 4]) -> Overlay {
     }
 }
 
-fn gb_at_3x(c: &mut Compositor, overlay: impl FnOnce(&mut Compositor) -> Option<Overlay>) -> Vec<u8> {
+fn gb_at_3x(
+    c: &mut Compositor,
+    overlay: impl FnOnce(&mut Compositor) -> Option<Overlay>,
+) -> Vec<u8> {
     c.fit((640, 480));
     let o = overlay(c);
     c.set_overlay(o);
-    laid_out(c, (640, 480), game_layout((640, 480), (160, 144), Sizing::Integer), 1.0)
+    laid_out(
+        c,
+        (640, 480),
+        game_layout((640, 480), (160, 144), Sizing::Integer),
+        1.0,
+    )
 }
 
 #[test]
@@ -1461,7 +1475,12 @@ fn no_overlay_leaves_the_frame_unchanged() {
     let Some((_g, _s, mut c)) = compositor() else {
         return;
     };
-    let before = laid_out(&mut c, (640, 480), game_layout((640, 480), (160, 144), Sizing::Integer), 1.0);
+    let before = laid_out(
+        &mut c,
+        (640, 480),
+        game_layout((640, 480), (160, 144), Sizing::Integer),
+        1.0,
+    );
     let after = gb_at_3x(&mut c, |_| None);
     assert!(before == after);
 }
@@ -1473,7 +1492,10 @@ fn a_translucent_overlay_blends_by_its_alpha() {
     };
     let plain = gb_at_3x(&mut c, |_| None);
     let f = gb_at_3x(&mut c, |c| Some(full_overlay(c, [0, 0, 0, 128])));
-    let (p, o) = (at(&plain, 640, 320, 240)[2] as i32, at(&f, 640, 320, 240)[2] as i32);
+    let (p, o) = (
+        at(&plain, 640, 320, 240)[2] as i32,
+        at(&f, 640, 320, 240)[2] as i32,
+    );
     assert!((o - p * 127 / 255).abs() <= 2, "plain {p} overlaid {o}");
 }
 
@@ -1536,7 +1558,11 @@ fn a_still_after_the_game_does_not_lay_the_full_overlay_over_the_bezel() {
     c.begin_frame();
     c.draw_list(&[Draw::Game, Draw::Shot { tex: still }]);
     let both = c.read_frame();
-    assert_eq!(at(&both, 640, 5, 240), at(&game, 640, 5, 240), "the bezel strip changed under a still");
+    assert_eq!(
+        at(&both, 640, 5, 240),
+        at(&game, 640, 5, 240),
+        "the bezel strip changed under a still"
+    );
 }
 
 #[test]
@@ -1547,7 +1573,214 @@ fn no_overlay_while_the_screen_powers_on() {
     c.fit((640, 480));
     let o = full_overlay(&mut c, [255, 0, 0, 255]);
     c.set_overlay(Some(o));
-    let f = laid_out(&mut c, (640, 480), game_layout((640, 480), (160, 144), Sizing::Integer), 0.5);
-    let red = f.chunks_exact(4).filter(|p| p[0] == 255 && p[1] == 0 && p[2] == 0).count();
+    let f = laid_out(
+        &mut c,
+        (640, 480),
+        game_layout((640, 480), (160, 144), Sizing::Integer),
+        0.5,
+    );
+    let red = f
+        .chunks_exact(4)
+        .filter(|p| p[0] == 255 && p[1] == 0 && p[2] == 0)
+        .count();
     assert_eq!(red, 0, "the overlay drew over a screen still powering on");
+}
+
+fn blended(blend: FrameBlend, lcd: Lcd, frames: &[[u8; 3]]) -> Option<Vec<u8>> {
+    let (_g, _s, mut c) = compositor()?;
+    c.fit((OUT_W, OUT_H));
+    c.set_game_source_rect(WHOLE);
+    c.set_screen_effect(ScreenEffect::None);
+    c.set_lcd(lcd);
+    c.set_frame_blend(blend);
+    c.set_screen_power(1.0);
+    let shown = frames
+        .iter()
+        .map(|&rgb| {
+            c.begin_frame();
+            c.upload_game(&flat_shot(rgb));
+            c.draw_game();
+            let frame = c.read_window((OUT_W, OUT_H));
+            px(&frame, OUT_W as usize / 2, OUT_H as usize / 2)[1]
+        })
+        .collect();
+    Some(shown)
+}
+
+#[test]
+fn frame_blending_off_shows_each_frame_as_it_comes() {
+    let Some(shown) = blended(FrameBlend::Off, Lcd::Gba, &[[0xff; 3], [0; 3], [0xff; 3]]) else {
+        return;
+    };
+    assert_eq!(shown, [0xff, 0, 0xff]);
+}
+
+#[test]
+fn mix_blends_each_frame_half_and_half_with_the_one_before_on_the_gpu() {
+    let frames = [[0xff; 3], [0; 3], [0xff; 3], [0xff; 3]];
+    let Some(shown) = blended(FrameBlend::Mix, Lcd::Gba, &frames) else {
+        return;
+    };
+    assert_eq!(
+        shown[0], 0xff,
+        "the first frame has nothing before it to mix with"
+    );
+    assert!(
+        shown[1].abs_diff(0x80) <= 1,
+        "white then black showed {}",
+        shown[1]
+    );
+    assert!(
+        shown[2].abs_diff(0x80) <= 1,
+        "black then white showed {}",
+        shown[2]
+    );
+    assert_eq!(shown[3], 0xff, "two white frames mixed to {}", shown[3]);
+}
+
+#[test]
+fn ghosting_fades_like_the_screens_lcd_and_settles() {
+    let mut frames = vec![[0xff; 3]; 4];
+    frames.extend([[0; 3]; 30]);
+    let Some(shown) = blended(FrameBlend::Ghosting, Lcd::Gba, &frames) else {
+        return;
+    };
+    let fading = &shown[4..];
+    assert_eq!(shown[3], 0xff);
+    assert!(
+        fading[0] < 0xff && fading[0] > 0x10,
+        "one frame of black showed {}, not the GBA's slow fade",
+        fading[0]
+    );
+    assert!(
+        fading.windows(2).all(|w| w[1] <= w[0]),
+        "the fade went back up: {fading:?}"
+    );
+    assert_eq!(
+        *fading.last().unwrap(),
+        0,
+        "the fade never finished: {fading:?}"
+    );
+}
+
+#[test]
+fn blending_a_still_picture_leaves_it_as_sharp_as_no_blending() {
+    let Some((_g, _s, mut c)) = compositor() else {
+        return;
+    };
+    c.fit((OUT_W, OUT_H));
+    c.set_game_source_rect(WHOLE);
+    c.set_screen_effect(ScreenEffect::None);
+    c.set_screen_power(1.0);
+    let stripes = every_fourth_column_lit();
+    let mut drawn = |blend: FrameBlend| {
+        c.set_frame_blend(blend);
+        for _ in 0..30 {
+            c.begin_frame();
+            c.upload_game(&stripes);
+            c.draw_game();
+        }
+        c.read_window((OUT_W, OUT_H))
+    };
+    let off = drawn(FrameBlend::Off);
+    for blend in [FrameBlend::Mix, FrameBlend::Ghosting] {
+        assert!(
+            drawn(blend) == off,
+            "{blend:?} drew a still picture differently"
+        );
+    }
+}
+fn redrawn(c: &mut Compositor) -> u8 {
+    c.begin_frame();
+    c.draw_game();
+    let frame = c.read_window((OUT_W, OUT_H));
+    px(&frame, OUT_W as usize / 2, OUT_H as usize / 2)[1]
+}
+
+#[test]
+fn a_paused_game_shows_a_new_blending_choice_without_another_frame() {
+    let Some((_g, _s, mut c)) = compositor() else {
+        return;
+    };
+    c.fit((OUT_W, OUT_H));
+    c.set_game_source_rect(WHOLE);
+    c.set_screen_effect(ScreenEffect::None);
+    c.set_lcd(Lcd::Gba);
+    c.set_screen_power(1.0);
+    for rgb in [[0xff; 3], [0; 3]] {
+        c.begin_frame();
+        c.upload_game(&flat_shot(rgb));
+        c.draw_game();
+    }
+    assert_eq!(redrawn(&mut c), 0);
+    c.set_frame_blend(FrameBlend::Mix);
+    let mixed = redrawn(&mut c);
+    assert!(mixed.abs_diff(0x80) <= 1, "paused Mix showed {mixed}");
+    c.set_frame_blend(FrameBlend::Ghosting);
+    let ghosted = redrawn(&mut c);
+    assert!(
+        ghosted > 0x10 && ghosted < 0xf0,
+        "paused Ghosting showed {ghosted}, not white fading to black"
+    );
+    c.set_frame_blend(FrameBlend::Off);
+    assert_eq!(redrawn(&mut c), 0);
+}
+
+#[test]
+fn a_cut_blends_nothing_of_the_picture_before_it() {
+    let Some((_g, _s, mut c)) = compositor() else {
+        return;
+    };
+    c.fit((OUT_W, OUT_H));
+    c.set_game_source_rect(WHOLE);
+    c.set_screen_effect(ScreenEffect::None);
+    c.set_lcd(Lcd::Gba);
+    c.set_screen_power(1.0);
+    for blend in [FrameBlend::Mix, FrameBlend::Ghosting] {
+        c.set_frame_blend(blend);
+        for _ in 0..10 {
+            c.begin_frame();
+            c.upload_game(&flat_shot([0xff; 3]));
+            c.draw_game();
+        }
+        c.cut_frame_blend();
+        assert_eq!(
+            redrawn(&mut c),
+            0xff,
+            "{blend:?} lost the last frame at the cut"
+        );
+        c.begin_frame();
+        c.upload_game(&flat_shot([0; 3]));
+        c.draw_game();
+        let frame = c.read_window((OUT_W, OUT_H));
+        let first = px(&frame, OUT_W as usize / 2, OUT_H as usize / 2)[1];
+        assert_eq!(
+            first, 0,
+            "{blend:?} blended the old picture into the first frame after a cut"
+        );
+        c.set_frame_blend(FrameBlend::Off);
+    }
+}
+
+#[test]
+fn blending_chosen_after_a_lone_frame_blends_the_next_frame_with_it() {
+    let Some((_g, _s, mut c)) = compositor() else {
+        return;
+    };
+    c.fit((OUT_W, OUT_H));
+    c.set_game_source_rect(WHOLE);
+    c.set_screen_effect(ScreenEffect::None);
+    c.set_screen_power(1.0);
+    c.cut_frame_blend();
+    c.begin_frame();
+    c.upload_game(&flat_shot([0xff; 3]));
+    c.draw_game();
+    c.set_frame_blend(FrameBlend::Mix);
+    assert_eq!(redrawn(&mut c), 0xff);
+    c.begin_frame();
+    c.upload_game(&flat_shot([0; 3]));
+    c.draw_game();
+    let frame = c.read_window((OUT_W, OUT_H));
+    let mixed = px(&frame, OUT_W as usize / 2, OUT_H as usize / 2)[1];
+    assert!(mixed.abs_diff(0x80) <= 1, "white then black showed {mixed}");
 }

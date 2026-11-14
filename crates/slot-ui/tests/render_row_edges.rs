@@ -26,6 +26,7 @@ fn shelf_with(n: usize) -> Shelf {
                 code: String::new(),
                 shell: None,
                 title: format!("GAME {i}"),
+                tags: Vec::new(),
             })
             .collect(),
     )

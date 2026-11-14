@@ -27,6 +27,7 @@ fn cart_with_label(root: &Path, rgb: [u8; 3]) -> Cart {
         title: String::new(),
         code: String::new(),
         shell: None,
+        tags: Vec::new(),
     }
 }
 

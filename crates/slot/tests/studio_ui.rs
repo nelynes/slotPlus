@@ -107,7 +107,6 @@ fn closing_writes_the_shell_and_updates_the_shelf() {
     a.apply(Action::SelectTap);
     press(&mut a, Btn::Down);
     press(&mut a, Btn::Down);
-    press(&mut a, Btn::Down);
     press(&mut a, Btn::Right);
     press(&mut a, Btn::B);
     let t = a.now();
@@ -525,12 +524,13 @@ mod printing {
             faces: vec![
                 (LabelKind::Real, t),
                 (LabelKind::Logo, t),
-                (LabelKind::Title, t),
+                (LabelKind::Hand, t),
             ],
             bare: t,
             under: None,
             w: 360,
             h: 212,
+            hand: None,
         });
         a.tick_ms(a.now() + 50);
         assert_eq!(a.studio_slip_count(), 0, "printed before the screen opened");
@@ -562,69 +562,6 @@ fn shortcuts_fire_in_the_studio() {
     assert_ne!(a.blue_light(), blue);
     assert!(a.studio().is_some());
     assert!(count(&a) > before, "no HUD over the studio");
-}
-
-#[test]
-fn a_text_color_is_saved_as_a_tagged_label() {
-    let (d, mut a) = on_shelf();
-    a.apply(Action::SelectTap);
-    let t = a.now();
-    a.tick_ms(t + 400);
-    let cart = a.studio().unwrap().cart.clone();
-    assert!(cart.label.is_none());
-    press(&mut a, Btn::Down);
-    assert_eq!(
-        a.studio().unwrap().row(),
-        Some(slot::studio::Row::LabelColor)
-    );
-    press(&mut a, Btn::A);
-    press(&mut a, Btn::Down);
-    press(&mut a, Btn::B);
-    assert!(a.studio().unwrap().recolored());
-    press(&mut a, Btn::B);
-    let t = a.now();
-    a.tick_ms(t + 400);
-    assert!(a.studio().is_none());
-    let path = slot::art::make::label_path(d.path(), &cart);
-    let tag = slot_ui::house_label::label_tag(&std::fs::read(path).unwrap());
-    assert!(
-        matches!(tag, Some(slot_ui::house_label::LabelTag::Text(_))),
-        "{tag:?}"
-    );
-}
-
-#[test]
-fn a_text_color_saved_with_a_new_shape_uses_that_shape() {
-    use slot::studio::Row;
-    let d = tmp_root_with_gb_carts(&["Kirby", "Tetris"]);
-    write_slot_state(
-        d.path(),
-        &SlotState {
-            clock_set: true,
-            ..SlotState::default()
-        },
-    )
-    .unwrap();
-    let (mut a, _clock) = app_booting_at(d.path(), CLOCK_IS_SET);
-    a.apply(Action::SelectTap);
-    let t = a.now();
-    a.tick_ms(t + 400);
-    let mut cart = a.studio().unwrap().cart.clone();
-    assert_eq!(a.studio().unwrap().row(), Some(Row::LabelColor));
-    press(&mut a, Btn::A);
-    press(&mut a, Btn::Down);
-    press(&mut a, Btn::B);
-    let ground = a.studio().unwrap().ground.unwrap();
-    while a.studio().unwrap().row() != Some(Row::Shape) {
-        press(&mut a, Btn::Down);
-    }
-    let was = cart.shell;
-    press(&mut a, Btn::Right);
-    cart.shell = a.studio().unwrap().shell;
-    assert_ne!(cart.shell, was, "the shape did not change");
-    a.close_studio();
-    let saved = std::fs::read(slot::art::make::label_path(d.path(), &cart)).unwrap();
-    assert_eq!(saved, slot::art::make::text_label(&cart, ground));
 }
 
 #[test]
@@ -720,9 +657,18 @@ fn powering_off_keeps_studio_edits() {
     a.apply(Action::SelectTap);
     press(&mut a, Btn::Down);
     press(&mut a, Btn::Down);
-    press(&mut a, Btn::Down);
     press(&mut a, Btn::Right);
     a.apply(Action::PowerHold);
     let text = std::fs::read_to_string(d.path().join("Labels/cart_shell.txt")).unwrap_or_default();
     assert!(text.contains("Emerald"), "{text:?}");
+}
+
+#[test]
+fn the_studio_knows_when_the_marker_lies_below_the_cart() {
+    for (panel, below) in [((720, 480), true), ((640, 480), false)] {
+        let (_d, mut a) = on_shelf();
+        a.set_panel(panel);
+        a.apply(Action::SelectTap);
+        assert_eq!(a.studio().unwrap().marker_below, below, "{panel:?}");
+    }
 }

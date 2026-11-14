@@ -89,7 +89,12 @@ fn the_in_game_menu_darkens_the_game_and_screen_leaves_it_bare() {
     assert_eq!(f.app().in_game_menu(), Some(QuickRow::Shader));
     let screen = composed(&mut f, &mut c, "screen");
 
-    let panel = quick_row_top(slot_ui::Canvas::FRAMED, QuickRow::Shader, &f.app().in_game_hidden()) as usize - 16;
+    let panel = quick_row_top(
+        slot_ui::Canvas::FRAMED,
+        QuickRow::Shader,
+        &f.app().in_game_hidden(),
+    ) as usize
+        - 16;
     let (mut probed, mut lit) = (0, 0);
     for y in (48..panel).step_by(17) {
         for x in (0..150).chain(570..OUT_W as usize).step_by(13) {
@@ -128,7 +133,11 @@ fn the_in_game_menu_darkens_the_game_and_screen_leaves_it_bare() {
         );
     }
 
-    let row = quick_row_top(slot_ui::Canvas::FRAMED, QuickRow::Shader, &f.app().in_game_hidden()) as usize;
+    let row = quick_row_top(
+        slot_ui::Canvas::FRAMED,
+        QuickRow::Shader,
+        &f.app().in_game_hidden(),
+    ) as usize;
     let ink = (row..row + 40)
         .flat_map(|y| (64..400).map(move |x| (x, y)))
         .filter(|&(x, y)| bright(at(&screen, x, y)) > 600)
@@ -269,15 +278,29 @@ fn the_controls_page_renders() {
     run_for(&mut f, &mut input, 4.0);
     tap(&mut f, &mut input, Btn::Menu);
     run_for(&mut f, &mut input, 0.5);
-    for btn in [Btn::Down, Btn::A, Btn::Down, Btn::Down, Btn::A] {
-        tap(&mut f, &mut input, btn);
-    }
+    common::reach(
+        &mut f,
+        QuickRow::Settings,
+        |f| f.app().in_game_menu(),
+        |f| tap(f, &mut input, Btn::Down),
+    );
+    tap(&mut f, &mut input, Btn::A);
+    common::reach(
+        &mut f,
+        QuickRow::PlayControls,
+        |f| f.app().in_game_menu(),
+        |f| tap(f, &mut input, Btn::Down),
+    );
+    tap(&mut f, &mut input, Btn::A);
     run_for(&mut f, &mut input, 0.3);
     assert_eq!(f.app().in_game_menu(), Some(QuickRow::GameUp));
     composed(&mut f, &mut c, "controls");
-    for _ in 0..7 {
-        tap(&mut f, &mut input, Btn::Down);
-    }
+    common::reach(
+        &mut f,
+        QuickRow::GameStart,
+        |f| f.app().in_game_menu(),
+        |f| tap(f, &mut input, Btn::Down),
+    );
     run_for(&mut f, &mut input, 0.2);
     assert_eq!(f.app().in_game_menu(), Some(QuickRow::GameStart));
     composed(&mut f, &mut c, "controls-scrolled");
