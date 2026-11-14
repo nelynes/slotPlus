@@ -1,7 +1,8 @@
 # RetroAchievements
 
 slotPlus earns **softcore RetroAchievements for Game Boy, Game Boy Color, Game Boy
-Advance, WonderSwan, WonderSwan Color and Atari Lynx games**. Earning one shows a short banner in Slot's style, the achievement's title and
+Advance, WonderSwan, WonderSwan Color and Atari Lynx games**, and in slotPlusUltra **Game Gear,
+NeoGeo Pocket, NeoGeo Pocket Color and TurboGrafx-16 games** (not yet the DS). Earning one shows a short banner in Slot's style, the achievement's title and
 points on one line and its description below, with its own badge, and plays a quiet chime that
 follows the game's volume. There is no achievement browser, leaderboards or hardcore mode.
 Save states, resume, rewind and fast-forward all still work.
@@ -48,10 +49,19 @@ expects: the 64 KB of system RAM at 0x0000, and for the WonderSwan the cart's sa
 EEPROM from 0x10000. A `.lnx` game is hashed without its 64-byte header, as RetroAchievements
 does; `.lyx`, `.ws` and `.wsc` games are hashed whole.
 
+## slotPlusUltra's systems
+
+Their cores hand over their RAM whole too, and slotPlus lays it out as RetroAchievements
+numbers it for each console: the Game Gear's 8 KB at 0x0000 and the cart's RAM from 0x2000,
+the NeoGeo Pocket's 16 KB at 0x0000, and the TurboGrafx-16's 8 KB at 0x0000. A HuCard dump
+with a copier's 512-byte header is hashed without it, as RetroAchievements does; Game Gear
+and NeoGeo Pocket games are hashed whole.
+
 ## Downloading sets
 
 A game earns from its achievement set, which has to be on the card first. In Settings →
-RetroAchievements, **Download Achievement Sets** checks every `.gb`, `.gbc`, `.gba`, `.ws`, `.wsc`, `.lnx` and `.lyx` game on
+RetroAchievements, **Download Achievement Sets** checks every `.gb`, `.gbc`, `.gba`, `.ws`, `.wsc`, `.lnx` and `.lyx` game (and in slotPlusUltra,
+`.gg`, `.ngp`, `.ngc`, `.ngpc` and `.pce`) on
 the card while you watch: the game it's on, the systems done, sets downloaded and already on
 the card, games RetroAchievements has no achievements for, and badges downloaded. Each game's
 badges come straight after its set, so stopping with B leaves whole games.

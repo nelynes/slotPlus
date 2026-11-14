@@ -2,10 +2,11 @@
 
 ## [1.16.0-plus2.9](https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus2.9)
 
-slotPlus brought up to Slot 1.16.0, and a faster Nintendo DS core for slotPlusUltra. See [Slot's 1.16.0 notes](https://github.com/slot-cfw/slot/releases/tag/v1.16.0).
+slotPlus brought up to Slot 1.16.0, and for slotPlusUltra, RetroAchievements on three more systems and a faster Nintendo DS core. See [Slot's 1.16.0 notes](https://github.com/slot-cfw/slot/releases/tag/v1.16.0).
 
 To upgrade, use Settings → System → Check for Updates, or replace the `System` folder on your card with the one from the zip.
 
+- **RetroAchievements in slotPlusUltra for the Game Gear, NeoGeo Pocket and Pocket Color, and TurboGrafx-16.** Download Achievement Sets checks `.gg`, `.ngp`, `.ngc`, `.ngpc` and `.pce` games too, a gold trophy marks the ones with a set, and they earn softcore achievements like the rest. A HuCard dump with a copier's header is matched without it, as RetroAchievements does. The DS isn't covered yet.
 - Carts with no label art get their title handwritten on the plastic in marker. That includes the WonderSwan and Lynx carts, which keep their gold contacts, and in slotPlusUltra the Game Gear, NeoGeo Pocket, TurboGrafx-16 and DS ones.
 - Frame Blending runs on the GPU, so Ghosting works on gpSP and Gambatte too. As before, it's for the Game Boy family only.
 - Nickname, a new setting under System, is the name other players see when you host a link, and link play works with Kid Mode.
