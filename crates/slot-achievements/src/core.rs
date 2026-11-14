@@ -17,6 +17,8 @@ pub(crate) struct Tracked {
     enabled: Arc<AtomicBool>,
     current: Arc<AtomicU64>,
     tracking: Arc<AtomicU64>,
+    /// slotPlus: the game's RetroAchievements console, which decides its memory layout.
+    console: u32,
     generation: u64,
     sequence: u64,
     timeline: u64,
@@ -24,7 +26,7 @@ pub(crate) struct Tracked {
 }
 
 impl Tracked {
-    pub fn new(core: Box<dyn RetroCore>, service: &Service) -> Self {
+    pub fn new(core: Box<dyn RetroCore>, console: u32, service: &Service) -> Self {
         let (recycle, recycled) = mpsc::sync_channel(QUEUE_SIZE + 1);
         Self {
             core,
@@ -35,6 +37,7 @@ impl Tracked {
             enabled: service.enabled.clone(),
             current: service.current.clone(),
             tracking: service.tracking.clone(),
+            console,
             generation: 0,
             sequence: 0,
             timeline: 0,
@@ -59,7 +62,7 @@ impl Tracked {
             }
             Err(_) => return,
         };
-        let valid = self.core.achievement_memory(&mut ram);
+        let valid = self.core.achievement_memory(self.console, &mut ram);
         let frame = Frame {
             generation: self.generation,
             sequence: self.sequence,
@@ -149,8 +152,8 @@ impl RetroCore for Tracked {
         self.core.stop_link();
         self.timeline += 1;
     }
-    fn achievement_memory(&self, ram: &mut [u8]) -> AchievementMemory {
-        self.core.achievement_memory(ram)
+    fn achievement_memory(&self, console: u32, ram: &mut [u8]) -> AchievementMemory {
+        self.core.achievement_memory(console, ram)
     }
 }
 

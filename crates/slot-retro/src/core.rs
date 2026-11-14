@@ -228,9 +228,10 @@ pub trait RetroCore: Send {
     fn set_option(&mut self, _key: &str, _value: &str) {}
     fn set_frame_skip(&mut self, _skip: bool) {}
     /// Copies memory into a buffer of ACHIEVEMENT_RAM_SIZE, indexed by RetroAchievements
-    /// addresses, and returns the valid spans; absent memory is never treated as zero RAM.
+    /// addresses for `console` (its RetroAchievements console ID, 0 when unknown), and
+    /// returns the valid spans; absent memory is never treated as zero RAM.
     /// Called only on the emulator thread, between frames.
-    fn achievement_memory(&self, _ram: &mut [u8]) -> crate::AchievementMemory {
+    fn achievement_memory(&self, _console: u32, _ram: &mut [u8]) -> crate::AchievementMemory {
         crate::AchievementMemory::default()
     }
     fn set_touch(&mut self, _at: Option<(u8, u8)>) {}

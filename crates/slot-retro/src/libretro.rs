@@ -806,18 +806,19 @@ impl Drop for LibretroCore {
 }
 
 impl RetroCore for LibretroCore {
-    fn achievement_memory(&self, ram: &mut [u8]) -> AchievementMemory {
+    fn achievement_memory(&self, console: u32, ram: &mut [u8]) -> AchievementMemory {
         let mut valid = AchievementMemory::default();
         if !self.loaded || ram.len() < ACHIEVEMENT_RAM_SIZE {
             return valid;
         }
-        // slotPlus: a core with no memory map (the WonderSwan's and the Lynx's) hands over its
-        // RAM whole. rcheevos consoleinfo.c: the Lynx's 64 KB is addresses 0x0000-0xffff; the
-        // WonderSwan's internal RAM starts at 0x00000 and its cartridge RAM at 0x10000.
-        if self.host.memory.is_empty() {
+        // slotPlus: the other systems' cores hand over their RAM whole, laid out as
+        // RetroAchievements numbers it (`plain_spans`). A console it doesn't know, with no
+        // memory map, still gets the WonderSwan's layout, as before consoles were passed in.
+        let spans = plain_spans(console).or(self.host.memory.is_empty().then_some(WS_SPANS));
+        if let Some(spans) = spans {
             let system = self.memory(MEMORY_SYSTEM_RAM);
             let save = self.memory(MEMORY_SAVE_RAM);
-            return plain_layout(system, save, ram);
+            return plain_layout(spans, system, save, ram);
         }
         let game_boy = self.host.memory.iter().any(|d| d.start == 0xc000);
         // rcheevos consoleinfo.c: GB/GBC use native addresses plus fixed banks;
@@ -1059,12 +1060,37 @@ impl RetroCore for LibretroCore {
 /// slotPlus: RetroAchievements addresses for a core that publishes no memory map: system RAM
 /// from 0 (at most 64 KB) and save RAM from 0x10000, as rcheevos lays out the WonderSwan, and
 /// the Lynx, which has no save RAM to give.
-fn plain_layout(system: Option<&[u8]>, save: Option<&[u8]>, ram: &mut [u8]) -> AchievementMemory {
+/// slotPlus: where a core's system RAM and save RAM go in RetroAchievements' numbering, as
+/// (address, most bytes) for each, from rcheevos consoleinfo.c. `None` for save RAM means
+/// achievements never read it.
+type Spans = [(usize, usize); 2];
+
+const WS_SPANS: Spans = [(0, 0x10000), (0x10000, ACHIEVEMENT_RAM_SIZE - 0x10000)];
+
+fn plain_spans(console: u32) -> Option<Spans> {
+    Some(match console {
+        // Atari Lynx: 64 KB of RAM at 0x0000.
+        13 => [(0, 0x10000), (0, 0)],
+        // WonderSwan: internal RAM, then the cart's save RAM or EEPROM from 0x10000.
+        53 => WS_SPANS,
+        // Game Gear: 8 KB of RAM (0xc000 on the console), then the cart's RAM from 0x2000.
+        15 => [(0, 0x2000), (0x2000, 0x8000)],
+        // NeoGeo Pocket: the 16 KB of RAM at 0x4000 on the console.
+        14 => [(0, 0x4000), (0, 0)],
+        // PC Engine: the 8 KB of RAM (0x1f0000 on the console). HuCards save nothing it reads.
+        8 => [(0, 0x2000), (0, 0)],
+        _ => return None,
+    })
+}
+
+fn plain_layout(
+    spans: Spans,
+    system: Option<&[u8]>,
+    save: Option<&[u8]>,
+    ram: &mut [u8],
+) -> AchievementMemory {
     let mut valid = AchievementMemory::default();
-    for (src, offset, size) in [
-        (system, 0, 0x10000),
-        (save, 0x10000, ACHIEVEMENT_RAM_SIZE - 0x10000),
-    ] {
+    for (src, (offset, size)) in [system, save].into_iter().zip(spans) {
         if let Some(src) = src {
             let n = src.len().min(size);
             ram[offset..offset + n].copy_from_slice(&src[..n]);
@@ -1081,15 +1107,37 @@ mod tests {
         let mut ram = vec![0u8; crate::ACHIEVEMENT_RAM_SIZE];
         let system = vec![1u8; 0x4000];
         let save = vec![2u8; 0x8000];
-        let valid = super::plain_layout(Some(&system), Some(&save), &mut ram);
+        let valid = super::plain_layout(super::WS_SPANS, Some(&system), Some(&save), &mut ram);
         let spans: Vec<_> = valid.regions().iter().map(|r| (r.start, r.len)).collect();
         assert_eq!(spans, [(0, 0x4000), (0x10000, 0x8000)]);
         assert_eq!((ram[0x3fff], ram[0x4000], ram[0x10000]), (1, 0, 2));
         // The Lynx: 64 KB of RAM and nothing else.
         let lynx = vec![3u8; 0x10000];
-        let valid = super::plain_layout(Some(&lynx), None, &mut ram);
+        let valid = super::plain_layout(super::plain_spans(13).unwrap(), Some(&lynx), None, &mut ram);
         assert_eq!(valid.regions().len(), 1);
         assert_eq!(valid.regions()[0].len, 0x10000);
+    }
+
+    #[test]
+    fn each_plain_console_lays_its_ram_out_as_retroachievements_numbers_it() {
+        let spans = |console, system: usize, save: usize| {
+            let mut ram = vec![0u8; crate::ACHIEVEMENT_RAM_SIZE];
+            let (a, b) = (vec![1u8; system], vec![2u8; save]);
+            let valid = super::plain_layout(
+                super::plain_spans(console).unwrap(),
+                Some(&a),
+                (save > 0).then_some(&b[..]),
+                &mut ram,
+            );
+            valid.regions().iter().map(|r| (r.start, r.len)).collect::<Vec<_>>()
+        };
+        // Game Gear: Gearsystem's 8 KB, then 32 KB of cart RAM at 0x2000.
+        assert_eq!(spans(15, 0x2000, 0x8000), [(0, 0x2000), (0x2000, 0x8000)]);
+        // NeoGeo Pocket: beetle-ngp's 16 KB and no save RAM.
+        assert_eq!(spans(14, 0x4000, 0), [(0, 0x4000)]);
+        // PC Engine: the 8 KB of RAM; the 2 KB of CD backup RAM is left out.
+        assert_eq!(spans(8, 0x2000, 0x800), [(0, 0x2000)]);
+        assert!(super::plain_spans(4).is_none());
     }
 
     use super::*;

@@ -258,7 +258,7 @@ impl RetroCore for TestCore {
             sample_rate: 48000.0,
         }
     }
-    fn achievement_memory(&self, ram: &mut [u8]) -> AchievementMemory {
+    fn achievement_memory(&self, _console: u32, ram: &mut [u8]) -> AchievementMemory {
         if matches!(self.console, 4 | 6) {
             ram[0xc000] = self.value;
             AchievementMemory::new([0xc000..0xe000, 0xff80..0xffff])
@@ -1294,6 +1294,45 @@ fn a_lynx_game_is_hashed_without_its_header_as_retroachievements_does() {
         library::content_hash(&d.path().join("Tiny.ws")).unwrap(),
         format!("{:x}", md5::compute([9u8; 64]))
     );
+}
+
+#[test]
+fn a_headered_hucard_is_hashed_without_its_header_as_retroachievements_does() {
+    let d = tempfile::tempdir().unwrap();
+    let body = vec![5u8; 0x2000 * 4];
+    let mut headered = vec![1u8; 512];
+    headered.extend_from_slice(&body);
+    std::fs::write(d.path().join("Card.pce"), &headered).unwrap();
+    std::fs::write(d.path().join("Plain.pce"), &body).unwrap();
+    let want = format!("{:x}", md5::compute(&body));
+    assert_eq!(library::content_hash(&d.path().join("Card.pce")).unwrap(), want);
+    assert_eq!(library::content_hash(&d.path().join("Plain.pce")).unwrap(), want);
+    // The size rule is only the PC Engine's: a Game Gear game that size is hashed whole.
+    std::fs::write(d.path().join("Same.gg"), &headered).unwrap();
+    assert_eq!(
+        library::content_hash(&d.path().join("Same.gg")).unwrap(),
+        format!("{:x}", md5::compute(&headered))
+    );
+}
+
+#[test]
+fn ultras_systems_are_scanned_after_the_lynx_and_known_by_their_consoles() {
+    let root = configured();
+    for (shelf, name) in [("TG16", "Hu.pce"), ("NGP", "Pocket.ngc"), ("GG", "Gear.gg"), ("Lynx", "Cat.lyx")] {
+        let dir = root.path().join("Games").join(shelf);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join(name), name).unwrap();
+    }
+    use slot_store::Platform;
+    let systems: Vec<_> = library::roms(root.path()).into_iter().map(|(p, _)| p).collect();
+    assert_eq!(systems, [Platform::Lynx, Platform::Gg, Platform::Ngp, Platform::Tg16]);
+    let consoles: Vec<_> = systems.into_iter().map(library::console_of).collect();
+    assert_eq!(consoles, [13, 15, 14, 8]);
+    for console in [8, 14, 15] {
+        assert!(Game { console, ..game() }.supported_console(), "{console}");
+    }
+    // The DS isn't tracked yet.
+    assert!(!Game { console: 18, ..game() }.supported_console());
 }
 
 #[test]

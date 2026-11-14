@@ -76,8 +76,9 @@ pub(crate) const NOTICE_IDS: u32 = 100_000_000;
 
 impl Game {
     pub fn supported_console(&self) -> bool {
-        // Game Boy, Game Boy Advance, Game Boy Color; slotPlus: Atari Lynx, WonderSwan.
-        matches!(self.console, 4..=6 | 13 | 53)
+        // Game Boy, Game Boy Advance, Game Boy Color; slotPlus: Atari Lynx, WonderSwan,
+        // and Ultra's PC Engine, NeoGeo Pocket and Game Gear.
+        matches!(self.console, 4..=6 | 8 | 13 | 14 | 15 | 53)
     }
 
     /// slotPlus: RetroAchievements doesn't know this dump and sent a stand-in game.

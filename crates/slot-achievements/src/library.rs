@@ -6,7 +6,7 @@
 //! the index whether each ROM has a set, so the shelf can show a trophy without reading any
 //! set itself.
 use std::collections::{BTreeMap, HashSet};
-use std::io::Read;
+use std::io::{Read, Seek};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::{Duration, Instant, UNIX_EPOCH};
@@ -152,13 +152,32 @@ pub(crate) fn indexed(dir: &Path) -> Vec<(PathBuf, String)> {
 }
 
 /// The systems slot tracks achievements for, in the order a scan visits them.
-pub(crate) const SYSTEMS: [Platform; 5] = [
+pub(crate) const SYSTEMS: [Platform; 8] = [
     Platform::Gb,
     Platform::Gbc,
     Platform::Gba,
     Platform::Ws,
     Platform::Lynx,
+    Platform::Gg,
+    Platform::Ngp,
+    Platform::Tg16,
 ];
+
+/// slotPlus: a system's RetroAchievements console ID (rcheevos rc_consoles.h). The
+/// WonderSwan and WonderSwan Color share one, as do the NeoGeo Pocket and Pocket Color.
+pub(crate) fn console_of(platform: Platform) -> u32 {
+    match platform {
+        Platform::Gb => 4,
+        Platform::Gba | Platform::Gbav => 5,
+        Platform::Gbc => 6,
+        Platform::Tg16 => 8,
+        Platform::Lynx => 13,
+        Platform::Ngp => 14,
+        Platform::Gg => 15,
+        Platform::Nds => 18,
+        Platform::Ws => 53,
+    }
+}
 
 /// Each tracked system that has games on the card, with its ROMs in name order. Hidden
 /// files and anything the shelf wouldn't show are left out.
@@ -237,6 +256,15 @@ pub(crate) fn with_sets(dir: &Path) -> HashSet<PathBuf> {
         .collect()
 }
 
+/// slotPlus: a PC Engine HuCard with a 512-byte copier's header, told by its size as
+/// rcheevos does: `size & 512`.
+fn pce_header(path: &Path, size: u64) -> bool {
+    size & 512 != 0
+        && path
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("pce"))
+}
+
 pub(crate) fn content_hash(path: &Path) -> Result<String, String> {
     let size = path
         .metadata()
@@ -252,7 +280,11 @@ pub(crate) fn content_hash(path: &Path) -> Result<String, String> {
     // (rcheevos rc_hash), which .lnx files carry and .lyx ones don't.
     let mut head = [0; 64];
     let read = file.read(&mut head).map_err(|_| "Cannot read ROM")?;
-    if !(read == 64 && head.starts_with(b"LYNX\0")) {
+    if pce_header(path, size) {
+        // A HuCard dump 512 bytes past a multiple of 8 KB carries a copier's header, which
+        // rcheevos rc_hash_pce leaves out (as the core does).
+        file.seek(std::io::SeekFrom::Start(512)).map_err(|_| "Cannot read ROM")?;
+    } else if !(read == 64 && head.starts_with(b"LYNX\0")) {
         md5.consume(&head[..read]);
     }
     loop {
