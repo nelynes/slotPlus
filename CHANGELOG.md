@@ -6,7 +6,7 @@ slotPlus brought up to Slot 1.16.0, and a faster Nintendo DS core for slotPlusUl
 
 To upgrade, use Settings → System → Check for Updates, or replace the `System` folder on your card with the one from the zip.
 
-- Carts with no label art get their title handwritten on the plastic in marker. That includes the WonderSwan and Lynx carts (and in slotPlusUltra, every system's but the DS), which keep their gold contacts.
+- Carts with no label art get their title handwritten on the plastic in marker. That includes the WonderSwan and Lynx carts, which keep their gold contacts, and in slotPlusUltra the Game Gear, NeoGeo Pocket, TurboGrafx-16 and DS ones.
 - Frame Blending runs on the GPU, so Ghosting works on gpSP and Gambatte too. As before, it's for the Game Boy family only.
 - Nickname, a new setting under System, is the name other players see when you host a link, and link play works with Kid Mode.
 - Sound plays through a USB-C audio adapter when one is plugged in. With the picture on a TV and no adapter, sound still goes to the TV.
