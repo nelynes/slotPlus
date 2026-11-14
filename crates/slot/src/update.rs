@@ -788,7 +788,11 @@ fn fetch_until(
     )
 }
 
-pub(crate) fn fetch(url: &str, timeout: Duration, report: &mut dyn FnMut(u64)) -> Result<Vec<u8>, UpdateFail> {
+pub(crate) fn fetch(
+    url: &str,
+    timeout: Duration,
+    report: &mut dyn FnMut(u64),
+) -> Result<Vec<u8>, UpdateFail> {
     let mut body = open(url, timeout, DOWNLOAD_LIMIT)?;
     read_counted(&mut body, DOWNLOAD_LIMIT, report)
 }

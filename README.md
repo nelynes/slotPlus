@@ -8,6 +8,7 @@
 
 # New on 2.9
 
+- **Now built on Slot 1.16.0,** with handwritten titles on carts without label art, Frame Blending on the GPU and the rest of [Slot's 1.16 changes](https://github.com/slot-cfw/slot/releases/tag/v1.16.0).
 - **A faster Nintendo DS core in slotPlusUltra.** DSperate v3.3.0 with its own frame skip: Mario Kart DS now holds full speed, and leaving a DS game no longer freezes the handheld.
 
 # New on 2.8

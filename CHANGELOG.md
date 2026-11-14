@@ -1,11 +1,16 @@
 # Changelog
 
-## [1.15.3-plus2.9](https://github.com/nelynes/slotPlus/releases/tag/v1.15.3-plus2.9)
+## [1.16.0-plus2.9](https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus2.9)
 
-A faster Nintendo DS core for slotPlusUltra. slotPlus itself is unchanged from 1.15.3-plus2.8.
+slotPlus brought up to Slot 1.16.0, and a faster Nintendo DS core for slotPlusUltra. See [Slot's 1.16.0 notes](https://github.com/slot-cfw/slot/releases/tag/v1.16.0).
 
 To upgrade, use Settings → System → Check for Updates, or replace the `System` folder on your card with the one from the zip.
 
+- Carts with no label art get their title handwritten on the plastic in marker. That includes the WonderSwan and Lynx carts, which keep their gold contacts, and in slotPlusUltra the Game Gear, NeoGeo Pocket, TurboGrafx-16 and DS ones.
+- Frame Blending runs on the GPU, so Ghosting works on gpSP and Gambatte too. As before, it's for the Game Boy family only.
+- Nickname, a new setting under System, is the name other players see when you host a link, and link play works with Kid Mode.
+- Sound plays through a USB-C audio adapter when one is plugged in. With the picture on a TV and no adapter, sound still goes to the TV.
+- The Turbo Buttons setting is gone: clear Turbo A and Turbo B in Settings → Controls to turn turbo off.
 - **Nintendo DS, in slotPlusUltra:** DSperate moves to v3.3.0 with its latest libretro wrapper, and DS games now skip frames the way plorpOS does, one late frame at a time. Mario Kart DS holds 57 to 60 fps on the RG SP instead of sliding to about 35 after 20 seconds or so, and going back to the shelf from a DS game no longer freezes the handheld.
 
 ## [1.15.3-plus2.8](https://github.com/nelynes/slotPlus/releases/tag/v1.15.3-plus2.8)

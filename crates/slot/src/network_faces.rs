@@ -206,7 +206,13 @@ impl NetworkSync {
             .url
             .as_deref()
             .and_then(|url| crate::romm::qr::qr_rgba(url, slot_ui::PAIR_QR))
-            .map(|(rgba, side)| up(&UndoFace { rgba, w: side, h: side }));
+            .map(|(rgba, side)| {
+                up(&UndoFace {
+                    rgba,
+                    w: side,
+                    h: side,
+                })
+            });
         let max_w = pair_text_width(app.canvas());
         let lines = now
             .lines

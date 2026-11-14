@@ -136,9 +136,10 @@ impl Shelf {
         let mut interiors = vec![None; carts.len()];
         let mut kept = vec![false; self.carts.len()];
         for (to, cart) in carts.iter().enumerate() {
-            let from = self.carts.iter().enumerate().position(|(k, c)| {
-                !kept[k] && c.platform == cart.platform && c.stem == cart.stem
-            });
+            let from =
+                self.carts.iter().enumerate().position(|(k, c)| {
+                    !kept[k] && c.platform == cart.platform && c.stem == cart.stem
+                });
             if let Some(from) = from {
                 kept[from] = true;
                 faces[to] = self.faces[from].take();
@@ -631,7 +632,17 @@ impl Shelf {
     ) {
         let spread = part.clamp(0.0, 1.0) * canvas.w;
         let still = (0.0, 0.0, 1.0);
-        self.row(canvas, hidden, 0.0, 0.0, spread, 1.0, &|_| 0.0, &|_| still, out);
+        self.row(
+            canvas,
+            hidden,
+            0.0,
+            0.0,
+            spread,
+            1.0,
+            &|_| 0.0,
+            &|_| still,
+            out,
+        );
     }
 
     pub fn draw_row(
@@ -643,7 +654,17 @@ impl Shelf {
         dim: f32,
         out: &mut Vec<Draw>,
     ) {
-        self.row(canvas, hidden, shake, recede, 0.0, dim, &|_| 0.0, &|_| (0.0, 0.0, 1.0), out);
+        self.row(
+            canvas,
+            hidden,
+            shake,
+            recede,
+            0.0,
+            dim,
+            &|_| 0.0,
+            &|_| (0.0, 0.0, 1.0),
+            out,
+        );
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -748,7 +769,10 @@ pub fn turned(rect: [f32; 4], centre: [f32; 2], deg: f32) -> [[f32; 2]; 4] {
     let (sin, cos) = deg.to_radians().sin_cos();
     [[x, y], [x + w, y], [x + w, y + h], [x, y + h]].map(|[px, py]| {
         let (dx, dy) = (px - centre[0], py - centre[1]);
-        [centre[0] + dx * cos - dy * sin, centre[1] + dx * sin + dy * cos]
+        [
+            centre[0] + dx * cos - dy * sin,
+            centre[1] + dx * sin + dy * cos,
+        ]
     })
 }
 

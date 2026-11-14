@@ -249,13 +249,7 @@ use slot_ui::{thumbnail, Draw, Gauge, Printed, TexId};
 
 fn drawn(v: &ShotViewer, canvas: Canvas) -> Vec<Draw> {
     let mut out = Vec::new();
-    v.draw(
-        canvas,
-        Gauge::default(),
-        None,
-        Printed::default(),
-        &mut out,
-    );
+    v.draw(canvas, Gauge::default(), None, Printed::default(), &mut out);
     out
 }
 
@@ -287,9 +281,13 @@ fn thumbed(n: usize) -> ShotViewer {
 fn white_rects(out: &[Draw]) -> Vec<(f32, f32, f32, f32)> {
     out.iter()
         .filter_map(|d| match *d {
-            Draw::Rect { x, y, w, h, colour } if colour == [1.0, 1.0, 1.0, 1.0] => {
-                Some((x, y, w, h))
-            }
+            Draw::Rect {
+                x,
+                y,
+                w,
+                h,
+                colour: [1.0, 1.0, 1.0, 1.0],
+            } => Some((x, y, w, h)),
             _ => None,
         })
         .collect()
@@ -410,7 +408,7 @@ fn thumbnail_fits_whole_and_averages() {
     assert_eq!(&t[..3], &[128, 0, 128]);
     let (_, w, h) = thumbnail(&vec![0; 720 * 480 * 4], 720, 480, 218, 145);
     assert_eq!((w, h), (217, 145));
-    let (_, w, h) = thumbnail(&vec![0; 4 * 4 * 4], 4, 4, 218, 145);
+    let (_, w, h) = thumbnail(&[0; 4 * 4 * 4], 4, 4, 218, 145);
     assert_eq!((w, h), (4, 4));
 }
 
@@ -536,7 +534,7 @@ fn ticked_cells_wear_the_tick_badge() {
     let (x, y, ..) = tex_at(&out, TexId::from_raw(77)).unwrap();
     let (cw, _) = grid_cell(C720);
     assert!(
-        x > 32.0 + cw && x < 32.0 + 2.0 * cw && y >= 56.0 && y < 90.0,
+        x > 32.0 + cw && x < 32.0 + 2.0 * cw && (56.0..90.0).contains(&y),
         "{x} {y}"
     );
 }

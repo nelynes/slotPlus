@@ -20,6 +20,7 @@ fn cart() -> Cart {
         code: String::new(),
         shell: None,
         title: "POKEMON EMER".into(),
+        tags: Vec::new(),
     }
 }
 
@@ -32,6 +33,7 @@ fn pak() -> Cart {
         code: String::new(),
         shell: None,
         title: "TETRIS".into(),
+        tags: Vec::new(),
     }
 }
 
