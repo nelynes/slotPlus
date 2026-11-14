@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 
 use crate::cable::{self, Cable};
 use slot_retro::{
-    ButtonMask, Link, LinkChannel, Pointer, RetroCore, Rumble, NETPACKET_RELIABLE,
+    mask_for, ButtonMask, Link, LinkChannel, Pointer, RetroCore, Rumble, NETPACKET_RELIABLE,
 };
 
 use crate::audio::Ring;
@@ -194,7 +194,6 @@ struct Shared {
     state: AtomicU8,
     rewind: AtomicBool,
     rewind_fill: AtomicU8,
-    turbo: AtomicBool,
     /// The core takes X and Y as buttons of its own (the DS), so turbo leaves
     /// them be.
     face_xy: AtomicBool,
@@ -210,6 +209,7 @@ struct Shared {
     fast_quarters: AtomicU32,
     ff_sound: AtomicBool,
     published: AtomicU64,
+    cuts: AtomicU64,
     resume_refused: AtomicBool,
     sav_refused: AtomicBool,
     link_lost: AtomicBool,
@@ -245,9 +245,7 @@ impl Shared {
             let Some(left) = until.checked_duration_since(Instant::now()) else {
                 return Wait::Late;
             };
-            if self.stop.load(Ordering::Relaxed)
-                || !self.driven.load(Ordering::Relaxed)
-            {
+            if self.stop.load(Ordering::Relaxed) || !self.driven.load(Ordering::Relaxed) {
                 return Wait::Late;
             }
             clock = match self.clocked.wait_timeout(clock, left) {
@@ -309,7 +307,6 @@ impl EmuHandle {
             state: AtomicU8::new(CoreState::Loading as u8),
             rewind: AtomicBool::new(false),
             rewind_fill: AtomicU8::new(0),
-            turbo: AtomicBool::new(true),
             face_xy: AtomicBool::new(false),
             skip_slow: AtomicBool::new(false),
             pointer: AtomicU64::new(0),
@@ -319,6 +316,7 @@ impl EmuHandle {
             fast_quarters: AtomicU32::new(FAST_STEPS * 4),
             ff_sound: AtomicBool::new(false),
             published: AtomicU64::new(0),
+            cuts: AtomicU64::new(0),
             resume_refused: AtomicBool::new(false),
             sav_refused: AtomicBool::new(false),
             link_lost: AtomicBool::new(false),
@@ -494,6 +492,10 @@ impl EmuHandle {
         self.frames.taken()
     }
 
+    pub fn cuts(&self) -> u64 {
+        self.shared.cuts.load(Ordering::Relaxed)
+    }
+
     pub fn published_count(&self) -> u64 {
         self.shared.published.load(Ordering::Relaxed)
     }
@@ -526,10 +528,6 @@ impl EmuHandle {
 
     pub fn set_rewinding(&self, on: bool) {
         self.shared.rewind.store(on, Ordering::Relaxed);
-    }
-
-    pub fn set_turbo(&self, on: bool) {
-        self.shared.turbo.store(on, Ordering::Relaxed);
     }
 
     pub fn set_face_xy(&self, on: bool) {
@@ -814,6 +812,7 @@ impl Worker {
                             } else {
                                 match core.unserialize(&state) {
                                     Ok(()) => {
+                                        self.shared.cuts.fetch_add(1, Ordering::Relaxed);
                                         eprintln!(
                                         "slot: cable: restored {} bytes, running the host's game",
                                         state.len()
@@ -920,13 +919,8 @@ impl Worker {
                     // fast forward trims to the time it has.
                     let last = ran >= ceiling
                         || (speed == Speed::Fast && cost.last(began.elapsed(), budget));
-                    let input = if self.shared.face_xy.load(Ordering::Relaxed) || core.takes_xy() {
-                        input
-                    } else if self.shared.turbo.load(Ordering::Relaxed) {
-                        input.turbo(turbo_frame)
-                    } else {
-                        input.without_turbo()
-                    };
+                    let face_xy = self.shared.face_xy.load(Ordering::Relaxed);
+                    let input = mask_for(face_xy || core.takes_xy(), input, turbo_frame);
                     turbo_frame = turbo_frame.wrapping_add(1);
                     let ask = !last
                         || (speed == Speed::Normal
@@ -1170,9 +1164,11 @@ impl Worker {
                 if let Err(e) = core.unserialize(&self.for_core(state)) {
                     eprintln!("slot: {e}");
                 }
+                self.shared.cuts.fetch_add(1, Ordering::Relaxed);
             }
             Cmd::Refresh => match core.serialize() {
                 Ok(state) => {
+                    self.shared.cuts.fetch_add(1, Ordering::Relaxed);
                     core.set_frame_skip(true);
                     core.run_frame(ButtonMask(0));
                     core.set_frame_skip(false);
@@ -1227,7 +1223,10 @@ impl Worker {
             Cmd::SetOption(key, value) => {
                 core.set_option(&key, &value);
             }
-            Cmd::Reset => core.reset(),
+            Cmd::Reset => {
+                core.reset();
+                self.shared.cuts.fetch_add(1, Ordering::Relaxed);
+            }
             Cmd::EndLink => {
                 self.shared.link_lost.store(false, Ordering::Relaxed);
                 self.shared.peer_ended.store(false, Ordering::Relaxed);
@@ -1266,7 +1265,8 @@ impl Worker {
         let mut buf = self.frames.take_write();
         buf.clear();
         buf.extend_from_slice(video);
-        self.frames.publish(buf);
+        self.frames
+            .publish(buf, self.shared.cuts.load(Ordering::Relaxed));
         self.shared.published.fetch_add(1, Ordering::Relaxed);
         crate::latency::published();
     }
@@ -1659,11 +1659,20 @@ mod tests {
     #[test]
     fn a_tick_keeps_the_time_the_loop_sent_it() {
         let ring = Arc::new(crate::audio::Ring::new(4096));
-        let handle = EmuHandle::spawn(Box::new(slot_retro::MockCore::new()), "mock".into(), ring, None, None);
+        let handle = EmuHandle::spawn(
+            Box::new(slot_retro::MockCore::new()),
+            "mock".into(),
+            ring,
+            None,
+            None,
+        );
         let sent = Instant::now();
         handle.tick(PRESENT);
         std::thread::sleep(Duration::from_millis(40));
-        match handle.shared.next_tick(0, Instant::now() + Duration::from_millis(1)) {
+        match handle
+            .shared
+            .next_tick(0, Instant::now() + Duration::from_millis(1))
+        {
             Wait::Tick(_, at) => assert!(
                 at.duration_since(sent) < Duration::from_millis(10),
                 "the tick was stamped when the worker read it, {:?} after it was sent",
@@ -1685,8 +1694,14 @@ mod tests {
             from_fixed = from_fixed.or(lock_scale(true, &mut fixed, at, t));
             from_free = from_free.or(lock_scale(false, &mut free, at, t));
         }
-        assert_eq!(from_fixed, None, "a fixed panel period was re-measured from a late loop");
-        assert!(from_free.is_some_and(|s| s > 1.1), "a free period was not measured: {from_free:?}");
+        assert_eq!(
+            from_fixed, None,
+            "a fixed panel period was re-measured from a late loop"
+        );
+        assert!(
+            from_free.is_some_and(|s| s > 1.1),
+            "a free period was not measured: {from_free:?}"
+        );
     }
 
     #[test]

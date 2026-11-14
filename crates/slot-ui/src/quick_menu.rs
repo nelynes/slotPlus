@@ -21,7 +21,6 @@ pub enum QuickRow {
     GbColourCorrection,
     Game,
     ResumePowerOn,
-    Turbo,
     Rewind,
     GbPalette,
     Theme,
@@ -162,6 +161,7 @@ pub enum QuickRow {
     RaSetsNone,
     RaSetsBadges,
     Romm,
+    Nickname,
     RommProtocol,
     RommServer,
     RommPort,
@@ -192,7 +192,6 @@ impl QuickRow {
         QuickRow::GbColourCorrection,
         QuickRow::Game,
         QuickRow::ResumePowerOn,
-        QuickRow::Turbo,
         QuickRow::Rewind,
         QuickRow::GbPalette,
         QuickRow::Theme,
@@ -333,6 +332,7 @@ impl QuickRow {
         QuickRow::RaSetsNone,
         QuickRow::RaSetsBadges,
         QuickRow::Romm,
+        QuickRow::Nickname,
         QuickRow::RommProtocol,
         QuickRow::RommServer,
         QuickRow::RommPort,
@@ -391,9 +391,10 @@ impl QuickRow {
         QuickRow::KidShelf,
     ];
 
-    pub const SYSTEM: [QuickRow; 6] = [
+    pub const SYSTEM: [QuickRow; 7] = [
         QuickRow::Wifi,
         QuickRow::DateTime,
+        QuickRow::Nickname,
         QuickRow::LidOff,
         QuickRow::BatteryDisplay,
         QuickRow::CheckUpdates,
@@ -449,10 +450,7 @@ impl QuickRow {
         QuickRow::ShelfForget,
     ];
 
-    pub const COLLECTION_KEYS: [QuickRow; 2] = [
-        QuickRow::CollPrev,
-        QuickRow::CollNext,
-    ];
+    pub const COLLECTION_KEYS: [QuickRow; 2] = [QuickRow::CollPrev, QuickRow::CollNext];
 
     pub const CONTROLS: [QuickRow; 12] = [
         QuickRow::GameUp,
@@ -555,11 +553,10 @@ impl QuickRow {
         QuickRow::GbStretch,
     ];
 
-    pub const GAME: [QuickRow; 8] = [
+    pub const GAME: [QuickRow; 7] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Rewind,
-        QuickRow::Turbo,
         QuickRow::Rumble,
         QuickRow::LeftStick,
         QuickRow::ResumeInsert,
@@ -653,7 +650,6 @@ impl QuickRow {
             QuickRow::FastForward
             | QuickRow::FastForwardSound
             | QuickRow::Rewind
-            | QuickRow::Turbo
             | QuickRow::Rumble
             | QuickRow::LeftStick
             | QuickRow::ResumeInsert
@@ -672,7 +668,8 @@ impl QuickRow {
             | QuickRow::LidOff
             | QuickRow::BatteryDisplay
             | QuickRow::CheckUpdates
-            | QuickRow::About => &QuickRow::SYSTEM,
+            | QuickRow::About
+            | QuickRow::Nickname => &QuickRow::SYSTEM,
             QuickRow::WifiPower | QuickRow::Networks => &QuickRow::WIFI,
             QuickRow::FetchArt
             | QuickRow::Romm
@@ -715,8 +712,7 @@ impl QuickRow {
             }
             r if r.game_button().is_some() => &QuickRow::CONTROLS,
             r if r.shortcut().is_some() => &QuickRow::SHORTCUTS,
-            QuickRow::CollPrev
-            | QuickRow::CollNext => &QuickRow::COLLECTION_KEYS,
+            QuickRow::CollPrev | QuickRow::CollNext => &QuickRow::COLLECTION_KEYS,
             r if r.carousel_action().is_some() => &QuickRow::SHELF_KEYS,
             QuickRow::Shader
             | QuickRow::ColourCorrection
@@ -855,7 +851,6 @@ impl QuickRow {
             QuickRow::Game => "Gameplay",
             QuickRow::ResumeInsert => "Resume on Insert",
             QuickRow::ResumePowerOn => "Resume on Power On",
-            QuickRow::Turbo => "Turbo Buttons",
             QuickRow::Rewind => "Rewind",
             QuickRow::GbPalette => "Palette",
             QuickRow::Theme => "Theme",
@@ -899,6 +894,7 @@ impl QuickRow {
             QuickRow::RaSetsBadges => "Badges",
             QuickRow::CheckUpdates => "Check for Updates",
             QuickRow::Server => "Gamebit",
+            QuickRow::Nickname => "Nickname",
             QuickRow::Romm => "RomM",
             QuickRow::RommProtocol => "Protocol",
             QuickRow::RommServer | QuickRow::RommPairedServer => "Server",
@@ -1046,6 +1042,7 @@ impl QuickRow {
                 | QuickRow::RaPassword
                 | QuickRow::RaDownload
                 | QuickRow::Romm
+                | QuickRow::Nickname
                 | QuickRow::RommServer
                 | QuickRow::RommPort
                 | QuickRow::RommPair
@@ -1470,6 +1467,12 @@ pub fn quick_value_face(text: &str, lit: bool) -> UndoFace {
     quick_text_face(text, if lit { MENU_INK } else { DIM_INK })
 }
 
+const FAINT_INK: [u8; 3] = [0x6c, 0x6c, 0x76];
+
+pub fn quick_placeholder_face(text: &str, lit: bool) -> UndoFace {
+    quick_text_face(text, if lit { DIM_INK } else { FAINT_INK })
+}
+
 pub fn quick_warning_value_face(text: &str, lit: bool) -> UndoFace {
     let words = quick_value_face(text, lit);
     let (Some((cov, iw, ih)), Some(label)) = (
@@ -1694,16 +1697,26 @@ pub fn fetch_legends(ink: [u8; 3]) -> UndoFace {
     with_hint(button_face(ButtonLegend::B), "Stop", Some(ink), true)
 }
 
-pub fn print_stop_legend(ink: [u8; 3]) -> UndoFace {
-    let (src, w, h) = button_legend(ButtonLegend::B);
+fn small_button(which: ButtonLegend) -> UndoFace {
+    let (src, w, h) = button_legend(which);
     let side = PRINT_STOP_BUTTON;
     let rgba = crate::art::cover_rgba(src, w, h, side, side).unwrap_or_default();
-    let button = UndoFace {
+    UndoFace {
         rgba,
         w: side,
         h: side,
-    };
-    with_hint(button, "Stop", Some(ink), true)
+    }
+}
+
+pub fn print_stop_legend(ink: [u8; 3]) -> UndoFace {
+    with_hint(small_button(ButtonLegend::B), "Stop", Some(ink), true)
+}
+
+pub fn small_prompt_legends(ink: [u8; 3], no: &str, yes: &str) -> [UndoFace; 2] {
+    [
+        with_hint(small_button(ButtonLegend::B), no, Some(ink), true),
+        with_hint(small_button(ButtonLegend::A), yes, Some(ink), true),
+    ]
 }
 
 pub fn fetch_skip_legend(ink: [u8; 3]) -> UndoFace {
@@ -1983,6 +1996,7 @@ pub struct QuickMenu<'a> {
     pub achievements: [Option<[(TexId, u32, u32); 2]>; 8],
     pub romm: [Option<[(TexId, u32, u32); 2]>; 4],
     pub kid_shelf: Option<[(TexId, u32, u32); 2]>,
+    pub nickname: Option<[(TexId, u32, u32); 2]>,
     pub faces: Option<&'a QuickMenuFaces>,
     pub ground: Option<MenuGround>,
     pub palette: Option<[(TexId, u32, u32); 2]>,
@@ -2092,6 +2106,7 @@ impl QuickMenu<'_> {
                 QuickRow::RaSetsNone => self.achievements[6].map(|c| c[1]),
                 QuickRow::RaSetsBadges => self.achievements[7].map(|c| c[1]),
                 QuickRow::KidShelf => self.kid_shelf.map(|c| c[lit as usize]),
+                QuickRow::Nickname => self.nickname.map(|c| c[lit as usize]),
                 QuickRow::Palette | QuickRow::GbPalette => self.palette.map(|c| c[lit as usize]),
                 QuickRow::GbaBezel => self.gba_bezel.map(|c| c[lit as usize]),
                 QuickRow::GbBezel => self.gb_bezel.map(|c| c[lit as usize]),
@@ -2230,6 +2245,7 @@ fn scrolls(page: &[QuickRow]) -> bool {
         &QuickRow::PLAY_SCREEN,
         // General and eight consoles are more rows than fit above the legend.
         &QuickRow::SCREEN,
+        &QuickRow::SYSTEM,
     ]
     .contains(&page)
 }
@@ -2260,7 +2276,11 @@ pub fn quick_window(canvas: Canvas, selected: QuickRow, hidden: &[QuickRow]) -> 
     (start, fits)
 }
 
-pub fn quick_scroll(canvas: Canvas, selected: QuickRow, hidden: &[QuickRow]) -> Option<QuickScroll> {
+pub fn quick_scroll(
+    canvas: Canvas,
+    selected: QuickRow,
+    hidden: &[QuickRow],
+) -> Option<QuickScroll> {
     let shown = selected.shown(hidden);
     let (start, len) = quick_window(canvas, selected, hidden);
     if len >= shown.len() {

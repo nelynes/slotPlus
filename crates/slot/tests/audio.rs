@@ -438,7 +438,8 @@ impl slot_power::Platform for PowerCut {
 
 #[test]
 fn the_speaker_is_let_go_before_the_power_is_cut() {
-    let cuts: [(&str, fn(&mut slot::frontend::Frontend)); 2] = [
+    type Cut = fn(&mut slot::frontend::Frontend);
+    let cuts: [(&str, Cut); 2] = [
         ("power off", |f| f.poweroff()),
         ("restart", |f| f.restart()),
     ];
@@ -472,4 +473,16 @@ fn device_xruns_are_counted_until_the_faults_clear() {
     assert_eq!(r.xruns(), 2);
     r.clear_faults();
     assert_eq!(r.xruns(), 0);
+}
+
+#[test]
+fn a_usb_dac_replaces_the_onboard_codec() {
+    assert_eq!(
+        slot::audio::devices(Some(1), &["plug:default"]),
+        ["plughw:1,0"]
+    );
+    assert_eq!(
+        slot::audio::devices(None, &["plug:default", "hw:0,0"]),
+        ["plug:default", "hw:0,0"]
+    );
 }

@@ -208,7 +208,7 @@ impl RetroCore for Counted {
     fn run_frame(&mut self, input: ButtonMask) {
         let mut n = self.1.lock().unwrap();
         *n += 1;
-        let slow = *n % 5 == 0;
+        let slow = n.is_multiple_of(5);
         drop(n);
         std::thread::sleep(Duration::from_millis(if slow { 40 } else { 2 }));
         self.0.run_frame(input)
@@ -242,7 +242,10 @@ impl RetroCore for Counted {
 #[test]
 fn a_locked_core_that_falls_behind_runs_every_frame_it_was_ticked_for() {
     let frames = Arc::new(Mutex::new(0u32));
-    let emu = spawn(Box::new(Counted(MockCore::with_size(256, 384), frames.clone())));
+    let emu = spawn(Box::new(Counted(
+        MockCore::with_size(256, 384),
+        frames.clone(),
+    )));
     emu.set_driven(true);
     let present = Duration::from_nanos(16_666_667);
     assert!(wait_for(|| emu.locked()));

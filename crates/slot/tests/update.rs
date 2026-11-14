@@ -2,8 +2,8 @@ use std::io::{Cursor, Read, Write};
 
 use slot::update::{
     check_with, clean_baseos, clock_is_wrong, install_baseos_with, install_with, newer,
-    parse_baseos, parse_release, Device, read_counted, stage, verify, wifi_conf, will_apply, Kind, Release,
-    Running, Stoppable, Ticket, UpdateEvent, UpdateFail,
+    parse_baseos, parse_release, read_counted, stage, verify, wifi_conf, will_apply, Device, Kind,
+    Release, Running, Stoppable, Ticket, UpdateEvent, UpdateFail,
 };
 
 const DIGEST: &str = "e78b2771abbc41a07774fe870e08d3d870c1a06c6db42a1d799626190156aba5";
@@ -197,7 +197,10 @@ fn parse_release_refuses_a_release_without_the_h700_zip() {
 
 #[test]
 fn parse_release_refuses_a_manifest_without_stable() {
-    assert_eq!(parse_release(r#"{"beta": {}}"#, Device::H700), Err(UpdateFail::Bad));
+    assert_eq!(
+        parse_release(r#"{"beta": {}}"#, Device::H700),
+        Err(UpdateFail::Bad)
+    );
 }
 
 #[test]
@@ -630,16 +633,14 @@ fn clean_baseos_removes_only_our_stale_files() {
     }
 }
 
-fn ranged(
-    body: &[u8],
-    chunk: u64,
-    short_at: Option<u64>,
-) -> (
+type Ranged = (
     Result<[u8; 32], UpdateFail>,
     Vec<u8>,
     Vec<(u64, u64)>,
     Vec<u64>,
-) {
+);
+
+fn ranged(body: &[u8], chunk: u64, short_at: Option<u64>) -> Ranged {
     let mut asked = Vec::new();
     let mut out = Vec::new();
     let mut seen = Vec::new();

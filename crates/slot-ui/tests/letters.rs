@@ -58,6 +58,7 @@ fn shelf_of(names: &[&str]) -> Shelf {
                 code: String::new(),
                 shell: None,
                 title: n.to_uppercase(),
+                tags: Vec::new(),
             })
             .collect(),
     )
@@ -144,4 +145,3 @@ fn a_row_of_one_letter_stays_put() {
     s.jump_prev_letter();
     assert_eq!(s.carts[s.index].stem, "Metroid");
 }
-

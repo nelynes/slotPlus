@@ -46,6 +46,7 @@ fn brightness(d: &TempDir) -> u32 {
 
 fn platform(d: &TempDir) -> DevicePlatform {
     DevicePlatform::probe(d.path(), PathBuf::from("/mnt/sdcard"))
+        .with_sound_cards(d.path().join("asound/cards"))
 }
 
 #[test]
@@ -380,6 +381,30 @@ fn headphones_follow_the_detection_pin() {
     assert!(!platform(&d).headphones());
 }
 
+const ONBOARD_CARDS: &str =
+    " 0 [audiocodec     ]: audiocodec - audiocodec\n                      audiocodec\n";
+
+const USB_DAC_CARDS: &str = " 0 [audiocodec     ]: audiocodec - audiocodec\n                      audiocodec\n 1 [D700           ]: USB-Audio - BTD 700\n                      Sennheiser BTD 700 at usb-sunxi-ehci-1, full speed\n";
+
+#[test]
+fn a_usb_audio_card_is_found_by_its_driver() {
+    assert_eq!(slot_power::usb_card(ONBOARD_CARDS), None);
+    assert_eq!(slot_power::usb_card(""), None);
+    assert_eq!(slot_power::usb_card(USB_DAC_CARDS), Some(1));
+}
+
+#[test]
+fn a_usb_dac_counts_as_headphones() {
+    let d = sysfs("255", "87");
+    with_jack(&d, "lo");
+    let cards = d.path().join("asound/cards");
+    fs::create_dir_all(cards.parent().unwrap()).unwrap();
+    fs::write(&cards, ONBOARD_CARDS).unwrap();
+    assert!(!platform(&d).headphones());
+    fs::write(&cards, USB_DAC_CARDS).unwrap();
+    assert!(platform(&d).headphones());
+}
+
 const MOUNTS: &str = "\
 /dev/mmcblk0p5 / ext4 rw,noatime 0 0
 /dev/mmcblk0p7 /mnt/sdcard vfat ro,noatime,fmask=0022,errors=remount-ro 0 0
@@ -607,6 +632,36 @@ fn the_charging_led_is_left_to_the_kernel() {
     let mut p = platform(&d);
     p.set_led(LedState::Running);
     p.set_led(LedState::Charging);
-    assert_eq!(read(&d, "amber:charging/brightness"), "0", "slot drove the kernel's charging LED");
+    assert_eq!(
+        read(&d, "amber:charging/brightness"),
+        "0",
+        "slot drove the kernel's charging LED"
+    );
     assert_eq!(read(&d, "green:power/brightness"), "255");
+}
+
+#[test]
+fn the_bottom_screen_backlight_powers_down_and_back_on_its_own() {
+    let d = sysfs("1666", "87");
+    let top = second_panel(&d, "1666");
+    let bottom_power = d.path().join("class/backlight/backlight-lcd0/bl_power");
+    let mut p = platform(&d);
+    p.set_bottom_backlight(false);
+    assert_eq!(fs::read_to_string(&bottom_power).unwrap(), "4");
+    assert!(!top.with_file_name("bl_power").exists());
+    p.set_backlight(10);
+    assert_eq!(fs::read_to_string(&bottom_power).unwrap(), "4");
+    p.set_bottom_backlight(true);
+    assert_eq!(fs::read_to_string(&bottom_power).unwrap(), "0");
+}
+
+#[test]
+fn one_screen_has_no_bottom_backlight_to_switch() {
+    let d = sysfs("255", "87");
+    let mut p = platform(&d);
+    p.set_bottom_backlight(false);
+    assert!(!d
+        .path()
+        .join("class/backlight/backlight-lcd0/bl_power")
+        .exists());
 }

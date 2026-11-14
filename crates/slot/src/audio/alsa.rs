@@ -11,6 +11,7 @@ use super::pacer::Pacer;
 use super::ring::Ring;
 use super::silence::Silence;
 use super::sink::{AudioError, AudioSink};
+use super::usb::{devices, present_usb_card};
 
 const SND_PCM_STREAM_PLAYBACK: c_int = 0;
 const SND_PCM_FORMAT_S16_LE: c_int = 2;
@@ -32,7 +33,9 @@ const HDMI_DEVICES: [&str; 2] = ["plughw:CARD=ahubhdmi,DEV=0", "plughw:ahubhdmi"
 /// HDMI.
 pub const HDMI_ENV: &str = "SLOT_AUDIO_HDMI";
 
-fn devices() -> Vec<&'static str> {
+/// The cards to try with no USB adapter plugged in: slotPlus tries HDMI's
+/// first while the picture is on a TV.
+fn fallback_devices() -> Vec<&'static str> {
     let hdmi = std::env::var_os(HDMI_ENV).is_some();
     hdmi.then_some(HDMI_DEVICES)
         .into_iter()
@@ -40,6 +43,8 @@ fn devices() -> Vec<&'static str> {
         .chain(DEVICES)
         .collect()
 }
+
+const USB_CHECK_EVERY: Duration = Duration::from_secs(1);
 
 type PcmOpen = unsafe extern "C" fn(*mut *mut c_void, *const c_char, c_int, c_int) -> c_int;
 type PcmSetParams =
@@ -96,10 +101,10 @@ impl Alsa {
         }
     }
 
-    fn open_pcm(&self, rate: u32) -> Result<*mut c_void, AudioError> {
+    fn open_pcm(&self, rate: u32, usb: Option<u32>) -> Result<*mut c_void, AudioError> {
         let mut last = AudioError::NoDevice;
-        for name in devices() {
-            let Ok(cname) = CString::new(name) else {
+        for name in devices(usb, &fallback_devices()) {
+            let Ok(cname) = CString::new(name.as_str()) else {
                 continue;
             };
             let mut pcm: *mut c_void = std::ptr::null_mut();
@@ -222,6 +227,7 @@ struct Playback {
     rate: u32,
     failing: bool,
     follow_jack: bool,
+    usb: Option<u32>,
 }
 
 fn play(ring: &Arc<Ring>, sample_rate: u32) -> Result<Playback, AudioError> {
@@ -233,6 +239,7 @@ fn play(ring: &Arc<Ring>, sample_rate: u32) -> Result<Playback, AudioError> {
         rate: sample_rate,
         failing: false,
         follow_jack: follows_jack(std::env::var("IS_DSOS").ok().as_deref()),
+        usb: present_usb_card(),
     })
 }
 
@@ -243,6 +250,7 @@ impl Playback {
         let mut silence = Silence::quiet(RELEASE_AFTER);
         let mut pace = Pacer::new(span);
         let mut route = RouteWatch::new(std::env::var("ALSA_CONFIG_PATH").ok().as_deref());
+        let mut usb_checked = Instant::now();
         while !stop.load(Ordering::Relaxed) {
             ring.fill(&mut buf);
             let hold = silence.hear(&buf, span) || ring.awake();
@@ -251,12 +259,25 @@ impl Playback {
                 self.release();
                 eprintln!("slot: audio released to follow the new audio route");
             }
+            if usb_checked.elapsed() >= USB_CHECK_EVERY {
+                usb_checked = Instant::now();
+                let usb = present_usb_card();
+                if usb != self.usb {
+                    match usb {
+                        Some(n) => eprintln!("slot: audio moved to USB audio card {n}"),
+                        None => eprintln!("slot: audio moved off USB audio"),
+                    }
+                    self.usb = usb;
+                    self.release();
+                    self.failing = false;
+                }
+            }
             match (self.pcm, hold) {
                 (Some(_), false) if !jack.plugged() => {
                     self.release();
                     eprintln!("slot: audio released after silence");
                 }
-                (None, true) => match self.alsa.open_pcm(self.rate) {
+                (None, true) => match self.alsa.open_pcm(self.rate, self.usb) {
                     Ok(pcm) => {
                         eprintln!("slot: audio reopened at {:.1} ms", crate::boot_time::ms());
                         self.pcm = Some(pcm);
@@ -275,7 +296,10 @@ impl Playback {
                 Some(pcm) => {
                     pace.reset();
                     if !self.write(pcm, &buf, ring) {
-                        return;
+                        if self.usb.is_none() {
+                            return;
+                        }
+                        self.release();
                     }
                 }
                 None => std::thread::sleep(pace.wait(Instant::now())),

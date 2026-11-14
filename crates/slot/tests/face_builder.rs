@@ -14,6 +14,7 @@ fn cart(stem: &str) -> Cart {
         title: stem.to_uppercase(),
         code: String::new(),
         shell: None,
+        tags: Vec::new(),
     }
 }
 
@@ -95,6 +96,7 @@ fn the_selected_carts_lid_comes_from_the_label_cache() {
         title: String::new(),
         code: "BPRE".into(),
         shell: None,
+        tags: Vec::new(),
     };
     label_art(d.path(), &cart).unwrap();
     let meta = std::fs::metadata(&label).unwrap();

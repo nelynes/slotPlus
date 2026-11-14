@@ -92,7 +92,11 @@ pub fn layout(canvas_w: f32, platform: Platform) -> Layout {
         ),
         #[cfg(feature = "nds")]
         Platform::Nds => (
-            (if narrow { 268.0 } else { slot_ui::CART_W as f32 }) * slot_ui::DS_CART_W as f32
+            (if narrow {
+                268.0
+            } else {
+                slot_ui::CART_W as f32
+            }) * slot_ui::DS_CART_W as f32
                 / slot_ui::CART_W as f32,
             slot_ui::DS_CART_H as f32 / slot_ui::DS_CART_W as f32,
         ),
@@ -190,7 +194,7 @@ pub fn kind_name(kind: LabelKind) -> &'static str {
         LabelKind::Existing => "Existing",
         LabelKind::Real => "Real Label",
         LabelKind::Logo => "Logo Only",
-        LabelKind::Title => "Title",
+        LabelKind::Hand => "Handwritten",
     }
 }
 
@@ -521,14 +525,17 @@ pub fn view(s: &Studio, canvas_w: f32) -> View {
             canvas_w - LIST_INSET,
             &mut items,
         ),
-        Screen::Sheet { .. } if s.sheet.is_empty() => {
-            let line = match (s.art_failed, s.duplicates) {
+        Screen::Sheet { .. } if s.sheet.iter().all(|k| *k == LabelKind::Hand) => {
+            let line = match (s.art_failed || !s.wifi(), s.duplicates) {
                 (true, _) => "No Connection",
                 (false, true) => "No New Labels",
+                (false, false) if !s.wearing_hand() => "No Other Labels",
                 (false, false) => "No Art Found",
             };
-            let mid = (l.edge + right) / 2.0;
+            let t = tray(canvas_w, &s.cart);
+            let mid = t.printer_x + t.printer_w / 2.0;
             items.push(text(line, Style::Detail, Align::Center, mid, 197.0, 1.0));
+            items.push(Item::Sheet);
         }
         Screen::Sheet { .. } => items.push(Item::Sheet),
         Screen::Chips { target, at } => {
@@ -587,6 +594,84 @@ pub fn turned(rect: [f32; 4], centre: [f32; 2], deg: f32) -> [[f32; 2]; 4] {
     })
 }
 
+pub const MARKER_CARTS: f32 = 2.5;
+const MARKER_PAD: f32 = 12.0;
+const CAP_GAP: f32 = 8.0;
+const CAP_TILT: f32 = 6.0;
+
+pub fn marker_len(canvas_w: f32, platform: Platform) -> f32 {
+    let l = layout(canvas_w, platform);
+    l.cart_w.max(l.cart_h) * MARKER_CARTS
+}
+
+pub struct MarkerRest {
+    pub at: [f32; 2],
+    pub deg: f32,
+    pub len: f32,
+    pub cap: [f32; 2],
+    pub cap_deg: f32,
+}
+
+pub fn marker_rest(canvas_w: f32, cart: &slot_store::Cart) -> MarkerRest {
+    let l = layout(canvas_w, cart.platform);
+    let t = tray(canvas_w, cart);
+    let units = slot_ui::hand::MARKER_H as f32;
+    let thin = slot_ui::hand::MARKER_W as f32 / units;
+    let [cap_top, cap_end] = slot_ui::hand::MARKER_CAP;
+    let cap_len = cap_end - cap_top;
+    let reach = (units + CAP_GAP + cap_len) / units;
+    let inset = match cart.platform {
+        Platform::Gb | Platform::Gbc => l.cart_w * GB_ART_INSET / GB_CART_W as f32,
+        _ => 0.0,
+    };
+    let (sin, cos) = CART_TILT.to_radians().abs().sin_cos();
+    let tall = l.cart_h * cos + (l.cart_w - 2.0 * inset) * sin;
+    let low = l.cart_y + l.cart_h / 2.0 + tall / 2.0 + MARKER_PAD;
+    let below = (GRID_BOTTOM - MARKER_PAD - low).max(0.0);
+    let flat = ((l.edge - l.margin) / reach).min(below / thin);
+    let top = MARKER_PAD;
+    let gap = (t.printer_x - l.edge - 2.0 * MARKER_PAD).max(0.0);
+    let upright = ((GRID_BOTTOM - MARKER_PAD - top) / reach).min(gap / thin);
+    let most = marker_len(canvas_w, cart.platform);
+    let (centre, deg, len) = if flat >= upright {
+        (
+            [(l.margin + l.edge) / 2.0, low + below / 2.0],
+            -90.0f32,
+            flat.min(most),
+        )
+    } else {
+        (
+            [
+                (l.edge + t.printer_x) / 2.0,
+                (top + GRID_BOTTOM - MARKER_PAD) / 2.0,
+            ],
+            0.0,
+            upright.min(most),
+        )
+    };
+    let unit = len / units;
+    let along = |deg: f32, d: f32, from: [f32; 2]| {
+        let r = deg.to_radians();
+        [from[0] - r.sin() * d * unit, from[1] + r.cos() * d * unit]
+    };
+    let whole = reach * units;
+    let at = along(deg, units / 2.0 - whole / 2.0, centre);
+    let cap_mid = along(deg, whole / 2.0 - cap_len / 2.0, centre);
+    let cap_deg = if deg == 0.0 {
+        -CAP_TILT
+    } else {
+        deg + CAP_TILT
+    };
+    let cap = along(cap_deg, units / 2.0 - (cap_top + cap_end) / 2.0, cap_mid);
+    MarkerRest {
+        at,
+        deg,
+        len,
+        cap,
+        cap_deg,
+    }
+}
+
 pub fn tray(canvas_w: f32, cart: &slot_store::Cart) -> Tray {
     let l = layout(canvas_w, cart.platform);
     let well = well_of(cart);
@@ -614,7 +699,12 @@ pub fn tray(canvas_w: f32, cart: &slot_store::Cart) -> Tray {
 pub fn well_of(cart: &slot_store::Cart) -> [u32; 4] {
     #[cfg(feature = "nds")]
     if cart.platform == Platform::Nds {
-        return [slot_ui::DS_LABEL_X, slot_ui::DS_LABEL_Y, slot_ui::DS_LABEL_W, slot_ui::DS_LABEL_H];
+        return [
+            slot_ui::DS_LABEL_X,
+            slot_ui::DS_LABEL_Y,
+            slot_ui::DS_LABEL_W,
+            slot_ui::DS_LABEL_H,
+        ];
     }
     if !matches!(
         cart.platform,

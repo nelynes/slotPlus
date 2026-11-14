@@ -138,7 +138,7 @@ impl Toast {
     pub fn hold_ms(self) -> crate::hud::Millis {
         match self {
             Toast::CardRepaired | Toast::CardRepairFailed => REPAIR_HOLD_MS,
-            Toast::Duplicate(_) => WARNING_HOLD_MS,
+            Toast::Duplicate(_) | Toast::KidUnlocked => WARNING_HOLD_MS,
             Toast::TintOff | Toast::TintLow | Toast::TintMedium | Toast::TintHigh => TINT_HOLD_MS,
             _ => crate::hud::HUD_MS,
         }
@@ -175,7 +175,7 @@ impl Toast {
             Toast::NoLink => "No link support",
             Toast::NoWifi => "This device has no Wi-Fi",
             Toast::LinkEnded => "Link ended",
-            Toast::PeerEnded => "Other player ended the link",
+            Toast::PeerEnded => "Your friend unplugged",
             Toast::BiosMismatch => "BIOS does not match",
             Toast::ColourOn => "Correction On",
             Toast::ColourOff => "Correction Off",
@@ -292,7 +292,10 @@ pub fn toast_box(toast: Toast) -> (u32, u32) {
 
 fn toast_box_lines(toast: Toast, lines: usize) -> (u32, u32) {
     let s = setting(toast);
-    (s.w + 2 * HALO_PX, s.h * lines as u32 + detail_h(toast) + 2 * HALO_PX)
+    (
+        s.w + 2 * HALO_PX,
+        s.h * lines as u32 + detail_h(toast) + 2 * HALO_PX,
+    )
 }
 
 fn detail_h(toast: Toast) -> u32 {
@@ -452,7 +455,11 @@ mod tests {
                 layout.px,
                 s.w
             );
-            assert!(layout.lines.len() <= s.lines, "{t:?} took {} lines", layout.lines.len());
+            assert!(
+                layout.lines.len() <= s.lines,
+                "{t:?} took {} lines",
+                layout.lines.len()
+            );
             let w = ink_width(t);
             assert!(w <= s.w, "{:?} is {w} px wide in a {} px box", t, s.w);
         }

@@ -66,6 +66,7 @@ fn setup_with_shell(
     let compositor = Compositor::new(&surface).ok()?;
     let d = tmp_root_with_carts(&["Emerald", "Fusion"]);
     clocked(d.path());
+    common::plain_wallpaper(d.path());
     std::fs::write(d.path().join("Config/wifi.conf"), b"network={}\n").unwrap();
     if let Some(shell) = shell {
         std::fs::write(d.path().join("Config/cart_shell.txt"), shell).unwrap();
@@ -119,8 +120,8 @@ fn press(f: &mut Frontend, btn: Btn) {
 }
 
 fn first_edge(frame: &[u8], x: usize) -> usize {
-    let ground = px(frame, x, 100);
-    (100..400)
+    let ground = px(frame, x, 125);
+    (125..400)
         .find(|&y| !near(px(frame, x, y), ground, 30))
         .unwrap_or(400)
 }
@@ -172,20 +173,36 @@ fn running_with_label(f: &mut Frontend, c: &mut Compositor, d: &TempDir, art: &F
 }
 
 #[test]
-fn mid_peel_shows_paper_and_well() {
+fn a_handwritten_cart_keeps_its_ink_through_the_peel() {
     let Some((d, mut f, mut c, _s, art)) = setup() else {
         return;
     };
     let start = running_with_label(&mut f, &mut c, &d, &art);
     f.app_mut()
-        .tick_ms((start + slot::fetch_art::stage_start(Stage::Peel) + 200.0) as u64);
+        .tick_ms((start + slot::fetch_art::stage_start(Stage::Hold) + 20.0) as u64);
+    f.compose(&mut c);
+    let held = c.read_frame();
+    for (stage, at) in [(Stage::Peel, 200.0), (Stage::Toss, 130.0)] {
+        f.app_mut()
+            .tick_ms((start + slot::fetch_art::stage_start(stage) + at) as u64);
+        f.compose(&mut c);
+        let frame = c.read_frame();
+        dump(&frame, &format!("{stage:?}").to_lowercase());
+        for y in 110..320 {
+            for x in 180..540 {
+                assert_eq!(
+                    px(&frame, x, y),
+                    px(&held, x, y),
+                    "{stage:?} changed the cart at {x},{y}"
+                );
+            }
+        }
+    }
+    f.app_mut()
+        .tick_ms((start + slot::fetch_art::stage_start(Stage::Fly) + 210.0) as u64);
     f.compose(&mut c);
     let frame = c.read_frame();
-    dump(&frame, "peel");
-    let paper = (228..500)
-        .flat_map(|x| (110..300).map(move |y| (x, y)))
-        .any(|(x, y)| near(px(&frame, x, y), [0xf6, 0xf4, 0xef], 10));
-    assert!(paper, "no paper back showing mid-peel");
+    dump(&frame, "fly");
     assert!(
         !near(px(&frame, 486, 222), BLUE, 40),
         "the new label showed before it was applied"

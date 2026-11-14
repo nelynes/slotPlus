@@ -1,3 +1,4 @@
+use crate::ghost::{FrameBlend, Ghost, Lcd};
 use crate::lcd3x::ScreenEffect;
 use crate::power::{screen_brightness, screen_rect_above};
 use crate::quad::Quad;
@@ -14,7 +15,12 @@ const FULL: [f32; 4] = [0.0, 0.0, OUT_W as f32, OUT_H as f32];
 
 pub struct GamePass {
     prog: gl::types::GLuint,
-    game: gl::types::GLuint,
+    game: [gl::types::GLuint; 2],
+    at: usize,
+    held: usize,
+    blend: FrameBlend,
+    lcd: Lcd,
+    ghost: Ghost,
     u_rect: gl::types::GLint,
     u_bright: gl::types::GLint,
     u_uv: gl::types::GLint,
@@ -44,7 +50,9 @@ pub struct GamePass {
 impl GamePass {
     pub fn new() -> Result<Self, GfxError> {
         let prog = crate::shaders::program(RECT_VERT, GAME_FRAG)?;
-        let game = crate::gl::texture(SRC_W, SRC_H, gl::NEAREST, gl::CLAMP_TO_EDGE, gl::BGRA, None);
+        let game = [0, 1].map(|_| {
+            crate::gl::texture(SRC_W, SRC_H, gl::NEAREST, gl::CLAMP_TO_EDGE, gl::BGRA, None)
+        });
         let paper = crate::gl::texture(
             1,
             1,
@@ -79,6 +87,11 @@ impl GamePass {
         Ok(GamePass {
             prog,
             game,
+            at: 0,
+            held: 0,
+            blend: FrameBlend::Off,
+            lcd: Lcd::Gba,
+            ghost: Ghost::new()?,
             u_rect,
             u_bright,
             u_uv,
@@ -170,6 +183,45 @@ impl GamePass {
         self.effect = effect;
     }
 
+    pub fn set_blend(&mut self, blend: FrameBlend, quad: &Quad) {
+        if blend != self.blend {
+            self.blend = blend;
+            self.reblend(quad);
+        }
+    }
+
+    pub fn set_lcd(&mut self, lcd: Lcd, quad: &Quad) {
+        if lcd != self.lcd {
+            self.lcd = lcd;
+            self.reblend(quad);
+        }
+    }
+
+    pub fn cut(&mut self) {
+        self.held = 0;
+        self.ghost.reset();
+    }
+
+    fn reblend(&mut self, quad: &Quad) {
+        self.ghost.reset();
+        let (game, last) = (self.game[self.at], self.game[1 - self.at]);
+        if !self.blends() {
+            return;
+        }
+        match (self.blend, self.held) {
+            (_, 0) | (FrameBlend::Off, _) => {}
+            (_, 1) => self.ghost.respond(game, [0.0; 2], quad),
+            (FrameBlend::Mix, _) => {
+                self.ghost.respond(last, [0.0; 2], quad);
+                self.ghost.mix(game, last, quad);
+            }
+            (FrameBlend::Ghosting, _) => {
+                self.ghost.respond(last, [0.0; 2], quad);
+                self.ghost.respond(game, self.lcd.response(), quad);
+            }
+        }
+    }
+
     pub fn set_paper(&mut self, size: u32, gray: &[u8]) {
         let tex = crate::gl::texture(
             size,
@@ -188,30 +240,40 @@ impl GamePass {
         self.src = rect;
     }
 
-    pub fn upload(&mut self, xrgb8888: &[u8]) {
-        self.upload_sized(SRC_W, SRC_H, xrgb8888);
+    pub fn upload(&mut self, xrgb8888: &[u8], quad: &Quad) {
+        self.upload_sized(SRC_W, SRC_H, xrgb8888, quad);
     }
 
-    /// Upload a frame whose buffer is `w` x `h`. The game texture is
+    /// Upload a frame whose buffer is `w` x `h`. The game textures are
     /// reallocated when the size changes, so GBA and Game Boy keep their
-    /// 240x160 texture and only a bigger buffer pays for more.
-    pub fn upload_sized(&mut self, w: u32, h: u32, xrgb8888: &[u8]) {
+    /// 240x160 textures and only a bigger buffer pays for more. Frame
+    /// blending works at 240x160 only, the Game Boy family's size; slotPlus's
+    /// other systems never blend.
+    pub fn upload_sized(&mut self, w: u32, h: u32, xrgb8888: &[u8], quad: &Quad) {
         if xrgb8888.len() < (w * h * 4) as usize {
             return;
         }
         if (w, h) != self.src_size {
             unsafe {
-                gl::DeleteTextures(1, &self.game);
+                gl::DeleteTextures(2, self.game.as_ptr());
             }
-            self.game = crate::gl::texture(w, h, gl::NEAREST, gl::CLAMP_TO_EDGE, gl::BGRA, None);
+            for t in &mut self.game {
+                *t = crate::gl::texture(w, h, gl::NEAREST, gl::CLAMP_TO_EDGE, gl::BGRA, None);
+            }
             self.src_size = (w, h);
+            self.held = 0;
+            self.ghost.reset();
             unsafe {
                 gl::UseProgram(self.prog);
                 gl::Uniform2f(self.u_src, w as f32, h as f32);
             }
         }
+        let last = self.game[self.at];
+        self.at = 1 - self.at;
+        let game = self.game[self.at];
+        self.held = (self.held + 1).min(2);
         unsafe {
-            gl::BindTexture(gl::TEXTURE_2D, self.game);
+            gl::BindTexture(gl::TEXTURE_2D, game);
             gl::PixelStorei(gl::UNPACK_ALIGNMENT, 1);
             gl::TexSubImage2D(
                 gl::TEXTURE_2D,
@@ -225,6 +287,18 @@ impl GamePass {
                 xrgb8888.as_ptr() as *const std::ffi::c_void,
             );
         }
+        match self.blend {
+            _ if !self.blends() => {}
+            FrameBlend::Off => {}
+            FrameBlend::Mix => self.ghost.mix(game, last, quad),
+            FrameBlend::Ghosting => self.ghost.respond(game, self.lcd.response(), quad),
+        }
+    }
+
+    /// slotPlus: whether frame blending applies to the frames being shown,
+    /// which it does only at the Game Boy family's 240x160.
+    fn blends(&self) -> bool {
+        self.src_size == (SRC_W, SRC_H)
     }
 
     pub fn draw(&self, quad: &Quad) {
@@ -234,13 +308,19 @@ impl GamePass {
             }
             _ => self.src,
         };
-        self.draw_source(self.game, quad, src, self.layout, self.effect);
+        let game = self.game[self.at];
+        let shown = match self.blend {
+            _ if !self.blends() => game,
+            FrameBlend::Off => game,
+            FrameBlend::Mix | FrameBlend::Ghosting => self.ghost.texture().unwrap_or(game),
+        };
+        self.draw_source(shown, quad, src, self.layout, self.effect);
     }
 
     /// Draw another part of the game's frame somewhere else on the canvas,
     /// plain: a DS game's second screen.
     pub fn draw_inset(&self, quad: &Quad, src: [f32; 4], layout: [f32; 4]) {
-        self.draw_source(self.game, quad, src, layout, ScreenEffect::None);
+        self.draw_source(self.game[self.at], quad, src, layout, ScreenEffect::None);
     }
 
     pub fn draw_still(&self, tex: gl::types::GLuint, quad: &Quad) {
@@ -320,7 +400,7 @@ fn whole_scale(at: f32, len: f32, texels: f32, out: f32) -> (f32, f32) {
 impl Drop for GamePass {
     fn drop(&mut self) {
         unsafe {
-            gl::DeleteTextures(1, &self.game);
+            gl::DeleteTextures(2, self.game.as_ptr());
             gl::DeleteTextures(1, &self.paper);
             gl::DeleteProgram(self.prog);
         }
