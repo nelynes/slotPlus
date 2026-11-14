@@ -23,7 +23,8 @@ fn session_playing_with(keys: &ShortcutKeys) -> (Session, TempDir, Millis) {
     let d = common::tmp_root_with_carts(&["Emerald", "Fusion"]);
     write_shortcuts(d.path(), keys).expect("write shortcuts");
     common::write_retail_header(&d, "Emerald", "POKEMON RUBY", "AXVE");
-    slot_store::write_selected_core(d.path(), slot_store::Platform::Gba, "Emerald", Core::Mgba).expect("write core");
+    slot_store::write_selected_core(d.path(), slot_store::Platform::Gba, "Emerald", Core::Mgba)
+        .expect("write core");
     write_slot_state(
         d.path(),
         &SlotState {
@@ -127,7 +128,7 @@ fn colour_correction_changed_behind_the_menu_redraws_the_paused_frame() {
 }
 
 #[test]
-fn frame_blending_changed_behind_the_menu_redraws_the_paused_frame() {
+fn frame_blending_changed_behind_the_menu_reaches_the_gpu_and_leaves_the_core_paused() {
     let (mut s, _d, mut now) = session_playing();
     assert!(
         runs_at(&mut s, &mut now, Speed::Normal),
@@ -139,18 +140,10 @@ fn frame_blending_changed_behind_the_menu_redraws_the_paused_frame() {
         tap(&mut s, &mut now, btn);
     }
     assert_eq!(s.app().in_game_menu(), Some(QuickRow::Blending));
-    let shown = s.emu().map(|e| e.published_count()).expect("no core");
+    assert_eq!(s.app().frame_blend(), slot_gfx::FrameBlend::Off);
     tap(&mut s, &mut now, Btn::Right);
-    let deadline = Instant::now() + BAIL;
-    while s.emu().map(|e| e.published_count()) == Some(shown) {
-        assert!(
-            Instant::now() < deadline,
-            "the paused frame was never redrawn"
-        );
-        step(&mut s, &mut now, &[]);
-        std::thread::sleep(Duration::from_millis(1));
-    }
-    assert_eq!(s.observed_speed(), Some(Speed::Paused));
+    assert_eq!(s.app().frame_blend(), slot_gfx::FrameBlend::Mix);
+    assert!(runs_at(&mut s, &mut now, Speed::Paused));
 }
 
 #[test]

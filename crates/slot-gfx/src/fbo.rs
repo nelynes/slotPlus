@@ -136,11 +136,11 @@ impl Compositor {
     }
 
     pub fn upload_game(&mut self, xrgb8888: &[u8]) {
-        self.game.upload(xrgb8888);
+        self.game.upload(xrgb8888, &self.quad);
     }
 
     pub fn upload_game_sized(&mut self, w: u32, h: u32, xrgb8888: &[u8]) {
-        self.game.upload_sized(w, h, xrgb8888);
+        self.game.upload_sized(w, h, xrgb8888, &self.quad);
     }
 
     pub fn draw_game(&mut self) {
@@ -234,6 +234,18 @@ impl Compositor {
         self.game.set_effect(effect);
     }
 
+    pub fn set_frame_blend(&mut self, blend: crate::FrameBlend) {
+        self.game.set_blend(blend, &self.quad);
+    }
+
+    pub fn set_lcd(&mut self, lcd: crate::Lcd) {
+        self.game.set_lcd(lcd, &self.quad);
+    }
+
+    pub fn cut_frame_blend(&mut self) {
+        self.game.cut();
+    }
+
     pub fn set_picture(&mut self, rect: [f32; 4]) {
         self.game.set_picture(rect);
     }
@@ -263,7 +275,8 @@ impl Compositor {
             let [ox, oy] = self.game.origin();
             let top = self.size.1 as f32 - oy - sy * OUT_H as f32;
             let px = [ox + x * sx, top + y * sy, pw * sx, ph * sy];
-            self.overlay_pass.draw_tile(tex, (w, h), px, self.size, &self.quad);
+            self.overlay_pass
+                .draw_tile(tex, (w, h), px, self.size, &self.quad);
         }
     }
 

@@ -1,13 +1,13 @@
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use slot::frontend::Frontend;
 use slot::app::BottomSource;
-use slot::pacer::Pacer;
-use slot::screen::Screen;
+use slot::frontend::Frontend;
 use slot::input::DeviceInput;
+use slot::pacer::Pacer;
 use slot::panel_turn::{panel_turn, PanelTurn};
 use slot_gfx::hdmi::{self, CableWatch};
+use slot::screen::Screen;
 use slot_gfx::{Compositor, DsPass, DsScreen, FbdevSurface, KmsSurface, Surface};
 use slot_power::{trace_first_frame, DevicePlatform};
 
@@ -16,7 +16,6 @@ const CARD: &str = "/mnt/sdcard";
 const MIN_FRAME: Duration = Duration::from_millis(12);
 
 const STEP_TIMEOUT: Duration = Duration::from_millis(12);
-
 
 const LOG_SYNC: Duration = Duration::from_secs(1);
 
@@ -134,7 +133,9 @@ pub fn run() {
         .spawn(sync_log_writes);
     let mut drawn = false;
     let mut ds = match surface.panel_count() > 1 {
-        true => DsPass::new().map_err(|e| eprintln!("slot: ds pass: {e}")).ok(),
+        true => DsPass::new()
+            .map_err(|e| eprintln!("slot: ds pass: {e}"))
+            .ok(),
         false => None,
     };
     frontend.set_two_panels(ds.is_some());
@@ -144,7 +145,10 @@ pub fn run() {
     frontend.drive_emulator();
     let mut pacer = match surface.refresh_period() {
         Some(period) => {
-            eprintln!("slot: pace: fixed at the panel's {:.3} ms", period.as_secs_f64() * 1e3);
+            eprintln!(
+                "slot: pace: fixed at the panel's {:.3} ms",
+                period.as_secs_f64() * 1e3
+            );
             frontend.fix_present();
             Pacer::fixed(period)
         }
@@ -154,6 +158,7 @@ pub fn run() {
     let mut cable = CableWatch::new(hdmi_paths, on_tv);
     let (mut repeats, mut shown_at) = (0u32, None::<Instant>);
     let mut stages = Stages::default();
+    let mut bottom_blank = false;
     loop {
         pacer.wait();
         let began = Instant::now();
@@ -212,11 +217,16 @@ pub fn run() {
         let bottom_began = Instant::now();
         if let Some(pass) = ds.as_ref() {
             let power = frontend.ds_frame().map(|_| frontend.screen_power());
-            let drawn = match frontend.bottom_source() {
-                BottomSource::Compositor => draw_menu_below(&mut *surface, &mut frontend, &mut compositor, window),
+            let source = frontend.bottom_source();
+            let drawn = match source {
+                BottomSource::Compositor => {
+                    draw_menu_below(&mut *surface, &mut frontend, &mut compositor, window)
+                }
                 BottomSource::DsScreen => draw_bottom(&mut *surface, pass, power),
+                BottomSource::Black if bottom_blank => Ok(()),
                 BottomSource::Black => draw_bottom(&mut *surface, pass, None),
             };
+            bottom_blank = source == BottomSource::Black && drawn.is_ok();
             if let Err(e) = drawn {
                 eprintln!("slot: bottom panel: {e}");
                 ds = None;
@@ -228,7 +238,8 @@ pub fn run() {
         let dropped = pacer.swapped(work, swap_took > Duration::from_millis(1));
         if let Some(vblank) = surface.last_vblank() {
             if let Some(prev) = shown_at.replace(vblank) {
-                repeats += u32::from(vblank.saturating_duration_since(prev) > pacer.period().mul_f64(1.5));
+                repeats +=
+                    u32::from(vblank.saturating_duration_since(prev) > pacer.period().mul_f64(1.5));
             }
             pacer.lock_to(vblank);
         }
@@ -237,7 +248,13 @@ pub fn run() {
             missed += u32::from(dropped);
             early += u32::from(swap_took > pacer.period() / 2);
             stale += u32::from(late);
-            stages.add([stepped - began, rendered - stepped, swap - rendered, swap_took, bottom_took]);
+            stages.add([
+                stepped - began,
+                rendered - stepped,
+                swap - rendered,
+                swap_took,
+                bottom_took,
+            ]);
             if frames == 600 {
                 eprintln!(
                     "slot: pace: 600 frames, {repeats} repeated on the top panel, {missed} missed a latch, {early} drawn early, {stale} stale, work {:.1} ms, period {:.2} ms, {}, panel phase {}",
@@ -365,7 +382,11 @@ fn draw_menu_below(
     swapped
 }
 
-fn draw_bottom(surface: &mut dyn Surface, pass: &DsPass, power: Option<f32>) -> Result<(), slot_gfx::GfxError> {
+fn draw_bottom(
+    surface: &mut dyn Surface,
+    pass: &DsPass,
+    power: Option<f32>,
+) -> Result<(), slot_gfx::GfxError> {
     surface.select_panel(1)?;
     let panel = surface.window_size();
     match power {

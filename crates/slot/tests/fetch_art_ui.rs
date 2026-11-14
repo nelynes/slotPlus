@@ -36,7 +36,11 @@ fn the_row_asks_for_wifi_until_connected() {
     for wifi in [false, true] {
         let (_d, mut a) = booted(wifi);
         open_network(&mut a);
-        assert!(a.quick_menu().is_some_and(|r| r.page() == QuickRow::NETWORK), "wifi.conf {wifi}");
+        assert!(
+            a.quick_menu()
+                .is_some_and(|r| r.page() == QuickRow::NETWORK),
+            "wifi.conf {wifi}"
+        );
         while a.quick_menu() != Some(QuickRow::FetchArt) {
             press(&mut a, Btn::Down);
         }
@@ -653,7 +657,11 @@ fn box_run() -> (TempDir, App, FakeArt) {
 fn fetch_box_art_shows_on_two_panels_and_asks_for_the_job() {
     let (_d, a, art) = box_run();
     assert_eq!(art.asked(), vec![ArtJob::FetchBoxArt]);
-    assert!(matches!(a.fetch_art(), Some(FetchArt::Running(run)) if run.boxes), "{:?}", a.fetch_art());
+    assert!(
+        matches!(a.fetch_art(), Some(FetchArt::Running(run)) if run.boxes),
+        "{:?}",
+        a.fetch_art()
+    );
 }
 
 #[cfg(feature = "nds")]
@@ -661,14 +669,41 @@ fn fetch_box_art_shows_on_two_panels_and_asks_for_the_job() {
 fn fetch_box_art_counts_up_and_ends_on_a_summary() {
     let (_d, mut a, art) = box_run();
     art.send(&mut a, ArtEvent::Counted(2));
-    art.send(&mut a, ArtEvent::BoxLanded { stem: "Emerald".into(), platform: Platform::Gba });
+    art.send(
+        &mut a,
+        ArtEvent::BoxLanded {
+            stem: "Emerald".into(),
+            platform: Platform::Gba,
+        },
+    );
     let lines = a.fetch_art_lines();
-    assert_eq!(lines, vec!["Fetching Box Art".to_string(), "1 of 2".to_string()]);
-    art.send(&mut a, ArtEvent::Missed { stem: "Fusion".into() });
-    art.send(&mut a, ArtEvent::Done { landed: 1, missed: vec!["Fusion".into()] });
+    assert_eq!(
+        lines,
+        vec!["Fetching Box Art".to_string(), "1 of 2".to_string()]
+    );
+    art.send(
+        &mut a,
+        ArtEvent::Missed {
+            stem: "Fusion".into(),
+        },
+    );
+    art.send(
+        &mut a,
+        ArtEvent::Done {
+            landed: 1,
+            missed: vec!["Fusion".into()],
+        },
+    );
     advance(&mut a, 100.0);
     assert!(
-        matches!(a.fetch_art(), Some(FetchArt::Summary { landed: 1, featured: None, .. })),
+        matches!(
+            a.fetch_art(),
+            Some(FetchArt::Summary {
+                landed: 1,
+                featured: None,
+                ..
+            })
+        ),
         "{:?}",
         a.fetch_art()
     );
@@ -680,4 +715,68 @@ fn b_stops_fetch_box_art() {
     let (_d, mut a, art) = box_run();
     press(&mut a, Btn::B);
     assert_eq!(art.asked(), vec![ArtJob::FetchBoxArt, ArtJob::Cancel]);
+}
+
+#[test]
+fn a_handwritten_cart_keeps_its_ink_and_skips_the_peel() {
+    use slot_gfx::{Draw, TexId};
+    let (_d, mut a, art) = running();
+    art.send(&mut a, ArtEvent::Counted(1));
+    art.send(&mut a, landed("Emerald"));
+    a.tick_ms(a.now() + 1);
+    let (title, bare, done) = (
+        TexId::from_raw(60),
+        TexId::from_raw(61),
+        TexId::from_raw(62),
+    );
+    a.set_fetch_tex(
+        Platform::Gba,
+        "Emerald",
+        slot::fetch_art::FetchTex {
+            title,
+            bare,
+            done,
+            under: None,
+            w: 372,
+            h: 209,
+            inked: true,
+        },
+    );
+    for stage in [Stage::Peel, Stage::Toss, Stage::Fly, Stage::Roll] {
+        let start = match a.fetch_art() {
+            Some(FetchArt::Running(run)) => run.scene.as_ref().unwrap().started_ms,
+            _ => panic!("no scene"),
+        };
+        let at = start + slot::fetch_art::stage_start(stage) + 20.0;
+        a.tick_ms(at as u64);
+        let mut out = Vec::new();
+        a.draw(&mut out);
+        let peeled = out
+            .iter()
+            .any(|d| matches!(d, Draw::Quad { tex, .. } if *tex == title));
+        assert!(!peeled, "{stage:?} peels the ink");
+        let faces: Vec<TexId> = out
+            .iter()
+            .filter_map(|d| match d {
+                Draw::Tex { tex, .. } if [title, bare].contains(tex) => Some(*tex),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(faces, vec![title], "{stage:?} shows {faces:?}");
+    }
+}
+
+#[test]
+fn the_faces_of_a_cart_with_no_label_say_they_are_handwritten() {
+    let cart = slot_store::Cart {
+        platform: Platform::Gba,
+        stem: "Metroid Fusion".into(),
+        rom: PathBuf::from("Games/GBA/Metroid Fusion.gba"),
+        label: Some(PathBuf::from("Labels/GBA/Metroid Fusion.png")),
+        code: String::new(),
+        shell: None,
+        title: "METROID FUSION".into(),
+        tags: Vec::new(),
+    };
+    assert!(slot::fetch_faces::faces_for(&cart).inked);
 }

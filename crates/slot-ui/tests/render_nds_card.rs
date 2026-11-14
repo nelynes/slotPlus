@@ -30,6 +30,7 @@ fn ds_cart(dir: &std::path::Path, label: Option<std::path::PathBuf>) -> Cart {
         title: String::new(),
         code: String::new(),
         shell: None,
+        tags: Vec::new(),
     }
 }
 
@@ -109,8 +110,8 @@ fn the_ds_slot_is_narrower_than_the_gba_slot_and_keeps_its_ends() {
     for y in [5usize, 30, 50] {
         for x in [10usize, 200, 520, 710] {
             assert_eq!(
-                row(&gba, y, x),
-                row(&ds, y, x),
+                row(gba, y, x),
+                row(ds, y, x),
                 "the strip changed outside the mouth at {x},{y}"
             );
         }

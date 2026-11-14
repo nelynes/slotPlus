@@ -258,3 +258,35 @@ fn neogeo_pocket_roms_scan_into_one_shelf_with_no_header_title() {
     }
     std::fs::remove_dir_all(&root).ok();
 }
+
+#[test]
+fn a_cart_carries_only_the_tags_that_tell_it_from_its_twins() {
+    let d = tmp_root();
+    write_rom(&d, "GBA/Zelda (USA).gba", "ZELDA");
+    write_rom(&d, "GBA/Zelda (Europe).gba", "ZELDA");
+    write_rom(&d, "GBA/Metroid (USA).gba", "METROID");
+    write_rom(&d, "GBA/Kirby (USA, Europe).gba", "KIRBY");
+    write_rom(&d, "GBA/Kirby (USA, Europe) (Rev 1).gba", "KIRBY");
+    let carts = scan(d.path()).unwrap();
+    let tags = |stem: &str| {
+        carts
+            .iter()
+            .find(|c| c.stem == stem)
+            .map(|c| c.tags.clone())
+            .unwrap()
+    };
+    assert_eq!(tags("Zelda (USA)"), ["USA"]);
+    assert_eq!(tags("Zelda (Europe)"), ["Europe"]);
+    assert!(tags("Metroid (USA)").is_empty());
+    assert!(tags("Kirby (USA, Europe)").is_empty());
+    assert_eq!(tags("Kirby (USA, Europe) (Rev 1)"), ["Rev 1"]);
+}
+
+#[test]
+fn twins_on_different_platforms_keep_no_tags() {
+    let d = tmp_root();
+    write_rom(&d, "GBA/Tetris (USA).gba", "TETRIS");
+    write_rom(&d, "GB/Tetris (Japan).gb", "TETRIS");
+    let carts = scan(d.path()).unwrap();
+    assert!(carts.iter().all(|c| c.tags.is_empty()));
+}

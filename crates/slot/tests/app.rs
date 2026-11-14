@@ -36,6 +36,7 @@ fn app_with_carts(stems: &[&str]) -> App {
                 code: String::new(),
                 shell: None,
                 title: stem.to_uppercase(),
+                tags: Vec::new(),
             })
             .collect(),
     )
@@ -318,6 +319,7 @@ fn app_with_platforms(carts: &[(Platform, &str)]) -> App {
                 code: String::new(),
                 shell: None,
                 title: stem.to_uppercase(),
+                tags: Vec::new(),
             })
             .collect(),
     )
@@ -857,7 +859,10 @@ fn choosing_a_core_writes_it_and_closes() {
     app.apply(Action::GbaDown(Btn::Right));
     app.apply(Action::GbaDown(Btn::A));
 
-    assert_eq!(slot_store::core_for_platform(d.path(), "Emerald", Platform::Gba, Core::Mgba), Core::Gpsp);
+    assert_eq!(
+        slot_store::core_for_platform(d.path(), "Emerald", Platform::Gba, Core::Mgba),
+        Core::Gpsp
+    );
     assert_eq!(
         slot_store::core_for_platform(d.path(), "Zzz", Platform::Gba, Core::Mgba),
         Core::Mgba,
@@ -966,7 +971,10 @@ fn a_mid_hop_writes_where_the_chip_is_heading() {
     app.apply(Action::GbaDown(Btn::Right));
     app.update(0.05);
     app.apply(Action::GbaDown(Btn::A));
-    assert_eq!(slot_store::core_for_platform(d.path(), "Emerald", Platform::Gba, Core::Mgba), Core::Gpsp);
+    assert_eq!(
+        slot_store::core_for_platform(d.path(), "Emerald", Platform::Gba, Core::Mgba),
+        Core::Gpsp
+    );
 }
 
 #[test]
@@ -1020,7 +1028,10 @@ fn shutting_the_lid_closes_the_picker_without_writing() {
     app.apply(Action::GbaDown(Btn::Right));
     app.apply(Action::LidClose);
     assert_eq!(app.core_picker(), None, "the picker survived the lid");
-    assert_eq!(slot_store::core_for_platform(d.path(), "Emerald", Platform::Gba, Core::Mgba), Core::Mgba);
+    assert_eq!(
+        slot_store::core_for_platform(d.path(), "Emerald", Platform::Gba, Core::Mgba),
+        Core::Mgba
+    );
 }
 
 #[test]
@@ -1516,7 +1527,12 @@ fn the_highlighted_cart_becomes_the_lid_rather_than_a_second_cart() {
 
     let (_, lid, turn) = turned_at(&out, f.lid).expect("no lid");
     let want = grown(
-        lid_from(Canvas::FRAMED, shelf_cart_at(slot_ui::Canvas::FRAMED, rest, 1.0), 0.0).0,
+        lid_from(
+            Canvas::FRAMED,
+            shelf_cart_at(slot_ui::Canvas::FRAMED, rest, 1.0),
+            0.0,
+        )
+        .0,
         TURN_PAD as f32,
     );
     assert!(
@@ -1740,7 +1756,10 @@ fn the_open_waits_on_the_shelf_for_its_faces() {
     app.set_core_board_faces(f.board, f.lid);
     app.update(0.016);
     let out = frame(&app);
-    let shelf = grown(shelf_cart_at(slot_ui::Canvas::FRAMED, rest, 1.0), TURN_PAD as f32);
+    let shelf = grown(
+        shelf_cart_at(slot_ui::Canvas::FRAMED, rest, 1.0),
+        TURN_PAD as f32,
+    );
     let (_, lid, _) = turned_at(&out, f.lid).expect("no lid once the faces arrived");
     assert!(
         near(lid, [shelf.x, shelf.y, shelf.w, shelf.h]),

@@ -26,8 +26,15 @@ fn call_full(port: u16, method: &str, target: &str, body: &[u8]) -> (u16, String
     let mut out = Vec::new();
     let _ = s.read_to_end(&mut out);
     let text = String::from_utf8_lossy(&out).into_owned();
-    let status = text.split_whitespace().nth(1).and_then(|c| c.parse().ok()).unwrap_or(0);
-    let (head, body) = text.split_once("\r\n\r\n").map(|(h, b)| (h.to_string(), b.to_string())).unwrap_or_default();
+    let status = text
+        .split_whitespace()
+        .nth(1)
+        .and_then(|c| c.parse().ok())
+        .unwrap_or(0);
+    let (head, body) = text
+        .split_once("\r\n\r\n")
+        .map(|(h, b)| (h.to_string(), b.to_string()))
+        .unwrap_or_default();
     (status, head, body)
 }
 
@@ -60,8 +67,12 @@ fn tags_are_the_four_platforms() {
     let (status, body) = call(server.port(), "GET", "/api/tags", b"");
     assert_eq!(status, 200, "{body}");
     let v = json(&body);
-    let mut tags: Vec<String> =
-        v["tags"].as_array().unwrap().iter().map(|t| t.as_str().unwrap().to_string()).collect();
+    let mut tags: Vec<String> = v["tags"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|t| t.as_str().unwrap().to_string())
+        .collect();
     tags.sort();
     // slotPlus: every shelf, its own systems too.
     assert_eq!(tags, ["GB", "GBA", "GBAV", "GBC", "GG", "Lynx", "NDS", "NGP", "TG16", "WS"]);
@@ -92,7 +103,11 @@ fn game_lists_with_label_url() {
     let (status, head, art) = call_full(p, "GET", "/api/games/GBA/0/art", b"");
     assert_eq!(status, 200);
     assert_eq!(art, "png-bytes");
-    assert!(head.to_ascii_lowercase().contains("cache-control: public, max-age=31536000, immutable"), "{head}");
+    assert!(
+        head.to_ascii_lowercase()
+            .contains("cache-control: public, max-age=31536000, immutable"),
+        "{head}"
+    );
     let (status, body) = call(p, "GET", "/api/games/GBA/0", b"");
     assert_eq!(status, 200, "{body}");
     let detail = json(&body);
@@ -127,9 +142,18 @@ fn rename_moves_save_label_and_guide() {
     let r = d.path();
     assert!(r.join("Games/GBA/Gamma.gba").exists());
     assert!(!r.join("Games/GBA/Alpha.gba").exists());
-    assert_eq!(std::fs::read(r.join("Saves/GBA/Gamma.sav")).unwrap(), b"save-bytes");
-    assert_eq!(std::fs::read(r.join("Labels/GBA/Gamma.png")).unwrap(), b"png-bytes");
-    assert_eq!(std::fs::read(r.join("Guides/GBA/Gamma.txt")).unwrap(), b"guide text");
+    assert_eq!(
+        std::fs::read(r.join("Saves/GBA/Gamma.sav")).unwrap(),
+        b"save-bytes"
+    );
+    assert_eq!(
+        std::fs::read(r.join("Labels/GBA/Gamma.png")).unwrap(),
+        b"png-bytes"
+    );
+    assert_eq!(
+        std::fs::read(r.join("Guides/GBA/Gamma.txt")).unwrap(),
+        b"guide text"
+    );
     assert!(!r.join("Saves/GBA/Alpha.sav").exists());
     assert!(!r.join("Labels/GBA/Alpha.png").exists());
     assert!(!r.join("Guides/GBA/Alpha.txt").exists());
@@ -143,8 +167,21 @@ fn rename_refuses_bad_names_and_moves_nothing() {
     let (d, server) = start();
     library(d.path());
     let p = server.port();
-    for name in ["Gamma%20.gba", "Gamma.gba%20", "Gamma.", "..%2Fx.gba", "a%3Ab.gba", "", ".hidden.gba"] {
-        let (status, body) = call(p, "POST", &format!("/api/games/GBA/0/rename?name={name}"), b"");
+    for name in [
+        "Gamma%20.gba",
+        "Gamma.gba%20",
+        "Gamma.",
+        "..%2Fx.gba",
+        "a%3Ab.gba",
+        "",
+        ".hidden.gba",
+    ] {
+        let (status, body) = call(
+            p,
+            "POST",
+            &format!("/api/games/GBA/0/rename?name={name}"),
+            b"",
+        );
         assert!(status == 400 || status == 403, "{name}: {status} {body}");
     }
     let r = d.path();
@@ -187,8 +224,15 @@ fn delete_without_purge_keeps_save_label_and_guide() {
 fn purge_removes_save_label_and_guide() {
     let (d, server) = start();
     library(d.path());
-    StateRing::new(d.path(), Platform::Gba, Core::Mgba, "Alpha").write_resume(b"r").unwrap();
-    let (status, _) = call(server.port(), "DELETE", "/api/games/GBA/0?purge=true&rom=Alpha.gba", b"");
+    StateRing::new(d.path(), Platform::Gba, Core::Mgba, "Alpha")
+        .write_resume(b"r")
+        .unwrap();
+    let (status, _) = call(
+        server.port(),
+        "DELETE",
+        "/api/games/GBA/0?purge=true&rom=Alpha.gba",
+        b"",
+    );
     assert_eq!(status, 200);
     let r = d.path();
     assert!(!r.join("Games/GBA/Alpha.gba").exists());
@@ -204,11 +248,24 @@ fn purge_removes_save_label_and_guide() {
 fn save_upload_names_cores_with_a_resume_state() {
     let (d, server) = start();
     library(d.path());
-    StateRing::new(d.path(), Platform::Gba, Core::Mgba, "Alpha").write_resume(b"resume").unwrap();
-    let (status, body) = call(server.port(), "POST", "/api/games/GBA/0/saves?name=whatever.SAV", b"new-save");
+    StateRing::new(d.path(), Platform::Gba, Core::Mgba, "Alpha")
+        .write_resume(b"resume")
+        .unwrap();
+    let (status, body) = call(
+        server.port(),
+        "POST",
+        "/api/games/GBA/0/saves?name=whatever.SAV",
+        b"new-save",
+    );
     assert_eq!(status, 200, "{body}");
-    assert_eq!(json(&body), serde_json::json!({ "ok": true, "resumeCores": ["mGBA"] }));
-    assert_eq!(std::fs::read(d.path().join("Saves/GBA/Alpha.sav")).unwrap(), b"new-save");
+    assert_eq!(
+        json(&body),
+        serde_json::json!({ "ok": true, "resumeCores": ["mGBA"] })
+    );
+    assert_eq!(
+        std::fs::read(d.path().join("Saves/GBA/Alpha.sav")).unwrap(),
+        b"new-save"
+    );
     server.stop();
 }
 
@@ -216,10 +273,21 @@ fn save_upload_names_cores_with_a_resume_state() {
 fn save_upload_with_no_resume_reports_none() {
     let (d, server) = start();
     library(d.path());
-    let (status, body) = call(server.port(), "POST", "/api/games/GBA/1/saves?name=x.srm", b"fresh");
+    let (status, body) = call(
+        server.port(),
+        "POST",
+        "/api/games/GBA/1/saves?name=x.srm",
+        b"fresh",
+    );
     assert_eq!(status, 200, "{body}");
-    assert_eq!(json(&body), serde_json::json!({ "ok": true, "resumeCores": [] }));
-    assert_eq!(std::fs::read(d.path().join("Saves/GBA/Beta.srm")).unwrap(), b"fresh");
+    assert_eq!(
+        json(&body),
+        serde_json::json!({ "ok": true, "resumeCores": [] })
+    );
+    assert_eq!(
+        std::fs::read(d.path().join("Saves/GBA/Beta.srm")).unwrap(),
+        b"fresh"
+    );
     server.stop();
 }
 
@@ -229,7 +297,12 @@ fn resume_state_is_left_alone() {
     library(d.path());
     let ring = StateRing::new(d.path(), Platform::Gba, Core::Mgba, "Alpha");
     ring.write_resume(b"resume-bytes").unwrap();
-    call(server.port(), "POST", "/api/games/GBA/0/saves?name=a.sav", b"new-save");
+    call(
+        server.port(),
+        "POST",
+        "/api/games/GBA/0/saves?name=a.sav",
+        b"new-save",
+    );
     assert_eq!(ring.read_resume().unwrap().unwrap(), b"resume-bytes");
     server.stop();
 }
@@ -239,10 +312,18 @@ fn save_upload_with_a_bad_name_writes_nothing() {
     let (d, server) = start();
     library(d.path());
     for name in ["a%20.sav", "noext", "..%2Fa.sav"] {
-        let (status, _) = call(server.port(), "POST", &format!("/api/games/GBA/0/saves?name={name}"), b"x");
+        let (status, _) = call(
+            server.port(),
+            "POST",
+            &format!("/api/games/GBA/0/saves?name={name}"),
+            b"x",
+        );
         assert!(status == 400 || status == 403, "{name}: {status}");
     }
-    assert_eq!(std::fs::read(d.path().join("Saves/GBA/Alpha.sav")).unwrap(), b"save-bytes");
+    assert_eq!(
+        std::fs::read(d.path().join("Saves/GBA/Alpha.sav")).unwrap(),
+        b"save-bytes"
+    );
     server.stop();
 }
 
@@ -272,8 +353,16 @@ fn read(root: &Path, rel: &str) -> String {
 fn references(root: &Path) {
     put(root, "Config/favorites.txt", b"gba/Alpha\ngba/Beta\n");
     put(root, "Config/recents.txt", b"gba/Alpha\ngbc/Alpha\n");
-    put(root, "Config/cart_shell.txt", b"Alpha = auto\nBeta = auto\n");
-    put(root, "Config/guides.txt", b"GBA/Alpha.txt = 3 4 1\nGBA/Beta.txt = 1 1 1\n");
+    put(
+        root,
+        "Config/cart_shell.txt",
+        b"Alpha = auto\nBeta = auto\n",
+    );
+    put(
+        root,
+        "Config/guides.txt",
+        b"GBA/Alpha.txt = 3 4 1\nGBA/Beta.txt = 1 1 1\n",
+    );
 }
 
 #[test]
@@ -281,15 +370,28 @@ fn rename_carries_favorites_recents_shell_and_guide_spot() {
     let (d, server) = start();
     library(d.path());
     references(d.path());
-    let (status, body) = call(server.port(), "POST", "/api/games/GBA/0/rename?name=Gamma.gba", b"");
+    let (status, body) = call(
+        server.port(),
+        "POST",
+        "/api/games/GBA/0/rename?name=Gamma.gba",
+        b"",
+    );
     assert_eq!(status, 200, "{body}");
     let r = d.path();
     assert_eq!(read(r, "Config/favorites.txt"), "gba/Gamma\ngba/Beta\n");
     assert_eq!(read(r, "Config/recents.txt"), "gba/Gamma\ngbc/Alpha\n");
     let shell = read(r, "Config/cart_shell.txt");
-    assert!(shell.contains("Gamma = auto") && shell.contains("Beta = auto") && !shell.contains("Alpha"), "{shell}");
+    assert!(
+        shell.contains("Gamma = auto") && shell.contains("Beta = auto") && !shell.contains("Alpha"),
+        "{shell}"
+    );
     let spots = read(r, "Config/guides.txt");
-    assert!(spots.contains("GBA/Gamma.txt = 3 4 1") && spots.contains("GBA/Beta.txt") && !spots.contains("Alpha"), "{spots}");
+    assert!(
+        spots.contains("GBA/Gamma.txt = 3 4 1")
+            && spots.contains("GBA/Beta.txt")
+            && !spots.contains("Alpha"),
+        "{spots}"
+    );
     server.stop();
 }
 
@@ -298,15 +400,26 @@ fn purge_removes_favorites_recents_shell_and_guide_spot() {
     let (d, server) = start();
     library(d.path());
     references(d.path());
-    let (status, body) = call(server.port(), "DELETE", "/api/games/GBA/0?purge=true&rom=Alpha.gba", b"");
+    let (status, body) = call(
+        server.port(),
+        "DELETE",
+        "/api/games/GBA/0?purge=true&rom=Alpha.gba",
+        b"",
+    );
     assert_eq!(status, 200, "{body}");
     let r = d.path();
     assert_eq!(read(r, "Config/favorites.txt"), "gba/Beta\n");
     assert_eq!(read(r, "Config/recents.txt"), "gbc/Alpha\n");
     let shell = read(r, "Config/cart_shell.txt");
-    assert!(shell.contains("Beta") && !shell.contains("Alpha"), "{shell}");
+    assert!(
+        shell.contains("Beta") && !shell.contains("Alpha"),
+        "{shell}"
+    );
     let spots = read(r, "Config/guides.txt");
-    assert!(spots.contains("Beta") && !spots.contains("Alpha"), "{spots}");
+    assert!(
+        spots.contains("Beta") && !spots.contains("Alpha"),
+        "{spots}"
+    );
     server.stop();
 }
 
@@ -316,7 +429,10 @@ fn delete_without_purge_leaves_references() {
     library(d.path());
     references(d.path());
     call(server.port(), "DELETE", "/api/games/GBA/0", b"");
-    assert_eq!(read(d.path(), "Config/favorites.txt"), "gba/Alpha\ngba/Beta\n");
+    assert_eq!(
+        read(d.path(), "Config/favorites.txt"),
+        "gba/Alpha\ngba/Beta\n"
+    );
     server.stop();
 }
 
@@ -357,10 +473,20 @@ fn save_upload_takes_only_sav_and_srm() {
     let (d, server) = start();
     library(d.path());
     for name in ["a.exe", "a.sh", "a.txt", "a.state"] {
-        let (status, _) = call(server.port(), "POST", &format!("/api/games/GBA/0/saves?name={name}"), b"x");
+        let (status, _) = call(
+            server.port(),
+            "POST",
+            &format!("/api/games/GBA/0/saves?name={name}"),
+            b"x",
+        );
         assert_eq!(status, 400, "{name}");
     }
-    assert_eq!(std::fs::read_dir(d.path().join("Saves/GBA")).unwrap().count(), 1);
+    assert_eq!(
+        std::fs::read_dir(d.path().join("Saves/GBA"))
+            .unwrap()
+            .count(),
+        1
+    );
     server.stop();
 }
 
@@ -376,7 +502,12 @@ fn guides_list_download_upload_and_delete() {
     assert_eq!((status, body.as_str()), (200, "guide text"));
     let (_, body) = call(p, "GET", "/api/games/GBA/1/guides", b"");
     assert_eq!(json(&body)["files"].as_array().unwrap().len(), 0);
-    let (status, _) = call(p, "POST", "/api/games/GBA/1/guides?name=whatever.txt", b"beta guide");
+    let (status, _) = call(
+        p,
+        "POST",
+        "/api/games/GBA/1/guides?name=whatever.txt",
+        b"beta guide",
+    );
     assert_eq!(status, 200);
     assert_eq!(read(d.path(), "Guides/GBA/Beta.txt"), "beta guide");
     let (status, _) = call(p, "POST", "/api/games/GBA/1/guides?name=x.pdf", b"nope");
@@ -392,7 +523,12 @@ fn guides_list_download_upload_and_delete() {
 fn art_upload_caches_the_label_for_the_shelf() {
     let (d, server) = start();
     library(d.path());
-    let (status, _) = call(server.port(), "POST", "/api/games/GBA/1/art?name=cover.png", b"\x89PNG\r\n\x1a\nrest");
+    let (status, _) = call(
+        server.port(),
+        "POST",
+        "/api/games/GBA/1/art?name=cover.png",
+        b"\x89PNG\r\n\x1a\nrest",
+    );
     assert_eq!(status, 200);
     assert!(d.path().join("Cache/Labels/GBA/Beta.lz4").exists());
     server.stop();
@@ -414,7 +550,11 @@ fn art_upload_over_a_label_learned_at_boot_shows_the_new_label() {
     let (d, server) = start();
     let root = d.path();
     put(root, "Games/GBA/Gamma.gba", b"gamma-rom");
-    put(root, "Labels/GBA/Gamma.png", &solid_png(640, 330, [200, 10, 10]));
+    put(
+        root,
+        "Labels/GBA/Gamma.png",
+        &solid_png(640, 330, [200, 10, 10]),
+    );
     slot::label_cache::learn_stamps(root);
     let cart = slot_store::Cart {
         platform: Platform::Gba,
@@ -424,11 +564,23 @@ fn art_upload_over_a_label_learned_at_boot_shows_the_new_label() {
         title: String::new(),
         code: String::new(),
         shell: None,
+        tags: Vec::new(),
     };
-    assert_eq!(&slot::label_cache::label_art(root, &cart).unwrap()[..3], &[200, 10, 10]);
-    let (status, _) = call(server.port(), "POST", "/api/games/GBA/0/art?name=new.png", &solid_png(640, 330, [10, 10, 200]));
+    assert_eq!(
+        &slot::label_cache::label_art(root, &cart).unwrap()[..3],
+        &[200, 10, 10]
+    );
+    let (status, _) = call(
+        server.port(),
+        "POST",
+        "/api/games/GBA/0/art?name=new.png",
+        &solid_png(640, 330, [10, 10, 200]),
+    );
     assert_eq!(status, 200);
-    assert_eq!(&slot::label_cache::label_art(root, &cart).unwrap()[..3], &[10, 10, 200]);
+    assert_eq!(
+        &slot::label_cache::label_art(root, &cart).unwrap()[..3],
+        &[10, 10, 200]
+    );
     server.stop();
 }
 
@@ -440,10 +592,16 @@ fn art_upload_replaces_the_label_and_delete_removes_it() {
     let png = b"\x89PNG\r\n\x1a\nrest";
     let (status, _) = call(p, "POST", "/api/games/GBA/1/art?name=cover.jpg", png);
     assert_eq!(status, 200);
-    assert_eq!(std::fs::read(d.path().join("Labels/GBA/Beta.png")).unwrap(), png);
+    assert_eq!(
+        std::fs::read(d.path().join("Labels/GBA/Beta.png")).unwrap(),
+        png
+    );
     let (status, _) = call(p, "POST", "/api/games/GBA/0/art?name=x.png", b"not a png");
     assert_eq!(status, 400);
-    assert_eq!(std::fs::read(d.path().join("Labels/GBA/Alpha.png")).unwrap(), b"png-bytes");
+    assert_eq!(
+        std::fs::read(d.path().join("Labels/GBA/Alpha.png")).unwrap(),
+        b"png-bytes"
+    );
     let (status, _) = call(p, "DELETE", "/api/games/GBA/0/art", b"");
     assert_eq!(status, 200);
     assert!(!d.path().join("Labels/GBA/Alpha.png").exists());
@@ -472,9 +630,16 @@ fn resume_names(platform: Platform, tag: &str, file: &str) -> serde_json::Value 
     let (d, server) = start();
     put(d.path(), &format!("Games/{tag}/{file}"), b"rom");
     for core in Core::ALL {
-        StateRing::new(d.path(), platform, core, "Alpha").write_resume(b"r").unwrap();
+        StateRing::new(d.path(), platform, core, "Alpha")
+            .write_resume(b"r")
+            .unwrap();
     }
-    let (status, body) = call(server.port(), "POST", &format!("/api/games/{tag}/0/saves?name=a.sav"), b"x");
+    let (status, body) = call(
+        server.port(),
+        "POST",
+        &format!("/api/games/{tag}/0/saves?name=a.sav"),
+        b"x",
+    );
     assert_eq!(status, 200, "{body}");
     server.stop();
     json(&body)["resumeCores"].clone()
@@ -482,12 +647,18 @@ fn resume_names(platform: Platform, tag: &str, file: &str) -> serde_json::Value 
 
 #[test]
 fn a_gb_game_lists_mgba_and_gambatte_only() {
-    assert_eq!(resume_names(Platform::Gb, "GB", "Alpha.gb"), serde_json::json!(["mGBA", "Gambatte"]));
+    assert_eq!(
+        resume_names(Platform::Gb, "GB", "Alpha.gb"),
+        serde_json::json!(["mGBA", "Gambatte"])
+    );
 }
 
 #[test]
 fn a_gba_game_lists_mgba_and_gpsp_only() {
-    assert_eq!(resume_names(Platform::Gba, "GBA", "Alpha.gba"), serde_json::json!(["mGBA", "gpSP"]));
+    assert_eq!(
+        resume_names(Platform::Gba, "GBA", "Alpha.gba"),
+        serde_json::json!(["mGBA", "gpSP"])
+    );
 }
 
 fn collections(root: &Path) {
@@ -504,10 +675,21 @@ fn rename_carries_collections() {
     let other = d.path().join("Collections/Other.txt");
     let stamp = std::fs::metadata(&other).unwrap().modified().unwrap();
     std::thread::sleep(std::time::Duration::from_millis(20));
-    let (status, body) = call(server.port(), "POST", "/api/games/GBA/0/rename?name=Gamma.gba", b"");
+    let (status, body) = call(
+        server.port(),
+        "POST",
+        "/api/games/GBA/0/rename?name=Gamma.gba",
+        b"",
+    );
     assert_eq!(status, 200, "{body}");
-    assert_eq!(read(d.path(), "Collections/Puzzlers.txt"), "gba/Gamma\ngb/Beta\n");
-    assert_eq!(std::fs::metadata(&other).unwrap().modified().unwrap(), stamp);
+    assert_eq!(
+        read(d.path(), "Collections/Puzzlers.txt"),
+        "gba/Gamma\ngb/Beta\n"
+    );
+    assert_eq!(
+        std::fs::metadata(&other).unwrap().modified().unwrap(),
+        stamp
+    );
     server.stop();
 }
 
@@ -515,8 +697,17 @@ fn rename_carries_collections() {
 fn rename_onto_a_game_already_collected_keeps_one() {
     let (d, server) = start();
     library(d.path());
-    put(d.path(), "Collections/Puzzlers.txt", b"gba/Alpha\ngba/Gamma\n");
-    let (status, body) = call(server.port(), "POST", "/api/games/GBA/0/rename?name=Gamma.gba", b"");
+    put(
+        d.path(),
+        "Collections/Puzzlers.txt",
+        b"gba/Alpha\ngba/Gamma\n",
+    );
+    let (status, body) = call(
+        server.port(),
+        "POST",
+        "/api/games/GBA/0/rename?name=Gamma.gba",
+        b"",
+    );
     assert_eq!(status, 200, "{body}");
     assert_eq!(read(d.path(), "Collections/Puzzlers.txt"), "gba/Gamma\n");
     server.stop();
@@ -527,7 +718,12 @@ fn purge_removes_from_collections() {
     let (d, server) = start();
     library(d.path());
     collections(d.path());
-    let (status, body) = call(server.port(), "DELETE", "/api/games/GBA/0?purge=true&rom=Alpha.gba", b"");
+    let (status, body) = call(
+        server.port(),
+        "DELETE",
+        "/api/games/GBA/0?purge=true&rom=Alpha.gba",
+        b"",
+    );
     assert_eq!(status, 200, "{body}");
     assert_eq!(read(d.path(), "Collections/Puzzlers.txt"), "gb/Beta\n");
     assert_eq!(read(d.path(), "Collections/Other.txt"), "gb/Beta\n");

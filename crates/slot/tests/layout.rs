@@ -26,6 +26,7 @@ fn app_on(platform: Platform, stems: &[&str], panel: (u32, u32)) -> App {
                 code: String::new(),
                 shell: None,
                 title: stem.to_uppercase(),
+                tags: Vec::new(),
             })
             .collect(),
     );

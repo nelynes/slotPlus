@@ -273,7 +273,7 @@ fn stop_during_rip_finishes_leaving_the_screen() {
     let mut t = stop;
     while !s.done(t) {
         t += 1;
-        assert!(s.frame(t).paper.map_or(true, |p| !p.bow), "at {t}");
+        assert!(s.frame(t).paper.is_none_or(|p| !p.bow), "at {t}");
     }
     smooth_from(&s, stop);
     let mut cues = Vec::new();

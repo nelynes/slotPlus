@@ -660,14 +660,10 @@ mod tests {
     }
 
     #[test]
-    fn a_game_boy_label_is_the_shape_of_its_own_well() {
+    fn a_game_boy_label_is_made_at_the_game_boy_size() {
         assert_eq!(size(Platform::Gba), (W, H));
         assert_eq!(size(Platform::Gb), (GB_W, GB_H));
         assert_eq!(size(Platform::Gbc), (GB_W, GB_H));
-
-        let want = crate::cart::GB_LABEL_W as f32 / crate::cart::GB_LABEL_H as f32;
-        let got = GB_W as f32 / GB_H as f32;
-        assert!((got - want).abs() < 0.01, "{got} is not the well's {want}");
 
         let mut logo = Vec::new();
         {

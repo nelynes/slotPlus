@@ -22,7 +22,8 @@ fn text(host: Option<&str>, ip: &str) -> ReceiptText {
 
 fn dark(f: &UndoFace, x: u32, y: u32) -> bool {
     let i = ((y * f.w + x) * 4) as usize;
-    f.rgba[i + 3] > 200 && (f.rgba[i] as u32 + f.rgba[i + 1] as u32 + f.rgba[i + 2] as u32) < 3 * 140
+    f.rgba[i + 3] > 200
+        && (f.rgba[i] as u32 + f.rgba[i + 1] as u32 + f.rgba[i + 2] as u32) < 3 * 140
 }
 
 fn ink_rows(f: &UndoFace) -> Vec<u32> {
@@ -73,7 +74,7 @@ fn no_host_omits_the_line() {
     let m = modules(URL);
     let with = receipt_face(&m, &text(Some("GAMEBIT.LOCAL"), "192.168.1.42"));
     let without = receipt_face(&m, &text(None, "192.168.1.42"));
-    let last = |f: &UndoFace| ink_rows(f).into_iter().filter(|y| *y < 368).last().unwrap();
+    let last = |f: &UndoFace| ink_rows(f).into_iter().rfind(|y| *y < 368).unwrap();
     assert!(last(&without) < last(&with));
 }
 
@@ -108,12 +109,14 @@ fn blank_face_is_paper_sized_with_text() {
 #[test]
 fn qr_decodes_from_the_face() {
     let f = receipt_face(&modules(URL), &text(Some("GAMEBIT.LOCAL"), "192.168.1.42"));
-    let mut img = rqrr::PreparedImage::prepare_from_greyscale(f.w as usize, f.h as usize, |x, y| {
-        let i = (y * f.w as usize + x) * 4;
-        let a = f.rgba[i + 3] as u32;
-        let g = (f.rgba[i] as u32 * 30 + f.rgba[i + 1] as u32 * 59 + f.rgba[i + 2] as u32 * 11) / 100;
-        ((g * a + 255 * (255 - a)) / 255) as u8
-    });
+    let mut img =
+        rqrr::PreparedImage::prepare_from_greyscale(f.w as usize, f.h as usize, |x, y| {
+            let i = (y * f.w as usize + x) * 4;
+            let a = f.rgba[i + 3] as u32;
+            let g = (f.rgba[i] as u32 * 30 + f.rgba[i + 1] as u32 * 59 + f.rgba[i + 2] as u32 * 11)
+                / 100;
+            ((g * a + 255 * (255 - a)) / 255) as u8
+        });
     let grids = img.detect_grids();
     assert_eq!(grids.len(), 1);
     let (_, content) = grids[0].decode().unwrap();
