@@ -17,11 +17,12 @@ pub enum Core {
     Gearsystem,
     Ngp,
     Pce,
+    Pokemini,
     Dsperate,
 }
 
 impl Core {
-    pub const ALL: [Core; 9] = [
+    pub const ALL: [Core; 10] = [
         Core::Mgba,
         Core::Gpsp,
         Core::Gambatte,
@@ -31,6 +32,7 @@ impl Core {
         Core::Ngp,
         Core::Pce,
         Core::Dsperate,
+        Core::Pokemini,
     ];
 
     pub fn as_str(&self) -> &'static str {
@@ -43,6 +45,7 @@ impl Core {
             Core::Gearsystem => "gearsystem",
             Core::Ngp => "ngp",
             Core::Pce => "pce",
+            Core::Pokemini => "pokemini",
             Core::Dsperate => "dsperate",
         }
     }
@@ -61,6 +64,7 @@ impl Core {
             Core::Gearsystem => "Gearsystem",
             Core::Ngp => "Beetle NeoPop",
             Core::Pce => "Beetle PCE Fast",
+            Core::Pokemini => "PokeMini",
             Core::Dsperate => "DSperate",
         }
     }
@@ -75,6 +79,7 @@ impl Core {
             "gearsystem" => Some(Core::Gearsystem),
             "ngp" => Some(Core::Ngp),
             "pce" => Some(Core::Pce),
+            "pokemini" => Some(Core::Pokemini),
             "dsperate" => Some(Core::Dsperate),
             _ => None,
         }
@@ -96,6 +101,7 @@ impl Core {
             Core::Ngp => platform == Platform::Ngp,
             Core::Pce => platform == Platform::Tg16,
             Core::Dsperate => platform == Platform::Nds,
+            Core::Pokemini => platform == Platform::Pm,
         }
     }
 
@@ -123,6 +129,7 @@ impl Core {
             Platform::Gg => Core::Gearsystem,
             Platform::Ngp => Core::Ngp,
             Platform::Tg16 => Core::Pce,
+            Platform::Pm => Core::Pokemini,
             Platform::Nds => Core::Dsperate,
         }
     }

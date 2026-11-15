@@ -70,6 +70,10 @@ pub enum QuickRow {
     ScreenNds,
     NdsShader,
     NdsBezel,
+    ScreenPm,
+    PmShader,
+    PmBezel,
+    PmFullScreen,
     General,
     ShelfPrev,
     ShelfNext,
@@ -179,7 +183,7 @@ pub enum QuickRow {
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 165 + cfg!(feature = "nds") as usize] = [
+    pub const ALL: [QuickRow; 169 + cfg!(feature = "nds") as usize] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -241,6 +245,10 @@ impl QuickRow {
         QuickRow::ScreenNds,
         QuickRow::NdsShader,
         QuickRow::NdsBezel,
+        QuickRow::ScreenPm,
+        QuickRow::PmShader,
+        QuickRow::PmBezel,
+        QuickRow::PmFullScreen,
         QuickRow::General,
         QuickRow::ShelfPrev,
         QuickRow::ShelfNext,
@@ -489,7 +497,7 @@ impl QuickRow {
         QuickRow::ScSunlightUp,
     ];
 
-    pub const SCREEN: [QuickRow; 10] = [
+    pub const SCREEN: [QuickRow; 11] = [
         QuickRow::ScreenGeneral,
         QuickRow::ScreenGba,
         QuickRow::ScreenGbc,
@@ -500,6 +508,7 @@ impl QuickRow {
         QuickRow::ScreenNgp,
         QuickRow::ScreenTg16,
         QuickRow::ScreenNds,
+        QuickRow::ScreenPm,
     ];
 
     pub const SCREEN_GENERAL: [QuickRow; 4] = [
@@ -522,6 +531,12 @@ impl QuickRow {
 
     pub const SCREEN_TG16: [QuickRow; 2] = [QuickRow::Tg16Shader, QuickRow::Tg16Bezel];
     pub const SCREEN_NDS: [QuickRow; 2] = [QuickRow::NdsShader, QuickRow::NdsBezel];
+
+    pub const SCREEN_PM: [QuickRow; 3] = [
+        QuickRow::PmShader,
+        QuickRow::PmBezel,
+        QuickRow::PmFullScreen,
+    ];
 
     pub const SCREEN_GBA: [QuickRow; 6] = [
         QuickRow::GbaShader,
@@ -611,7 +626,8 @@ impl QuickRow {
             | QuickRow::ScreenGg
             | QuickRow::ScreenNgp
             | QuickRow::ScreenTg16
-            | QuickRow::ScreenNds => &QuickRow::SCREEN,
+            | QuickRow::ScreenNds
+            | QuickRow::ScreenPm => &QuickRow::SCREEN,
             QuickRow::Brightness
             | QuickRow::BlueLight
             | QuickRow::Saturation
@@ -626,6 +642,7 @@ impl QuickRow {
             QuickRow::NgpShader | QuickRow::NgpBezel => &QuickRow::SCREEN_NGP,
             QuickRow::Tg16Shader | QuickRow::Tg16Bezel => &QuickRow::SCREEN_TG16,
             QuickRow::NdsShader | QuickRow::NdsBezel => &QuickRow::SCREEN_NDS,
+            QuickRow::PmShader | QuickRow::PmBezel | QuickRow::PmFullScreen => &QuickRow::SCREEN_PM,
             QuickRow::GbaShader
             | QuickRow::GbaOverlay
             | QuickRow::GbaColourCorrection
@@ -739,6 +756,7 @@ impl QuickRow {
             QuickRow::NgpShader => Some(QuickRow::ScreenNgp),
             QuickRow::Tg16Shader => Some(QuickRow::ScreenTg16),
             QuickRow::NdsShader => Some(QuickRow::ScreenNds),
+            QuickRow::PmShader => Some(QuickRow::ScreenPm),
             QuickRow::FastForward => Some(QuickRow::Game),
             QuickRow::PlayScreen => Some(QuickRow::Settings),
             QuickRow::Shader => Some(QuickRow::PlayScreen),
@@ -809,6 +827,7 @@ impl QuickRow {
             QuickRow::ScreenNgp => Some(QuickRow::SCREEN_NGP[0]),
             QuickRow::ScreenTg16 => Some(QuickRow::SCREEN_TG16[0]),
             QuickRow::ScreenNds => Some(QuickRow::SCREEN_NDS[0]),
+            QuickRow::ScreenPm => Some(QuickRow::SCREEN_PM[0]),
             _ => None,
         }
     }
@@ -984,6 +1003,10 @@ impl QuickRow {
             QuickRow::ScreenNds => "Nintendo DS",
             QuickRow::NdsShader => "Shader",
             QuickRow::NdsBezel => "Bezel",
+            QuickRow::ScreenPm => "Pokémon mini",
+            QuickRow::PmShader => "Shader",
+            QuickRow::PmBezel => "Bezel",
+            QuickRow::PmFullScreen => "Full Screen",
             QuickRow::GbaOverlay
             | QuickRow::GbOverlay
             | QuickRow::GbcOverlay
@@ -1031,6 +1054,7 @@ impl QuickRow {
                 | QuickRow::ScreenNgp
                 | QuickRow::ScreenTg16
                 | QuickRow::ScreenNds
+                | QuickRow::ScreenPm
                 | QuickRow::ScreenGeneral
                 | QuickRow::Network
                 | QuickRow::Wifi
@@ -1418,6 +1442,13 @@ pub const WS_TURBO_LABELS: [&str; 2] = ["X Button", "Y Button"];
 
 pub fn ws_turbo_label_faces() -> [[UndoFace; 2]; 2] {
     WS_TURBO_LABELS.map(|t| [DIM_INK, MENU_INK].map(|ink| quick_text_face(t, ink)))
+}
+
+/// The Pokémon mini's own names for the L, R and Select rows on the In-Game controls page.
+pub const PM_BUTTON_LABELS: [&str; 3] = ["Shake", "C Button", "Power"];
+
+pub fn pm_button_label_faces() -> [[UndoFace; 2]; 3] {
+    PM_BUTTON_LABELS.map(|t| [DIM_INK, MENU_INK].map(|ink| quick_text_face(t, ink)))
 }
 
 fn cap_centre(label: &fontdue::Font, h: u32) -> f32 {
@@ -1973,6 +2004,8 @@ pub struct QuickMenuFaces {
     pub labels: Vec<[(TexId, u32, u32); 2]>,
     /// The Turbo A and Turbo B labels for a WonderSwan game, see `WS_TURBO_LABELS`.
     pub ws_turbo_labels: [FacePair; 2],
+    /// The L, R and Select labels for a Pokémon mini game, see `PM_BUTTON_LABELS`.
+    pub pm_labels: [FacePair; 3],
     pub pointer: (TexId, u32, u32),
     pub values: Vec<[(TexId, u32, u32); 2]>,
     pub legend: [(TexId, u32); 8],
@@ -1987,6 +2020,8 @@ pub struct QuickMenu<'a> {
     pub disabled: &'a [QuickRow],
     /// A WonderSwan game is playing, so the turbo rows are named X and Y.
     pub ws_buttons: bool,
+    /// A Pokémon mini game is in the slot: L, R and Select take its own names.
+    pub pm_buttons: bool,
     pub values: [Option<QuickValue>; QuickRow::ALL.len()],
     pub clock: Option<[(TexId, u32, u32); 2]>,
     pub wallpaper: Option<[(TexId, u32, u32); 2]>,
@@ -2041,9 +2076,12 @@ impl QuickMenu<'_> {
         let Some(faces) = self.faces else {
             return;
         };
-        let label = |row: QuickRow| match (self.ws_buttons, row) {
-            (true, QuickRow::GameTurboA) => Some(&faces.ws_turbo_labels[0]),
-            (true, QuickRow::GameTurboB) => Some(&faces.ws_turbo_labels[1]),
+        let label = |row: QuickRow| match (self.ws_buttons, self.pm_buttons, row) {
+            (true, _, QuickRow::GameTurboA) => Some(&faces.ws_turbo_labels[0]),
+            (true, _, QuickRow::GameTurboB) => Some(&faces.ws_turbo_labels[1]),
+            (_, true, QuickRow::GameL) => Some(&faces.pm_labels[0]),
+            (_, true, QuickRow::GameR) => Some(&faces.pm_labels[1]),
+            (_, true, QuickRow::GameSelect) => Some(&faces.pm_labels[2]),
             _ => faces.labels.get(row.index()),
         };
         let (right, pad) = (self.canvas.w - QUICK_EDGE, MENU_PAD as f32);

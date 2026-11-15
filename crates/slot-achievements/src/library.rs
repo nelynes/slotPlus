@@ -176,6 +176,8 @@ pub(crate) fn console_of(platform: Platform) -> u32 {
         Platform::Gg => 15,
         Platform::Nds => 18,
         Platform::Ws => 53,
+        // Not tracked: no SYSTEMS entry, so never scanned or loaded.
+        Platform::Pm => 24,
     }
 }
 

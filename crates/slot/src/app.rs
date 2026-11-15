@@ -793,7 +793,7 @@ pub struct App {
     kid_icon_faces: Option<[(TexId, u32, u32); 2]>,
     pub romm: crate::romm::RommConf,
     quick_palette_faces: Option<[(TexId, u32, u32); 2]>,
-    quick_bezel_faces: [Option<[(TexId, u32, u32); 2]>; 9],
+    quick_bezel_faces: [Option<[(TexId, u32, u32); 2]>; 10],
     quick_overlay_faces: [Option<[(TexId, u32, u32); 2]>; 4],
     overlay_cache: std::sync::Mutex<Vec<OverlayScan>>,
     game_bezel: Option<TexId>,
@@ -1368,7 +1368,7 @@ impl App {
             kid_icon_faces: None,
             romm: crate::romm::RommConf::default(),
             quick_palette_faces: None,
-            quick_bezel_faces: [None; 9],
+            quick_bezel_faces: [None; 10],
             quick_overlay_faces: [None; 4],
             overlay_cache: std::sync::Mutex::new(Vec::new()),
             game_bezel: None,
@@ -2791,8 +2791,13 @@ impl App {
                 | Platform::Ngp
                 | Platform::Tg16
                 | Platform::Nds
+                | Platform::Pm
         ) {
             hidden.push(QuickRow::ColourCorrection);
+        }
+        // The Pokémon mini has no Start: Select is its Power button.
+        if platform == Platform::Pm {
+            hidden.push(QuickRow::GameStart);
         }
         if !self.palette_live {
             hidden.push(QuickRow::Palette);
@@ -2806,7 +2811,7 @@ impl App {
         if self.scale_choices(self.playing_platform()).len() < 2 {
             hidden.push(QuickRow::Scale);
         }
-        if self.stretch_choices(self.playing_platform()).len() < 2 {
+        if platform != Platform::Pm && self.stretch_choices(self.playing_platform()).len() < 2 {
             hidden.push(QuickRow::Stretch);
         }
         // slotPlus's other cores have no frame blending to pick.
@@ -2954,6 +2959,9 @@ impl App {
             (QuickRow::Shader, Platform::Nds) => QuickRow::NdsShader,
             (QuickRow::Bezel, Platform::Tg16) => QuickRow::Tg16Bezel,
             (QuickRow::Bezel, Platform::Nds) => QuickRow::NdsBezel,
+            (QuickRow::Shader, Platform::Pm) => QuickRow::PmShader,
+            (QuickRow::Bezel, Platform::Pm) => QuickRow::PmBezel,
+            (QuickRow::Stretch, Platform::Pm) => QuickRow::PmFullScreen,
             (QuickRow::Scale, Platform::Gba) => QuickRow::GbaScale,
             (QuickRow::Scale, Platform::Gb) => QuickRow::GbScale,
             (QuickRow::Scale, Platform::Gbc) => QuickRow::GbcScale,
@@ -3024,6 +3032,8 @@ impl App {
             QuickRow::NgpShader => Some(shader_value(self.state.shader_ngp)),
             QuickRow::Tg16Shader => Some(shader_value(self.state.shader_tg16)),
             QuickRow::NdsShader => Some(shader_value(self.state.shader_nds)),
+            QuickRow::PmShader => Some(shader_value(self.state.shader_pm)),
+            QuickRow::PmFullScreen => Some(QuickValue::flag(self.state.pm_full_screen)),
             QuickRow::Rumble => Some(QuickValue::flag(self.state.rumble)),
             QuickRow::LeftStick => Some(QuickValue::flag(self.state.left_stick_dpad)),
             QuickRow::ResumeInsert => Some(QuickValue::flag(self.state.resume_insert)),
@@ -3138,12 +3148,14 @@ impl App {
             | QuickRow::NgpBezel
             | QuickRow::Tg16Bezel
             | QuickRow::NdsBezel
+            | QuickRow::PmBezel
             | QuickRow::ScreenWs
             | QuickRow::ScreenLynx
             | QuickRow::ScreenGg
             | QuickRow::ScreenNgp
             | QuickRow::ScreenTg16
             | QuickRow::ScreenNds
+            | QuickRow::ScreenPm
             | QuickRow::Bezel
             | QuickRow::General
             | QuickRow::System
@@ -3489,6 +3501,7 @@ impl App {
             Platform::Ngp => &mut self.state.bezel_ngp,
             Platform::Tg16 => &mut self.state.bezel_tg16,
             Platform::Nds => &mut self.state.bezel_nds,
+            Platform::Pm => &mut self.state.bezel_pm,
         }
     }
 
@@ -3505,6 +3518,7 @@ impl App {
             Platform::Ngp => &self.state.bezel_ngp,
             Platform::Tg16 => &self.state.bezel_tg16,
             Platform::Nds => &self.state.bezel_nds,
+            Platform::Pm => &self.state.bezel_pm,
         };
         let choices = self.bezel_choices(platform);
         if choices.contains(pick) {
@@ -3566,7 +3580,8 @@ impl App {
             | Platform::Gg
             | Platform::Ngp
             | Platform::Tg16
-            | Platform::Nds => &mut self.state.overlay_gbc,
+            | Platform::Nds
+            | Platform::Pm => &mut self.state.overlay_gbc,
         }
     }
 
@@ -3582,7 +3597,8 @@ impl App {
             | Platform::Gg
             | Platform::Ngp
             | Platform::Tg16
-            | Platform::Nds => return None,
+            | Platform::Nds
+            | Platform::Pm => return None,
         };
         let name = pick.as_deref()?;
         self.overlay_entries(platform)
@@ -4628,6 +4644,18 @@ impl App {
 
     pub fn set_video_mode(&mut self, mode: VideoMode) {
         self.video_mode = mode;
+        // The Pokémon mini's L1 and R1 are its Shake and C, so its picture is a setting
+        // of its own rather than each game's.
+        if self.playing_platform() == Platform::Pm {
+            self.video_mode = self.pm_picture();
+        }
+    }
+
+    fn pm_picture(&self) -> VideoMode {
+        match self.state.pm_full_screen {
+            true => VideoMode::Stretch,
+            false => VideoMode::Actual,
+        }
     }
 
     /// A DS game's view of its screens, as it was last left.
@@ -5668,6 +5696,7 @@ impl App {
             Platform::Ngp => self.state.shader_ngp,
             Platform::Tg16 => self.state.shader_tg16,
             Platform::Nds => self.state.shader_nds,
+            Platform::Pm => self.state.shader_pm,
         }
     }
 
@@ -5724,7 +5753,8 @@ impl App {
             | Platform::Gg
             | Platform::Ngp
             | Platform::Tg16
-            | Platform::Nds => false,
+            | Platform::Nds
+            | Platform::Pm => false,
         }
     }
 
@@ -7337,6 +7367,7 @@ impl App {
             | QuickRow::ScreenTg16
             | QuickRow::ScreenNds
             | QuickRow::ScreenLynx
+            | QuickRow::ScreenPm
             | QuickRow::ScreenGb
             | QuickRow::Shortcuts
             | QuickRow::General
@@ -7378,6 +7409,7 @@ impl App {
             | QuickRow::NgpShader
             | QuickRow::Tg16Shader
             | QuickRow::NdsShader
+            | QuickRow::PmShader
             | QuickRow::GbPalette
             | QuickRow::Rumble
             | QuickRow::LeftStick
@@ -7418,6 +7450,8 @@ impl App {
             | QuickRow::NgpBezel
             | QuickRow::Tg16Bezel
             | QuickRow::NdsBezel
+            | QuickRow::PmBezel
+            | QuickRow::PmFullScreen
             | QuickRow::GbaScale
             | QuickRow::GbScale
             | QuickRow::GbcScale
@@ -7556,6 +7590,14 @@ impl App {
             self.persist();
             return;
         }
+        if row == QuickRow::PmFullScreen {
+            self.state.pm_full_screen = !self.state.pm_full_screen;
+            if self.playing_platform() == Platform::Pm {
+                self.video_mode = self.pm_picture();
+            }
+            self.persist();
+            return;
+        }
         if let QuickRow::GbStretch | QuickRow::GbcStretch = row {
             let platform = match row {
                 QuickRow::GbStretch => Platform::Gb,
@@ -7583,7 +7625,8 @@ impl App {
         | QuickRow::GgBezel
         | QuickRow::NgpBezel
         | QuickRow::Tg16Bezel
-        | QuickRow::NdsBezel = row
+        | QuickRow::NdsBezel
+        | QuickRow::PmBezel = row
         {
             let platform = match row {
                 QuickRow::GbaBezel => Platform::Gba,
@@ -7594,6 +7637,7 @@ impl App {
                 QuickRow::NgpBezel => Platform::Ngp,
                 QuickRow::Tg16Bezel => Platform::Tg16,
                 QuickRow::NdsBezel => Platform::Nds,
+                QuickRow::PmBezel => Platform::Pm,
                 _ => Platform::Gbc,
             };
             self.cycle_bezel(platform, right);
@@ -7736,6 +7780,13 @@ impl App {
                 }
                 s.shader_nds = to;
             }
+            QuickRow::PmShader => {
+                let to = s.shader_pm.step(&Shader::PM, right);
+                if to == s.shader_pm {
+                    return;
+                }
+                s.shader_pm = to;
+            }
             QuickRow::Rumble => s.rumble = !s.rumble,
             QuickRow::LeftStick => s.left_stick_dpad = !s.left_stick_dpad,
             QuickRow::ResumeInsert => s.resume_insert = !s.resume_insert,
@@ -7804,12 +7855,15 @@ impl App {
             | QuickRow::NgpBezel
             | QuickRow::Tg16Bezel
             | QuickRow::NdsBezel
+            | QuickRow::PmBezel
+            | QuickRow::PmFullScreen
             | QuickRow::ScreenWs
             | QuickRow::ScreenLynx
             | QuickRow::ScreenGg
             | QuickRow::ScreenNgp
             | QuickRow::ScreenTg16
             | QuickRow::ScreenNds
+            | QuickRow::ScreenPm
             | QuickRow::GbaScale
             | QuickRow::GbScale
             | QuickRow::GbcScale
@@ -7921,6 +7975,7 @@ impl App {
             Platform::Ngp => (&mut self.state.shader_ngp, &Shader::NGP[..]),
             Platform::Tg16 => (&mut self.state.shader_tg16, &Shader::TG16[..]),
             Platform::Nds => (&mut self.state.shader_nds, &Shader::NDS[..]),
+            Platform::Pm => (&mut self.state.shader_pm, &Shader::PM[..]),
         };
         *shader = shader.step(choices, right);
         let said = match *shader {
@@ -7982,7 +8037,8 @@ impl App {
                 | Platform::Gg
                 | Platform::Ngp
                 | Platform::Tg16
-                | Platform::Nds => return true,
+                | Platform::Nds
+                | Platform::Pm => return true,
             };
             self.change_setting(row, true);
             let said = match self.colour_correction() {
@@ -9421,6 +9477,7 @@ impl App {
                     // Controls are the same for every game, so from the shelf the
                     // turbo rows keep their own names.
                     ws_buttons: false,
+                    pm_buttons: false,
                     bound: Some(&self.bound_faces()),
                     description: self.description(*row),
                     values: QuickRow::ALL.map(|r| self.quick_value(r)),
@@ -9666,6 +9723,7 @@ impl App {
                 hidden: &hidden,
                 disabled: &[],
                 ws_buttons: self.ws_buttons(),
+                pm_buttons: self.playing_platform() == Platform::Pm && self.seated_cart().is_some(),
                 values: QuickRow::ALL.map(|r| self.quick_value(r)),
                 achievements: [None; 8],
                 clock: None,
@@ -17535,7 +17593,8 @@ pub fn overlay_slot(platform: Platform) -> usize {
         | Platform::Gg
         | Platform::Ngp
         | Platform::Tg16
-        | Platform::Nds => 3,
+        | Platform::Nds
+        | Platform::Pm => 3,
     }
 }
 
@@ -17552,6 +17611,7 @@ fn bezel_slot(platform: Platform) -> usize {
         Platform::Ngp => 6,
         Platform::Tg16 => 7,
         Platform::Nds => 8,
+        Platform::Pm => 5,
     }
 }
 

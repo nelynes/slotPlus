@@ -58,6 +58,7 @@ To upgrade, use Settings → Tools → Check for Updates, or replace the `System
 - **Wi-Fi stays off in games.** A game earns from its downloaded set; what you earn is kept on the card and sent from the shelf, along with the games you played, so they show on your RetroAchievements profile.
 - RetroAchievements' own notices ("Unknown Emulator", "Unsupported Game Version") are no longer counted as achievements, so a ROM version RetroAchievements doesn't support gets no trophy.
 - `Logs/slot.log` notes each set loaded, achievement earned and unlock sent.
+- Groundwork for experimental features, not yet ready for general use.
 
 ## [1.14.0-plus2.6](https://github.com/nelynes/slotPlus/releases/tag/v1.14.0-plus2.6)
 

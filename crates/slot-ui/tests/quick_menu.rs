@@ -142,7 +142,8 @@ fn the_rows_run_in_the_order_the_user_chose() {
             "Game Gear",
             "NeoGeo Pocket",
             "TurboGrafx-16",
-            "Nintendo DS"
+            "Nintendo DS",
+            "Pokémon mini"
         ]
     );
     assert_eq!(
@@ -248,6 +249,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::ScreenNgp,
             QuickRow::ScreenTg16,
             QuickRow::ScreenNds,
+            QuickRow::ScreenPm,
             QuickRow::General,
             QuickRow::PlayControls,
             QuickRow::Shortcuts,

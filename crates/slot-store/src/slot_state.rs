@@ -476,6 +476,9 @@ pub struct SlotState {
     pub shader_ngp: Shader,
     pub shader_tg16: Shader,
     pub shader_nds: Shader,
+    pub shader_pm: Shader,
+    /// A Pokémon mini game fills the screen (7.5x) instead of sitting at 6x.
+    pub pm_full_screen: bool,
     pub resume_insert: bool,
     pub resume_power_on: bool,
     pub rewind: bool,
@@ -505,6 +508,7 @@ pub struct SlotState {
     pub bezel_ngp: BezelPick,
     pub bezel_tg16: BezelPick,
     pub bezel_nds: BezelPick,
+    pub bezel_pm: BezelPick,
     pub overlay_gba: Option<String>,
     pub overlay_gb: Option<String>,
     pub overlay_gbc: Option<String>,
@@ -634,6 +638,8 @@ impl Shader {
     pub const TG16: [Shader; 5] = Shader::GBA;
     /// The DS's two screens pick from the GBA's list, as the TurboExpress does.
     pub const NDS: [Shader; 5] = Shader::GBA;
+    /// The Pokémon mini's unlit screen picks from the Game Boy's list, Transparent among them.
+    pub const PM: [Shader; 6] = Shader::GB;
 
     pub fn name(self) -> &'static str {
         match self {
@@ -705,6 +711,8 @@ impl Default for SlotState {
             shader_ngp: Shader::Simpletex,
             shader_tg16: Shader::Grid,
             shader_nds: Shader::Off,
+            shader_pm: Shader::Grid,
+            pm_full_screen: false,
             resume_insert: true,
             resume_power_on: true,
             rewind: true,
@@ -733,6 +741,7 @@ impl Default for SlotState {
             bezel_tg16: BezelPick::None,
             // nelynes's DS Lite set, bundled in slot-ui (slot_ui::DS_LITE_BEZEL).
             bezel_nds: BezelPick::Bundled(String::from("DS Lite")),
+            bezel_pm: BezelPick::None,
             overlay_gba: None,
             overlay_gb: None,
             overlay_gbc: None,
@@ -853,6 +862,8 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     text.push_str(&format!("shader_ngp={}\n", s.shader_ngp.name()));
     text.push_str(&format!("shader_tg16={}\n", s.shader_tg16.name()));
     text.push_str(&format!("shader_nds={}\n", s.shader_nds.name()));
+    text.push_str(&format!("shader_pm={}\n", s.shader_pm.name()));
+    text.push_str(&format!("pm_full_screen={}\n", u8::from(s.pm_full_screen)));
     text.push_str(&format!("saturation={}\n", s.saturation));
     text.push_str(&format!("contrast={}\n", s.contrast));
     text.push_str(&format!("wallpaper_tint={}\n", s.wallpaper_tint.key()));
@@ -883,6 +894,7 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     text.push_str(&format!("bezel_ngp={}\n", s.bezel_ngp.key()));
     text.push_str(&format!("bezel_tg16={}\n", s.bezel_tg16.key()));
     text.push_str(&format!("bezel_nds={}\n", s.bezel_nds.key()));
+    text.push_str(&format!("bezel_pm={}\n", s.bezel_pm.key()));
     text.push_str(&format!(
         "overlay_gba={}\n",
         s.overlay_gba.as_deref().unwrap_or_default()
@@ -972,6 +984,8 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut shader_ngp = None;
     let mut shader_tg16 = None;
     let mut shader_nds = None;
+    let mut shader_pm = None;
+    let mut pm_full_screen = None;
     let mut auto_load = None;
     let mut resume_insert = None;
     let mut resume_power_on = None;
@@ -1000,6 +1014,7 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut bezel_ngp = None;
     let mut bezel_tg16 = None;
     let mut bezel_nds = None;
+    let mut bezel_pm = None;
     let mut overlay_gba = None;
     let mut overlay_gb = None;
     let mut overlay_gbc = None;
@@ -1077,6 +1092,7 @@ fn parse(text: &str) -> Option<SlotState> {
             "bezel_ngp" => bezel_ngp = Some(BezelPick::parse(value)),
             "bezel_tg16" => bezel_tg16 = Some(BezelPick::parse(value)),
             "bezel_nds" => bezel_nds = Some(BezelPick::parse(value)),
+            "bezel_pm" => bezel_pm = Some(BezelPick::parse(value)),
             "overlay_gba" => overlay_gba = overlay_name(value),
             "overlay_gb" => overlay_gb = overlay_name(value),
             "overlay_gbc" => overlay_gbc = overlay_name(value),
@@ -1106,6 +1122,8 @@ fn parse(text: &str) -> Option<SlotState> {
                 shader_tg16 = Shader::parse(value).filter(|s| Shader::TG16.contains(s))
             }
             "shader_nds" => shader_nds = Shader::parse(value).filter(|s| Shader::NDS.contains(s)),
+            "shader_pm" => shader_pm = Shader::parse(value).filter(|s| Shader::PM.contains(s)),
+            "pm_full_screen" => pm_full_screen = flag(value),
             "shader_lynx" => {
                 shader_lynx = Shader::parse(value).filter(|s| Shader::LYNX.contains(s))
             }
@@ -1163,6 +1181,8 @@ fn parse(text: &str) -> Option<SlotState> {
             .unwrap_or(fallback.shader_ngp),
         shader_tg16: shader_tg16.unwrap_or(fallback.shader_tg16),
         shader_nds: shader_nds.unwrap_or(fallback.shader_nds),
+        shader_pm: shader_pm.unwrap_or(fallback.shader_pm),
+        pm_full_screen: pm_full_screen.unwrap_or(fallback.pm_full_screen),
         resume_insert: resume_insert
             .or(auto_load.map(|(insert, _)| insert))
             .unwrap_or(fallback.resume_insert),
@@ -1194,6 +1214,7 @@ fn parse(text: &str) -> Option<SlotState> {
         bezel_ngp: bezel_ngp.unwrap_or(fallback.bezel_ngp),
         bezel_tg16: bezel_tg16.unwrap_or(fallback.bezel_tg16),
         bezel_nds: bezel_nds.unwrap_or(fallback.bezel_nds),
+        bezel_pm: bezel_pm.unwrap_or(fallback.bezel_pm),
         overlay_gba,
         overlay_gb,
         overlay_gbc,

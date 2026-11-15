@@ -1,7 +1,7 @@
 import type { LocationQueryRaw } from 'vue-router'
 
 export const PLATFORM_TAGS = [
-  'GB', 'GBC', 'GBA', 'GBAV', 'WS', 'Lynx', 'GG', 'NGP', 'TG16', 'NDS',
+  'GB', 'GBC', 'GBA', 'GBAV', 'WS', 'Lynx', 'GG', 'NGP', 'TG16', 'NDS', 'PokeMini',
 ] as const
 
 export const PLATFORM_NAMES: Record<string, string> = {
@@ -15,9 +15,12 @@ export const PLATFORM_NAMES: Record<string, string> = {
   NGP: 'NeoGeo Pocket',
   TG16: 'TurboGrafx-16',
   NDS: 'Nintendo DS',
+  PokeMini: 'Pokémon mini',
 }
 
-export const HOME_TAGS = ['GB', 'GBC', 'GBA', 'WS', 'Lynx', 'GG', 'NGP', 'TG16', 'NDS'] as const
+export const HOME_TAGS = [
+  'GB', 'GBC', 'GBA', 'WS', 'Lynx', 'GG', 'NGP', 'TG16', 'NDS', 'PokeMini',
+] as const
 
 export const VIDEO_TAG = 'GBAV'
 export const VIDEO_HOME = 'GBA'
@@ -34,7 +37,8 @@ const BIOS_FILES: Record<string, string> = {
   Lynx: 'lynxboot.img',
 }
 
-export const NO_BIOS: readonly string[] = ['WS', 'GG', 'NGP', 'TG16', 'NDS']
+// The Pokémon mini's core has a free BIOS built in; BIOS/bios.min is optional.
+export const NO_BIOS: readonly string[] = ['WS', 'GG', 'NGP', 'TG16', 'NDS', 'PokeMini']
 
 export function biosFile(tag: string): string {
   return BIOS_FILES[tag] ?? `${tag.toLowerCase()}_bios.bin`

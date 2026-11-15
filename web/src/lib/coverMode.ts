@@ -9,6 +9,7 @@ const CART_ASPECTS: Record<string, number> = {
   NGP: 312 / 268,
   TG16: 214 / 337,
   NDS: 288 / 304,
+  PokeMini: 300 / 262,
 }
 
 export function cartAspect(tag: string): number {

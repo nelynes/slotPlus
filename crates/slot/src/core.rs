@@ -223,9 +223,13 @@ pub fn colour_option(
                 "OFF"
             },
         )),
-        Core::Cygne | Core::Lynx | Core::Gearsystem | Core::Ngp | Core::Pce | Core::Dsperate => {
-            None
-        }
+        Core::Cygne
+        | Core::Lynx
+        | Core::Gearsystem
+        | Core::Ngp
+        | Core::Pce
+        | Core::Dsperate
+        | Core::Pokemini => None,
         Core::Gpsp => Some((
             "gpsp_color_correction",
             if on { "enabled" } else { "disabled" },
@@ -310,7 +314,10 @@ pub fn option_prefix(which: Core) -> &'static str {
 /// the frames the frontend flags as late, `slotplus` the whole display periods
 /// our old patch onto the wrapper did.
 fn has_frameskip(which: Core) -> bool {
-    !matches!(which, Core::Lynx | Core::Gearsystem | Core::Ngp | Core::Gambatte)
+    !matches!(
+        which,
+        Core::Lynx | Core::Gearsystem | Core::Ngp | Core::Gambatte | Core::Pokemini
+    )
 }
 
 /// Whether the core writes its own save file rather than handing Slot its
@@ -480,6 +487,18 @@ pub fn apply_core_options(
         // The TurboExpress pad: two buttons, I and II, with Select and Run.
         // A six-button pad confuses games made for two.
         core.set_option("pce_fast_default_joypad_type_p1", "2 Buttons");
+    }
+    if which == Core::Pokemini {
+        // Slot scales and filters the 96x64 picture itself, at 60 frames a
+        // second like the panel: PokeMini drops one frame in six of its 72.
+        // The grey shades come from its LCD's ghosting, so it stays analog.
+        core.set_option("pokemini_video_scale", "1x");
+        core.set_option("pokemini_lcdfilter", "none");
+        core.set_option("pokemini_60hz_mode", "enabled");
+        core.set_option("pokemini_lcdmode", "analog");
+        // The handheld's motor does the shaking, so the picture stays still.
+        core.set_option("pokemini_screen_shake_lv", "0");
+        core.set_option("pokemini_rumble_lv", "10");
     }
     if which == Core::Gambatte {
         core.set_option("gambatte_gb_hwmode", "Auto");

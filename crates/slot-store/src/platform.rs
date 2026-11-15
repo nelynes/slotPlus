@@ -12,11 +12,13 @@ pub enum Platform {
     Ngp,
     Tg16,
     Gbav,
+    /// The Pokémon mini: a 96x64 black-and-white screen, run by PokeMini.
+    Pm,
     Nds,
 }
 
 impl Platform {
-    pub const ALL: [Platform; 10] = [
+    pub const ALL: [Platform; 11] = [
         Platform::Gba,
         Platform::Gbav,
         Platform::Gbc,
@@ -27,6 +29,7 @@ impl Platform {
         Platform::Ngp,
         Platform::Tg16,
         Platform::Nds,
+        Platform::Pm,
     ];
     #[cfg(feature = "nds")]
     pub const ALL: [Platform; 7] = [
@@ -51,6 +54,7 @@ impl Platform {
             Platform::Tg16 => "TurboGrafx-16",
             Platform::Nds => "Nintendo DS",
             Platform::Gbav => "Game Boy Advance Video",
+            Platform::Pm => "Pokémon mini",
             #[cfg(feature = "nds")]
             Platform::Nds => "Nintendo DS",
         }
@@ -68,6 +72,7 @@ impl Platform {
             Platform::Tg16 => "TG16",
             Platform::Nds => "NDS",
             Platform::Gbav => "GBAV",
+            Platform::Pm => "PokeMini",
             #[cfg(feature = "nds")]
             Platform::Nds => "NDS",
         }
@@ -91,6 +96,7 @@ impl Platform {
             Platform::Ngp => &["ngp", "ngc", "ngpc"],
             // TurboGrafx-16 and PC Engine HuCards, as the TurboExpress played.
             Platform::Tg16 => &["pce"],
+            Platform::Pm => &["min"],
             Platform::Nds => &["nds"],
         }
     }
@@ -107,6 +113,7 @@ impl Platform {
             Platform::Nds => (256, 384),
             Platform::Ws => (224, 144),
             Platform::Lynx => (160, 102),
+            Platform::Pm => (96, 64),
         }
     }
 
@@ -119,6 +126,8 @@ impl Platform {
             Platform::Lynx => (180, 120),
             // The canvas at 2x: a 256 to 352 wide picture lands at 2x.
             Platform::Tg16 => (360, 240),
+            // 96x64 lands at 6x (576x384) in a 120x80 window.
+            Platform::Pm => (120, 80),
             _ => (240, 160),
         }
     }
@@ -143,7 +152,8 @@ impl Platform {
             | Platform::Gbc
             | Platform::Lynx
             | Platform::Gg
-            | Platform::Ngp => (240, 160),
+            | Platform::Ngp
+            | Platform::Pm => (240, 160),
             Platform::Ws => (360, 240),
             // Room for a 512-wide high resolution picture, and 240 lines.
             Platform::Tg16 => (720, 240),

@@ -167,3 +167,13 @@ fn the_ds_has_the_silver_ds_lite_s_slot_with_dark_ink_over_it() {
     assert!(bespoke_slot(Platform::Nds).is_some());
     assert!(bespoke_slot_light(Platform::Nds), "silver is pale");
 }
+
+#[test]
+fn the_pokemon_mini_has_a_slot_of_its_own() {
+    use slot_ui::{bespoke_slot, bespoke_slot_light, SLOT_H, SLOT_W};
+    let strips = bespoke_slot(Platform::Pm).expect("its own");
+    for s in strips {
+        assert_eq!(s.len(), (SLOT_W * SLOT_H * 4) as usize);
+    }
+    assert!(!bespoke_slot_light(Platform::Pm), "blue keeps light ink");
+}

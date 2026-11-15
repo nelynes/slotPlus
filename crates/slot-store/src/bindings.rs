@@ -243,6 +243,21 @@ impl GameButton {
         GameButton::TurboB,
     ];
 
+    /// The Pokémon mini: A, B and C (R), Power (Select) and Shake (L). No Start.
+    const POKEMON_MINI: [GameButton; 11] = [
+        GameButton::Up,
+        GameButton::Down,
+        GameButton::Left,
+        GameButton::Right,
+        GameButton::A,
+        GameButton::B,
+        GameButton::R,
+        GameButton::L,
+        GameButton::Select,
+        GameButton::TurboA,
+        GameButton::TurboB,
+    ];
+
     pub fn of(platform: Platform) -> &'static [GameButton] {
         match platform {
             // The Lynx uses L1 and R1 for its Options, and the WonderSwan uses
@@ -256,6 +271,7 @@ impl GameButton {
             Platform::Gb | Platform::Gbc | Platform::Gg | Platform::Ngp | Platform::Tg16 => {
                 &GameButton::GAME_BOY
             }
+            Platform::Pm => &GameButton::POKEMON_MINI,
         }
     }
 
