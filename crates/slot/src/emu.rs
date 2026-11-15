@@ -686,6 +686,8 @@ impl Worker {
             rom.display(),
             crate::boot_time::ms()
         );
+        // slotPlus: a romhack or translation patch beside the game is applied here.
+        let rom = crate::rom_patch::prepare(&rom);
         if let Err(e) = core.load(&rom) {
             eprintln!("slot: {e}");
             self.shared

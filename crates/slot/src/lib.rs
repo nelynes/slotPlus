@@ -77,6 +77,7 @@ pub mod print_scene;
 pub mod resample;
 pub mod rewind;
 pub mod romm;
+pub mod rom_patch;
 pub mod root;
 pub mod screen;
 pub mod server;
