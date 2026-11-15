@@ -11490,17 +11490,19 @@ impl App {
                     self.core_blank_chip_face,
                 ),
             };
-            self.draw_board_chip(
-                board,
-                seats(shell),
-                picker.pair(),
-                sockets,
-                picker.chip(now),
-                chips,
-                blank,
-                lift,
-                out,
-            );
+            if !picker.alone() {
+                self.draw_board_chip(
+                    board,
+                    seats(shell),
+                    picker.pair(),
+                    sockets,
+                    picker.chip(now),
+                    chips,
+                    blank,
+                    lift,
+                    out,
+                );
+            }
         }
 
         self.draw_lid_shadow(shell, shelf, progress, out);
@@ -11537,7 +11539,11 @@ impl App {
 
         // The first three: the fourth is the Lynx hold picker's four-way Swap.
         let legends = &self.core_legend_faces[self.light() as usize];
-        if legends.len() >= 3 {
+        if picker.alone() {
+            if let Some(&back) = legends.first() {
+                self.draw_spread_legends(&[back], self.legend_y(), lift, out);
+            }
+        } else if legends.len() >= 3 {
             self.draw_spread_legends(&legends[..3], self.legend_y(), lift, out);
         }
     }
@@ -12038,8 +12044,9 @@ impl App {
             self.play_held = None;
             return;
         }
-        // slotPlus: a system with one core has nothing to pick.
-        if Core::choices(cart.platform).len() < 2 {
+        // slotPlus: a system with one core has nothing to pick, though a WonderSwan cart
+        // still opens to show its board.
+        if Core::choices(cart.platform).len() < 2 && !slot_ui::shows_board_alone(cart.platform) {
             return;
         }
         let seat =
@@ -12108,6 +12115,12 @@ impl App {
         let now = self.now();
         let Some(picker) = &mut self.core_picker else {
             return;
+        };
+        // slotPlus: a board with only its own core on it: A or B closes it, nothing to move.
+        let press = match (picker.alone(), press) {
+            (true, Press::Left | Press::Right) => return,
+            (true, _) => Press::Back,
+            (false, press) => press,
         };
         let outcome = picker.press(press, now);
         if let Outcome::Write(core) = outcome {

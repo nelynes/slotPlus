@@ -4,7 +4,8 @@
 
 Work toward slotPlus 3.0, "the cart remembers", on the `cart-remembers` branch. Not released yet.
 
-- **Play time.** slotPlus counts how long you play each game (paused menus, loading and sleep don't count) and keeps it in `Saves/play_log.txt`. Press START on a GBA or Game Boy cart and its board carries a small handwritten sticker with the time; a Lynx card shows it on its back.
+- **Play time.** slotPlus counts how long you play each game (paused menus, loading and sleep don't count) and keeps it in `Saves/play_log.txt`. Press START on a GBA, Game Boy or WonderSwan cart and its board carries a small handwritten sticker with the time; a Lynx card shows it on its back.
+- **A WonderSwan board.** START on a WonderSwan cart now opens it to show its board, drawn after Bandai's own: the coin cell in its clip, the ROM with the game's name on it, the mapper, the save RAM and the band of vias over the contacts. A or B closes it. The same board shows through clear WonderSwan shells. slotPlus's own boards (WonderSwan, Lynx) are marked "2026 SlotPlus+".
 - **Shelf Life**, a new page at the foot of Settings → Shelf, with three switches, all on to start:
   - **Shrink Wrap:** a game you've never played sits on the shelf in shrink wrap, which comes off the first time you put it in. A game with a save on the card, or on the Recents shelf, is never wrapped.
   - **Dust:** a cart left alone gathers dust: a little after two weeks, more after six, thick after three months. The clock starts the first time the card sees the game.

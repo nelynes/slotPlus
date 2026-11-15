@@ -338,7 +338,8 @@ fn wrap(face: &mut CartFace, seed: u64) {
 }
 
 /// Where a play-time sticker goes on the back of a cart: on the board of a GBA or Game Boy
-/// cart, and low on the back of a Lynx card. Other carts have no back to show yet.
+/// or WonderSwan cart, and low on the back of a Lynx card. Other carts have no back to
+/// show yet.
 pub fn sticker_at(cart: &Cart, back: &CartFace) -> Option<(u32, u32)> {
     use slot_store::Platform;
     let (sw, sh) = (STICKER_W, STICKER_H);
@@ -348,6 +349,7 @@ pub fn sticker_at(cart: &Cart, back: &CartFace) -> Option<(u32, u32)> {
             back.h.saturating_sub(sh + 12),
         ),
         Platform::Gba | Platform::Gbav => (224, 56),
+        Platform::Ws => (250, 104),
         Platform::Gb | Platform::Gbc if gb_shell_of(cart).is_some() => (28, 14),
         _ => return None,
     };

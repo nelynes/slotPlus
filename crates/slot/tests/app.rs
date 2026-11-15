@@ -2486,3 +2486,28 @@ fn the_shader_shortcut_does_nothing_in_the_save_state_switcher() {
     assert_eq!(slot_store::read_slot_state(d.path()).shader_gba, before);
     assert_eq!(a.toast(), None);
 }
+
+/// slotPlus: a WonderSwan cart has one core, but START still turns it over to show its
+/// board, and A or B puts it back without writing a core for the game.
+#[test]
+fn start_on_a_wonderswan_cart_shows_its_board_alone() {
+    let d = common::tmp_root_with_carts(&[]);
+    let ws = d.path().join("Games/WS");
+    std::fs::create_dir_all(&ws).unwrap();
+    for stem in ["Gunpey", "Klonoa"] {
+        std::fs::write(ws.join(format!("{stem}.ws")), vec![0u8; 0x10000]).unwrap();
+    }
+    let (d, mut app) = booted_on_shelf(d);
+    fake_picker_faces(&mut app);
+    assert_eq!(app.selected_cart().map(|c| c.platform), Some(Platform::Ws));
+    app.apply(Action::GbaDown(Btn::Start));
+    assert_eq!(app.core_picker(), Some(Core::Cygne));
+    let_it_hop(&mut app);
+    app.apply(Action::GbaDown(Btn::Right));
+    assert_eq!(app.core_picker(), Some(Core::Cygne));
+    app.apply(Action::GbaDown(Btn::A));
+    let_it_close(&mut app);
+    let_it_close(&mut app);
+    assert_eq!(app.core_picker(), None);
+    assert!(!d.path().join(slot_store::SELECTED_CORE_FILE).exists());
+}
