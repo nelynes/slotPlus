@@ -836,3 +836,47 @@ pub fn artwork_title(root: &std::path::Path, rom: &std::path::Path) -> Option<St
         && !game.title.starts_with("Unsupported Game Version"))
     .then_some(game.title)
 }
+
+/// slotPlus: how far a game's achievement set has got: achievements earned, of the ones
+/// that can be. Counts what the account had earned when the set was downloaded and what's
+/// been earned on this card since.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Progress {
+    pub earned: u32,
+    pub total: u32,
+}
+
+impl Progress {
+    pub fn mastered(&self) -> bool {
+        self.total > 0 && self.earned >= self.total
+    }
+
+    pub fn text(&self) -> String {
+        format!("{} / {}", self.earned, self.total)
+    }
+}
+
+/// slotPlus: a game's progress from what's on the card: no network, and the ROM itself is
+/// never read (a ROM the library hasn't hashed has no progress yet).
+pub fn progress(root: &std::path::Path, rom: &std::path::Path) -> Option<Progress> {
+    let config = storage::Config::read(&root.join("Config/retroachievements.toml")).ok()?;
+    if !config.enabled || config.username.trim().is_empty() {
+        return None;
+    }
+    let account = format!("{:x}", md5::compute(config.username.to_lowercase()));
+    let dir = root.join("Saves/RetroAchievements").join(account);
+    let hash = library::known_hash(&dir, rom)?;
+    let (game, unlocked): (storage::Game, std::collections::BTreeSet<u32>) =
+        storage::read(&dir.join(format!("{hash}.json"))).ok()?;
+    let here: std::collections::BTreeMap<u32, storage::Unlock> =
+        storage::read(&dir.join("unlocks.json")).unwrap_or_default();
+    let mut total = 0;
+    let mut earned = 0;
+    for a in game.earnable() {
+        total += 1;
+        if unlocked.contains(&a.id) || here.contains_key(&a.id) {
+            earned += 1;
+        }
+    }
+    (total > 0).then_some(Progress { earned, total })
+}

@@ -14,7 +14,12 @@ pub struct BuiltFaces {
     pub interior: CartFace,
     pub board: CartFace,
     pub lid: CartFace,
+    /// slotPlus: "12 / 34" for beside the shelf's trophy, when the game has a set.
+    pub progress: Option<CartFace>,
 }
+
+/// slotPlus: the height of the progress text beside the trophy.
+pub const PROGRESS_H: u32 = 34;
 
 /// A cart to build the picker's faces for: how it has been kept, and how long it has been
 /// played, so its lid matches the shelf and its back carries the time.
@@ -59,6 +64,16 @@ impl FaceBuilder {
                     if let Some(secs) = ask.played {
                         play_sticker(&mut board, cart, &slot_store::play_time_text(secs));
                     }
+                    let progress = crate::ACHIEVEMENTS
+                        .then(|| slot_achievements::progress(&root, &cart.rom))
+                        .flatten();
+                    if let Some(p) = progress {
+                        let words = match p.mastered() {
+                            true => "Mastered".to_string(),
+                            false => p.text(),
+                        };
+                        slot_ui::shelf_life::achievement_sticker(&mut board, cart, &words);
+                    }
                     let lid = crate::cart_faces::looked(
                         cart_face_with(cart, label_art(&root, cart)),
                         cart,
@@ -73,6 +88,8 @@ impl FaceBuilder {
                         // turns it over to its back instead.
                         board,
                         lid: padded(&lid, TURN_PAD),
+                        progress: progress
+                            .map(|p| slot_ui::shelf_life::progress_face(&p.text(), PROGRESS_H)),
                     };
                     if outbox.send(faces).is_err() {
                         return;

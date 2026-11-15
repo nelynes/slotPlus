@@ -363,10 +363,48 @@ const STICKER_INK: [u8; 3] = [38, 44, 80];
 
 /// A small paper sticker with the time played written on it by hand.
 pub fn play_sticker(back: &mut CartFace, cart: &Cart, text: &str) {
-    let Some((x0, y0)) = sticker_at(cart, back) else {
+    let Some(at) = sticker_at(cart, back) else {
         return;
     };
-    let seed = seed_of(cart);
+    sticker(back, cart, text, at, STICKER_PAPER, STICKER_INK, 0);
+}
+
+/// slotPlus: where the gold achievements sticker goes, beside the play-time one.
+pub fn gold_sticker_at(cart: &Cart, back: &CartFace) -> Option<(u32, u32)> {
+    use slot_store::Platform;
+    let (sw, sh) = (STICKER_W, STICKER_H);
+    let spot = match cart.platform {
+        Platform::Lynx => (16, back.h.saturating_sub(sh + 12)),
+        Platform::Gba | Platform::Gbav => (224, 27),
+        Platform::Ws => (66, 114),
+        Platform::Gb | Platform::Gbc if gb_shell_of(cart).is_some() => (28, 46),
+        _ => return None,
+    };
+    (spot.0 + sw <= back.w && spot.1 + sh <= back.h).then_some(spot)
+}
+
+const GOLD_PAPER: [u8; 3] = [232, 192, 84];
+const GOLD_INK: [u8; 3] = [74, 48, 6];
+
+/// slotPlus: a gold sticker with how far the game's achievement set has got: "12 / 34", or
+/// "Mastered" once every one is earned.
+pub fn achievement_sticker(back: &mut CartFace, cart: &Cart, text: &str) {
+    let Some(at) = gold_sticker_at(cart, back) else {
+        return;
+    };
+    sticker(back, cart, text, at, GOLD_PAPER, GOLD_INK, 1);
+}
+
+fn sticker(
+    back: &mut CartFace,
+    cart: &Cart,
+    text: &str,
+    (x0, y0): (u32, u32),
+    paper_colour: [u8; 3],
+    ink: [u8; 3],
+    which: i64,
+) {
+    let seed = seed_of(cart) ^ (which as u64).wrapping_mul(0x9e37_79b9);
     let (sw, sh) = (STICKER_W, STICKER_H);
     // A slight tilt, as a sticker put on by hand.
     let tilt = (unit(seed, 8, 8) - 0.5) * 0.06;
@@ -383,7 +421,7 @@ pub fn play_sticker(back: &mut CartFace, cart: &Cart, text: &str) {
             }
             let grain = 0.96 + 0.04 * unit(seed ^ 11, x as i64, y as i64);
             for k in 0..3 {
-                paper[at + k] = (STICKER_PAPER[k] as f32 * grain) as u8;
+                paper[at + k] = (paper_colour[k] as f32 * grain) as u8;
             }
             paper[at + 3] = 255;
         }
@@ -398,7 +436,7 @@ pub fn play_sticker(back: &mut CartFace, cart: &Cart, text: &str) {
             if a == 0 || paper[i * 4 + 3] == 0 {
                 continue;
             }
-            mix(&mut paper[i * 4..i * 4 + 4], STICKER_INK, a as f32 / 255.0);
+            mix(&mut paper[i * 4..i * 4 + 4], ink, a as f32 / 255.0);
         }
     }
     // Place it, turned a touch, with a soft shadow under the lower edge.
@@ -483,4 +521,42 @@ mod tests {
             }
         }
     }
+}
+
+/// slotPlus: "12 / 34" in the shelf's own lettering, to sit beside the trophy.
+pub fn progress_face(text: &str, height: u32) -> CartFace {
+    let font = crate::text::label_font();
+    let px = height as f32 * 0.62;
+    let width = font.map_or(0.0, |f| crate::text::line_width(f, text, px, 0.0));
+    let w = (width.ceil() as u32 + 6).max(1);
+    let h = height.max(1);
+    let layout = crate::text::Layout {
+        lines: vec![text.to_string()],
+        px,
+        tracking: 0.0,
+    };
+    let cov = crate::text::coverage_left(w, h, &layout, 2.0);
+    let mut rgba = vec![0u8; (w * h * 4) as usize];
+    // A soft dark shadow one pixel down and right, then the light text.
+    for y in 0..h as i64 {
+        for x in 0..w as i64 {
+            let at = ((y * w as i64 + x) * 4) as usize;
+            let here = cov[(y * w as i64 + x) as usize];
+            let shade = if x > 0 && y > 0 {
+                cov[((y - 1) * w as i64 + x - 1) as usize]
+            } else {
+                0
+            };
+            let a = here.max((shade as f32 * 0.6) as u8);
+            if a == 0 {
+                continue;
+            }
+            let lit = here as f32 / a as f32;
+            for k in 0..3 {
+                rgba[at + k] = (20.0 + (255.0 - 20.0) * lit) as u8;
+            }
+            rgba[at + 3] = a;
+        }
+    }
+    CartFace { rgba, w, h }
 }

@@ -915,6 +915,8 @@ pub struct App {
     /// slotPlus: the ROMs with a downloaded set, and the gold trophy shown over them.
     achievement_sets: std::sync::Arc<std::collections::HashSet<PathBuf>>,
     trophy_face: Option<(TexId, u32, u32)>,
+    /// slotPlus: "12 / 34" beside the trophy, for the cart named by `core_faces_for`.
+    progress_face: Option<(TexId, u32, u32)>,
     /// The RetroAchievements page's view of the card's settings.
     achievement_settings: slot_achievements::Settings,
     achievements_changed: bool,
@@ -1153,6 +1155,7 @@ impl App {
             ra_refresh_legend: None,
             achievement_sets: Default::default(),
             trophy_face: None,
+            progress_face: None,
             achievement_settings: slot_achievements::Settings::default(),
             achievements_changed: false,
             quick_achievement_faces: [None; 8],
@@ -4071,6 +4074,11 @@ impl App {
         self.achievement_sets = sets;
     }
 
+    /// slotPlus: the selected cart's achievement progress, built with its picker faces.
+    pub fn set_progress_face(&mut self, face: Option<(TexId, u32, u32)>) {
+        self.progress_face = face;
+    }
+
     pub fn set_trophy_face(&mut self, face: (TexId, u32, u32)) {
         self.trophy_face = Some(face);
     }
@@ -4097,6 +4105,21 @@ impl App {
             tex,
             alpha: 1.0,
         });
+        // slotPlus: how far the set has got, when its faces are for this cart.
+        let current = self.selected_cart().map(|c| (c.platform, c.stem.clone()));
+        if let Some((ptex, pw, ph)) = self
+            .progress_face
+            .filter(|_| current.is_some() && self.core_faces_for == current)
+        {
+            out.push(Draw::Tex {
+                x: x + w as f32 + 4.0,
+                y: y + (h as f32 - ph as f32) / 2.0,
+                w: pw as f32,
+                h: ph as f32,
+                tex: ptex,
+                alpha: 1.0,
+            });
+        }
     }
 
     /// slotPlus: Download Achievement Sets is on screen.

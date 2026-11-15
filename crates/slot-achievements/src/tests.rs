@@ -1311,3 +1311,54 @@ fn wonderswan_and_lynx_shelves_are_scanned_after_the_game_boys() {
     let swan = Game { console: 53, ..game() };
     assert!(scan::has_set(&lynx) && scan::has_set(&swan));
 }
+
+#[test]
+fn progress_counts_earned_achievements_from_the_card_alone() {
+    let root = configured();
+    let rom = root.path().join("Games/GBA/Test.gba");
+    std::fs::write(&rom, b"progress ROM").unwrap();
+    // Not hashed yet: no progress, and the ROM isn't read to find out.
+    assert_eq!(progress(root.path(), &rom), None);
+    let mut store = Store::open(root.path(), "Player").unwrap();
+    let hash = library::hash(&store.dir, &rom).unwrap();
+    let mut g = game();
+    g.achievements = (1..=4)
+        .map(|id| Achievement {
+            id,
+            ..achievement("0xH000000=1")
+        })
+        .collect();
+    // A notice and an unofficial one never count.
+    g.achievements.push(Achievement {
+        id: storage::NOTICE_IDS + 1,
+        ..achievement("0xH000000=1")
+    });
+    g.achievements.push(Achievement {
+        id: 9,
+        flags: 5,
+        ..achievement("0xH000000=1")
+    });
+    let earned_online: std::collections::BTreeSet<u32> = [1].into();
+    storage::write(&store.dir.join(format!("{hash}.json")), &(g, earned_online)).unwrap();
+    assert_eq!(
+        progress(root.path(), &rom),
+        Some(Progress { earned: 1, total: 4 })
+    );
+    store
+        .record(storage::Unlock {
+            id: 3,
+            hash: hash.clone(),
+            earned_at: 1,
+            synced: false,
+        })
+        .unwrap();
+    let p = progress(root.path(), &rom).unwrap();
+    assert_eq!((p.earned, p.total, p.text()), (2, 4, "2 / 4".to_string()));
+    assert!(!p.mastered());
+    std::fs::write(
+        root.path().join("Config/retroachievements.toml"),
+        "enabled = false\nusername = 'Player'\n",
+    )
+    .unwrap();
+    assert_eq!(progress(root.path(), &rom), None);
+}
