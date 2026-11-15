@@ -12,6 +12,7 @@ Work toward slotPlus 3.0, "the cart remembers", on the `cart-remembers` branch. 
   - **Wear:** a cart you play a lot shows it: rubbed corners and edges, scuffs and fine scratches after 10, 30 and 100 hours.
   - Hold B on a cart on the shelf to wipe it clean. Dust and wear both come off, and wear builds again with more play.
 - **Save backups.** Each time a game's save is replaced, the old one is kept in `Saves/Backups/<system>/` as `<game>.<time>.sav`. The newest three are kept for each game, and no more than one an hour, so a long session doesn't push out the older ones.
+- **gpSP updated** to its 2026-09-19 version: games that run code from video memory, several hardware-register reads, and a ROM whose data merely looks like an EEPROM save no longer losing its real save. slotPlus now asks gpSP for 65536 Hz sound by name, since gpSP's new 32768 Hz default makes its Game Boy–style sound effects fade and slide at half speed.
 - **Switch between slotPlus and slotPlusUltra** from Settings → System → Check for Updates: when you're up to date, X offers the other edition from the same release, and A installs it in place. Games, saves and settings stay.
 
 ## [1.16.0-plus2.9](https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus2.9)
