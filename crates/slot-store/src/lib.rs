@@ -21,6 +21,7 @@ pub mod ini;
 mod nds_header;
 pub mod overlay;
 mod platform;
+pub mod play_log;
 mod ring;
 mod scan;
 mod shots;
@@ -54,6 +55,10 @@ pub use guides::{
 pub use nds_header::{read_banner, NdsBanner};
 pub use overlay::{overlay_entries, OverlayEntry, OverlayPart};
 pub use platform::Platform;
+pub use play_log::{
+    play_log_path, play_time_text, read_play_log, update_play_log, write_play_log, PlayLog,
+    PlayRecord,
+};
 pub use ring::{is_stamp, StateEntry, StateRing, RING_MAX};
 pub use scan::{
     clean_label, initial, is_hidden, label_tags, listing, scan, scan_platform, sort_key, Cart,

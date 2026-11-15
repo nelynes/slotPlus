@@ -114,6 +114,17 @@ pub const UNDO_GRACE_MS: Millis = 30_000;
 pub const LINK_LOST_MS: Millis = 2000;
 
 const PLAY_HOLD_MS: Millis = 500;
+/// slotPlus Shelf Life: how long B is held on the shelf to wipe a cart, and how long the
+/// shine runs across it after.
+const WIPE_HOLD_MS: Millis = 600;
+const WIPE_SHINE_MS: Millis = 450;
+
+/// slotPlus Shelf Life: a cart being wiped clean.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Wipe {
+    Holding(Millis),
+    Shining(Millis),
+}
 
 const SHUTDOWN_SHOW_MS: Millis = 250;
 
@@ -551,6 +562,8 @@ enum UpdateState {
     Available(Vec<Release>, usize),
     Battery(Release),
     UpToDate,
+    /// slotPlus: switching to the other edition, waiting for A.
+    Switch(Release),
     Downloading(Release, u64),
     Cancelling(Release, u64),
     Closing(Release),
@@ -650,7 +663,10 @@ pub struct App {
     collections: Vec<Collection>,
     shelf_at: usize,
     orphaned: Vec<TexId>,
+    /// slotPlus Shelf Life: what the card remembers about each game.
+    play_log: slot_store::PlayLog,
     play_held: Option<Millis>,
+    wipe: Option<Wipe>,
     held_dir: Option<(Btn, Millis, usize)>,
     refusal: Option<Refusal>,
     refused_from: Option<f32>,
@@ -961,6 +977,8 @@ pub struct App {
     update_picker: Option<CorePicker>,
     update_seat_at: Option<Millis>,
     update_offers: Vec<Release>,
+    /// slotPlus: the other edition's build on the latest release, from the last check.
+    other_edition: Option<Release>,
     update_back: bool,
     update_sockets: Vec<TexId>,
     update_chips: Vec<TexId>,
@@ -1196,6 +1214,7 @@ impl App {
             update_picker: None,
             update_seat_at: None,
             update_offers: Vec::new(),
+            other_edition: None,
             update_back: false,
             update_sockets: Vec::new(),
             update_chips: Vec::new(),
@@ -1221,7 +1240,9 @@ impl App {
             collections: Vec::new(),
             shelf_at,
             orphaned: Vec::new(),
+            play_log: slot_store::PlayLog::default(),
             play_held: None,
+            wipe: None,
             held_dir: None,
             refusal: None,
             refused_from: None,
@@ -1440,6 +1461,7 @@ impl App {
         app.root = Some(root.to_path_buf());
         app.loading = loading;
         app.state = read_slot_state(root);
+        app.play_log = slot_store::read_play_log(root);
         let turbo_off = slot_store::legacy_turbo_off(root);
         app.give_wallpapers(root);
         tell_libc_the_zone(app.state.zone);
@@ -1456,6 +1478,7 @@ impl App {
         app.restock_favorites();
         app.restock_all_games();
         app.restock_collections();
+        app.see_carts();
         if let Some((at, i)) = app.remembered_seat() {
             app.shelf_at = at;
             app.shelves[at].1.select(i);
@@ -3038,6 +3061,10 @@ impl App {
             }),
             QuickRow::WifiPower => Some(QuickValue::flag(!self.state.wifi_off)),
             QuickRow::RaEncore => Some(QuickValue::flag(self.achievement_settings.encore)),
+            QuickRow::ShrinkWrap => Some(QuickValue::flag(self.state.shrink_wrap)),
+            QuickRow::Dust => Some(QuickValue::flag(self.state.dust)),
+            QuickRow::Wear => Some(QuickValue::flag(self.state.wear)),
+            QuickRow::ShelfLife => None,
             QuickRow::RommProtocol => Some(match self.romm.protocol {
                 crate::romm::Protocol::Https => QuickValue::Https,
                 crate::romm::Protocol::Http => QuickValue::Http,
@@ -4496,6 +4523,153 @@ impl App {
 
     pub fn face_cart(&self, shelf: usize, index: usize) -> Option<&Cart> {
         self.shelves.get(shelf)?.1.carts.get(index)
+    }
+
+    fn unix_now(&self) -> u64 {
+        self.utc_secs().max(0) as u64
+    }
+
+    /// slotPlus Shelf Life: how a cart has been kept, as its face should show it. A cart asked
+    /// to come wrapped still comes unwrapped when the card holds a save for it.
+    pub fn face_look(&self, cart: &Cart) -> slot_ui::shelf_life::Look {
+        use slot_ui::shelf_life::{dust_level, wear_level, Look};
+        let record = self.play_log.get(cart.platform, &cart.stem);
+        let recent = self
+            .state
+            .recents
+            .iter()
+            .any(|r| r.platform == cart.platform && r.stem == cart.stem);
+        let played = recent || record.is_some_and(|r| r.played());
+        let dust = match (self.state.dust, record.and_then(|r| r.idle_since())) {
+            (true, Some(since)) if self.state.clock_set => {
+                dust_level(self.unix_now().saturating_sub(since))
+            }
+            _ => 0,
+        };
+        let wear = match (self.state.wear, record) {
+            (true, Some(r)) => wear_level(r.worn_seconds()),
+            _ => 0,
+        };
+        Look {
+            wrap: self.state.shrink_wrap && !played,
+            dust,
+            wear,
+        }
+    }
+
+    /// slotPlus: seconds the game has been played on this card, if it has been.
+    pub fn play_seconds(&self, cart: &Cart) -> Option<u64> {
+        self.play_log
+            .get(cart.platform, &cart.stem)
+            .filter(|r| r.seconds >= 60)
+            .map(|r| r.seconds)
+    }
+
+    /// slotPlus: write the play log off the main thread. Writes can't land out of order: a
+    /// write older than the last one written is dropped.
+    fn save_play_log(&self) {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        use std::sync::Mutex;
+        static ISSUED: AtomicU64 = AtomicU64::new(0);
+        static WRITTEN: Mutex<u64> = Mutex::new(0);
+        let Some(root) = self.root.clone() else {
+            return;
+        };
+        let log = self.play_log.clone();
+        let n = ISSUED.fetch_add(1, Ordering::SeqCst) + 1;
+        let write = move || {
+            let mut last = WRITTEN.lock().unwrap_or_else(|e| e.into_inner());
+            if *last > n {
+                return;
+            }
+            if let Err(e) = slot_store::write_play_log(&root, &log) {
+                eprintln!("slot: play log: {e}");
+            }
+            *last = n;
+        };
+        if std::thread::Builder::new()
+            .name("slot-play-log".into())
+            .spawn(write)
+            .is_err()
+        {
+            eprintln!("slot: play log: writer thread failed to start");
+        }
+    }
+
+    /// Note when each game on the card first sat on a shelf, so its dust starts from then.
+    fn see_carts(&mut self) {
+        if !self.state.clock_set || self.root.is_none() {
+            return;
+        }
+        let now = self.unix_now();
+        let games: Vec<(Platform, String)> = self
+            .carts()
+            .map(|c| (c.platform, c.stem.clone()))
+            .collect();
+        if self
+            .play_log
+            .see(games.iter().map(|(p, s)| (*p, s.as_str())), now)
+        {
+            self.save_play_log();
+        }
+    }
+
+    fn reface_if(&mut self, platform: Platform, stem: &str, before: Option<slot_ui::shelf_life::Look>) {
+        let cart = self
+            .carts()
+            .find(|c| c.platform == platform && c.stem == stem)
+            .cloned();
+        if let Some(cart) = cart {
+            if before != Some(self.face_look(&cart)) {
+                self.reface(stem);
+            }
+        }
+    }
+
+    fn look_of(&self, platform: Platform, stem: &str) -> Option<slot_ui::shelf_life::Look> {
+        self.carts()
+            .find(|c| c.platform == platform && c.stem == stem)
+            .map(|c| self.face_look(c))
+    }
+
+    /// A cart going into the slot: its shrink wrap comes off, and its dust starts again.
+    fn note_inserted(&mut self, platform: Platform, stem: &str) {
+        if !self.state.clock_set {
+            return;
+        }
+        let before = self.look_of(platform, stem);
+        let now = self.unix_now();
+        self.play_log.add_play(platform, stem, 0, now);
+        if before.is_some_and(|l| l.wrap) {
+            self.reface_if(platform, stem, before);
+        }
+    }
+
+    /// slotPlus: time spent playing a game, counted by the session while it runs.
+    pub fn add_play_time(&mut self, platform: Platform, stem: &str, seconds: u64) {
+        if seconds == 0 {
+            return;
+        }
+        let before = self.look_of(platform, stem);
+        let now = self.unix_now();
+        self.play_log.add_play(platform, stem, seconds, now);
+        self.save_play_log();
+        self.reface_if(platform, stem, before);
+    }
+
+    /// slotPlus Shelf Life: wipe the selected cart. True when there was anything to wipe.
+    pub fn clean_selected(&mut self) -> bool {
+        let Some(cart) = self.selected_cart().cloned() else {
+            return false;
+        };
+        if !self.face_look(&cart).cleanable() {
+            return false;
+        }
+        let now = self.unix_now();
+        self.play_log.clean(cart.platform, &cart.stem, now);
+        self.save_play_log();
+        self.reface(&cart.stem);
+        true
     }
 
     pub fn set_cart_face(&mut self, shelf: usize, index: usize, tex: TexId) -> Option<TexId> {
@@ -6646,6 +6820,9 @@ impl App {
         if matches!(self.phase, Phase::Shelf) {
             if matches!(action, Action::GbaDown(_)) {
                 self.leaving = None;
+                if action != Action::GbaDown(Btn::B) {
+                    self.wipe = None;
+                }
             }
             match action {
                 Action::GbaDown(Btn::Y) if self.edit.is_none() => self.press = Some((Btn::Y, now)),
@@ -6711,6 +6888,14 @@ impl App {
                 }
                 Action::QuickMenu => self.open_quick_menu(),
                 Action::GbaDown(Btn::A) => self.play_held = Some(now),
+                Action::GbaDown(Btn::B) if self.shelf_life_on() => {
+                    self.wipe = Some(Wipe::Holding(now))
+                }
+                Action::GbaUp(Btn::B) => {
+                    if matches!(self.wipe, Some(Wipe::Holding(_))) {
+                        self.wipe = None;
+                    }
+                }
                 Action::GbaUp(Btn::A) => {
                     if self.play_held.take().is_some() && !self.unwrap_seated() {
                         self.insert(!self.state.resume_insert);
@@ -7071,6 +7256,7 @@ impl App {
             | QuickRow::ScreenGb
             | QuickRow::Shortcuts
             | QuickRow::General
+            | QuickRow::ShelfLife
             | QuickRow::System
             | QuickRow::Network
             | QuickRow::Romm
@@ -7116,6 +7302,9 @@ impl App {
             | QuickRow::BatteryDisplay
             | QuickRow::KidMode
             | QuickRow::KidShelf
+            | QuickRow::ShrinkWrap
+            | QuickRow::Dust
+            | QuickRow::Wear
             | QuickRow::Wallpaper
             | QuickRow::WallpaperTint
             | QuickRow::Resume
@@ -7439,6 +7628,15 @@ impl App {
             }
             QuickRow::Theme => s.appearance = s.appearance.toggle(),
             QuickRow::BatteryDisplay => s.battery_display = s.battery_display.step(right),
+            QuickRow::ShrinkWrap | QuickRow::Dust | QuickRow::Wear => {
+                match row {
+                    QuickRow::ShrinkWrap => s.shrink_wrap = !s.shrink_wrap,
+                    QuickRow::Dust => s.dust = !s.dust,
+                    _ => s.wear = !s.wear,
+                }
+                self.reface_all();
+            }
+            QuickRow::ShelfLife => return,
             QuickRow::WallpaperTint => s.wallpaper_tint = s.wallpaper_tint.step(right),
             QuickRow::ScreenGeneral
             | QuickRow::Brightness
@@ -8244,6 +8442,7 @@ impl App {
         self.romm_tick(self.now());
         self.take_update_events();
         self.play_hold();
+        self.wipe_hold();
         self.repeat_held_dir();
         self.take_shot_list();
         if self.radio_bye.is_some_and(|at| self.now() >= at) {
@@ -9112,6 +9311,7 @@ impl App {
                         } else if !self.draw_unwrap(out) {
                             self.shelf()
                                 .draw(self.canvas(), self.shelf_shake(), self.slot_now(), out);
+                            self.draw_wipe(out);
                         }
                         let name_alpha = match &self.edit {
                             None | Some(crate::editing::Edit::Selecting { .. }) => {
@@ -11513,6 +11713,7 @@ impl App {
             return;
         };
         self.seated_platform = Some(platform);
+        self.note_inserted(platform, &cart);
         eprintln!(
             "slot: launch: insert {cart} at {:.1} ms",
             crate::boot_time::ms()
@@ -11538,6 +11739,62 @@ impl App {
 
     pub fn starting_clean(&self) -> bool {
         matches!(self.phase, Phase::Inserting { clean: true, .. })
+    }
+
+    fn shelf_life_on(&self) -> bool {
+        self.state.dust || self.state.wear
+    }
+
+    fn wipe_hold(&mut self) {
+        let now = self.now();
+        if !matches!(self.phase, Phase::Shelf) || self.picker_open() || self.edit.is_some() {
+            self.wipe = None;
+            return;
+        }
+        match self.wipe {
+            Some(Wipe::Holding(at)) if now.saturating_sub(at) >= WIPE_HOLD_MS => {
+                self.wipe = self.clean_selected().then_some(Wipe::Shining(now));
+            }
+            Some(Wipe::Shining(at)) if now.saturating_sub(at) >= WIPE_SHINE_MS => {
+                self.wipe = None;
+            }
+            _ => {}
+        }
+    }
+
+    /// The shine left across a cart just wiped.
+    fn draw_wipe(&self, out: &mut Vec<Draw>) {
+        let Some(Wipe::Shining(at)) = self.wipe else {
+            return;
+        };
+        let Some(cart) = self.selected_cart() else {
+            return;
+        };
+        let t = (self.now().saturating_sub(at) as f32 / WIPE_SHINE_MS as f32).clamp(0.0, 1.0);
+        let canvas = self.canvas();
+        let (x, scale) = self.shelf().selected_at(canvas);
+        let (cw, ch) = slot_ui::cart_box(cart.platform);
+        let (w, h) = (cw as f32 * scale, ch as f32 * scale);
+        let top = slot_ui::foot_y(canvas, ch as f32) - h;
+        // A soft band of light crossing the cart, inset from its rounded corners.
+        let band = w * 0.16;
+        let inset = h * 0.06;
+        let centre = x - band + (w + 2.0 * band) * ease(t);
+        let fade = (1.0 - t).min(t * 4.0).clamp(0.0, 1.0);
+        for (k, alpha) in [(-1.0, 0.10), (0.0, 0.28), (1.0, 0.10)] {
+            let left = (centre + k * band / 3.0 - band / 6.0).max(x + inset);
+            let right = (centre + k * band / 3.0 + band / 6.0).min(x + w - inset);
+            if right <= left {
+                continue;
+            }
+            out.push(Draw::Rect {
+                x: left,
+                y: top + inset,
+                w: right - left,
+                h: h - 2.0 * inset,
+                colour: [1.0, 1.0, 1.0, alpha * fade],
+            });
+        }
     }
 
     fn play_hold(&mut self) {
@@ -12219,6 +12476,16 @@ impl App {
         if now.saturating_sub(since) >= WIFI_SETTLE_MS {
             self.hold_wifi();
         }
+    }
+
+    /// slotPlus Shelf Life: every face is drawn again, as a setting changed how carts look.
+    fn reface_all(&mut self) {
+        for (_, shelf) in self.shelves.iter_mut() {
+            for i in 0..shelf.carts.len() {
+                self.orphaned.extend(shelf.take_face(i));
+            }
+        }
+        self.core_stale = true;
     }
 
     fn reface(&mut self, stem: &str) {
@@ -14353,6 +14620,7 @@ impl App {
         self.restock_favorites();
         self.restock_all_games();
         self.restock_collections();
+        self.see_carts();
         for ((_, shelf), (index, seat)) in self.shelves.iter_mut().zip(seats) {
             let found = shelf.carts.iter().position(|c| {
                 seat.as_ref()
@@ -15337,7 +15605,14 @@ impl App {
             ),
             UpdateState::UpToDate => (
                 format!("{} is up to date", crate::edition::NAME),
-                format!("{running} is the latest version."),
+                match &self.other_edition {
+                    Some(_) => format!("{running}. X switches to {}.", crate::edition::OTHER_NAME),
+                    None => format!("{running} is the latest version."),
+                },
+            ),
+            UpdateState::Switch(r) => (
+                format!("Switch to {}?", crate::edition::OTHER_NAME),
+                format!("A installs {} {}. Saves stay.", crate::edition::OTHER_NAME, r.version),
             ),
             UpdateState::CheckFailed => (
                 "Could not fetch update info".into(),
@@ -15387,6 +15662,7 @@ impl App {
     }
 
     fn check_for_update(&mut self) {
+        self.other_edition = None;
         self.hold_wifi();
         self.update_jobs.ask(UpdateJob::Check);
         self.update_busy = true;
@@ -15420,6 +15696,18 @@ impl App {
             (Some(UpdateState::Battery(r)), Action::GbaDown(Btn::A)) => {
                 let r = r.clone();
                 self.install_update(r);
+            }
+            (Some(UpdateState::UpToDate), Action::GbaDown(Btn::X)) => {
+                if let Some(r) = self.other_edition.clone() {
+                    self.set_update(Some(UpdateState::Switch(r)));
+                }
+            }
+            (Some(UpdateState::Switch(r)), Action::GbaDown(Btn::A)) => {
+                let r = r.clone();
+                self.install_update(r);
+            }
+            (Some(UpdateState::Switch(_)), Action::GbaDown(Btn::B)) => {
+                self.set_update(Some(UpdateState::UpToDate));
             }
             (
                 Some(
@@ -15479,6 +15767,9 @@ impl App {
                 (Some(UpdateState::Checking), UpdateEvent::Available(offers)) => {
                     self.update_offers = offers.clone();
                     self.set_update(Some(UpdateState::Available(offers, 0)))
+                }
+                (Some(UpdateState::Checking), UpdateEvent::OtherEdition(r)) => {
+                    self.other_edition = Some(r.clone());
                 }
                 (Some(UpdateState::Checking), UpdateEvent::UpToDate) => {
                     self.set_update(Some(UpdateState::UpToDate))
@@ -15829,7 +16120,7 @@ impl App {
                 self.draw_side_legend(cancel, false, self.legend_y(), out);
                 self.draw_side_legend(install, true, self.legend_y(), out);
             }
-            Some(UpdateState::Battery(_)) => {
+            Some(UpdateState::Battery(_) | UpdateState::Switch(_)) => {
                 self.draw_side_legend(cancel, false, self.legend_y(), out);
                 self.draw_side_legend(install, true, self.legend_y(), out);
             }

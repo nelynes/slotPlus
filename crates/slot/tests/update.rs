@@ -1,8 +1,8 @@
 use std::io::{Cursor, Read, Write};
 
 use slot::update::{
-    check_with, clean_baseos, clock_is_wrong, install_baseos_with, install_with, newer,
-    parse_baseos, parse_release, read_counted, stage, verify, wifi_conf, will_apply, Device, Kind,
+    check_editions_with, check_with, clean_baseos, clock_is_wrong, install_baseos_with, install_with, newer,
+    parse_baseos, parse_other_edition, parse_release, read_counted, stage, verify, wifi_conf, will_apply, Device, Kind,
     Release, Running, Stoppable, Ticket, UpdateEvent, UpdateFail,
 };
 
@@ -761,3 +761,23 @@ fn device_of_target_reads_rgdsplus() {
     assert_eq!(Device::of_target(""), Device::H700);
 }
 
+
+#[test]
+fn the_other_edition_is_read_from_the_same_release() {
+    let json = release_json("v1.11.0", "slot-v1.11.0-h700.zip", DIGEST);
+    let other = parse_other_edition(&json).unwrap();
+    assert_eq!(other.kind, Kind::Slot);
+    assert_eq!(other.version, "1.11.0");
+    assert!(other.url.ends_with(&format!("/v1.11.0/{}", slot::edition::OTHER_ZIP)));
+    assert_ne!(slot::edition::OTHER_ZIP, slot::edition::ZIP);
+}
+
+#[test]
+fn an_up_to_date_check_still_offers_the_other_edition() {
+    let json = release_json("v1.11.0", "slot-v1.11.0-h700.zip", DIGEST);
+    let mut fetch = |_: &str| Ok(json.clone().into_bytes());
+    let (event, other) = check_editions_with(u64::MAX / 2, &mut fetch, slot_only("1.11.0"));
+    assert_eq!(event, UpdateEvent::UpToDate);
+    let other = other.unwrap();
+    assert_eq!(other.running, "1.11.0");
+}

@@ -6,6 +6,7 @@ use std::thread;
 
 use slot_gfx::{Compositor, TexId};
 use slot_store::Cart;
+use slot_ui::shelf_life::{apply_look, seed_of, Look};
 use slot_ui::{cart_face_with, cart_interior, shows_interior, CartFace};
 
 use crate::app::{App, FaceWant};
@@ -18,9 +19,12 @@ type Key = (usize, usize);
 /// A cart's face and, for a clear GBA cart, the game-coloured inside it is drawn over.
 type Built = (Key, CartFace, Option<CartFace>);
 
+/// A cart and how it has been kept: a face is built for both.
+type Job = (Cart, Look);
+
 #[derive(Default)]
 struct Queue {
-    jobs: VecDeque<(Key, Cart)>,
+    jobs: VecDeque<(Key, Job)>,
     closed: bool,
 }
 
@@ -28,12 +32,12 @@ type Shared = Arc<(Mutex<Queue>, Condvar)>;
 
 #[derive(Default)]
 struct Building {
-    carts: HashMap<Key, Cart>,
+    carts: HashMap<Key, Job>,
     outdated: HashSet<Key>,
 }
 
 impl Building {
-    fn start(&mut self, key: Key, cart: &Cart) -> bool {
+    fn start(&mut self, key: Key, cart: &Job) -> bool {
         match self.carts.get(&key) {
             None => {
                 self.carts.insert(key, cart.clone());
@@ -53,7 +57,7 @@ impl Building {
         self.outdated.remove(&key);
     }
 
-    fn finish(&mut self, key: Key, seated: Option<&Cart>) -> bool {
+    fn finish(&mut self, key: Key, seated: Option<&Job>) -> bool {
         let built = self.carts.remove(&key);
         !self.outdated.remove(&key) && built.as_ref() == seated
     }
@@ -123,8 +127,9 @@ impl CartFaces {
         for w in wants {
             let key = (w.shelf, w.index);
             if let Some(cart) = app.face_cart(w.shelf, w.index) {
-                if self.building.start(key, cart) {
-                    queue.jobs.push_back((key, cart.clone()));
+                let job = (cart.clone(), app.face_look(cart));
+                if self.building.start(key, &job) {
+                    queue.jobs.push_back((key, job));
                 }
             }
         }
@@ -150,7 +155,10 @@ impl CartFaces {
         interior: Option<CartFace>,
     ) {
         self.asked.retain(|w| (w.shelf, w.index) != key);
-        if !self.building.finish(key, app.face_cart(key.0, key.1)) {
+        let seated = app
+            .face_cart(key.0, key.1)
+            .map(|c| (c.clone(), app.face_look(c)));
+        if !self.building.finish(key, seated.as_ref()) {
             return;
         }
         let tex = self.texture(compositor, &face);
@@ -173,7 +181,7 @@ impl Drop for CartFaces {
 fn work(queue: &Shared, outbox: &Sender<Built>, root: &Path) {
     let (lock, wake) = &**queue;
     loop {
-        let (key, cart) = {
+        let (key, (cart, look)) = {
             let mut q = lock.lock().unwrap_or_else(|e| e.into_inner());
             loop {
                 if q.closed {
@@ -186,12 +194,22 @@ fn work(queue: &Shared, outbox: &Sender<Built>, root: &Path) {
             }
         };
         slot_store::header_index::verify(&cart.rom);
-        let face = cart_face_with(&cart, label_art(root, &cart));
+        let face = looked(cart_face_with(&cart, label_art(root, &cart)), &cart, look, root);
         let interior = shows_interior(&cart).then(|| cart_interior(&cart));
         if outbox.send((key, face, interior)).is_err() {
             return;
         }
     }
+}
+
+/// slotPlus Shelf Life: draw how the cart has been kept into its face. A game with a save
+/// on the card has been played somewhere, so it never comes wrapped.
+pub fn looked(mut face: CartFace, cart: &Cart, mut look: Look, root: &Path) -> CartFace {
+    if look.wrap && crate::persist::has_save(root, cart.platform, &cart.stem) {
+        look.wrap = false;
+    }
+    apply_look(&mut face, &look, seed_of(cart));
+    face
 }
 
 #[cfg(test)]
@@ -212,12 +230,24 @@ mod tests {
         }
     }
 
+    fn job(stem: &str) -> Job {
+        (cart(stem), Look::default())
+    }
+
+    #[test]
+    fn a_face_built_for_an_old_look_is_thrown_away() {
+        let mut b = Building::default();
+        let dusty = (cart("A"), Look { wrap: false, dust: 2, wear: 0 });
+        assert!(b.start((0, 0), &dusty));
+        assert!(!b.finish((0, 0), Some(&job("A"))));
+    }
+
     #[test]
     fn a_face_built_from_an_old_cart_is_thrown_away() {
         let mut b = Building::default();
-        let old = cart("A");
+        let old = (cart("A"), Look::default());
         let mut new = old.clone();
-        new.label = Some("new.png".into());
+        new.0.label = Some("new.png".into());
         assert!(b.start((0, 0), &old));
         assert!(!b.start((0, 0), &new));
         assert!(!b.finish((0, 0), Some(&new)));
@@ -228,17 +258,17 @@ mod tests {
     #[test]
     fn the_same_cart_asked_twice_builds_once_and_lands() {
         let mut b = Building::default();
-        assert!(b.start((0, 0), &cart("A")));
-        assert!(!b.start((0, 0), &cart("A")));
-        assert!(b.finish((0, 0), Some(&cart("A"))));
+        assert!(b.start((0, 0), &job("A")));
+        assert!(!b.start((0, 0), &job("A")));
+        assert!(b.finish((0, 0), Some(&job("A"))));
     }
 
     #[test]
     fn a_face_whose_seat_now_holds_another_cart_is_thrown_away() {
         let mut b = Building::default();
-        assert!(b.start((3, 0), &cart("A")));
-        assert!(!b.finish((3, 0), Some(&cart("B"))));
-        assert!(b.start((3, 1), &cart("A")));
+        assert!(b.start((3, 0), &job("A")));
+        assert!(!b.finish((3, 0), Some(&job("B"))));
+        assert!(b.start((3, 1), &job("A")));
         assert!(!b.finish((3, 1), None));
     }
 }

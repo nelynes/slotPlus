@@ -164,10 +164,14 @@ pub enum QuickRow {
     Overlay,
     BatteryDisplay,
     System,
+    ShelfLife,
+    ShrinkWrap,
+    Dust,
+    Wear,
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 153 + cfg!(feature = "nds") as usize] = [
+    pub const ALL: [QuickRow; 157 + cfg!(feature = "nds") as usize] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -323,6 +327,10 @@ impl QuickRow {
         QuickRow::Overlay,
         QuickRow::BatteryDisplay,
         QuickRow::System,
+        QuickRow::ShelfLife,
+        QuickRow::ShrinkWrap,
+        QuickRow::Dust,
+        QuickRow::Wear,
     ];
 
     pub const MAIN: [QuickRow; 7] = [
@@ -355,7 +363,10 @@ impl QuickRow {
         QuickRow::RaSetsBadges,
     ];
 
-    pub const GENERAL: [QuickRow; 9] = [
+    /// slotPlus Shelf Life: how the carts on the shelf show the way they've been kept.
+    pub const SHELF_LIFE: [QuickRow; 3] = [QuickRow::ShrinkWrap, QuickRow::Dust, QuickRow::Wear];
+
+    pub const GENERAL: [QuickRow; 10] = [
         QuickRow::Theme,
         QuickRow::Wallpaper,
         QuickRow::WallpaperTint,
@@ -365,6 +376,7 @@ impl QuickRow {
         QuickRow::CartSlot,
         QuickRow::KidMode,
         QuickRow::KidShelf,
+        QuickRow::ShelfLife,
     ];
 
     pub const SYSTEM: [QuickRow; 7] = [
@@ -618,7 +630,9 @@ impl QuickRow {
             | QuickRow::ShowTitles
             | QuickRow::CartSlot
             | QuickRow::KidMode
-            | QuickRow::KidShelf => &QuickRow::GENERAL,
+            | QuickRow::KidShelf
+            | QuickRow::ShelfLife => &QuickRow::GENERAL,
+            QuickRow::ShrinkWrap | QuickRow::Dust | QuickRow::Wear => &QuickRow::SHELF_LIFE,
             QuickRow::Wifi
             | QuickRow::DateTime
             | QuickRow::LidOff
@@ -702,6 +716,7 @@ impl QuickRow {
             QuickRow::RommProtocol => Some(QuickRow::Romm),
             QuickRow::WifiPower => Some(QuickRow::Wifi),
             QuickRow::RaUsername => Some(QuickRow::Achievements),
+            QuickRow::ShrinkWrap => Some(QuickRow::ShelfLife),
             QuickRow::RaSetsStatus => Some(QuickRow::RaDownload),
             QuickRow::ControlsShelf => Some(QuickRow::Controls),
             QuickRow::ShelfPrev => Some(QuickRow::ControlsShelf),
@@ -741,6 +756,7 @@ impl QuickRow {
             QuickRow::PlayControls => Some(QuickRow::CONTROLS[0]),
             QuickRow::Shortcuts => Some(QuickRow::SHORTCUTS[0]),
             QuickRow::General => Some(QuickRow::GENERAL[0]),
+            QuickRow::ShelfLife => Some(QuickRow::SHELF_LIFE[0]),
             QuickRow::System => Some(QuickRow::SYSTEM[0]),
             QuickRow::Network => Some(QuickRow::NETWORK[0]),
             QuickRow::Achievements => Some(QuickRow::ACHIEVEMENTS[0]),
@@ -823,6 +839,10 @@ impl QuickRow {
             QuickRow::LidOff => "Lid Power Off",
             QuickRow::KidMode => "Kid Mode",
             QuickRow::KidShelf => "Kid Shelf",
+            QuickRow::ShelfLife => "Shelf Life",
+            QuickRow::ShrinkWrap => "Shrink Wrap",
+            QuickRow::Dust => "Dust",
+            QuickRow::Wear => "Wear",
             QuickRow::FetchArt => "Fetch Missing Art",
             #[cfg(feature = "nds")]
             QuickRow::FetchBoxArt => "Fetch Box Art",
@@ -951,6 +971,7 @@ impl QuickRow {
                 | QuickRow::PlayScreen
                 | QuickRow::PlayGameplay
                 | QuickRow::General
+                | QuickRow::ShelfLife
                 | QuickRow::System
                 | QuickRow::Controls
                 | QuickRow::ControlsShelf

@@ -475,6 +475,12 @@ pub struct SlotState {
     /// of Slot's.
     pub bespoke_slot: bool,
     pub battery_display: BatteryDisplay,
+    /// slotPlus Shelf Life: games never played come shrink-wrapped.
+    pub shrink_wrap: bool,
+    /// slotPlus Shelf Life: carts left on the shelf gather dust.
+    pub dust: bool,
+    /// slotPlus Shelf Life: well-played carts show their wear.
+    pub wear: bool,
     pub wifi_off: bool,
     pub nickname: String,
     pub gb_core: Core,
@@ -684,6 +690,9 @@ impl Default for SlotState {
             show_titles: false,
             bespoke_slot: false,
             battery_display: BatteryDisplay::Both,
+            shrink_wrap: true,
+            dust: true,
+            wear: true,
             wifi_off: false,
             nickname: String::new(),
             gb_core: Core::Gambatte,
@@ -818,6 +827,9 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     text.push_str(&format!("show_titles={}\n", s.show_titles as u8));
     text.push_str(&format!("bespoke_slot={}\n", s.bespoke_slot as u8));
     text.push_str(&format!("battery_display={}\n", s.battery_display.key()));
+    text.push_str(&format!("shrink_wrap={}\n", s.shrink_wrap as u8));
+    text.push_str(&format!("dust={}\n", s.dust as u8));
+    text.push_str(&format!("wear={}\n", s.wear as u8));
     if s.wifi_off {
         text.push_str("wifi_off=1\n");
     }
@@ -935,6 +947,9 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut show_titles = None;
     let mut bespoke_slot = None;
     let mut battery_display = None;
+    let mut shrink_wrap = None;
+    let mut dust = None;
+    let mut wear = None;
     let mut wifi_off = None;
     let mut nickname = None;
     let mut gb_core = None;
@@ -1008,6 +1023,9 @@ fn parse(text: &str) -> Option<SlotState> {
             "show_titles" => show_titles = flag(value),
             "bespoke_slot" => bespoke_slot = flag(value),
             "battery_display" => battery_display = BatteryDisplay::parse(value),
+            "shrink_wrap" => shrink_wrap = flag(value),
+            "dust" => dust = flag(value),
+            "wear" => wear = flag(value),
             "wifi_off" => wifi_off = flag(value),
             "nickname" => nickname = Some(value.to_string()),
             "gb_core" => gb_core = Core::parse(value).filter(|c| c.runs(Platform::Gb)),
@@ -1104,6 +1122,9 @@ fn parse(text: &str) -> Option<SlotState> {
         show_titles: show_titles.unwrap_or(fallback.show_titles),
         bespoke_slot: bespoke_slot.unwrap_or(fallback.bespoke_slot),
         battery_display: battery_display.unwrap_or(fallback.battery_display),
+        shrink_wrap: shrink_wrap.unwrap_or(fallback.shrink_wrap),
+        dust: dust.unwrap_or(fallback.dust),
+        wear: wear.unwrap_or(fallback.wear),
         wifi_off: wifi_off.unwrap_or(fallback.wifi_off),
         nickname: nickname.unwrap_or_default(),
         gb_core: gb_core.unwrap_or(Core::Mgba),

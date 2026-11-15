@@ -2911,7 +2911,11 @@ fn sync_core_picker(
     }
     let highlighted = app.selected_cart().map(|c| (c.platform, c.stem.clone()));
     if let Some(cart) = app.selected_cart().filter(|_| *asked != highlighted) {
-        builder.request(cart.clone());
+        builder.request(crate::face_builder::FaceAsk {
+            cart: cart.clone(),
+            look: app.face_look(cart),
+            played: app.play_seconds(cart),
+        });
         *asked = highlighted.clone();
     }
     let Some(faces) = builder.take() else {

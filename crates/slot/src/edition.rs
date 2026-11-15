@@ -7,3 +7,8 @@ pub const KEY: &str = "plus";
 pub const ZIP: &str = "slot-plus.zip";
 /// The name the update screens use.
 pub const NAME: &str = "slotPlus";
+
+/// slotPlus: the other edition, which Check for Updates offers to switch to.
+pub const OTHER_KEY: &str = "ultra";
+pub const OTHER_ZIP: &str = "slot-plusultra.zip";
+pub const OTHER_NAME: &str = "slotPlusUltra";

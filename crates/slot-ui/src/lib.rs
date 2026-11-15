@@ -43,6 +43,7 @@ mod slot_chrome;
 pub use box_screen::BoxScreen;
 pub mod hand;
 mod sticker;
+pub mod shelf_life;
 pub mod sticker_curl;
 pub mod text;
 mod toast;

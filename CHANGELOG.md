@@ -1,5 +1,18 @@
 # Changelog
 
+## [Unreleased]
+
+Work toward slotPlus 3.0, "the cart remembers", on the `cart-remembers` branch. Not released yet.
+
+- **Play time.** slotPlus counts how long you play each game (paused menus, loading and sleep don't count) and keeps it in `Saves/play_log.txt`. Press START on a GBA or Game Boy cart and its board carries a small handwritten sticker with the time; a Lynx card shows it on its back.
+- **Shelf Life**, a new page at the foot of Settings → Shelf, with three switches, all on to start:
+  - **Shrink Wrap:** a game you've never played sits on the shelf in shrink wrap, which comes off the first time you put it in. A game with a save on the card, or on the Recents shelf, is never wrapped.
+  - **Dust:** a cart left alone gathers dust: a little after two weeks, more after six, thick after three months. The clock starts the first time the card sees the game.
+  - **Wear:** a cart you play a lot shows it: rubbed corners and edges, scuffs and fine scratches after 10, 30 and 100 hours.
+  - Hold B on a cart on the shelf to wipe it clean. Dust and wear both come off, and wear builds again with more play.
+- **Save backups.** Each time a game's save is replaced, the old one is kept in `Saves/Backups/<system>/` as `<game>.<time>.sav`. The newest three are kept for each game, and no more than one an hour, so a long session doesn't push out the older ones.
+- **Switch between slotPlus and slotPlusUltra** from Settings → System → Check for Updates: when you're up to date, X offers the other edition from the same release, and A installs it in place. Games, saves and settings stay.
+
 ## [1.16.0-plus2.9](https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus2.9)
 
 slotPlus brought up to Slot 1.16.0, and for slotPlusUltra, RetroAchievements on three more systems and a faster Nintendo DS core. See [Slot's 1.16.0 notes](https://github.com/slot-cfw/slot/releases/tag/v1.16.0).
