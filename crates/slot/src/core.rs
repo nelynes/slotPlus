@@ -433,6 +433,10 @@ pub fn apply_core_options(
     if which == Core::Gpsp {
         core.set_option("gpsp_serial", serial);
         core.set_option("gpsp_rtc_time_source", "system");
+        // slotPlus: gpSP's default became 32768 Hz (libretro/gpsp 8d268a6), and at that rate
+        // its PSG envelope, sweep and length clock (`gbc_sound_tick_step`) still steps as if
+        // it were 65536, so they run at half speed. Keep the rate gpSP was built around.
+        core.set_option("gpsp_sound_rate", "65536");
         if bios {
             core.set_option("gpsp_boot_mode", "bios");
         }
