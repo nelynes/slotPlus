@@ -667,6 +667,10 @@ pub struct App {
     play_log: slot_store::PlayLog,
     play_held: Option<Millis>,
     wipe: Option<Wipe>,
+    /// slotPlus: Kid Mode's play allowance: the part of a second counted but not yet
+    /// added, and whether the five-minute warning has been shown today.
+    kid_frac: f32,
+    kid_warned: bool,
     held_dir: Option<(Btn, Millis, usize)>,
     refusal: Option<Refusal>,
     refused_from: Option<f32>,
@@ -1243,6 +1247,8 @@ impl App {
             play_log: slot_store::PlayLog::default(),
             play_held: None,
             wipe: None,
+            kid_frac: 0.0,
+            kid_warned: false,
             held_dir: None,
             refusal: None,
             refused_from: None,
@@ -3062,6 +3068,14 @@ impl App {
             QuickRow::WifiPower => Some(QuickValue::flag(!self.state.wifi_off)),
             QuickRow::RaEncore => Some(QuickValue::flag(self.achievement_settings.encore)),
             QuickRow::ShrinkWrap => Some(QuickValue::flag(self.state.shrink_wrap)),
+            QuickRow::KidAllowance => Some(
+                QuickValue::ALLOWANCE
+                    .into_iter()
+                    .find(|v| {
+                        v.minutes().map_or(0, u16::from) == self.state.kid_allowance
+                    })
+                    .unwrap_or(QuickValue::Off),
+            ),
             QuickRow::Dust => Some(QuickValue::flag(self.state.dust)),
             QuickRow::Wear => Some(QuickValue::flag(self.state.wear)),
             QuickRow::ShelfLife => None,
@@ -3887,6 +3901,9 @@ impl App {
         if self.state.kid_mode != KidMode::OneShelf {
             hidden.push(QuickRow::KidShelf);
         }
+        if self.state.kid_mode == KidMode::Off {
+            hidden.push(QuickRow::KidAllowance);
+        }
         if cfg!(feature = "nds") || self.kid_locked() {
             hidden.push(QuickRow::Nickname);
         }
@@ -4645,6 +4662,60 @@ impl App {
         }
     }
 
+    /// slotPlus: the day's play a locked Kid Mode allows, in seconds.
+    fn kid_limit(&self) -> Option<u32> {
+        (self.kid_locked() && self.state.kid_allowance > 0)
+            .then(|| u32::from(self.state.kid_allowance) * 60)
+    }
+
+    /// A new day starts the allowance again.
+    fn kid_roll_day(&mut self) {
+        let today = self.wall_secs().div_euclid(86_400);
+        if self.state.kid_day != today {
+            self.state.kid_day = today;
+            self.state.kid_used = 0;
+            self.kid_frac = 0.0;
+            self.kid_warned = false;
+            self.persist_soon();
+        }
+    }
+
+    /// The day's allowance is used up.
+    pub fn kid_time_up(&mut self) -> bool {
+        let Some(limit) = self.kid_limit() else {
+            return false;
+        };
+        self.kid_roll_day();
+        self.state.kid_used >= limit
+    }
+
+    /// slotPlus: a moment of play in a locked Kid Mode, counted against the day's
+    /// allowance. A warning five minutes before the end; at the end the game saves and the
+    /// cart comes out, as a parent would take the Game Boy away.
+    pub fn kid_tick(&mut self, dt: f32) {
+        let Some(limit) = self.kid_limit() else {
+            return;
+        };
+        self.kid_roll_day();
+        self.kid_frac += dt.clamp(0.0, 0.5);
+        let whole = self.kid_frac.floor();
+        self.kid_frac -= whole;
+        self.state.kid_used = self.state.kid_used.saturating_add(whole as u32);
+        let left = limit.saturating_sub(self.state.kid_used);
+        if left == 0 {
+            if matches!(self.phase, Phase::Playing { .. }) {
+                self.hud.toast(Toast::KidTimeUp, self.now());
+                self.persist_soon();
+                self.eject();
+            }
+        } else if left <= 300 && !self.kid_warned {
+            self.kid_warned = true;
+            self.hud.toast(Toast::KidTimeLow, self.now());
+        } else if left > 300 {
+            self.kid_warned = false;
+        }
+    }
+
     /// slotPlus: time spent playing a game, counted by the session while it runs.
     pub fn add_play_time(&mut self, platform: Platform, stem: &str, seconds: u64) {
         if seconds == 0 {
@@ -4654,6 +4725,9 @@ impl App {
         let now = self.unix_now();
         self.play_log.add_play(platform, stem, seconds, now);
         self.save_play_log();
+        if self.kid_limit().is_some() {
+            self.persist_soon();
+        }
         self.reface_if(platform, stem, before);
     }
 
@@ -7302,6 +7376,7 @@ impl App {
             | QuickRow::BatteryDisplay
             | QuickRow::KidMode
             | QuickRow::KidShelf
+            | QuickRow::KidAllowance
             | QuickRow::ShrinkWrap
             | QuickRow::Dust
             | QuickRow::Wear
@@ -7637,6 +7712,18 @@ impl App {
                 self.reface_all();
             }
             QuickRow::ShelfLife => return,
+            QuickRow::KidAllowance => {
+                let all = QuickValue::ALLOWANCE;
+                let now = all
+                    .iter()
+                    .position(|v| v.minutes().map_or(0, u16::from) == s.kid_allowance)
+                    .unwrap_or(0);
+                let to = match right {
+                    true => (now + 1) % all.len(),
+                    false => (now + all.len() - 1) % all.len(),
+                };
+                s.kid_allowance = all[to].minutes().map_or(0, u16::from);
+            }
             QuickRow::WallpaperTint => s.wallpaper_tint = s.wallpaper_tint.step(right),
             QuickRow::ScreenGeneral
             | QuickRow::Brightness
@@ -11709,6 +11796,10 @@ impl App {
     fn insert(&mut self, clean: bool) {
         if !self.on_shelf() {
             return;
+        }
+        if self.kid_time_up() {
+            self.hud.toast(Toast::KidTimeUp, self.now());
+            return self.refuse();
         }
         self.settle_saves();
         let at = self.shelf().index;

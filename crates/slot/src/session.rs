@@ -583,6 +583,7 @@ impl Session {
                         secs: 0.0,
                     });
                 }
+                self.app.kid_tick(dt);
                 if let Some(clock) = &mut self.play_clock {
                     // A long frame is a stall or a sleep, not play.
                     clock.secs += f64::from(dt.clamp(0.0, 0.5));

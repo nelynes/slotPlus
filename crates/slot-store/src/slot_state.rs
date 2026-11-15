@@ -513,6 +513,12 @@ pub struct SlotState {
     pub gba_video: bool,
     pub kid_mode: KidMode,
     pub kid_shelf: String,
+    /// slotPlus: minutes of play a locked Kid Mode allows each day; 0 is no limit.
+    pub kid_allowance: u16,
+    /// slotPlus: the local day (days since 1970) `kid_used` counts, and the seconds
+    /// played on it in a locked Kid Mode.
+    pub kid_day: i64,
+    pub kid_used: u32,
 }
 
 impl SlotState {
@@ -725,6 +731,9 @@ impl Default for SlotState {
             gba_video: false,
             kid_mode: KidMode::Off,
             kid_shelf: KID_SHELF_ALL.to_string(),
+            kid_allowance: 0,
+            kid_day: 0,
+            kid_used: 0,
         }
     }
 }
@@ -885,6 +894,9 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     text.push_str(&format!("shelf_mode={}\n", s.shelf_mode.key()));
     text.push_str(&format!("kid_mode={}\n", s.kid_mode.key()));
     text.push_str(&format!("kid_shelf={}\n", s.kid_shelf));
+    text.push_str(&format!("kid_allowance={}\n", s.kid_allowance));
+    text.push_str(&format!("kid_day={}\n", s.kid_day));
+    text.push_str(&format!("kid_used={}\n", s.kid_used));
     text.push_str(&format!(
         "collection={}\n",
         s.collection.as_deref().unwrap_or("")
@@ -978,6 +990,9 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut shelf_mode = None;
     let mut kid_mode = None;
     let mut kid_shelf = None;
+    let mut kid_allowance = None;
+    let mut kid_day = None;
+    let mut kid_used = None;
     let mut collection = None;
     let mut gba_video = None;
     for line in text.lines().filter(|l| !l.is_empty()) {
@@ -1054,6 +1069,9 @@ fn parse(text: &str) -> Option<SlotState> {
             "shelf_mode" => shelf_mode = ShelfMode::parse(value),
             "kid_mode" => kid_mode = KidMode::parse(value),
             "kid_shelf" => kid_shelf = Some(value.to_string()).filter(|v| !v.is_empty()),
+            "kid_allowance" => kid_allowance = value.parse().ok(),
+            "kid_day" => kid_day = value.parse().ok(),
+            "kid_used" => kid_used = value.parse().ok(),
             "collection" => collection = Some(value.to_string()).filter(|v| !v.is_empty()),
             "gba_video" => gba_video = flag(value),
             "shader_gb" => shader_gb = Shader::parse(value).filter(|s| Shader::GB.contains(s)),
@@ -1155,6 +1173,9 @@ fn parse(text: &str) -> Option<SlotState> {
         shelf_mode: shelf_mode.unwrap_or(fallback.shelf_mode),
         kid_mode: kid_mode.unwrap_or(KidMode::Off),
         kid_shelf: kid_shelf.unwrap_or_else(|| KID_SHELF_ALL.to_string()),
+        kid_allowance: kid_allowance.unwrap_or(fallback.kid_allowance),
+        kid_day: kid_day.unwrap_or(fallback.kid_day),
+        kid_used: kid_used.unwrap_or(fallback.kid_used),
         collection,
         gba_video: gba_video.unwrap_or(false),
     })

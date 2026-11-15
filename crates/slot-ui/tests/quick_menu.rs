@@ -104,6 +104,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
             "Cart Slot",
             "Kid Mode",
             "Kid Shelf",
+            "Kid Play Time",
             "Shelf Life"
         ]
     );
@@ -361,6 +362,10 @@ fn the_values_read_as_the_menu_prints_them() {
             "Both",
             "Icon",
             "Percentage",
+            "45 min",
+            "1 hour",
+            "1.5 hours",
+            "2 hours",
         ]
     );
     assert_eq!(QuickValue::flag(true), QuickValue::On);

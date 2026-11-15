@@ -168,10 +168,11 @@ pub enum QuickRow {
     ShrinkWrap,
     Dust,
     Wear,
+    KidAllowance,
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 157 + cfg!(feature = "nds") as usize] = [
+    pub const ALL: [QuickRow; 158 + cfg!(feature = "nds") as usize] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -331,6 +332,7 @@ impl QuickRow {
         QuickRow::ShrinkWrap,
         QuickRow::Dust,
         QuickRow::Wear,
+        QuickRow::KidAllowance,
     ];
 
     pub const MAIN: [QuickRow; 7] = [
@@ -366,7 +368,7 @@ impl QuickRow {
     /// slotPlus Shelf Life: how the carts on the shelf show the way they've been kept.
     pub const SHELF_LIFE: [QuickRow; 3] = [QuickRow::ShrinkWrap, QuickRow::Dust, QuickRow::Wear];
 
-    pub const GENERAL: [QuickRow; 10] = [
+    pub const GENERAL: [QuickRow; 11] = [
         QuickRow::Theme,
         QuickRow::Wallpaper,
         QuickRow::WallpaperTint,
@@ -376,6 +378,7 @@ impl QuickRow {
         QuickRow::CartSlot,
         QuickRow::KidMode,
         QuickRow::KidShelf,
+        QuickRow::KidAllowance,
         QuickRow::ShelfLife,
     ];
 
@@ -631,6 +634,7 @@ impl QuickRow {
             | QuickRow::CartSlot
             | QuickRow::KidMode
             | QuickRow::KidShelf
+            | QuickRow::KidAllowance
             | QuickRow::ShelfLife => &QuickRow::GENERAL,
             QuickRow::ShrinkWrap | QuickRow::Dust | QuickRow::Wear => &QuickRow::SHELF_LIFE,
             QuickRow::Wifi
@@ -839,6 +843,7 @@ impl QuickRow {
             QuickRow::LidOff => "Lid Power Off",
             QuickRow::KidMode => "Kid Mode",
             QuickRow::KidShelf => "Kid Shelf",
+            QuickRow::KidAllowance => "Kid Play Time",
             QuickRow::ShelfLife => "Shelf Life",
             QuickRow::ShrinkWrap => "Shrink Wrap",
             QuickRow::Dust => "Dust",
@@ -1137,10 +1142,14 @@ pub enum QuickValue {
     Both,
     Icon,
     Percentage,
+    Min45,
+    Min60,
+    Min90,
+    Min120,
 }
 
 impl QuickValue {
-    pub const ALL: [QuickValue; 60] = [
+    pub const ALL: [QuickValue; 64] = [
         QuickValue::Speed1_5,
         QuickValue::Speed2,
         QuickValue::Speed3,
@@ -1201,6 +1210,21 @@ impl QuickValue {
         QuickValue::Both,
         QuickValue::Icon,
         QuickValue::Percentage,
+        QuickValue::Min45,
+        QuickValue::Min60,
+        QuickValue::Min90,
+        QuickValue::Min120,
+    ];
+
+    /// slotPlus: a day's play in a locked Kid Mode.
+    pub const ALLOWANCE: [QuickValue; 7] = [
+        QuickValue::Off,
+        QuickValue::Min15,
+        QuickValue::Min30,
+        QuickValue::Min45,
+        QuickValue::Min60,
+        QuickValue::Min90,
+        QuickValue::Min120,
     ];
 
     pub const LEVELS: [QuickValue; 16] = [
@@ -1270,6 +1294,10 @@ impl QuickValue {
             QuickValue::Min10 => "10 min",
             QuickValue::Min15 => "15 min",
             QuickValue::Min30 => "30 min",
+            QuickValue::Min45 => "45 min",
+            QuickValue::Min60 => "1 hour",
+            QuickValue::Min90 => "1.5 hours",
+            QuickValue::Min120 => "2 hours",
             QuickValue::Level0 => "0",
             QuickValue::Level1 => "1",
             QuickValue::Level2 => "2",
@@ -1324,6 +1352,10 @@ impl QuickValue {
             QuickValue::Min10 => 10,
             QuickValue::Min15 => 15,
             QuickValue::Min30 => 30,
+            QuickValue::Min45 => 45,
+            QuickValue::Min60 => 60,
+            QuickValue::Min90 => 90,
+            QuickValue::Min120 => 120,
             _ => return None,
         })
     }

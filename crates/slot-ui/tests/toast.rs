@@ -42,7 +42,7 @@ fn the_link_ending_says_who_ended_it() {
 fn the_banner_says_what_happened_and_never_what_is_on_screen() {
     let all = Toast::all();
     assert_eq!(
-        all[..33],
+        all[..35],
         [
             Toast::StateSaved,
             Toast::StateLoaded,
@@ -73,6 +73,8 @@ fn the_banner_says_what_happened_and_never_what_is_on_screen() {
             Toast::Forgotten,
             Toast::Collection,
             Toast::KidUnlocked,
+            Toast::KidTimeLow,
+            Toast::KidTimeUp,
             Toast::TintOff,
             Toast::TintLow,
             Toast::TintMedium,
@@ -83,12 +85,12 @@ fn the_banner_says_what_happened_and_never_what_is_on_screen() {
     let palettes = GbColors::all().count();
     assert_eq!(palettes, 49);
     assert_eq!(
-        all[33..33 + palettes],
+        all[35..35 + palettes],
         GbColors::all().map(Toast::Palette).collect::<Vec<_>>()[..],
         "the palette banners do not follow the fixed ones in palette order"
     );
     assert_eq!(
-        all[33 + palettes..],
+        all[35 + palettes..],
         QuickRow::ALL
             .into_iter()
             .filter(|r| r.binds())
@@ -552,4 +554,11 @@ fn the_kid_mode_unlock_toast_stays_on_one_line() {
 #[test]
 fn the_lcd_shader_toast_says_lcd_on_every_panel() {
     assert_eq!(Toast::ShaderLcd3x.text(), "Shader: LCD");
+}
+
+#[test]
+fn kid_mode_says_when_play_time_is_nearly_over_and_when_it_is() {
+    assert_eq!(Toast::KidTimeLow.text(), "5 minutes of play left");
+    assert_eq!(Toast::KidTimeUp.text(), "That's all the play for today");
+    assert_eq!(Toast::KidTimeUp.hold_ms(), Toast::KidUnlocked.hold_ms());
 }
