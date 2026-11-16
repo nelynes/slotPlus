@@ -175,7 +175,7 @@ pub fn apply_look(face: &mut CartFace, look: &Look, seed: u64) {
         wear(face, look.wear.min(MAX_LEVEL), seed);
     }
     if look.wrap {
-        wrap(face, seed ^ 0x5ea1);
+        wrap(face, seed ^ WRAP_SALT);
     }
     // Dust settles on whatever is outermost, the film included.
     if look.dust > 0 {
@@ -525,8 +525,54 @@ fn wrap(face: &mut CartFace, seed: u64) {
     price_sticker(face, seed);
 }
 
+/// The shrink wrap alone, as a layer to draw over the bare cart while it is torn off: what
+/// `wrap` adds to a face. Only the cart's outline matters, so any face of the cart will do.
+///
+/// The film is found by wrapping the outline twice, once black and once white: where the
+/// two differ the cart shows through, and what they share is the film.
+pub fn film_of(face: &CartFace, seed: u64) -> CartFace {
+    let painted = |v: u8| {
+        let mut f = CartFace {
+            w: face.w,
+            h: face.h,
+            rgba: face.rgba.clone(),
+        };
+        for px in f.rgba.chunks_exact_mut(4) {
+            px[..3].fill(v);
+        }
+        wrap(&mut f, seed ^ WRAP_SALT);
+        f
+    };
+    let (dark, light) = (painted(0), painted(255));
+    let mut film = dark;
+    for (px, lit) in film
+        .rgba
+        .chunks_exact_mut(4)
+        .zip(light.rgba.chunks_exact(4))
+    {
+        let all = px[3] as u32;
+        if all == 0 {
+            continue;
+        }
+        // Premultiplied, the white cart adds 255 x (the cart's share) to the black one.
+        let through = (lit[1] as u32 - (px[1] as u32).min(lit[1] as u32)) * all / 255;
+        let alpha = all.saturating_sub(through);
+        if alpha == 0 {
+            px.fill(0);
+            continue;
+        }
+        for c in &mut px[..3] {
+            *c = (*c as u32 * all / alpha).min(255) as u8;
+        }
+        px[3] = alpha as u8;
+    }
+    film
+}
+
 /// How far the film stands off the cart, in pixels.
 const FILM_SLACK: u32 = 5;
+/// What a game's seed is mixed with for its film, so `film_of` matches the wrapped face.
+const WRAP_SALT: u64 = 0x5ea1;
 
 /// Scale the face down about its middle so `margin` pixels are left clear on its short
 /// sides.
@@ -1126,5 +1172,30 @@ mod tests {
             );
         }
         eprintln!("wrap: {:.2} ms each", t.elapsed().as_secs_f64() * 50.0);
+    }
+
+    #[test]
+    fn the_film_alone_is_clear_over_the_cart_and_solid_at_its_sticker() {
+        let mut face = CartFace {
+            w: 120,
+            h: 80,
+            rgba: vec![0; 120 * 80 * 4],
+        };
+        for y in 10..70 {
+            for x in 10..110 {
+                face.rgba[(y * 120 + x) * 4..][..4].copy_from_slice(&[90, 40, 40, 255]);
+            }
+        }
+        let film = film_of(&face, 7);
+        let alpha = |x: usize, y: usize| film.rgba[(y * 120 + x) * 4 + 3];
+        assert_eq!(alpha(0, 0), 0, "nothing far outside the cart");
+        let thin = film
+            .rgba
+            .chunks_exact(4)
+            .filter(|p| (1..120).contains(&p[3]))
+            .count();
+        let solid = film.rgba.chunks_exact(4).filter(|p| p[3] == 255).count();
+        assert!(thin > 2000, "most of the film is see-through: {thin}");
+        assert!(solid > 100, "the price sticker is not: {solid}");
     }
 }

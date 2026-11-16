@@ -179,3 +179,48 @@ fn a_cart_with_a_save_never_comes_wrapped() {
     let built = slot::cart_faces::looked(plain(), &cart, wrapped, d.path());
     assert_eq!(built.rgba, plain().rgba);
 }
+
+#[test]
+fn a_wrapped_cart_has_its_film_torn_off_before_it_goes_in() {
+    let d = tmp_root_with_carts(&["Emerald", "Fusion"]);
+    let mut a = boot_with(d.path(), SlotState::default());
+    a.show_tears();
+    assert!(look(&a).wrap);
+    let first = selected(&a);
+
+    let t = a.now();
+    a.apply_at(Action::Insert, t);
+    assert!(a.tearing(), "the film comes off first");
+    assert!(a.tear_wants().is_some(), "and its film is asked for");
+    assert!(!look(&a).wrap, "the cart under it is bare");
+    assert!(a.seated_cart().is_none(), "the cart waits on the shelf");
+
+    a.apply_at(Action::ShelfRight, t + 100);
+    a.tick_ms(t + 200);
+    assert_eq!(selected(&a), first, "the shelf holds still while it tears");
+    assert!(a.tearing());
+
+    a.tick_ms(t + slot::app::TEAR_MS + 10);
+    assert!(!a.tearing());
+    assert_eq!(
+        a.seated_cart().map(|c| c.stem.as_str()),
+        Some(first.1.as_str())
+    );
+}
+
+#[test]
+fn a_cart_without_film_goes_straight_in() {
+    let d = tmp_root_with_carts(&["Emerald", "Fusion"]);
+    let mut a = boot_with(
+        d.path(),
+        SlotState {
+            shrink_wrap: false,
+            ..SlotState::default()
+        },
+    );
+    a.show_tears();
+    let t = a.now();
+    a.apply_at(Action::Insert, t);
+    assert!(!a.tearing());
+    assert!(a.seated_cart().is_some());
+}

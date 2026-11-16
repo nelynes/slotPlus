@@ -126,6 +126,20 @@ enum Wipe {
     Shining(Millis),
 }
 
+/// slotPlus Shelf Life: how long shrink wrap takes to tear off a cart before it goes in.
+pub const TEAR_MS: Millis = 520;
+/// How many strips the film is torn into down its height, each split a little off-centre.
+const TEAR_STRIPS: usize = 14;
+
+/// slotPlus Shelf Life: a cart's shrink wrap being torn off before it goes into the slot.
+struct Tear {
+    at: Millis,
+    clean: bool,
+    cart: Cart,
+    /// The film alone, drawn over the bare cart; made once the tear has started.
+    film: Option<TexId>,
+}
+
 const SHUTDOWN_SHOW_MS: Millis = 250;
 
 const REPAIR_GAP: u32 = 12;
@@ -667,6 +681,9 @@ pub struct App {
     play_log: slot_store::PlayLog,
     play_held: Option<Millis>,
     wipe: Option<Wipe>,
+    tear: Option<Tear>,
+    /// Whether anything is drawing cart faces, so a tear can be shown at all.
+    shows_tears: bool,
     /// slotPlus: Kid Mode's play allowance: the part of a second counted but not yet
     /// added, and whether the five-minute warning has been shown today.
     kid_frac: f32,
@@ -1247,6 +1264,8 @@ impl App {
             play_log: slot_store::PlayLog::default(),
             play_held: None,
             wipe: None,
+            tear: None,
+            shows_tears: false,
             kid_frac: 0.0,
             kid_warned: false,
             held_dir: None,
@@ -6891,6 +6910,10 @@ impl App {
             }
         }
         let now = self.now();
+        if self.tear.is_some() && matches!(self.phase, Phase::Shelf) {
+            // The film is coming off: the cart goes in when it has.
+            return;
+        }
         if matches!(self.phase, Phase::Shelf) {
             if matches!(action, Action::GbaDown(_)) {
                 self.leaving = None;
@@ -8530,6 +8553,7 @@ impl App {
         self.take_update_events();
         self.play_hold();
         self.wipe_hold();
+        self.tear_step();
         self.repeat_held_dir();
         self.take_shot_list();
         if self.radio_bye.is_some_and(|at| self.now() >= at) {
@@ -9399,6 +9423,7 @@ impl App {
                             self.shelf()
                                 .draw(self.canvas(), self.shelf_shake(), self.slot_now(), out);
                             self.draw_wipe(out);
+                            self.draw_tear(out);
                         }
                         let name_alpha = match &self.edit {
                             None | Some(crate::editing::Edit::Selecting { .. }) => {
@@ -11801,6 +11826,9 @@ impl App {
             self.hud.toast(Toast::KidTimeUp, self.now());
             return self.refuse();
         }
+        if self.start_tear(clean) {
+            return;
+        }
         self.settle_saves();
         let at = self.shelf().index;
         let Some((cart, platform)) = self.shelf_mut().carts.get_mut(at).map(|c| {
@@ -11836,6 +11864,131 @@ impl App {
 
     pub fn starting_clean(&self) -> bool {
         matches!(self.phase, Phase::Inserting { clean: true, .. })
+    }
+
+    /// slotPlus Shelf Life: a wrapped cart has its film torn off first, and goes in after.
+    /// True when a tear has started.
+    fn start_tear(&mut self, clean: bool) -> bool {
+        if self.tear.is_some() || !self.shows_tears || !self.state.clock_set {
+            return false;
+        }
+        let Some(cart) = self.selected_cart().cloned() else {
+            return false;
+        };
+        let saved = self
+            .root
+            .as_deref()
+            .is_some_and(|root| crate::persist::has_save(root, cart.platform, &cart.stem));
+        if saved || !self.face_look(&cart).wrap {
+            return false;
+        }
+        self.note_inserted(cart.platform, &cart.stem);
+        self.play_held = None;
+        self.tear = Some(Tear {
+            at: self.now(),
+            clean,
+            cart,
+            film: None,
+        });
+        true
+    }
+
+    /// Once the film is off, the cart goes in.
+    fn tear_step(&mut self) {
+        let Some(tear) = &self.tear else {
+            return;
+        };
+        let done = self.now().saturating_sub(tear.at) >= TEAR_MS;
+        if !done && self.on_shelf() {
+            return;
+        }
+        if let Some(tear) = self.tear.take() {
+            self.orphaned.extend(tear.film);
+            if self.on_shelf() {
+                self.insert(tear.clean);
+            }
+        }
+    }
+
+    /// Cart faces are being drawn, so a wrapped cart's film can be shown tearing off.
+    pub fn show_tears(&mut self) {
+        self.shows_tears = true;
+    }
+
+    pub fn tearing(&self) -> bool {
+        self.tear.is_some()
+    }
+
+    /// The cart whose film is wanted as a texture, for the tear.
+    pub fn tear_wants(&self) -> Option<&Cart> {
+        self.tear
+            .as_ref()
+            .filter(|t| t.film.is_none())
+            .map(|t| &t.cart)
+    }
+
+    pub fn set_tear_film(&mut self, tex: TexId) {
+        match &mut self.tear {
+            Some(tear) if tear.film.is_none() => tear.film = Some(tex),
+            _ => self.orphaned.push(tex),
+        }
+    }
+
+    /// The film splitting down the middle and peeling off to both sides, top first.
+    fn draw_tear(&self, out: &mut Vec<Draw>) {
+        let Some(Tear {
+            at,
+            cart,
+            film: Some(tex),
+            ..
+        }) = &self.tear
+        else {
+            return;
+        };
+        let t = (self.now().saturating_sub(*at) as f32 / TEAR_MS as f32).clamp(0.0, 1.0);
+        let canvas = self.canvas();
+        let (x, scale) = self.shelf().selected_at(canvas);
+        let (cw, ch) = slot_ui::cart_box(cart.platform);
+        let (w, h) = (cw as f32 * scale, ch as f32 * scale);
+        let top = slot_ui::foot_y(canvas, ch as f32) - h;
+        let seed = slot_ui::shelf_life::seed_of(cart);
+        let jag = |i: usize| {
+            let n = seed.rotate_left(i as u32 * 7) ^ (i as u64).wrapping_mul(0x9e37_79b9_7f4a_7c15);
+            0.5 + ((n >> 20) % 1000) as f32 / 1000.0 * 0.10 - 0.05
+        };
+        // Each half swings out about its outer bottom corner, so the rip opens from the
+        // top, then slides away and fades.
+        let open = ease((t / 0.75).min(1.0));
+        let away = ease(((t - 0.2) / 0.8).clamp(0.0, 1.0));
+        let alpha = (1.0 - ((t - 0.45) / 0.55).clamp(0.0, 1.0).powi(2)).clamp(0.0, 1.0);
+        for side in [-1.0f32, 1.0] {
+            let pivot = [if side < 0.0 { x } else { x + w }, top + h];
+            let (sin, cos) = (side * open * 0.62).sin_cos();
+            let (dx, dy) = (side * away * w * 0.22, away * away * h * 0.10);
+            let place = |px: f32, py: f32| {
+                let (rx, ry) = (px - pivot[0], py - pivot[1]);
+                [
+                    pivot[0] + rx * cos - ry * sin + dx,
+                    pivot[1] + rx * sin + ry * cos + dy,
+                ]
+            };
+            for i in 0..TEAR_STRIPS {
+                let (v0, v1) = (
+                    i as f32 / TEAR_STRIPS as f32,
+                    (i + 1) as f32 / TEAR_STRIPS as f32,
+                );
+                // The rip wanders from row to row, a ragged edge down the middle.
+                let (u0, u1) = if side < 0.0 { (0.0, jag(i)) } else { (jag(i), 1.0) };
+                let (xa, xb) = (x + w * u0, x + w * u1);
+                let (ya, yb) = (top + h * v0, top + h * v1);
+                out.push(Draw::Quad {
+                    corners: [place(xa, ya), place(xb, ya), place(xb, yb), place(xa, yb)],
+                    tex: *tex,
+                    uv: [u0, v0, u1, v1],
+                    alpha,
+                });
+            }
+        }
     }
 
     fn shelf_life_on(&self) -> bool {

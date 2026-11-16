@@ -6,7 +6,7 @@ use std::thread;
 
 use slot_gfx::{Compositor, TexId};
 use slot_store::Cart;
-use slot_ui::shelf_life::{apply_look, seed_of, Look};
+use slot_ui::shelf_life::{apply_look, film_of, seed_of, Look};
 use slot_ui::{cart_face_with, cart_interior, shows_interior, CartFace};
 
 use crate::app::{App, FaceWant};
@@ -97,6 +97,12 @@ impl CartFaces {
         self.free.extend(app.shed_faces());
         while let Ok((key, face, interior)) = self.built.try_recv() {
             self.place(app, compositor, key, face, interior);
+        }
+        app.show_tears();
+        if let Some(cart) = app.tear_wants() {
+            let film = film_of(&cart_face_with(cart, None), seed_of(cart));
+            let tex = self.texture(compositor, &film);
+            app.set_tear_film(tex);
         }
         let wants = app.face_wants();
         if wants != self.asked {
@@ -194,7 +200,12 @@ fn work(queue: &Shared, outbox: &Sender<Built>, root: &Path) {
             }
         };
         slot_store::header_index::verify(&cart.rom);
-        let face = looked(cart_face_with(&cart, label_art(root, &cart)), &cart, look, root);
+        let face = looked(
+            cart_face_with(&cart, label_art(root, &cart)),
+            &cart,
+            look,
+            root,
+        );
         let interior = shows_interior(&cart).then(|| cart_interior(&cart));
         if outbox.send((key, face, interior)).is_err() {
             return;
@@ -237,7 +248,14 @@ mod tests {
     #[test]
     fn a_face_built_for_an_old_look_is_thrown_away() {
         let mut b = Building::default();
-        let dusty = (cart("A"), Look { wrap: false, dust: 2, wear: 0 });
+        let dusty = (
+            cart("A"),
+            Look {
+                wrap: false,
+                dust: 2,
+                wear: 0,
+            },
+        );
         assert!(b.start((0, 0), &dusty));
         assert!(!b.finish((0, 0), Some(&job("A"))));
     }
