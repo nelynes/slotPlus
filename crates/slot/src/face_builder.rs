@@ -14,6 +14,8 @@ pub struct BuiltFaces {
     pub interior: CartFace,
     pub board: CartFace,
     pub lid: CartFace,
+    /// slotPlus: the game's achievement set is on the card, so it can be printed.
+    pub has_set: bool,
 }
 
 /// A cart to build the picker's faces for: how it has been kept, and how long it has been
@@ -62,6 +64,7 @@ impl FaceBuilder {
                     let progress = crate::ACHIEVEMENTS
                         .then(|| slot_achievements::progress(&root, &cart.rom))
                         .flatten();
+                    let has_set = progress.is_some();
                     if let Some(p) = progress {
                         let words = match p.mastered() {
                             true => "Mastered".to_string(),
@@ -83,6 +86,7 @@ impl FaceBuilder {
                         // turns it over to its back instead.
                         board,
                         lid: padded(&lid, TURN_PAD),
+                        has_set,
                     };
                     if outbox.send(faces).is_err() {
                         return;

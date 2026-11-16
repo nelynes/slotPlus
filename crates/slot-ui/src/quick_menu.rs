@@ -1605,6 +1605,8 @@ pub fn core_button_legends(ink: [u8; 3]) -> Vec<UndoFace> {
         with_hint(button_face(ButtonLegend::A), "Choose", hint, false),
         // The Lynx rotation picker's chip goes any of four ways.
         with_hint(four_way(), "Swap", hint, true),
+        // slotPlus: SELECT prints the game's achievement set.
+        with_hint(button_face(ButtonLegend::Select), "Print", hint, false),
     ]
 }
 
@@ -1695,6 +1697,20 @@ fn small_button(which: ButtonLegend) -> UndoFace {
 
 pub fn print_stop_legend(ink: [u8; 3]) -> UndoFace {
     with_hint(small_button(ButtonLegend::B), "Stop", Some(ink), true)
+}
+
+/// slotPlus: the achievement printout's own legends, printed on the paper: Up/Down to
+/// scroll a long list, and B to put it away.
+pub fn print_list_legends(ink: [u8; 3]) -> [UndoFace; 2] {
+    let pair = up_down_pair();
+    let h = PRINT_STOP_BUTTON;
+    let w = (pair.w as f32 * h as f32 / pair.h as f32).round() as u32;
+    let rgba = crate::art::cover_rgba(&pair.rgba, pair.w, pair.h, w, h).unwrap_or_default();
+    let small = UndoFace { rgba, w, h };
+    [
+        with_hint(small, "Scroll", Some(ink), true),
+        with_hint(small_button(ButtonLegend::B), "Done", Some(ink), true),
+    ]
 }
 
 pub fn small_prompt_legends(ink: [u8; 3], no: &str, yes: &str) -> [UndoFace; 2] {

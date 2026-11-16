@@ -371,6 +371,21 @@ fn sync_server(
     }
 }
 
+/// slotPlus: the achievement printout's sheet, redrawn as its list scrolls.
+fn sync_set_print(
+    app: &mut App,
+    compositor: &mut Compositor,
+    tex: Option<crate::print_scene::PrintTextures>,
+) {
+    let (Some(have), Some(print)) = (tex, app.set_print_mut()) else {
+        return;
+    };
+    print.set_tex(have);
+    if let Some(sheet) = print.take_sheet() {
+        have.set_paper_face(compositor, &sheet);
+    }
+}
+
 fn sync_fetch_art(app: &mut App, compositor: &mut Compositor, st: &mut FetchSync) {
     use crate::fetch_art::FetchTex;
     use crate::fetch_faces::{FaceDone, FaceJob};
@@ -1336,6 +1351,7 @@ impl Frontend {
         sync_studio(self.session.app_mut(), compositor, &mut self.studio_sync);
         self.step_print_stage(compositor);
         sync_server(self.session.app_mut(), compositor, self.print_tex);
+        sync_set_print(self.session.app_mut(), compositor, self.print_tex);
         self.gift_boxes.sync(self.session.app_mut(), compositor);
         let stale = self.session.app_mut().take_stale_labels();
         if !stale.is_empty() {
@@ -2948,6 +2964,7 @@ fn sync_core_picker(
         &faces.lid.rgba,
     );
     app.set_core_board_faces(board_id, lid_id);
+    app.set_core_has_set(faces.has_set);
     *built = made;
 }
 

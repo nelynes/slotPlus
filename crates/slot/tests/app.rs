@@ -2511,3 +2511,54 @@ fn start_on_a_wonderswan_cart_shows_its_board_alone() {
     assert_eq!(app.core_picker(), None);
     assert!(!d.path().join(slot_store::SELECTED_CORE_FILE).exists());
 }
+
+#[test]
+fn select_on_the_opened_cart_prints_its_achievement_set_only_when_it_has_one() {
+    let (_d, mut app) = on_shelf(&["Emerald", "Zzz"]);
+    fake_picker_faces(&mut app);
+    app.apply(Action::GbaDown(Btn::Start));
+    app.set_core_has_set(false);
+    app.apply(Action::SelectTap);
+    assert!(app.set_print().is_none(), "no set on the card, nothing to print");
+
+    app.set_core_has_set(true);
+    app.apply(Action::SelectTap);
+    assert!(app.set_print().is_some(), "SELECT starts the printer");
+    // This card has no set after all: the printer gives up, and the cart stays open.
+    for _ in 0..400 {
+        app.update(0.05);
+        if app.set_print().is_none() {
+            break;
+        }
+        // The list is read on a worker.
+        std::thread::sleep(std::time::Duration::from_millis(5));
+    }
+    assert!(app.set_print().is_none());
+    assert!(app.core_picker().is_some(), "back to the opened cart");
+}
+
+#[test]
+fn the_printer_takes_the_buttons_while_it_prints() {
+    let (d, mut app) = on_shelf(&["Emerald", "Zzz"]);
+    fake_picker_faces(&mut app);
+    app.apply(Action::GbaDown(Btn::Start));
+    let list = slot_ui::printout::PrintList {
+        game: "Emerald".into(),
+        printed: "16 NOV 2026".into(),
+        rows: Vec::new(),
+    };
+    app.print_set_with(slot_ui::printout::Printout::new(&list));
+    app.apply(Action::GbaDown(Btn::Right));
+    app.apply(Action::GbaDown(Btn::A));
+    app.apply(Action::GbaDown(Btn::B));
+    for _ in 0..200 {
+        app.update(0.05);
+    }
+    assert!(app.set_print().is_none(), "B put the print away");
+    assert!(app.core_picker().is_some(), "and left the cart open");
+    assert_eq!(
+        slot_store::core_for_platform(d.path(), "Emerald", Platform::Gba, Core::Mgba),
+        Core::Mgba,
+        "the presses went to the printer, not the chip"
+    );
+}

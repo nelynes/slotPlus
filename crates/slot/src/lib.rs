@@ -82,6 +82,7 @@ pub mod root;
 pub mod screen;
 pub mod server;
 pub mod session;
+pub mod set_print;
 pub mod shot_loader;
 pub mod shot_writer;
 pub mod state_writer;

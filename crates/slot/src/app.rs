@@ -977,6 +977,10 @@ pub struct App {
     server: Option<ServerSession>,
     server_net: ServerNet,
     print_cues: Vec<Cue>,
+    /// slotPlus: a game's achievement set coming out of the printer.
+    set_print: Option<crate::set_print::SetPrint>,
+    /// slotPlus: the opened cart's game has its achievement set on the card.
+    core_has_set: bool,
     rescanned: bool,
     stale_labels: Vec<Cart>,
     fetch_landed: Vec<ArtLanded>,
@@ -1214,6 +1218,8 @@ impl App {
             server: None,
             server_net: ServerNet::default(),
             print_cues: Vec::new(),
+            set_print: None,
+            core_has_set: false,
             rescanned: false,
             stale_labels: Vec::new(),
             fetch_landed: Vec::new(),
@@ -6842,6 +6848,9 @@ impl App {
         if self.server.is_some() {
             return self.server_input(action);
         }
+        if self.set_print.is_some() {
+            return self.set_print_input(action);
+        }
         if self.update.is_some() {
             return self.update_input(action);
         }
@@ -8547,6 +8556,7 @@ impl App {
     fn timers(&mut self) {
         self.step_ra_scan();
         self.step_server();
+        self.step_set_print();
         self.take_art_events();
         self.take_romm_events();
         self.romm_tick(self.now());
@@ -11252,6 +11262,79 @@ impl App {
         self.core_interior_face = Some(interior);
     }
 
+    /// slotPlus: whether the opened cart's game has its achievement set on the card, so
+    /// SELECT can print it.
+    pub fn set_core_has_set(&mut self, has: bool) {
+        self.core_has_set = has;
+    }
+
+    fn can_print_set(&self) -> bool {
+        crate::ACHIEVEMENTS
+            && self.core_has_set
+            && self.core_faces_ready()
+            && self.root.is_some()
+            && self.set_print.is_none()
+            && self.server.is_none()
+    }
+
+    /// slotPlus: SELECT on the opened cart prints its achievement set.
+    fn print_set(&mut self) {
+        if !self.can_print_set() {
+            return;
+        }
+        let (Some(root), Some(cart)) = (self.root.clone(), self.selected_cart().cloned()) else {
+            return;
+        };
+        let now = self.now();
+        self.set_print = Some(crate::set_print::SetPrint::open(
+            root,
+            cart,
+            self.state.zone,
+            now,
+        ));
+    }
+
+    /// For tests: print a printout already laid out.
+    pub fn print_set_with(&mut self, printout: slot_ui::printout::Printout) {
+        let now = self.now();
+        self.set_print = Some(crate::set_print::SetPrint::with(printout, now));
+    }
+
+    fn set_print_input(&mut self, action: Action) {
+        let now = self.now();
+        let Some(print) = &mut self.set_print else {
+            return;
+        };
+        match action {
+            Action::GbaDown(Btn::B) => print.stop(now),
+            Action::GbaDown(Btn::A) => print.skip(now),
+            Action::GbaDown(Btn::Up) => print.hold(Some(-1.0), now),
+            Action::GbaDown(Btn::Down) => print.hold(Some(1.0), now),
+            Action::GbaUp(Btn::Up | Btn::Down) => print.hold(None, now),
+            _ => {}
+        }
+    }
+
+    fn step_set_print(&mut self) {
+        let now = self.now();
+        let Some(print) = &mut self.set_print else {
+            return;
+        };
+        print.poll(now);
+        self.print_cues.extend(print.take_cues());
+        if print.finished(now) {
+            self.set_print = None;
+        }
+    }
+
+    pub fn set_print(&self) -> Option<&crate::set_print::SetPrint> {
+        self.set_print.as_ref()
+    }
+
+    pub fn set_print_mut(&mut self) -> Option<&mut crate::set_print::SetPrint> {
+        self.set_print.as_mut()
+    }
+
     pub fn set_core_board_faces(&mut self, board: TexId, lid: TexId) {
         self.core_board_face = Some(board);
         self.core_lid_face = Some(lid);
@@ -11651,12 +11734,16 @@ impl App {
 
         // The first three: the fourth is the Lynx hold picker's four-way Swap.
         let legends = &self.core_legend_faces[self.light() as usize];
+        // slotPlus: SELECT Print, when the game's achievement set is on the card.
+        let print = legends.get(4).copied().filter(|_| self.can_print_set());
         if picker.alone() {
             if let Some(&back) = legends.first() {
-                self.draw_spread_legends(&[back], self.legend_y(), lift, out);
+                let shown: Vec<_> = std::iter::once(back).chain(print).collect();
+                self.draw_spread_legends(&shown, self.legend_y(), lift, out);
             }
         } else if legends.len() >= 3 {
-            self.draw_spread_legends(&legends[..3], self.legend_y(), lift, out);
+            let shown: Vec<_> = legends[..3].iter().copied().chain(print).collect();
+            self.draw_spread_legends(&shown, self.legend_y(), lift, out);
         }
     }
 
@@ -12350,6 +12437,9 @@ impl App {
     }
 
     fn core_picker_input(&mut self, action: Action) {
+        if action == Action::SelectTap {
+            return self.print_set();
+        }
         let press = match action {
             Action::GbaDown(Btn::Left) | Action::ShelfLeft => Press::Left,
             Action::GbaDown(Btn::Right) | Action::ShelfRight => Press::Right,
@@ -14900,9 +14990,13 @@ impl App {
     }
 
     fn server_frame(&self) -> Option<(PrintFrame, PrintTextures)> {
-        match self.shutting_down() {
-            true => None,
-            false => self.server.as_ref()?.frame(self.now()),
+        if self.shutting_down() {
+            return None;
+        }
+        match &self.server {
+            Some(server) => server.frame(self.now()),
+            // slotPlus: the achievement printout uses the same printer.
+            None => self.set_print.as_ref()?.frame(self.now()),
         }
     }
 

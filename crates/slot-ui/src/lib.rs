@@ -33,6 +33,7 @@ mod power_menu;
 mod quick_menu;
 mod rebuild;
 mod receipt;
+pub mod printout;
 mod refusal;
 mod shelf;
 mod shell;
