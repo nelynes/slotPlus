@@ -2895,7 +2895,6 @@ struct CoreTextures {
     interior: Option<TexId>,
     board: Option<TexId>,
     lid: Option<TexId>,
-    progress: Option<TexId>,
 }
 
 fn sync_core_picker(
@@ -2949,14 +2948,6 @@ fn sync_core_picker(
         &faces.lid.rgba,
     );
     app.set_core_board_faces(board_id, lid_id);
-    let progress = faces.progress.as_ref().map(|p| {
-        (
-            upload_rgba(compositor, &mut tex.progress, p.w, p.h, &p.rgba),
-            p.w,
-            p.h,
-        )
-    });
-    app.set_progress_face(progress);
     *built = made;
 }
 

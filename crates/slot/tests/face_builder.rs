@@ -131,8 +131,8 @@ fn the_selected_carts_lid_comes_from_the_label_cache() {
     );
 }
 
-/// slotPlus: a game with a downloaded set shows how far it's got, beside the trophy and as
-/// a gold sticker on its board; one without a set shows neither.
+/// slotPlus: a game with a downloaded set shows how far it's got as a gold sticker on its
+/// board; one without a set has none.
 #[test]
 fn a_game_with_a_set_shows_its_progress() {
     let root = tempfile::tempdir().unwrap();
@@ -178,11 +178,7 @@ fn a_game_with_a_set_shows_its_progress() {
     let builder = FaceBuilder::spawn(r.to_path_buf());
     builder.request(cart("Drill Dozer"));
     let plain = collect(&builder, 1).remove(0);
-    assert!(plain.progress.is_none());
     builder.request(with_set);
     let got = collect(&builder, 1).remove(0);
-    let progress = got.progress.expect("a set, so progress");
-    assert_eq!(progress.h, slot::face_builder::PROGRESS_H);
-    assert!(progress.rgba.chunks(4).any(|p| p[3] > 200));
     assert_ne!(got.board.rgba, plain.board.rgba, "no gold sticker on the board");
 }

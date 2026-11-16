@@ -139,11 +139,12 @@ pub fn apply_look(face: &mut CartFace, look: &Look, seed: u64) {
     if look.wear > 0 {
         wear(face, look.wear.min(MAX_LEVEL), seed);
     }
-    if look.dust > 0 {
-        dust(face, look.dust.min(MAX_LEVEL), seed ^ 0xd057);
-    }
     if look.wrap {
         wrap(face, seed ^ 0x5ea1);
+    }
+    // Dust settles on whatever is outermost, the film included.
+    if look.dust > 0 {
+        dust(face, look.dust.min(MAX_LEVEL), seed ^ 0xd057);
     }
 }
 
@@ -272,41 +273,133 @@ fn stroke(
     }
 }
 
+/// The outline of the solid part of the face, as a convex polygon (Andrew's monotone chain
+/// over each row's ends): the shape a sheet of film pulled tight around the cart takes.
+fn hull(face: &CartFace) -> Vec<(f32, f32)> {
+    let (w, h) = (face.w as usize, face.h as usize);
+    let mut pts = Vec::new();
+    for y in 0..h {
+        let row = &face.rgba[y * w * 4..(y + 1) * w * 4];
+        let solid = |x: usize| row[x * 4 + 3] >= 128;
+        if let Some(l) = (0..w).find(|&x| solid(x)) {
+            let r = (0..w).rev().find(|&x| solid(x)).unwrap_or(l);
+            pts.push((l as f32, y as f32));
+            pts.push((r as f32 + 1.0, y as f32));
+            pts.push((l as f32, y as f32 + 1.0));
+            pts.push((r as f32 + 1.0, y as f32 + 1.0));
+        }
+    }
+    pts.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    pts.dedup();
+    if pts.len() < 3 {
+        return pts;
+    }
+    let cross = |o: (f32, f32), a: (f32, f32), b: (f32, f32)| {
+        (a.0 - o.0) * (b.1 - o.1) - (a.1 - o.1) * (b.0 - o.0)
+    };
+    let mut lower: Vec<(f32, f32)> = Vec::new();
+    for &p in &pts {
+        while lower.len() >= 2 && cross(lower[lower.len() - 2], lower[lower.len() - 1], p) <= 0.0 {
+            lower.pop();
+        }
+        lower.push(p);
+    }
+    let mut upper: Vec<(f32, f32)> = Vec::new();
+    for &p in pts.iter().rev() {
+        while upper.len() >= 2 && cross(upper[upper.len() - 2], upper[upper.len() - 1], p) <= 0.0 {
+            upper.pop();
+        }
+        upper.push(p);
+    }
+    lower.pop();
+    upper.pop();
+    lower.extend(upper);
+    lower
+}
+
+/// How far inside the convex polygon a point is (negative outside).
+fn inside_by(poly: &[(f32, f32)], x: f32, y: f32) -> f32 {
+    let mut best = f32::INFINITY;
+    for i in 0..poly.len() {
+        let (a, b) = (poly[i], poly[(i + 1) % poly.len()]);
+        let (ex, ey) = (b.0 - a.0, b.1 - a.1);
+        let len = (ex * ex + ey * ey).sqrt().max(1e-3);
+        // The polygon winds counter-clockwise in y-down space; inside is to the left.
+        let d = (ex * (y - a.1) - ey * (x - a.0)) / len;
+        best = best.min(d);
+    }
+    best
+}
+
+const FILM: [u8; 3] = [238, 243, 250];
+
+/// Shrink wrap: a sheet of clear film pulled tight around the cart. It bridges the cart's
+/// notches and rounded corners, so the cart's outline turns straight and glassy; a cloudy
+/// layer over everything; sharp crinkles where it was pulled over the edges and pinched at
+/// the corners; long glints across the face; and a crimped heat-seal seam along the top.
 fn wrap(face: &mut CartFace, seed: u64) {
     let (w, h) = (face.w, face.h);
-    let edges = edge_distance(face, 4);
-    // The film's sheen runs across the cart on a slant, in two soft bands.
+    let poly = hull(face);
+    if poly.len() < 3 {
+        return;
+    }
+    // The film over gaps in the outline and over the cart itself.
+    for y in 0..h {
+        for x in 0..w {
+            let at = ((y * w + x) * 4) as usize;
+            let (fx, fy) = (x as f32 + 0.5, y as f32 + 0.5);
+            let d = inside_by(&poly, fx, fy);
+            if d < -0.5 {
+                continue;
+            }
+            let edge = (1.0 - d / 2.5).clamp(0.0, 1.0);
+            let a = face.rgba[at + 3];
+            if a < 255 {
+                // Bridging the cart's own outline: thin film, brightest at the taut edge.
+                let cover = (d + 0.5).clamp(0.0, 1.0);
+                let film_a = (64.0 + 120.0 * edge) * cover;
+                let under = a as f32 / 255.0;
+                let fa = film_a / 255.0;
+                let out_a = fa + under * (1.0 - fa);
+                if out_a > 0.0 {
+                    for (k, film) in FILM.iter().enumerate() {
+                        let c = (*film as f32 * fa
+                            + face.rgba[at + k] as f32 * under * (1.0 - fa))
+                            / out_a;
+                        face.rgba[at + k] = c.round().clamp(0.0, 255.0) as u8;
+                    }
+                    face.rgba[at + 3] = (out_a * 255.0).round() as u8;
+                }
+            } else {
+                // Over the cart: a cloudy lift, and the taut edge catching the light.
+                let cloud = 0.10 + 0.05 * smooth(seed ^ 1, fx, fy, 40.0);
+                mix(&mut face.rgba[at..at + 4], FILM, cloud + 0.35 * edge);
+            }
+        }
+    }
+    // A broad, soft sheen in two slanted bands with a brighter core, as a glossy sheet
+    // reflects a window.
     let slope = 0.55;
     let span = w as f32 + h as f32 * slope;
     let bands = [
-        (0.22 + 0.08 * unit(seed, 0, 0), 0.075, 0.30),
-        (0.62 + 0.08 * unit(seed, 1, 0), 0.045, 0.20),
+        (0.24 + 0.08 * unit(seed, 0, 0), 0.085, 0.26),
+        (0.64 + 0.08 * unit(seed, 1, 0), 0.05, 0.18),
     ];
     for y in 0..h {
         for x in 0..w {
-            let i = (y * w + x) as usize;
-            let at = i * 4;
-            if face.rgba[at + 3] < 128 {
+            let at = ((y * w + x) * 4) as usize;
+            if face.rgba[at + 3] == 0 {
                 continue;
             }
             let (fx, fy) = (x as f32, y as f32);
-            // The film itself: a faint cool lift over everything.
-            mix(&mut face.rgba[at..at + 4], [236, 242, 248], 0.07);
             let along = (fx + fy * slope) / span;
             let mut shine = 0.0f32;
             for (centre, half, peak) in bands {
-                let d = ((along - centre) / half).abs();
+                let wobble = (smooth(seed ^ 2, fx, fy, 30.0) - 0.5) * 0.03;
+                let d = ((along - centre + wobble) / half).abs();
                 if d < 1.0 {
-                    let wobble = 0.75 + 0.5 * smooth(seed ^ 2, fx, fy, 14.0);
-                    shine = shine.max(peak * (1.0 - d * d) * wobble);
-                }
-            }
-            // Crinkles where the film folds over the edges.
-            let d = edges[i];
-            if d <= 4 {
-                let crease = smooth(seed ^ 3, fx * 1.6, fy * 1.6, 5.0);
-                if crease > 0.58 {
-                    shine = shine.max((crease - 0.58) * 1.6 * (5 - d as u32) as f32 / 4.0);
+                    let core = (-(d / 0.14).powi(2)).exp();
+                    shine = shine.max(peak * ((1.0 - d * d) + 0.8 * core));
                 }
             }
             if shine > 0.0 {
@@ -314,24 +407,68 @@ fn wrap(face: &mut CartFace, seed: u64) {
             }
         }
     }
-    // A seam where the film was sealed, low across the back of the label.
-    let seam_y = h as f32 * (0.80 + 0.05 * unit(seed, 2, 0));
+    // Creases: short folds, a bright ridge with a faint shadow beside it, fanning out of
+    // the corners where the film was pinched and running in from the edges.
+    let corners: Vec<(f32, f32)> = poly
+        .iter()
+        .enumerate()
+        .filter(|(i, p)| {
+            let n = poly.len();
+            let (a, b) = (poly[(i + n - 1) % n], poly[(i + 1) % n]);
+            let (ax, ay, bx, by) = (p.0 - a.0, p.1 - a.1, b.0 - p.0, b.1 - p.1);
+            let turn = (ax * by - ay * bx).abs()
+                / ((ax * ax + ay * ay).sqrt() * (bx * bx + by * by).sqrt()).max(1e-3);
+            turn > 0.5
+        })
+        .map(|(_, p)| *p)
+        .collect();
+    let crease = |face: &mut CartFace, x: f32, y: f32, angle: f32, len: f32, k: f32| {
+        let (nx, ny) = (-angle.sin(), angle.cos());
+        stroke(face, x + nx, y + ny, angle, 0.0, len, [0, 0, 0], k * 0.3);
+        stroke(face, x, y, angle, 0.0, len, [255, 255, 255], k);
+    };
+    let mut n = 0i64;
+    for &(cx, cy) in &corners {
+        let mid = (h as f32 / 2.0 - cy).atan2(w as f32 / 2.0 - cx);
+        for k in 0..3 {
+            n += 1;
+            let spread = (unit(seed ^ 5, n, 0) - 0.5) * 1.2;
+            let len = 5.0 + unit(seed ^ 5, n, 1) * 9.0;
+            let start = 1.0 + k as f32;
+            let (sx, sy) = (cx + mid.cos() * start, cy + mid.sin() * start);
+            crease(face, sx, sy, mid + spread, len, 0.45);
+        }
+    }
+    for _ in 0..26 {
+        n += 1;
+        let t = unit(seed ^ 6, n, 0);
+        let i = ((t * poly.len() as f32) as usize).min(poly.len() - 1);
+        let (a, b) = (poly[i], poly[(i + 1) % poly.len()]);
+        let f = unit(seed ^ 6, n, 1);
+        let (x0, y0) = (a.0 + (b.0 - a.0) * f, a.1 + (b.1 - a.1) * f);
+        let inward = (b.1 - a.1).atan2(b.0 - a.0) + std::f32::consts::FRAC_PI_2;
+        let angle = inward + (unit(seed ^ 6, n, 2) - 0.5) * 1.2;
+        let len = 3.0 + unit(seed ^ 6, n, 3) * 6.0;
+        crease(face, x0, y0, angle, len, 0.4);
+    }
+    // The heat seal: a crimped seam just inside the top edge.
+    let top = poly.iter().map(|p| p.1).fold(f32::INFINITY, f32::min);
+    let seam = top + 4.0;
     for x in 0..w {
-        let wob = (smooth(seed ^ 4, x as f32, 0.0, 18.0) - 0.5) * 3.0;
-        let y = (seam_y + wob).round() as i64;
-        for (dy, amount) in [(0, 0.28), (1, -0.12)] {
-            let yy = y + dy;
-            if yy < 0 || yy as u32 >= h {
+        let fx = x as f32 + 0.5;
+        if inside_by(&poly, fx, seam) < 3.0 {
+            continue;
+        }
+        let wob = (smooth(seed ^ 8, fx, 0.0, 22.0) - 0.5) * 1.6;
+        let crimp = if x % 3 == 0 { 0.55 } else { 0.25 };
+        for (dy, colour, k) in [(0.0, [255, 255, 255], crimp), (1.0, [0, 0, 0], 0.12)] {
+            let y = (seam + wob + dy).round() as i64;
+            if y < 0 || y as u32 >= h {
                 continue;
             }
-            let at = ((yy as u32 * w + x) * 4) as usize;
-            if face.rgba[at + 3] < 128 {
-                continue;
-            }
-            if amount > 0.0 {
-                mix(&mut face.rgba[at..at + 4], [255, 255, 255], amount);
-            } else {
-                mix(&mut face.rgba[at..at + 4], [0, 0, 0], -amount);
+            let at = ((y as u32 * w + x) * 4) as usize;
+            if face.rgba[at + 3] > 0 {
+                mix(&mut face.rgba[at..at + 4], colour, k);
             }
         }
     }
@@ -521,42 +658,4 @@ mod tests {
             }
         }
     }
-}
-
-/// slotPlus: "12 / 34" in the shelf's own lettering, to sit beside the trophy.
-pub fn progress_face(text: &str, height: u32) -> CartFace {
-    let font = crate::text::label_font();
-    let px = height as f32 * 0.62;
-    let width = font.map_or(0.0, |f| crate::text::line_width(f, text, px, 0.0));
-    let w = (width.ceil() as u32 + 6).max(1);
-    let h = height.max(1);
-    let layout = crate::text::Layout {
-        lines: vec![text.to_string()],
-        px,
-        tracking: 0.0,
-    };
-    let cov = crate::text::coverage_left(w, h, &layout, 2.0);
-    let mut rgba = vec![0u8; (w * h * 4) as usize];
-    // A soft dark shadow one pixel down and right, then the light text.
-    for y in 0..h as i64 {
-        for x in 0..w as i64 {
-            let at = ((y * w as i64 + x) * 4) as usize;
-            let here = cov[(y * w as i64 + x) as usize];
-            let shade = if x > 0 && y > 0 {
-                cov[((y - 1) * w as i64 + x - 1) as usize]
-            } else {
-                0
-            };
-            let a = here.max((shade as f32 * 0.6) as u8);
-            if a == 0 {
-                continue;
-            }
-            let lit = here as f32 / a as f32;
-            for k in 0..3 {
-                rgba[at + k] = (20.0 + (255.0 - 20.0) * lit) as u8;
-            }
-            rgba[at + 3] = a;
-        }
-    }
-    CartFace { rgba, w, h }
 }
