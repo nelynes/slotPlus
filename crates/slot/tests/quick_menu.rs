@@ -401,6 +401,7 @@ fn screen_opens_a_page_of_its_own_and_b_comes_back_to_it() {
         QuickRow::ScreenNgp,
         QuickRow::ScreenTg16,
         QuickRow::ScreenNds,
+        QuickRow::ScreenPm,
         QuickRow::ScreenGeneral,
         QuickRow::ScreenGba,
         QuickRow::ScreenGbc,
@@ -905,6 +906,20 @@ fn fake_faces(a: &mut App) {
         labels: (0..QuickRow::ALL.len())
             .map(|i| [(id(1000 + i), 200, 40), (id(5000 + i), 200, 40)])
             .collect(),
+        pm_labels: [
+            [
+                (TexId::from_raw(3100), 200, 40),
+                (TexId::from_raw(3101), 200, 40),
+            ],
+            [
+                (TexId::from_raw(3102), 200, 40),
+                (TexId::from_raw(3103), 200, 40),
+            ],
+            [
+                (TexId::from_raw(3104), 200, 40),
+                (TexId::from_raw(3105), 200, 40),
+            ],
+        ],
         ws_turbo_labels: [
             [
                 (TexId::from_raw(3000), 200, 40),
@@ -1376,6 +1391,20 @@ fn no_row_in_hand_runs_its_value_into_its_label() {
                 [(id(1000 + i), w, 40), (id(5000 + i), w, 40)]
             })
             .collect(),
+        pm_labels: [
+            [
+                (TexId::from_raw(3100), 200, 40),
+                (TexId::from_raw(3101), 200, 40),
+            ],
+            [
+                (TexId::from_raw(3102), 200, 40),
+                (TexId::from_raw(3103), 200, 40),
+            ],
+            [
+                (TexId::from_raw(3104), 200, 40),
+                (TexId::from_raw(3105), 200, 40),
+            ],
+        ],
         ws_turbo_labels: [
             [
                 (TexId::from_raw(3000), 200, 40),
@@ -2120,6 +2149,22 @@ fn fit_is_offered_on_both_panels() {
     assert_eq!(
         a.scale_choices(Platform::Gba),
         [Scale::Fit, Scale::Integer, Scale::FullScreen]
+    );
+}
+
+#[test]
+fn the_pokemon_mini_page_has_full_screen() {
+    assert_eq!(
+        QuickRow::SCREEN_PM.map(QuickRow::label),
+        ["Shader", "Bezel", "Full Screen"]
+    );
+    let (d, mut a, _) = on_carousel();
+    open_at(&mut a, QuickRow::PmFullScreen);
+    assert_eq!(a.quick_value(QuickRow::PmFullScreen), Some(QuickValue::Off));
+    press(&mut a, Btn::Right);
+    assert!(
+        read_slot_state(d.path()).pm_full_screen,
+        "Full Screen did not reach the card"
     );
 }
 

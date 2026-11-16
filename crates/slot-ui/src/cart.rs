@@ -49,7 +49,45 @@ pub const GBC_LABEL_H: u32 = 199;
 
 // WonderSwan: the label fills the face between the oval nameplate at the top
 // and the shoulder above the exposed contacts.
-pub use crate::bitmaps::{LYNX_CART_H, LYNX_CART_W, WS_CART_H, WS_CART_W};
+pub use crate::bitmaps::{LYNX_CART_H, LYNX_CART_W, PM_CART_H, PM_CART_W, WS_CART_H, WS_CART_W};
+
+// Pokémon mini: the label under the hood, about 1.82:1 as the real ones are, with its
+// bottom corners well rounded, as tools/cart_art/pokemini.py draws it.
+pub const PM_LABEL_X: u32 = 26;
+pub const PM_LABEL_Y: u32 = 104;
+pub const PM_LABEL_W: u32 = 248;
+pub const PM_LABEL_H: u32 = 136;
+const PM_LABEL_TOP_R: u32 = 6;
+const PM_LABEL_BOTTOM_R: u32 = 26;
+
+/// Whether a point of a mould's label box is on the label: a Pokémon mini label has
+/// rounded corners, every other label fills its box.
+fn on_label_at(mould: Mould, x: u32, y: u32, w: u32, h: u32) -> bool {
+    if mould != Mould::Pm {
+        return true;
+    }
+    let r = if y < h / 2 {
+        PM_LABEL_TOP_R
+    } else {
+        PM_LABEL_BOTTOM_R
+    };
+    let cx = if x < r {
+        r
+    } else if x >= w - r {
+        w - r
+    } else {
+        return true;
+    };
+    let cy = if y < r {
+        r
+    } else if y >= h - r {
+        h - r
+    } else {
+        return true;
+    };
+    let (dx, dy) = (x as f32 + 0.5 - cx as f32, y as f32 + 0.5 - cy as f32);
+    dx * dx + dy * dy <= (r * r) as f32
+}
 
 pub const fn ws_label_panel(w: u32, h: u32) -> (u32, u32, u32, u32) {
     (
@@ -202,6 +240,7 @@ pub fn mould_of(cart: &Cart) -> Mould {
         Platform::Ngp => Mould::Ngp,
         Platform::Tg16 => Mould::Tg16,
         Platform::Nds => Mould::Nds,
+        Platform::Pm => Mould::Pm,
         _ => match gb_shell_of(cart) {
             None => Mould::Gba,
             Some(GbShell::Notched) => Mould::Notched,
@@ -229,6 +268,7 @@ pub fn mould_for(platform: Platform) -> Mould {
         Platform::Ngp => Mould::Ngp,
         Platform::Tg16 => Mould::Tg16,
         Platform::Nds => Mould::Nds,
+        Platform::Pm => Mould::Pm,
     }
 }
 
@@ -293,7 +333,8 @@ pub fn gb_shell_of(cart: &Cart) -> Option<GbShell> {
         | Platform::Gg
         | Platform::Ngp
         | Platform::Tg16
-        | Platform::Nds => None,
+        | Platform::Nds
+        | Platform::Pm => None,
         Platform::Gb | Platform::Gbc => Some(match cart.shell.map(|c| c.outline) {
             Some(Outline::Notched) => GbShell::Notched,
             Some(Outline::Rounded) => GbShell::Rounded,
@@ -381,6 +422,7 @@ fn spec(shape: Shape) -> Spec {
                     Mould::Ngp => (NGP_LABEL_X, NGP_LABEL_Y, NGP_LABEL_W, NGP_LABEL_H),
                     Mould::Tg16 => (TG16_LABEL_X, TG16_LABEL_Y, TG16_LABEL_W, TG16_LABEL_H),
                     Mould::Nds => (NDS_LABEL_X, NDS_LABEL_Y, NDS_LABEL_W, NDS_LABEL_H),
+                    Mould::Pm => (PM_LABEL_X, PM_LABEL_Y, PM_LABEL_W, PM_LABEL_H),
                     _ => (LYNX_LABEL_X, LYNX_LABEL_Y, LYNX_LABEL_W, LYNX_LABEL_H),
                 },
                 mask: extra_mask(mould),
@@ -844,7 +886,7 @@ fn dress(s: &Spec, rgba: &mut [u8]) {
         Mould::Notched => "GAME BOY",
         Mould::Rounded => "GAME BOY COLOR",
         // The slotPlus moulds carry their markings in their art.
-        Mould::Ws | Mould::Lynx | Mould::Gg | Mould::Ngp | Mould::Tg16 | Mould::Nds => return,
+        Mould::Ws | Mould::Lynx | Mould::Gg | Mould::Ngp | Mould::Tg16 | Mould::Nds | Mould::Pm => return,
         #[cfg(feature = "nds")]
         Mould::Ds => "NINTENDO DS",
     };
@@ -950,7 +992,8 @@ fn shell_face_of(s: &Spec, shell: &Shell, bare: bool) -> CartFace {
                 && boxed
                 && (lx..lx + lw).contains(&x)
                 && (ly..ly + lh).contains(&y)
-                && corner_cover(x - lx, y - ly, lw, lh, r) >= 128;
+                && corner_cover(x - lx, y - ly, lw, lh, r) >= 128
+                && on_label_at(s.mould, x - lx, y - ly, lw, lh);
             let i = ((y * s.w + x) * 4) as usize;
             if !on_label {
                 for c in 0..3 {
@@ -1023,7 +1066,8 @@ fn generated_label(s: &Spec, title: &str, bg: [u8; 3]) -> Vec<u8> {
             | Mould::Gg
             | Mould::Ngp
             | Mould::Tg16
-            | Mould::Nds => (lh as f32 / (MAX_LINES as f32 * 1.36), f32::INFINITY),
+            | Mould::Nds
+            | Mould::Pm => (lh as f32 / (MAX_LINES as f32 * 1.36), f32::INFINITY),
             Mould::Notched | Mould::Rounded => {
                 let room = (lh - 2 * PAD) as f32;
                 (room / MAX_LINES as f32, room)
@@ -1138,7 +1182,7 @@ fn paste_label(s: &Spec, face: &mut CartFace, label: &[u8]) {
         for x in 0..lw {
             let src = ((y * lw + x) * 4) as usize;
             let a = (label[src + 3] as u32 * corner_cover(x, y, lw, lh, r) + 127) / 255;
-            if a == 0 {
+            if a == 0 || !on_label_at(s.mould, x, y, lw, lh) {
                 continue;
             }
             let d = (((y + ly) * s.w + x + lx) * 4) as usize;

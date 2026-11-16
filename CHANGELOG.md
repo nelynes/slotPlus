@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- **Pokémon mini.** Put `.min` games in `Games/PokeMini/`; they play on PokeMini, with no BIOS needed. The cart is the little Pokémon mini cart in its own shelf, and with Cart Slot set to Bespoke the slot is the back of a blue Pokémon mini. A and B are A and B, R1 is the C button, L1 is Shake (the handheld rumbles instead of the picture shaking) and SELECT is Power; there's no Start. Settings → Screen → Pokémon mini has its own Shader and Bezel, and Full Screen, which fills the screen at 7.5x instead of 6x. Cart Studio+ makes Pokémon mini carts too.
+
 ## [1.16.0-plus2.9](https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus2.9)
 
 slotPlus brought up to Slot 1.16.0, and for slotPlusUltra, RetroAchievements on three more systems and a faster Nintendo DS core. See [Slot's 1.16.0 notes](https://github.com/slot-cfw/slot/releases/tag/v1.16.0).

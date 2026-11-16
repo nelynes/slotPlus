@@ -52,6 +52,7 @@ fn label_band(c: &Cart) -> (f32, f32) {
         Platform::Gg => (GG_LABEL_Y as f32, GG_LABEL_H as f32),
         Platform::Ngp => (NGP_LABEL_Y as f32, NGP_LABEL_H as f32),
         Platform::Tg16 => (TG16_LABEL_Y as f32, TG16_LABEL_H as f32),
+        Platform::Pm => (slot_ui::PM_LABEL_Y as f32, slot_ui::PM_LABEL_H as f32),
     };
     let k = seated_box(c.platform).1 as f32 / cart_box(c.platform).1 as f32;
     (y * k, h * k)

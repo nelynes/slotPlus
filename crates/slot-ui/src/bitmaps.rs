@@ -15,12 +15,13 @@ pub enum Mould {
     Ngp,
     Tg16,
     Nds,
+    Pm,
     #[cfg(feature = "nds")]
     Ds,
 }
 
 impl Mould {
-    pub const ALL: [Mould; 9] = [
+    pub const ALL: [Mould; 10] = [
         Mould::Gba,
         Mould::Notched,
         Mould::Rounded,
@@ -30,16 +31,18 @@ impl Mould {
         Mould::Ngp,
         Mould::Tg16,
         Mould::Nds,
+        Mould::Pm,
     ];
 
     /// The shapes slotPlus adds to Slot's three, each its own set of art.
-    pub const EXTRA: [Mould; 6] = [
+    pub const EXTRA: [Mould; 7] = [
         Mould::Ws,
         Mould::Lynx,
         Mould::Gg,
         Mould::Ngp,
         Mould::Tg16,
         Mould::Nds,
+        Mould::Pm,
     ];
 
     pub fn index(self) -> usize {
@@ -57,6 +60,7 @@ impl Mould {
             Mould::Ngp => (NGP_CART_W, NGP_CART_H),
             Mould::Tg16 => (TG16_CART_W, TG16_CART_H),
             Mould::Nds => (NDS_CART_W, NDS_CART_H),
+            Mould::Pm => (PM_CART_W, PM_CART_H),
         }
     }
 }
@@ -83,6 +87,10 @@ pub const TG16_CART_H: u32 = 337;
 /// A Nintendo DS game card, 33 x 35 mm, a touch taller than it is wide.
 pub const NDS_CART_W: u32 = 288;
 pub const NDS_CART_H: u32 = 304;
+/// A Pokémon mini cart: wider than tall, a raised hood across the top and the label
+/// below it. tools/cart_art/pokemini.py draws it.
+pub const PM_CART_W: u32 = 300;
+pub const PM_CART_H: u32 = 262;
 pub const BOARD_W: u32 = GBA_CART_W;
 pub const BOARD_H: u32 = GBA_CART_H;
 pub const SOCKET_W: u32 = 64;
@@ -140,6 +148,9 @@ const SLOT_NDS_PLUGGED_PNG: &[u8] = include_bytes!("../../../assets/slot_nds_plu
 const SLOT_LYNX_BACK_PNG: &[u8] = include_bytes!("../../../assets/slot_lynx_back.png");
 const SLOT_LYNX_FRONT_PNG: &[u8] = include_bytes!("../../../assets/slot_lynx_front.png");
 const SLOT_LYNX_PLUGGED_PNG: &[u8] = include_bytes!("../../../assets/slot_lynx_plugged.png");
+const SLOT_PM_BACK_PNG: &[u8] = include_bytes!("../../../assets/slot_pm_back.png");
+const SLOT_PM_FRONT_PNG: &[u8] = include_bytes!("../../../assets/slot_pm_front.png");
+const SLOT_PM_PLUGGED_PNG: &[u8] = include_bytes!("../../../assets/slot_pm_plugged.png");
 const PORT_DARK_PNG: &[u8] = include_bytes!("../../../assets/link_port_dark.png");
 const PORT_LIGHT_PNG: &[u8] = include_bytes!("../../../assets/link_port_light.png");
 const PLUG_HOST_PNG: &[u8] = include_bytes!("../../../assets/link_plug_host.png");
@@ -178,6 +189,12 @@ const NDS_SHELL_PNG: &[u8] = include_bytes!("../../../assets/nds_neutral.png");
 const NDS_CLEAR_PNG: &[u8] = include_bytes!("../../../assets/nds_clear.png");
 const NDS_INTERIOR_PNG: &[u8] = include_bytes!("../../../assets/nds_interior.png");
 const NDS_BOARD_PNG: &[u8] = include_bytes!("../../../assets/nds_board.png");
+const PM_CART_PNG: &[u8] = include_bytes!("../../../assets/pm_cart.png");
+const PM_SHELL_PNG: &[u8] = include_bytes!("../../../assets/pm_neutral.png");
+const PM_CLEAR_PNG: &[u8] = include_bytes!("../../../assets/pm_clear.png");
+const PM_INTERIOR_PNG: &[u8] = include_bytes!("../../../assets/pm_interior.png");
+const PM_BOARD_PNG: &[u8] = include_bytes!("../../../assets/pm_board.png");
+const PM_DECAL_PNG: &[u8] = include_bytes!("../../../assets/pm_decal.png");
 const WS_DECAL_PNG: &[u8] = include_bytes!("../../../assets/ws_decal.png");
 const LYNX_DECAL_PNG: &[u8] = include_bytes!("../../../assets/lynx_decal.png");
 
@@ -188,10 +205,12 @@ pub fn extra_decal(mould: Mould) -> Option<&'static [u8]> {
     static WS: OnceLock<Vec<u8>> = OnceLock::new();
     static LYNX: OnceLock<Vec<u8>> = OnceLock::new();
     static TG16: OnceLock<Vec<u8>> = OnceLock::new();
+    static PM: OnceLock<Vec<u8>> = OnceLock::new();
     let (bytes, slot) = match mould {
         Mould::Ws => (WS_DECAL_PNG, &WS),
         Mould::Lynx => (LYNX_DECAL_PNG, &LYNX),
         Mould::Tg16 => (TG16_DECAL_PNG, &TG16),
+        Mould::Pm => (PM_DECAL_PNG, &PM),
         _ => return None,
     };
     let (w, h) = mould.size();
@@ -206,6 +225,7 @@ pub fn extra_cart(mould: Mould) -> &'static [u8] {
     static NGP: OnceLock<Vec<u8>> = OnceLock::new();
     static TG16: OnceLock<Vec<u8>> = OnceLock::new();
     static NDS: OnceLock<Vec<u8>> = OnceLock::new();
+    static PM: OnceLock<Vec<u8>> = OnceLock::new();
     let (bytes, slot) = match mould {
         Mould::Ws => (WS_CART_PNG, &WS),
         Mould::Lynx => (LYNX_CART_PNG, &LYNX),
@@ -213,6 +233,7 @@ pub fn extra_cart(mould: Mould) -> &'static [u8] {
         Mould::Ngp => (NGP_CART_PNG, &NGP),
         Mould::Tg16 => (TG16_CART_PNG, &TG16),
         Mould::Nds => (NDS_CART_PNG, &NDS),
+        Mould::Pm => (PM_CART_PNG, &PM),
         other => panic!("{other:?} is not a slotPlus mould"),
     };
     let (w, h) = mould.size();
@@ -227,6 +248,7 @@ pub fn extra_interior(mould: Mould) -> &'static [u8] {
     static NGP: OnceLock<Vec<u8>> = OnceLock::new();
     static TG16: OnceLock<Vec<u8>> = OnceLock::new();
     static NDS: OnceLock<Vec<u8>> = OnceLock::new();
+    static PM: OnceLock<Vec<u8>> = OnceLock::new();
     let (bytes, slot) = match mould {
         Mould::Ws => (WS_INTERIOR_PNG, &WS),
         Mould::Lynx => (LYNX_INTERIOR_PNG, &LYNX),
@@ -234,6 +256,7 @@ pub fn extra_interior(mould: Mould) -> &'static [u8] {
         Mould::Ngp => (NGP_INTERIOR_PNG, &NGP),
         Mould::Tg16 => (TG16_INTERIOR_PNG, &TG16),
         Mould::Nds => (NDS_INTERIOR_PNG, &NDS),
+        Mould::Pm => (PM_INTERIOR_PNG, &PM),
         other => panic!("{other:?} is not a slotPlus mould"),
     };
     let (w, h) = mould.size();
@@ -248,6 +271,7 @@ pub fn extra_board(mould: Mould) -> &'static [u8] {
     static NGP: OnceLock<Vec<u8>> = OnceLock::new();
     static TG16: OnceLock<Vec<u8>> = OnceLock::new();
     static NDS: OnceLock<Vec<u8>> = OnceLock::new();
+    static PM: OnceLock<Vec<u8>> = OnceLock::new();
     let (bytes, slot) = match mould {
         Mould::Ws => (WS_BOARD_PNG, &WS),
         Mould::Lynx => (LYNX_BOARD_PNG, &LYNX),
@@ -255,6 +279,7 @@ pub fn extra_board(mould: Mould) -> &'static [u8] {
         Mould::Ngp => (NGP_BOARD_PNG, &NGP),
         Mould::Tg16 => (TG16_BOARD_PNG, &TG16),
         Mould::Nds => (NDS_BOARD_PNG, &NDS),
+        Mould::Pm => (PM_BOARD_PNG, &PM),
         other => panic!("{other:?} is not a slotPlus mould"),
     };
     let (w, h) = mould.size();
@@ -477,6 +502,17 @@ pub fn bespoke_slot(platform: slot_store::Platform) -> Option<[&'static [u8]; 3]
                 load(SLOT_NDS_PLUGGED_PNG, SLOT_W, SLOT_H, &P),
             ])
         }
+        // The blue Pokémon mini.
+        Platform::Pm => {
+            static B: OnceLock<Vec<u8>> = OnceLock::new();
+            static F: OnceLock<Vec<u8>> = OnceLock::new();
+            static P: OnceLock<Vec<u8>> = OnceLock::new();
+            Some([
+                load(SLOT_PM_BACK_PNG, SLOT_W, SLOT_H, &B),
+                load(SLOT_PM_FRONT_PNG, SLOT_W, SLOT_H, &F),
+                load(SLOT_PM_PLUGGED_PNG, SLOT_W, SLOT_H, &P),
+            ])
+        }
         _ => None,
     }
 }
@@ -688,7 +724,11 @@ pub fn shell_asset(mould: Mould, clear: bool) -> &'static [u8] {
     static TG16_CLEAR: OnceLock<Vec<u8>> = OnceLock::new();
     static NDS: OnceLock<Vec<u8>> = OnceLock::new();
     static NDS_CLEAR: OnceLock<Vec<u8>> = OnceLock::new();
+    static PM: OnceLock<Vec<u8>> = OnceLock::new();
+    static PM_CLEAR: OnceLock<Vec<u8>> = OnceLock::new();
     let (bytes, w, h, slot) = match (mould, clear) {
+        (Mould::Pm, false) => (PM_SHELL_PNG, PM_CART_W, PM_CART_H, &PM),
+        (Mould::Pm, true) => (PM_CLEAR_PNG, PM_CART_W, PM_CART_H, &PM_CLEAR),
         (Mould::Ws, false) => (WS_SHELL_PNG, WS_CART_W, WS_CART_H, &WS),
         (Mould::Ws, true) => (WS_CLEAR_PNG, WS_CART_W, WS_CART_H, &WS_CLEAR),
         (Mould::Lynx, false) => (LYNX_SHELL_PNG, LYNX_CART_W, LYNX_CART_H, &LYNX),

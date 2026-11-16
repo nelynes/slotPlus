@@ -99,7 +99,8 @@ fn each_cart_has_its_own_mould() {
             Mould::Gg,
             Mould::Ngp,
             Mould::Tg16,
-            Mould::Nds
+            Mould::Nds,
+            Mould::Pm
         ]
     );
     for (i, m) in Mould::ALL.iter().enumerate() {
