@@ -191,6 +191,7 @@ fn a_wrapped_cart_has_its_film_torn_off_before_it_goes_in() {
     let t = a.now();
     a.apply_at(Action::Insert, t);
     assert!(a.tearing(), "the film comes off first");
+    assert_eq!(a.take_sfx(), Some(slot::audio::Sfx::WrapTear), "with a rip");
     assert!(a.tear_wants().is_some(), "and its film is asked for");
     assert!(!look(&a).wrap, "the cart under it is bare");
     assert!(a.seated_cart().is_none(), "the cart waits on the shelf");

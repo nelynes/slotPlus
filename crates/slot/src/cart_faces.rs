@@ -6,7 +6,7 @@ use std::thread;
 
 use slot_gfx::{Compositor, TexId};
 use slot_store::Cart;
-use slot_ui::shelf_life::{apply_look, film_of, seed_of, Look};
+use slot_ui::shelf_life::{apply_look_labelled, film_of, seed_of, Look};
 use slot_ui::{cart_face_with, cart_interior, shows_interior, CartFace};
 
 use crate::app::{App, FaceWant};
@@ -219,7 +219,19 @@ pub fn looked(mut face: CartFace, cart: &Cart, mut look: Look, root: &Path) -> C
     if look.wrap && crate::persist::has_save(root, cart.platform, &cart.stem) {
         look.wrap = false;
     }
-    apply_look(&mut face, &look, seed_of(cart));
+    let [x, y, w, h] = slot_ui::label_well(cart);
+    let (aw, ah) = slot_ui::cart_art_size(cart);
+    let (sx, sy) = (
+        face.w as f32 / aw.max(1) as f32,
+        face.h as f32 / ah.max(1) as f32,
+    );
+    let label = [
+        (x as f32 * sx) as u32,
+        (y as f32 * sy) as u32,
+        (w as f32 * sx) as u32,
+        (h as f32 * sy) as u32,
+    ];
+    apply_look_labelled(&mut face, &look, seed_of(cart), Some(label));
     face
 }
 

@@ -122,57 +122,84 @@ fn smooth(seed: u64, x: f32, y: f32, cell: f32) -> f32 {
 }
 
 fn mix(px: &mut [u8], to: [u8; 3], amount: f32) {
-    let amount = amount.clamp(0.0, 1.0);
+    if amount.is_nan() || amount <= 0.0 {
+        return;
+    }
+    let amount = amount.min(1.0);
     for k in 0..3 {
         let v = px[k] as f32 + (to[k] as f32 - px[k] as f32) * amount;
         px[k] = v.round().clamp(0.0, 255.0) as u8;
     }
 }
 
-/// How far each solid pixel is from the cart's outline, up to `max`.
+/// How far each solid pixel is from the cart's outline, up to `max` (`u8::MAX` for pixels
+/// that aren't solid): a chessboard distance, in two passes over the face.
 fn edge_distance(face: &CartFace, max: u32) -> Vec<u8> {
-    let (w, h) = (face.w as i64, face.h as i64);
-    let solid = |x: i64, y: i64| {
-        x >= 0 && y >= 0 && x < w && y < h && face.rgba[((y * w + x) * 4 + 3) as usize] >= 128
+    let (w, h) = (face.w as usize, face.h as usize);
+    let cap = (max + 1).min(254) as u8;
+    let mut d: Vec<u8> = face
+        .rgba
+        .chunks_exact(4)
+        .map(|p| if p[3] >= 128 { cap } else { 0 })
+        .collect();
+    // Off the face counts as outside, so the border's solid pixels sit 1 from the edge.
+    let at = |d: &Vec<u8>, x: isize, y: isize| -> u8 {
+        if x < 0 || y < 0 || x >= w as isize || y >= h as isize {
+            0
+        } else {
+            d[y as usize * w + x as usize]
+        }
     };
-    let mut out = vec![u8::MAX; (w * h) as usize];
-    for y in 0..h {
-        for x in 0..w {
-            if !solid(x, y) {
+    for y in 0..h as isize {
+        for x in 0..w as isize {
+            let i = y as usize * w + x as usize;
+            if d[i] == 0 {
                 continue;
             }
-            let mut best = max as i64 + 1;
-            let r = max as i64;
-            'look: for d in 1..=r {
-                for (dx, dy) in [
-                    (d, 0),
-                    (-d, 0),
-                    (0, d),
-                    (0, -d),
-                    (d, d),
-                    (-d, d),
-                    (d, -d),
-                    (-d, -d),
-                ] {
-                    if !solid(x + dx, y + dy) {
-                        best = d;
-                        break 'look;
-                    }
-                }
-            }
-            out[(y * w + x) as usize] = best.min(255) as u8;
+            let near = at(&d, x - 1, y)
+                .min(at(&d, x - 1, y - 1))
+                .min(at(&d, x, y - 1))
+                .min(at(&d, x + 1, y - 1));
+            d[i] = d[i].min(near + 1);
         }
     }
-    out
+    for y in (0..h as isize).rev() {
+        for x in (0..w as isize).rev() {
+            let i = y as usize * w + x as usize;
+            if d[i] == 0 {
+                continue;
+            }
+            let near = at(&d, x + 1, y)
+                .min(at(&d, x + 1, y + 1))
+                .min(at(&d, x, y + 1))
+                .min(at(&d, x - 1, y + 1));
+            d[i] = d[i].min(near + 1);
+        }
+    }
+    for v in &mut d {
+        *v = if *v == 0 { u8::MAX } else { (*v).min(cap) };
+    }
+    d
 }
 
 /// Draw how the cart has been kept into its face.
 pub fn apply_look(face: &mut CartFace, look: &Look, seed: u64) {
+    apply_look_labelled(face, look, seed, None);
+}
+
+/// The same, knowing where the label sits on the face (`[x, y, w, h]` in the face's pixels),
+/// so heavy wear can fray, tear and lift it.
+pub fn apply_look_labelled(face: &mut CartFace, look: &Look, seed: u64, label: Option<[u32; 4]>) {
     if look.plain() || face.w == 0 || face.h == 0 {
         return;
     }
     if look.wear > 0 {
-        wear(face, look.wear.min(MAX_LEVEL), seed);
+        let level = look.wear.min(MAX_LEVEL);
+        wear(face, level, seed);
+        if let Some(label) = label.filter(|l| l[2] > 8 && l[3] > 8) {
+            worn_label(face, level, seed, label);
+        }
+        insert_end(face, level, seed);
     }
     if look.wrap {
         wrap(face, seed ^ WRAP_SALT);
@@ -185,11 +212,12 @@ pub fn apply_look(face: &mut CartFace, look: &Look, seed: u64) {
 
 const DUST: [u8; 3] = [196, 188, 172];
 const SPECK: [u8; 3] = [226, 220, 206];
+const GRIME: [u8; 3] = [92, 86, 76];
 
 fn dust(face: &mut CartFace, level: u8, seed: u64) {
     let (w, h) = (face.w, face.h);
-    let haze = [0.0, 0.10, 0.19, 0.30][level as usize];
-    let specks = [0.0, 0.006, 0.014, 0.026][level as usize];
+    let haze = [0.0, 0.11, 0.27, 0.44][level as usize];
+    let specks = [0.0, 0.007, 0.028, 0.06][level as usize];
     let (broad, fine) = (
         Field::new(seed, w, h, 22.0),
         Field::new(seed ^ 1, w, h, 7.0),
@@ -205,19 +233,41 @@ fn dust(face: &mut CartFace, level: u8, seed: u64) {
             let cloud = 0.55 + 0.9 * broad.at(x, y) * fine.at(x, y);
             mix(&mut face.rgba[at..at + 4], DUST, haze * settle * cloud);
             let n = unit(seed ^ 2, x as i64, y as i64);
-            if n < specks * settle {
+            if level >= 2 && n > 1.0 - specks * settle * 0.35 {
+                // Grime: a few darker flecks among the pale ones.
+                mix(&mut face.rgba[at..at + 4], GRIME, 0.55);
+            } else if n < specks * settle {
                 let strength = 0.45 + 0.4 * unit(seed ^ 3, x as i64, y as i64);
                 mix(&mut face.rgba[at..at + 4], SPECK, strength);
             }
         }
     }
+    // Deep dust lies thick along the top edges and in the corners, where a cloth never
+    // quite reaches: a soft grey rim that fades inward.
+    if level >= 2 {
+        let edges = edge_distance(face, 6);
+        let rim = [0.0, 0.0, 0.30, 0.55][level as usize];
+        let clumps = Field::new(seed ^ 11, w, h, 9.0);
+        for y in 0..h {
+            let up = (1.0 - y as f32 / h as f32).powf(1.6);
+            for x in 0..w {
+                let i = (y * w + x) as usize;
+                let d = edges[i];
+                if d > 6 {
+                    continue;
+                }
+                let k = rim * up * (7 - d) as f32 / 6.0 * (0.4 + 0.9 * clumps.at(x, y));
+                mix(&mut face.rgba[i * 4..i * 4 + 4], DUST, k);
+            }
+        }
+    }
     // A few bits of fluff: short, faint strands.
-    let strands = [0, 2, 5, 9][level as usize];
+    let strands = [0, 2, 9, 18][level as usize];
     for i in 0..strands {
         let x0 = unit(seed ^ 4, i, 0) * w as f32;
         let y0 = unit(seed ^ 4, i, 1) * h as f32 * 0.7;
         let angle = unit(seed ^ 4, i, 2) * std::f32::consts::TAU;
-        let len = 4.0 + unit(seed ^ 4, i, 3) * 7.0;
+        let len = 4.0 + unit(seed ^ 4, i, 3) * (5.0 + 3.0 * level as f32);
         let bend = (unit(seed ^ 4, i, 4) - 0.5) * 0.25;
         stroke(face, x0, y0, angle, bend, len, SPECK, 0.55);
     }
@@ -228,8 +278,8 @@ const RUB: [u8; 3] = [232, 228, 218];
 fn wear(face: &mut CartFace, level: u8, seed: u64) {
     let (w, h) = (face.w, face.h);
     let edges = edge_distance(face, 3);
-    let rub = [0.0, 0.45, 0.65, 0.85][level as usize];
-    let reach = [0.0, 0.55, 0.42, 0.30][level as usize];
+    let rub = [0.0, 0.45, 0.80, 1.0][level as usize];
+    let reach = [0.0, 0.55, 0.36, 0.20][level as usize];
     let (patches, scuffs) = (
         Field::new(seed, w, h, 22.0),
         Field::new(seed ^ 5, w, h, 30.0),
@@ -265,23 +315,205 @@ fn wear(face: &mut CartFace, level: u8, seed: u64) {
             }
             // Broad scuffs: patches where the finish has gone dull.
             let scuff = scuffs.at(x, y);
-            let cut = [1.0, 0.74, 0.66, 0.58][level as usize];
+            let cut = [1.0, 0.74, 0.60, 0.50][level as usize];
             if scuff > cut {
-                let amount = ((scuff - cut) / (1.0 - cut)) * 0.22;
+                let amount =
+                    ((scuff - cut) / (1.0 - cut)) * [0.0, 0.22, 0.30, 0.34][level as usize];
                 let grain = 0.7 + 0.3 * unit(seed ^ 6, x as i64, y as i64);
                 mix(&mut face.rgba[at..at + 4], RUB, amount * grain);
             }
         }
     }
-    let scratches = [0, 4, 9, 16][level as usize];
+    let scratches = [0, 4, 14, 30][level as usize];
     for i in 0..scratches {
         let x0 = unit(seed ^ 7, i, 0) * w as f32;
         let y0 = unit(seed ^ 7, i, 1) * h as f32;
         let angle = (unit(seed ^ 7, i, 2) - 0.5) * 1.2 + if i % 3 == 0 { 1.4 } else { 0.0 };
         let len = 7.0 + unit(seed ^ 7, i, 3) * 20.0;
         let bend = (unit(seed ^ 7, i, 4) - 0.5) * 0.06;
-        let strength = 0.30 + 0.30 * unit(seed ^ 7, i, 5);
+        let strength = 0.30 + [0.0, 0.30, 0.38, 0.45][level as usize] * unit(seed ^ 7, i, 5);
         stroke(face, x0, y0, angle, bend, len, RUB, strength);
+    }
+}
+
+const PAPER_BACK: [u8; 3] = [222, 216, 200];
+const TORN_FIBRE: [u8; 3] = [240, 236, 226];
+const GLUE: [u8; 3] = [150, 142, 120];
+
+/// Worn labels: at level 2 the label's edges fray to bare paper; at level 3 a corner has
+/// peeled up and folded back on itself, and a strip has torn away along one edge, leaving
+/// the shell and a little glue showing.
+fn worn_label(face: &mut CartFace, level: u8, seed: u64, [lx, ly, lw, lh]: [u32; 4]) {
+    if level < 2 {
+        return;
+    }
+    let (w, h) = (face.w, face.h);
+    let (lx, ly) = (lx.min(w - 1), ly.min(h - 1));
+    let (lw, lh) = (lw.min(w - lx), lh.min(h - ly));
+    let (x1, y1) = (lx + lw, ly + lh);
+    let inside =
+        |x: i64, y: i64| x >= lx as i64 && y >= ly as i64 && x < x1 as i64 && y < y1 as i64;
+    // The shell beside the label, for what shows where the label has gone.
+    let shell = {
+        let (sx, sy) = (lx.saturating_sub(3), ly + lh / 2);
+        let at = ((sy * w + sx) * 4) as usize;
+        [face.rgba[at], face.rgba[at + 1], face.rgba[at + 2]]
+    };
+    let bare = |face: &mut CartFace, x: u32, y: u32| {
+        let at = ((y * w + x) * 4) as usize;
+        face.rgba[at..at + 3].copy_from_slice(&shell);
+        let glue = 0.35 * unit(seed ^ 31, x as i64 / 2, y as i64 / 2);
+        mix(&mut face.rgba[at..at + 4], GLUE, glue);
+    };
+
+    // Fraying: bare paper fibre showing in spots along the label's edge.
+    let fray = [0.0, 0.0, 0.22, 0.36][level as usize];
+    let patches = Field::new(seed ^ 32, w, h, 16.0);
+    let ragged = Field::new(seed ^ 37, w, h, 3.0);
+    for y in ly..y1 {
+        for x in lx..x1 {
+            let d = (x - lx).min(x1 - 1 - x).min(y - ly).min(y1 - 1 - y);
+            // Worn back from the edge in soft, uneven nibbles.
+            let p = patches.at(x, y);
+            let depth = ((p - (1.0 - fray)) / fray * 4.0 + ragged.at(x, y) * 1.5) as u32;
+            if p > 1.0 - fray && d <= depth.min(4) {
+                let at = ((y * w + x) * 4) as usize;
+                let k =
+                    (0.85 - d as f32 * 0.12) * (0.7 + 0.3 * unit(seed ^ 33, x as i64, y as i64));
+                mix(&mut face.rgba[at..at + 4], TORN_FIBRE, k);
+            }
+        }
+    }
+    if level < 3 {
+        return;
+    }
+
+    // A strip torn from one long edge: a ragged bite with white fibre at its rim.
+    let side = hash(seed ^ 34, 0, 0) % 4;
+    let along = if side < 2 { lw } else { lh } as f32;
+    let start = along * (0.15 + 0.45 * unit(seed ^ 34, 1, 0));
+    let len = along * (0.18 + 0.14 * unit(seed ^ 34, 2, 0));
+    let deep = (lw.min(lh) as f32) * (0.06 + 0.05 * unit(seed ^ 34, 3, 0));
+    for y in ly..y1 {
+        for x in lx..x1 {
+            // Distance into the label from the torn side, and position along it.
+            let (into, pos) = match side {
+                0 => ((y - ly) as f32, (x - lx) as f32),
+                1 => ((y1 - 1 - y) as f32, (x - lx) as f32),
+                2 => ((x - lx) as f32, (y - ly) as f32),
+                _ => ((x1 - 1 - x) as f32, (y - ly) as f32),
+            };
+            let t = (pos - start) / len;
+            if !(0.0..=1.0).contains(&t) {
+                continue;
+            }
+            let ragged = 0.55 + 0.45 * smooth(seed ^ 35, pos, 0.0, 3.0);
+            let bite = deep * (std::f32::consts::PI * t).sin().powf(0.6) * ragged;
+            if into < bite {
+                bare(face, x, y);
+            } else if into < bite + 1.6 {
+                let at = ((y * w + x) * 4) as usize;
+                mix(&mut face.rgba[at..at + 4], TORN_FIBRE, 0.85);
+            }
+        }
+    }
+
+    // A dog-eared corner: past a fold line the label has lifted and lies folded back over
+    // itself, so the corner shows the shell and the flap shows the label's paper back.
+    let corner = hash(seed ^ 36, 0, 0) % 4;
+    let (cx, cy, sx, sy) = match corner {
+        0 => (lx as f32, ly as f32, 1.0, 1.0),
+        1 => (x1 as f32, ly as f32, -1.0, 1.0),
+        2 => (lx as f32, y1 as f32, 1.0, -1.0),
+        _ => (x1 as f32, y1 as f32, -1.0, -1.0),
+    };
+    let size = lw.min(lh) as f32 * (0.17 + 0.08 * unit(seed ^ 36, 1, 0));
+    // Fold line: points where (u + v) == size, u and v measured in from the corner. A little
+    // off 45 degrees, from the seed.
+    let skew = 0.75 + 0.5 * unit(seed ^ 36, 2, 0);
+    let fold = |u: f32, v: f32| u * skew + v / skew;
+    let reach = (size * 2.2) as i64;
+    let at_uv = |u: f32, v: f32| ((cx + sx * u) as i64, (cy + sy * v) as i64);
+    for v in 0..reach {
+        for u in 0..reach {
+            let (uf, vf) = (u as f32 + 0.5, v as f32 + 0.5);
+            let (x, y) = at_uv(uf, vf);
+            if !inside(x, y) {
+                continue;
+            }
+            let (x, y) = (x as u32, y as u32);
+            let f = fold(uf, vf);
+            if f < size {
+                bare(face, x, y);
+                continue;
+            }
+            // The flap: the corner reflected across the fold, as far past it as the corner
+            // was before it.
+            let past = f - size;
+            let n = (skew * skew + 1.0 / (skew * skew)).sqrt();
+            let back = past / n;
+            if back * n > size {
+                // A soft shadow the flap casts beside it.
+                let shade = (1.0 - (past - size) / 3.0).clamp(0.0, 1.0) * 0.35;
+                if shade > 0.0 {
+                    let at = ((y * w + x) * 4) as usize;
+                    mix(&mut face.rgba[at..at + 4], [0, 0, 0], shade);
+                }
+                continue;
+            }
+            let at = ((y * w + x) * 4) as usize;
+            // Paper back, brighter near the fold where it curls toward the light.
+            let curl = 1.0 - back * n / size;
+            face.rgba[at..at + 3].copy_from_slice(&PAPER_BACK);
+            mix(&mut face.rgba[at..at + 4], [255, 255, 255], 0.25 * curl);
+            mix(
+                &mut face.rgba[at..at + 4],
+                [90, 84, 70],
+                0.18 * (1.0 - curl),
+            );
+            if (past - 0.0).abs() < 1.0 {
+                mix(&mut face.rgba[at..at + 4], [255, 255, 255], 0.5);
+            }
+        }
+    }
+}
+
+/// The end that goes into the slot: rubbed pale and scored by countless insertions, worst
+/// right at the edge.
+fn insert_end(face: &mut CartFace, level: u8, seed: u64) {
+    if level < 2 {
+        return;
+    }
+    let (w, h) = (face.w, face.h);
+    let bottom = (0..h)
+        .rev()
+        .find(|&y| (0..w).any(|x| face.rgba[((y * w + x) * 4 + 3) as usize] >= 128))
+        .unwrap_or(h - 1);
+    let band = h as f32 * [0.0, 0.0, 0.10, 0.16][level as usize];
+    let strength = [0.0, 0.0, 0.40, 0.70][level as usize];
+    let haze = Field::new(seed ^ 41, w, h, 10.0);
+    let top = (bottom as f32 - band).max(0.0) as u32;
+    for y in top..=bottom {
+        let near = (1.0 - (bottom - y) as f32 / band.max(1.0)).clamp(0.0, 1.0);
+        for x in 0..w {
+            let at = ((y * w + x) * 4) as usize;
+            if face.rgba[at + 3] < 128 {
+                continue;
+            }
+            let grain = 0.6 + 0.4 * unit(seed ^ 42, x as i64, y as i64);
+            let k = strength * near.powf(1.4) * (0.45 + 0.75 * haze.at(x, y)) * grain;
+            mix(&mut face.rgba[at..at + 4], RUB, k);
+        }
+    }
+    // Scoring: short scratches running up from the edge, as the slot's springs drag on it.
+    let marks = [0, 0, 14, 34][level as usize];
+    for i in 0..marks {
+        let x0 = unit(seed ^ 43, i, 0) * w as f32;
+        let y0 = bottom as f32 - unit(seed ^ 43, i, 1) * band * 0.7;
+        let angle = -std::f32::consts::FRAC_PI_2 + (unit(seed ^ 43, i, 2) - 0.5) * 0.35;
+        let len = 3.0 + unit(seed ^ 43, i, 3) * band * 0.9;
+        let k = 0.35 + 0.35 * unit(seed ^ 43, i, 4);
+        stroke(face, x0, y0, angle, 0.0, len, RUB, k);
     }
 }
 
@@ -1197,5 +1429,63 @@ mod tests {
         let solid = film.rgba.chunks_exact(4).filter(|p| p[3] == 255).count();
         assert!(thin > 2000, "most of the film is see-through: {thin}");
         assert!(solid > 100, "the price sticker is not: {solid}");
+    }
+
+    #[test]
+    fn heavy_wear_lifts_a_label_corner_and_scuffs_the_insert_end() {
+        let blank = || {
+            let mut face = CartFace {
+                w: 120,
+                h: 140,
+                rgba: vec![0; 120 * 140 * 4],
+            };
+            for y in 0..140 {
+                for x in 0..120 {
+                    let c = if (20..100).contains(&x) && (20..100).contains(&y) {
+                        [200, 40, 40, 255]
+                    } else {
+                        [120, 120, 124, 255]
+                    };
+                    face.rgba[(y * 120 + x) * 4..][..4].copy_from_slice(&c);
+                }
+            }
+            face
+        };
+        let label = Some([20, 20, 80, 80]);
+        let worn = |level| {
+            let mut f = blank();
+            let look = Look {
+                wrap: false,
+                dust: 0,
+                wear: level,
+            };
+            apply_look_labelled(&mut f, &look, 99, label);
+            f
+        };
+        let red_left = |f: &CartFace| {
+            f.rgba
+                .chunks_exact(4)
+                .filter(|p| p[0] > 150 && p[1] < 90)
+                .count()
+        };
+        let (fresh, light, heavy) = (red_left(&blank()), red_left(&worn(1)), red_left(&worn(3)));
+        assert!(
+            light > fresh * 9 / 10,
+            "light wear leaves the label: {light}/{fresh}"
+        );
+        assert!(
+            heavy < fresh * 9 / 10,
+            "heavy wear tears and lifts it: {heavy}/{fresh}"
+        );
+        let pale = |f: &CartFace, y: usize| {
+            (0..120)
+                .map(|x| f.rgba[(y * 120 + x) * 4] as u32)
+                .sum::<u32>()
+                / 120
+        };
+        assert!(
+            pale(&worn(3), 138) > pale(&blank(), 138) + 20,
+            "the insert end rubs pale"
+        );
     }
 }

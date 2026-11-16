@@ -11884,6 +11884,7 @@ impl App {
         }
         self.note_inserted(cart.platform, &cart.stem);
         self.play_held = None;
+        self.sfx = Some(Sfx::WrapTear);
         self.tear = Some(Tear {
             at: self.now(),
             clean,
