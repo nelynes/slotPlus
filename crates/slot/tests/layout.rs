@@ -4,7 +4,7 @@ use slot::app::{App, Phase};
 use slot_gfx::{Canvas, Draw};
 use slot_input::Action;
 use slot_store::{Cart, Platform};
-use slot_ui::MOUTH_H;
+use slot_ui::{QuickRow, MOUTH_H};
 
 const PANEL_4_3: (u32, u32) = (640, 480);
 const NATIVE: Canvas = Canvas { w: 640.0, h: 480.0 };
@@ -399,4 +399,12 @@ fn an_unlisted_canvas_gets_the_placeholder_not_a_stretched_bezel() {
     assert_eq!(a.bezel_art(), None);
     assert!(playing((720, 480)).placeholder_bezel().is_none());
     assert!(playing((640, 480)).placeholder_bezel().is_none());
+}
+
+#[test]
+fn a_tv_frames_the_game_in_black_and_offers_no_bezel_it_cannot_show() {
+    // slotPlus: Slot's lime-green placeholder showed on TVs as a bright green border.
+    let a = playing((1280, 720));
+    assert_eq!(a.placeholder_bezel(), Some([0.0, 0.0, 0.0, 1.0]));
+    assert!(a.in_game_hidden().contains(&QuickRow::Bezel));
 }

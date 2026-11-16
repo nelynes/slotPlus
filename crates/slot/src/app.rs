@@ -1078,7 +1078,10 @@ fn wallpaper_of_rack(rack: Rack, files: &[String]) -> Option<String> {
         })
 }
 
-const PLACEHOLDER_BEZEL: [f32; 4] = [50.0 / 255.0, 205.0 / 255.0, 50.0 / 255.0, 1.0];
+/// What fills the game's frame on a screen Slot has no bezels for yet (a TV over HDMI, or a
+/// panel other than 640x480). Slot marks it lime green, as a placeholder to be replaced by real
+/// bezels; slotPlus leaves it black, as a plain border, until those bezels exist.
+const PLACEHOLDER_BEZEL: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
 
 pub(crate) fn shift_down(draws: &mut [Draw], dy: f32) {
     if dy == 0.0 {
@@ -2818,7 +2821,10 @@ impl App {
 
     pub fn in_game_hidden(&self) -> Vec<QuickRow> {
         let platform = self.playing_platform();
-        let no_bezel = platform.hardware() == Platform::Gba && !self.framed_panel();
+        // slotPlus: on a screen with no bezels yet (a TV, or a panel other than 640x480) the
+        // Bezel row would change nothing, so it isn't offered.
+        let no_bezel = (platform.hardware() == Platform::Gba && !self.framed_panel())
+            || self.table_panel();
         let mut hidden = Vec::new();
         // The WonderSwan and Lynx cores have no colour correction to set. Their
         // bezel is None, the SP frame on a 4:3 panel, or a png of the card's own.
