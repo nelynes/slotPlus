@@ -5,6 +5,7 @@ const GB_CART = 312 / 337
 const CART_ASPECTS: Record<string, number> = {
   WS: 352 / 211,
   Lynx: 312 / 328,
+  PokeMini: 300 / 262,
 }
 
 export function cartAspect(tag: string): number {

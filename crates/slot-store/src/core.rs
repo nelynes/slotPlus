@@ -14,13 +14,21 @@ pub enum Core {
     // slotPlus's systems, one core each.
     Cygne,
     Lynx,
+    Pokemini,
     #[cfg(feature = "nds")]
     Dsperate,
 }
 
 impl Core {
     #[cfg(not(feature = "nds"))]
-    pub const ALL: [Core; 5] = [Core::Mgba, Core::Gpsp, Core::Gambatte, Core::Cygne, Core::Lynx];
+    pub const ALL: [Core; 6] = [
+        Core::Mgba,
+        Core::Gpsp,
+        Core::Gambatte,
+        Core::Cygne,
+        Core::Lynx,
+        Core::Pokemini,
+    ];
     #[cfg(feature = "nds")]
     pub const ALL: [Core; 6] = [
         Core::Mgba,
@@ -38,6 +46,7 @@ impl Core {
             Core::Gambatte => "gambatte",
             Core::Cygne => "cygne",
             Core::Lynx => "lynx",
+            Core::Pokemini => "pokemini",
             #[cfg(feature = "nds")]
             Core::Dsperate => "dsperate",
         }
@@ -54,6 +63,7 @@ impl Core {
             Core::Gambatte => "Gambatte",
             Core::Cygne => "Beetle Cygne",
             Core::Lynx => "Beetle Lynx",
+            Core::Pokemini => "PokeMini",
             #[cfg(feature = "nds")]
             Core::Dsperate => "DSperate",
         }
@@ -66,6 +76,7 @@ impl Core {
             "gambatte" => Some(Core::Gambatte),
             "cygne" => Some(Core::Cygne),
             "lynx" => Some(Core::Lynx),
+            "pokemini" => Some(Core::Pokemini),
             #[cfg(feature = "nds")]
             "dsperate" => Some(Core::Dsperate),
             _ => None,
@@ -84,6 +95,7 @@ impl Core {
             Core::Gambatte => matches!(platform, Platform::Gb | Platform::Gbc),
             Core::Cygne => platform == Platform::Ws,
             Core::Lynx => platform == Platform::Lynx,
+            Core::Pokemini => platform == Platform::Pm,
             #[cfg(feature = "nds")]
             Core::Dsperate => false,
         }
@@ -110,6 +122,7 @@ impl Core {
             Platform::Gba | Platform::Gb | Platform::Gbc | Platform::Gbav => Core::Mgba,
             Platform::Ws => Core::Cygne,
             Platform::Lynx => Core::Lynx,
+            Platform::Pm => Core::Pokemini,
             #[cfg(feature = "nds")]
             Platform::Nds => Core::Dsperate,
         }

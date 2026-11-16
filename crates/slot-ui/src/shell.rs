@@ -82,6 +82,9 @@ pub const WS_MONO_SHELL: Shell = shell([0x1e, 0x1e, 0x21], Finish::Solid);
 
 pub const LYNX_SHELL: Shell = shell([0x32, 0x3f, 0x41], Finish::Solid);
 
+/// A Pokémon mini cart: frosted clear plastic, the board showing through under the hood.
+pub const PM_SHELL: Shell = shell([0xdc, 0xdf, 0xe2], Finish::Translucent);
+
 pub const DUAL_MODE_SHELL: Shell = shell([0x33, 0x30, 0x31], Finish::Solid);
 
 pub const GB_CLEAR_SHELL: Shell = shell([0x7c, 0x7a, 0x8a], Finish::Translucent);
@@ -118,6 +121,7 @@ pub fn shell_for(cart: &Cart) -> Shell {
         Platform::Gba | Platform::Gbav => gba_shell_for(&gba_code(cart)),
         Platform::Ws => ws_shell_for(&cart.rom),
         Platform::Lynx => LYNX_SHELL,
+        Platform::Pm => PM_SHELL,
         #[cfg(feature = "nds")]
         Platform::Nds => gba_shell_for(""),
         Platform::Gb | Platform::Gbc => gb_shell_for(&cart.rom),

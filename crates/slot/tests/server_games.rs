@@ -75,7 +75,7 @@ fn tags_are_the_four_platforms() {
         .collect();
     tags.sort();
     // slotPlus: every shelf, its own systems too.
-    assert_eq!(tags, ["GB", "GBA", "GBAV", "GBC", "Lynx", "WS"]);
+    assert_eq!(tags, ["GB", "GBA", "GBAV", "GBC", "Lynx", "PokeMini", "WS"]);
     server.stop();
 }
 

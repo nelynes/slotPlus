@@ -304,14 +304,13 @@ fn writing_a_core_moves_a_line_without_a_system_onto_one_with() {
 
 #[cfg(not(feature = "nds"))]
 #[test]
-fn the_core_list_has_five_entries() {
-    // slotPlus: Slot's three, then Beetle Cygne and Beetle Lynx.
-    assert_eq!(Core::ALL.len(), 5);
+fn the_core_list_has_six_entries() {
+    // slotPlus: Slot's three, then Beetle Cygne, Beetle Lynx and the experiment.
+    assert_eq!(Core::ALL.len(), 6);
 }
 
 #[test]
 fn slotplus_systems_have_one_core_each() {
-    assert_eq!(Core::ALL.len(), 5);
     assert_eq!(Core::choices(Platform::Gba), vec![Core::Mgba, Core::Gpsp]);
     assert_eq!(Core::choices(Platform::Gb), vec![Core::Mgba, Core::Gambatte]);
     assert_eq!(Core::choices(Platform::Ws), vec![Core::Cygne]);

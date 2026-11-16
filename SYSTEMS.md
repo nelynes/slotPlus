@@ -2,7 +2,7 @@
 
 Everything slotPlus adds on top of Slot's Game Boy Advance, Game Boy and Game Boy Color, one system at a time: where the games go, how big label art should be, what the Screen menu offers, how saves work, and the controls.
 
-slotPlus comes in two versions. **slotPlus** (`slot-plus.zip`) adds the WonderSwan and Atari Lynx. **slotPlusUltra** (`slot-plusultra.zip`) adds those two plus the Nintendo DS, TurboGrafx-16, NeoGeo Pocket and Game Gear. Each system below says which version has it.
+slotPlus comes in two versions. **slotPlus** (`slot-plus.zip`) adds the WonderSwan, Atari Lynx and Pokémon mini. **slotPlusUltra** (`slot-plusultra.zip`) adds those three plus the Nintendo DS, TurboGrafx-16, NeoGeo Pocket and Game Gear. Each system below says which version has it.
 
 For the Game Boy systems, and everything else Slot does, see the [Slot user guide](https://slot-cfw.fyi). For playing on a TV over HDMI, see [Playing on a TV](README.md#playing-on-a-tv) in the README.
 
@@ -12,12 +12,13 @@ For the Game Boy systems, and everything else Slot does, see the [Slot user guid
 - [Sega Game Gear](#sega-game-gear)
 - [Atari Lynx](#atari-lynx)
 - [WonderSwan / WonderSwan Color](#wonderswan--wonderswan-color)
+- [Pokémon mini](#pokémon-mini)
 
 ## Things every added system shares
 
 - **Shelf:** each system gets its own shelf. Its folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
 - **Label art:** optional PNGs go in `Labels/<folder>/<game name>.png`, named after the game's file without its extension. Each system's cart has its own label size, given below. Art of a different size is scaled to cover the label and cropped, except on HuCards, where it keeps its own shape (see the TurboGrafx-16).
-- **Wallpapers:** with Wallpaper set to Shelf, a wallpaper named after a shelf (`ws.png`, `lynx.png`, and in slotPlusUltra `gg.png`, `ngp.png`, `tg16.png`, `nds.png`) shows on that shelf.
+- **Wallpapers:** with Wallpaper set to Shelf, a wallpaper named after a shelf (`ws.png`, `lynx.png`, `pokemini.png`, and in slotPlusUltra `gg.png`, `ngp.png`, `tg16.png`, `nds.png`) shows on that shelf.
 - **RetroAchievements:** Game Boy, Game Boy Color, Game Boy Advance, WonderSwan, WonderSwan Color and Atari Lynx games, and in slotPlusUltra Game Gear, NeoGeo Pocket, NeoGeo Pocket Color and TurboGrafx-16 games, not yet DS (softcore, never over a link cable). Set up in Settings → RetroAchievements (or `Config/retroachievements.toml`), then use Download Achievement Sets there to fetch the sets for the games on the card; a gold trophy on the shelf marks a game that has one. Achievements earned in a game are kept on the card and sent the next time Wi-Fi is up on the shelf. See [the RetroAchievements notes](crates/slot-achievements/README.md).
 - **Wi-Fi and updates:** Settings → System → Check for Updates offers slotPlus's own releases, the right one for slotPlus or slotPlusUltra. Gamebit, Slot's page for managing the card from a browser, lists every system here.
 - **Game guides:** Slot's guides work on every system. Put a `.txt` named after the game in `Guides/<folder>/`, and Guide shows up in the in-game menu.
@@ -272,3 +273,31 @@ Either way the D-pad is the Y pad, the four face buttons are the X pad, L1 is A 
 
 > [!NOTE]
 > Vertical controls are new but have been tested with several games. If something feels wrong, please open an issue.
+
+## Pokémon mini
+
+| | |
+|---|---|
+| **Version** | slotPlus and slotPlusUltra |
+| **Games** | `.min` in `Games/PokeMini/`. |
+| **BIOS** | Not needed: PokeMini has its own. |
+| **Core** | PokeMini. |
+| **Label art** | `Labels/PokeMini/`, about 248x136 px (1.8:1). |
+| **Picture** | Shown at 6x, or at 7.5x to fill the screen with Settings → Screen → Pokémon mini → Full Screen. The screen's grey shades come from its LCD's ghosting, so they're kept. |
+| **Shaders** | Off, LCD3x, Grid (the default), Dot, Shimmerless, Transparent. |
+| **Bezel** | Your own in `Bezels/PokeMini/`. |
+| **Cart** | The small Pokémon mini cart. With Cart Slot set to Bespoke, the slot is the back of a blue Pokémon mini. |
+| **Saves** | Kept with the game's other saves in `Saves/PokeMini/`, plus save states and the resume state. |
+
+### Controls
+
+| Press      | Does                                         |
+|------------|----------------------------------------------|
+| D-pad      | D-pad                                        |
+| A / B      | A / B                                        |
+| R1         | C button                                     |
+| L1         | Shake (the handheld rumbles)                 |
+| Select     | Power                                        |
+| Hold X / Y | Turbo A / turbo B                            |
+
+The Pokémon mini has no Start button. Because L1 and R1 are the game's own buttons, its picture size is the one Full Screen setting rather than each game's.

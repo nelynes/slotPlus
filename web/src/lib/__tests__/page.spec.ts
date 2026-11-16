@@ -12,7 +12,7 @@ const src = (...parts: string[]) => readFileSync(resolve(__dirname, '../..', ...
 
 describe('platforms', () => {
   it('lists GB GBC GBA GBAV and slotPlus systems', () => {
-    expect([...PLATFORM_TAGS]).toEqual(['GB', 'GBC', 'GBA', 'GBAV', 'WS', 'Lynx'])
+    expect([...PLATFORM_TAGS]).toEqual(['GB', 'GBC', 'GBA', 'GBAV', 'WS', 'Lynx', 'PokeMini'])
   })
 
   it('names each tag', () => {

@@ -133,3 +133,13 @@ fn the_lynx_has_a_dark_slot_of_its_own() {
     assert!(bespoke_slot(Platform::Lynx).is_some());
     assert!(!bespoke_slot_light(Platform::Lynx), "grey keeps light ink");
 }
+
+#[test]
+fn the_pokemon_mini_has_a_slot_of_its_own() {
+    use slot_ui::{bespoke_slot, bespoke_slot_light, SLOT_H, SLOT_W};
+    let strips = bespoke_slot(Platform::Pm).expect("its own");
+    for s in strips {
+        assert_eq!(s.len(), (SLOT_W * SLOT_H * 4) as usize);
+    }
+    assert!(!bespoke_slot_light(Platform::Pm), "blue keeps light ink");
+}

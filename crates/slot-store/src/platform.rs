@@ -9,19 +9,22 @@ pub enum Platform {
     Ws,
     Lynx,
     Gbav,
+    /// The Pokémon mini: a 96x64 black-and-white screen, run by PokeMini.
+    Pm,
     #[cfg(feature = "nds")]
     Nds,
 }
 
 impl Platform {
     #[cfg(not(feature = "nds"))]
-    pub const ALL: [Platform; 6] = [
+    pub const ALL: [Platform; 7] = [
         Platform::Gba,
         Platform::Gbav,
         Platform::Gbc,
         Platform::Gb,
         Platform::Ws,
         Platform::Lynx,
+        Platform::Pm,
     ];
     #[cfg(feature = "nds")]
     pub const ALL: [Platform; 7] = [
@@ -42,6 +45,7 @@ impl Platform {
             Platform::Ws => "WonderSwan",
             Platform::Lynx => "Atari Lynx",
             Platform::Gbav => "Game Boy Advance Video",
+            Platform::Pm => "Pokémon mini",
             #[cfg(feature = "nds")]
             Platform::Nds => "Nintendo DS",
         }
@@ -55,6 +59,7 @@ impl Platform {
             Platform::Ws => "WS",
             Platform::Lynx => "Lynx",
             Platform::Gbav => "GBAV",
+            Platform::Pm => "PokeMini",
             #[cfg(feature = "nds")]
             Platform::Nds => "NDS",
         }
@@ -73,6 +78,7 @@ impl Platform {
             Platform::Gb | Platform::Gbc => &["gb", "gbc"],
             Platform::Ws => &["ws", "wsc"],
             Platform::Lynx => &["lnx", "lyx"],
+            Platform::Pm => &["min"],
             #[cfg(feature = "nds")]
             Platform::Nds => &["nds"],
         }
@@ -86,6 +92,7 @@ impl Platform {
             Platform::Nds => (256, 192),
             Platform::Ws => (224, 144),
             Platform::Lynx => (160, 102),
+            Platform::Pm => (96, 64),
         }
     }
 
@@ -96,6 +103,8 @@ impl Platform {
     pub fn actual_window(self) -> (u32, u32) {
         match self {
             Platform::Lynx => (180, 120),
+            // 96x64 lands at 6x (576x384) in a 120x80 window.
+            Platform::Pm => (120, 80),
             _ => (240, 160),
         }
     }
@@ -113,9 +122,12 @@ impl Platform {
     /// vertical frame, so it gets 360x240 (the canvas at 2x).
     pub fn source_size(self) -> (u32, u32) {
         match self {
-            Platform::Gba | Platform::Gbav | Platform::Gb | Platform::Gbc | Platform::Lynx => {
-                (240, 160)
-            }
+            Platform::Gba
+            | Platform::Gbav
+            | Platform::Gb
+            | Platform::Gbc
+            | Platform::Lynx
+            | Platform::Pm => (240, 160),
             Platform::Ws => (360, 240),
         }
     }

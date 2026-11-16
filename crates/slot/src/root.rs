@@ -10,6 +10,7 @@ pub const DIRS: &[&str] = &[
     "Bezels/GBC",
     "Bezels/WS",
     "Bezels/Lynx",
+    "Bezels/PokeMini",
     "Cache",
     "Cache/romm",
     "Config",
@@ -20,6 +21,7 @@ pub const DIRS: &[&str] = &[
     "Games/GBC",
     "Games/WS",
     "Games/Lynx",
+    "Games/PokeMini",
     #[cfg(feature = "nds")]
     "Games/NDS",
     "Guides",
@@ -29,6 +31,7 @@ pub const DIRS: &[&str] = &[
     "Guides/GBC",
     "Guides/WS",
     "Guides/Lynx",
+    "Guides/PokeMini",
     "Labels",
     "Labels/GBA",
     "Labels/GBAV",
@@ -36,6 +39,7 @@ pub const DIRS: &[&str] = &[
     "Labels/GBC",
     "Labels/WS",
     "Labels/Lynx",
+    "Labels/PokeMini",
     #[cfg(feature = "nds")]
     "Labels/NDS",
     "Logs",
@@ -52,6 +56,7 @@ pub const DIRS: &[&str] = &[
     "Saves/GBC",
     "Saves/WS",
     "Saves/Lynx",
+    "Saves/PokeMini",
     #[cfg(feature = "nds")]
     "Saves/NDS",
     "States",
@@ -61,6 +66,7 @@ pub const DIRS: &[&str] = &[
     "States/GBC",
     "States/WS",
     "States/Lynx",
+    "States/PokeMini",
     #[cfg(feature = "nds")]
     "States/NDS",
     "System",

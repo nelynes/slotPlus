@@ -140,7 +140,8 @@ fn the_rows_run_in_the_order_the_user_chose() {
             "Game Boy Color",
             "Game Boy",
             "WonderSwan",
-            "Atari Lynx"
+            "Atari Lynx",
+            "Pokémon mini"
         ]
     );
     assert_eq!(
@@ -224,6 +225,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::ScreenGb,
             QuickRow::ScreenWs,
             QuickRow::ScreenLynx,
+            QuickRow::ScreenPm,
             QuickRow::General,
             QuickRow::PlayControls,
             QuickRow::Shortcuts,

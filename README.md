@@ -25,13 +25,14 @@ A slightly modified Slot. Alongside Slot's Game Boy Advance, Game Boy and Game B
 
 Each release comes in two versions. Pick the one you want from the [releases page](https://github.com/nelynes/slotPlus/releases):
 
-- **`slot-plus.zip`, slotPlus:** Game Boy Advance, Game Boy and Game Boy Color, plus WonderSwan and Atari Lynx.
+- **`slot-plus.zip`, slotPlus:** Game Boy Advance, Game Boy and Game Boy Color, plus WonderSwan, Atari Lynx and Pokémon mini.
 - **`slot-plusultra.zip`, slotPlusUltra:** everything in slotPlus, plus Game Gear, NeoGeo Pocket, TurboGrafx-16 and Nintendo DS.
 
 | System | Version | Put games in | Files | Core | BIOS |
 |---|---|---|---|---|---|
 | WonderSwan / Color | Plus and Ultra | `Games/WS/` | `.ws` `.wsc` | Beetle WonderSwan (Cygne) | Not needed |
 | Atari Lynx | Plus and Ultra | `Games/Lynx/` | `.lnx` `.lyx` | Beetle Lynx | `lynxboot.img` in `BIOS/` |
+| Pokémon mini | Plus and Ultra | `Games/PokeMini/` | `.min` | PokeMini | Not needed |
 | Sega Game Gear | Ultra | `Games/GG/` | `.gg` | Gearsystem | Not needed |
 | NeoGeo Pocket / Color | Ultra | `Games/NGP/` | `.ngp` `.ngc` `.ngpc` | Beetle NeoPop | Not needed |
 | TurboGrafx-16 / TurboExpress | Ultra | `Games/TG16/` | `.pce` (HuCards) | Beetle PCE Fast | Not needed |
@@ -45,7 +46,7 @@ Each release comes in two versions. Pick the one you want from the [releases pag
 - **Folders:** each system's folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
 - **Carts:** each system has its own cart, drawn in Slot's look. WonderSwan games get a black cart, WonderSwan Color games a frosted clear one, and a HuCard turns over to go into the slot contacts first.
 - **RetroAchievements:** Game Boy, Game Boy Color, Game Boy Advance, WonderSwan and Atari Lynx games (and in slotPlusUltra, Game Gear, NeoGeo Pocket and TurboGrafx-16 games) earn softcore achievements, with a banner in Slot's style. Enter your account in Settings → RetroAchievements and download the sets for your games from there. Achievements earned with Wi-Fi off are sent from the shelf. [More](crates/slot-achievements/README.md).
-- **Cart Slot:** set Settings > General > Cart Slot to Bespoke and the slot on each shelf becomes the back of that system's handheld: a pearl WonderSwan and a Lynx II, plus a Game Gear, a carbon NeoGeo Pocket Color, a TurboExpress and a silver DS Lite in Ultra. The Game Boy shelves keep Slot's own.
+- **Cart Slot:** set Settings > General > Cart Slot to Bespoke and the slot on each shelf becomes the back of that system's handheld: a pearl WonderSwan, a Lynx II and a blue Pokémon mini, plus a Game Gear, a carbon NeoGeo Pocket Color, a TurboExpress and a silver DS Lite in Ultra. The Game Boy shelves keep Slot's own.
 
 **Controls, label art sizes, bezels, saves, the DS's screen layouts and stylus, and how Lynx and WonderSwan games that turn sideways work are all in the [systems guide](SYSTEMS.md).**
 

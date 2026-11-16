@@ -45,9 +45,11 @@ pub(crate) fn gb_cart_mask(shell: GbShell) -> &'static [u8] {
 pub(crate) fn extra_mask(mould: bitmaps::Mould) -> &'static [u8] {
     static WS: OnceLock<Vec<u8>> = OnceLock::new();
     static LYNX: OnceLock<Vec<u8>> = OnceLock::new();
+    static PM: OnceLock<Vec<u8>> = OnceLock::new();
     let lock = match mould {
         bitmaps::Mould::Ws => &WS,
         bitmaps::Mould::Lynx => &LYNX,
+        bitmaps::Mould::Pm => &PM,
         other => panic!("{other:?} is not a slotPlus mould"),
     };
     lock.get_or_init(|| {

@@ -84,7 +84,8 @@ pub use cart::{
 pub use cart::{
     cart_art_size, label_well, lynx_label_panel, mould_backing, mould_for, mould_label_rect,
     mould_of, mould_shadow, platform_art_size, platform_label_well, ws_label_panel, LYNX_CART_H,
-    LYNX_CART_W, LYNX_LABEL_H, LYNX_LABEL_W, LYNX_LABEL_X, LYNX_LABEL_Y, WS_CART_H, WS_CART_W,
+    LYNX_CART_W, LYNX_LABEL_H, LYNX_LABEL_W, LYNX_LABEL_X, LYNX_LABEL_Y, PM_CART_H, PM_CART_W, PM_LABEL_H, PM_LABEL_W, PM_LABEL_X,
+    PM_LABEL_Y, WS_CART_H, WS_CART_W,
     WS_LABEL_H, WS_LABEL_W, WS_LABEL_X, WS_LABEL_Y,
 };
 #[cfg(feature = "nds")]
@@ -141,7 +142,7 @@ pub use power_menu::{heading_face, menu_detail_face, menu_face, PowerChoice, MEN
 pub use quick_menu::{
     add_legend, clock_legend_faces, core_button_legends, delete_legends, draw_menu_ground, MenuGround,
     fetch_choice_legends, fetch_legends, fetch_skip_legend, link_button_legends, picking_legend_faces,
-    print_stop_legend, ra_refresh_legend,
+    pm_button_label_faces, print_stop_legend, ra_refresh_legend,
     prompt_legends, quick_description_face, quick_label_face, quick_legend_faces,
     quick_pointer_face, quick_row_top, quick_row_top_at, quick_scroll, quick_value_face,
     quick_warning_value_face, quick_window, repair_legends, studio_legend, update_legends,
