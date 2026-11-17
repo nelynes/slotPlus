@@ -286,7 +286,7 @@ Either way the D-pad is the Y pad, the four face buttons are the X pad, L1 is A 
 | **Picture** | Shown at 6x, or at 7.5x to fill the screen with Settings → Screen → Pokémon mini → Full Screen. The screen's grey shades come from its LCD's ghosting, so they're kept. |
 | **Shaders** | Off, LCD3x, Grid (the default), Dot, Shimmerless, Transparent. |
 | **Bezel** | Your own in `Bezels/PokeMini/`. |
-| **Cart** | The small Pokémon mini cart. With Cart Slot set to Bespoke, the slot is the back of a blue Pokémon mini. |
+| **Cart** | The small Pokémon mini cart. With Cart Slot set to Bespoke, the slot is the back of a blue Pokémon mini. START opens it to its board, drawn after the real one: one wide chip with the game's name on it, the small parts round it, and two rows of gold contacts. The play-time sticker and the gold achievements sticker go low on the board, either side of its mark. A clear shell shows the same board through it. |
 | **Saves** | Kept with the game's other saves in `Saves/PokeMini/`, plus save states and the resume state. |
 
 ### Controls

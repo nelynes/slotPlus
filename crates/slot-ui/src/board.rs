@@ -71,11 +71,20 @@ pub const WS_ROM_X: u32 = 124;
 pub const WS_ROM_Y: u32 = 28;
 pub const WS_ROM_W: u32 = 112;
 pub const WS_ROM_H: u32 = 60;
+/// slotPlus: where the game's name is marked on the Pokémon mini board's chip, as
+/// `PM_ROM` in assets/src/carts.py.
+pub const PM_ROM_X: u32 = 95;
+pub const PM_ROM_Y: u32 = 24;
+pub const PM_ROM_W: u32 = 102;
+pub const PM_ROM_H: u32 = 46;
 
 /// slotPlus: carts whose back can be turned to, with nothing to pick there, only the
 /// board (and the play-time sticker) to see.
 pub fn shows_board_alone(platform: slot_store::Platform) -> bool {
-    platform == slot_store::Platform::Ws
+    matches!(
+        platform,
+        slot_store::Platform::Ws | slot_store::Platform::Pm
+    )
 }
 
 fn marking_sized(title: &[String], w: u32, h: u32) -> CartFace {
@@ -111,6 +120,17 @@ pub fn board_face(cart: &Cart) -> CartFace {
         };
         let mark = marking_sized(&rom_marking(&cart.stem), WS_ROM_W, WS_ROM_H);
         over(&mut face, &mark, WS_ROM_X, WS_ROM_Y);
+        return face;
+    }
+    if cart.platform == slot_store::Platform::Pm {
+        let (w, h) = bitmaps::Mould::Pm.size();
+        let mut face = CartFace {
+            rgba: bitmaps::extra_board(bitmaps::Mould::Pm).to_vec(),
+            w,
+            h,
+        };
+        let mark = marking_sized(&rom_marking(&cart.stem), PM_ROM_W, PM_ROM_H);
+        over(&mut face, &mark, PM_ROM_X, PM_ROM_Y);
         return face;
     }
     let mut face = CartFace {

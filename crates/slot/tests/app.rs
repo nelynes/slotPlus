@@ -2512,6 +2512,28 @@ fn start_on_a_wonderswan_cart_shows_its_board_alone() {
     assert!(!d.path().join(slot_store::SELECTED_CORE_FILE).exists());
 }
 
+/// slotPlus: a Pokémon mini cart opens the same way, to its board.
+#[test]
+fn start_on_a_pokemon_mini_cart_shows_its_board_alone() {
+    let d = common::tmp_root_with_carts(&[]);
+    let pm = d.path().join("Games/PokeMini");
+    std::fs::create_dir_all(&pm).unwrap();
+    for stem in ["Pokemon Puzzle Collection", "Pokemon Party mini"] {
+        std::fs::write(pm.join(format!("{stem}.min")), vec![0u8; 0x10000]).unwrap();
+    }
+    let (d, mut app) = booted_on_shelf(d);
+    fake_picker_faces(&mut app);
+    assert_eq!(app.selected_cart().map(|c| c.platform), Some(Platform::Pm));
+    app.apply(Action::GbaDown(Btn::Start));
+    assert_eq!(app.core_picker(), Some(Core::Pokemini));
+    let_it_hop(&mut app);
+    app.apply(Action::GbaDown(Btn::B));
+    let_it_close(&mut app);
+    let_it_close(&mut app);
+    assert_eq!(app.core_picker(), None);
+    assert!(!d.path().join(slot_store::SELECTED_CORE_FILE).exists());
+}
+
 #[test]
 fn select_on_the_opened_cart_prints_its_achievement_set_only_when_it_has_one() {
     let (_d, mut app) = on_shelf(&["Emerald", "Zzz"]);

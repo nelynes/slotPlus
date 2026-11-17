@@ -8,8 +8,9 @@ Writes, all 300x262:
   pm_neutral.png   the grey shell the game's colour is blended onto
   pm_clear.png     the same for a clear shell (the Pokémon mini's usual frosted plastic)
   pm_interior.png  the back half's inside
-  pm_board.png     the board, seen through a clear shell
   pm_decal.png     the hood's lip and its shadow, drawn over the label
+
+The board (pm_board.png) is drawn by assets/src/carts.py pm.
 
 The cart is wider than it is tall. A raised hood runs across the top, with a screw post
 at each corner and a lip that dips in the middle where it overhangs the label. The
@@ -160,53 +161,6 @@ def interior():
     return with_alpha(img, mask())
 
 
-def board():
-    """The board as the real ones are: bright green, a half-round cut at each top corner
-    round the screw posts, one wide flat chip across the top, a few small parts, and two
-    staggered rows of contacts along the bottom edge."""
-    big = Image.new('RGBA', (W * SS, H * SS), (0, 0, 0, 0))
-    d = ImageDraw.Draw(big)
-    S = SS
-    bx0, by0, bx1, by1 = 30, 14, W - 30, 224
-    green, trace, silk = (0x2e, 0x9c, 0x46, 255), (0x52, 0xb8, 0x5e, 255), (0xee, 0xf2, 0xe8, 255)
-    d.rectangle([bx0 * S, by0 * S, bx1 * S, by1 * S], fill=green)
-    # The cuts round the screw posts, and the small notch in the top edge.
-    for cx in (bx0, bx1):
-        d.ellipse([(cx - 17) * S, (36 - 17) * S, (cx + 17) * S, (36 + 17) * S], fill=(0, 0, 0, 0))
-    d.rectangle([(W // 2 - 8) * S, by0 * S, (W // 2 + 8) * S, (by0 + 5) * S], fill=(0, 0, 0, 0))
-    # Traces fanning down from the chip to the contacts.
-    rng = np.random.default_rng(7)
-    for i in range(16):
-        x0 = W // 2 - 60 + i * 8
-        x1 = bx0 + 22 + i * ((bx1 - bx0 - 44) / 15)
-        d.line([x0 * S, 70 * S, x0 * S, 110 * S, x1 * S, 150 * S, x1 * S, 168 * S], fill=trace, width=S)
-        d.ellipse([(x1 - 3) * S, (166 - 3) * S, (x1 + 3) * S, (166 + 3) * S], fill=(0xd0, 0xc8, 0x90, 255))
-    # The chip: a wide flat package with legs along its long sides.
-    cx, cy, cw, ch = W // 2, 46, 64, 20
-    for i in range(26):
-        x = cx - cw + 4 + i * (2 * cw - 8) / 25
-        for side in (-1, 1):
-            y0 = cy + side * ch
-            d.line([x * S, y0 * S, x * S, (y0 + side * 6) * S], fill=(0xc8, 0xc8, 0xc0, 255), width=S)
-    d.rectangle([(cx - cw) * S, (cy - ch) * S, (cx + cw) * S, (cy + ch) * S], fill=(0x1c, 0x1d, 0x22, 255))
-    d.ellipse([(cx - cw + 6) * S, (cy + ch - 12) * S, (cx - cw + 12) * S, (cy + ch - 6) * S], fill=(0x30, 0x31, 0x38, 255))
-    # Small parts in white outlines: two beside the chip, a pair lower left, two on the right.
-    for x, y, w, h in [(70, 66, 12, 8), (W - 82, 60, 12, 8), (64, 100, 8, 14), (78, 100, 8, 14),
-                       (130, 98, 10, 14), (W - 70, 98, 10, 14), (172, 98, 30, 14)]:
-        d.rectangle([(x - 2) * S, (y - 2) * S, (x + w + 2) * S, (y + h + 2) * S], outline=silk, width=S)
-        d.rectangle([x * S, y * S, (x + w) * S, (y + h) * S], fill=(0x3a, 0x34, 0x2c, 255))
-    # Two staggered rows of gold contacts, the upper longer, along the bottom edge.
-    n = 13
-    pitch = (bx1 - bx0 - 20) / n
-    for i in range(n):
-        x = bx0 + 10 + pitch * (i + 0.5)
-        d.rounded_rectangle([(x - 4) * S, 172 * S, (x + 4) * S, 196 * S], radius=S, fill=(0xd8, 0xa8, 0x3c, 255))
-        if i < n - 1:
-            x2 = x + pitch / 2
-            d.rounded_rectangle([(x2 - 4) * S, 202 * S, (x2 + 4) * S, 220 * S], radius=S, fill=(0xd8, 0xa8, 0x3c, 255))
-    return big.resize((W, H), Image.Resampling.LANCZOS)
-
-
 def decal():
     """Over the label: the hood's lip and the soft shadow it casts on the label's top edge."""
     img = Image.new('RGBA', (W, H), (0, 0, 0, 0))
@@ -233,9 +187,8 @@ def main():
     neutral().save(out / 'pm_neutral.png', optimize=True)
     clear().save(out / 'pm_clear.png', optimize=True)
     interior().save(out / 'pm_interior.png', optimize=True)
-    board().save(out / 'pm_board.png', optimize=True)
     decal().save(out / 'pm_decal.png', optimize=True)
-    print(f'pm_cart/neutral/clear/interior/board/decal.png in {out}')
+    print(f'pm_cart/neutral/clear/interior/decal.png in {out}')
 
 
 if __name__ == '__main__':

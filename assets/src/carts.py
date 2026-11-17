@@ -597,7 +597,120 @@ def lynx():
     rgba_colour(decal, dalpha).save(os.path.join(ASSETS, "lynx_decal.png"))
 
 
-MOULDS = {"ws": wonderswan, "lynx": lynx}
+# --------------------------------------------------------------------------
+# The Pokémon mini board, after the real one: bright green, a half-round cut in
+# each side by the top for the shell's screw posts, one wide flat chip with its
+# legs down both short sides, a few small parts round it, a little block of test
+# pads, a row of vias over the contacts, and two rows of gold contacts along the
+# foot. No makers' names or marks; the slotPlus mark instead.
+
+PM_GREEN = np.array([30, 128, 58], np.float32)
+PM_TRACE = np.array([64, 162, 86], np.float32)
+# Where the chip's marking goes; `slot_ui::board` writes the game's name there.
+PM_ROM = (95, 24, 197, 70)
+PM_BOARD = (30, 14, 270, 224)
+
+
+def pm_pcb(c):
+    rng = np.random.default_rng(61)
+    x0, y0, x1, y1 = PM_BOARD
+    outline = c.rrect(c.layer(), x0, y0, x1, y1, 3)
+    cut = c.layer()
+    for cx in (x0, x1):
+        c.ellipse(cut, cx - 17, 36 - 17, cx + 17, 36 + 17)
+    region = np.clip(f(outline) - f(cut), 0, 1)
+
+    rgb = np.ones((c.H, c.W, 3), np.float32) * PM_GREEN
+    blotch = ndimage.gaussian_filter(rng.normal(0, 1, (c.H // 8 + 1, c.W // 8 + 1)), 2.2)
+    blotch = np.kron(blotch / max(blotch.std(), 1e-6), np.ones((8, 8)))[: c.H, : c.W]
+    rgb += (blotch * 6.0)[..., None].astype(np.float32)
+    rgb += grain((c.H, c.W), 62, 4.0)[..., None]
+
+    count = 17
+    fx0, fx1 = x0 + 6, x1 - 6
+    pitch = (fx1 - fx0) / count
+    finger_x = [fx0 + pitch * (k + 0.5) for k in range(count)]
+    via_y = 158
+    rx0, ry0, rx1, ry1 = PM_ROM
+
+    # Traces: up from the vias over the contacts, a 45-degree jog, and in under
+    # the chip; and out from its legs to the small parts.
+    traces = c.layer()
+    d = ImageDraw.Draw(traces)
+    for k, fx in enumerate(finger_x):
+        tx = rx0 + 8 + k * (rx1 - rx0 - 16) / (count - 1)
+        bend = 134 - abs(k - count // 2) * 2.0
+        route(d, [(fx, via_y), (fx, bend), (tx, bend - abs(fx - tx)), (tx, ry1)], 1.2)
+    for k in range(9):
+        y = ry0 + 4 + k * 5.0
+        route(d, [(rx0 - 4, y), (rx0 - 12, y), (rx0 - 18 - k * 1.5, y + 8 + k * 1.2), (rx0 - 18 - k * 1.5, 100)], 1.0)
+        route(d, [(rx1 + 4, y), (rx1 + 12, y), (rx1 + 18 + k * 1.2, y + 8 + k), (rx1 + 18 + k * 1.2, 98)], 1.0)
+    rgb = paint(rgb, soft(f(traces), 0.2), PM_TRACE, 0.85)
+
+    # The chip, legs down both short sides.
+    rgb = silk_text(c, rgb, rx0 - 26, ry0 - 2, "U1", 7)
+    rgb = chip_with_legs(c, rgb, rx0, ry0, rx1, ry1, "lr", 2.2, leg=4.0, seed=63)
+
+    # The small parts.
+    for (x, y, v, lab, at) in [
+        (64, 68, True, "C4", (54, 72)),
+        (60, 106, True, "R1", (61, 99)), (72, 106, True, "R2", (75, 99)),
+        (132, 108, False, "C2", (136, 101)),
+        (228, 66, True, "C3", (240, 70)),
+        (234, 106, True, "C1", (244, 110)),
+    ]:
+        rgb = passive(c, rgb, x, y, v, lab, at)
+
+    # The block of test pads, two rows of six in a box.
+    rgb = silk_box(c, rgb, 164, 100, 214, 120)
+    pads = c.layer()
+    for row in range(2):
+        for k in range(6):
+            px, py = 168 + k * 7.6, 103 + row * 8
+            c.rrect(pads, px, py, px + 5, py + 5, 0.8)
+    rgb = paint(rgb, f(pads), [210, 176, 86])
+    rgb = silk_text(c, rgb, 155, 111, "CN1", 6)
+
+    # Vias: a row over the contacts, and a few where traces go through.
+    pts = [(fx, via_y) for fx in finger_x]
+    pts += [(52, 90), (88, 92), (120, 86), (180, 88), (214, 90), (250, 92),
+            (56, 140), (246, 140), (150, 92)]
+    rgb = vias(c, rgb, pts, r=2.4)
+
+    # The board's mark, between where the stickers go.
+    rgb = silk_mark(c, rgb, 182, 140, year_px=8, name_px=10)
+
+    # A dark rim round the board's edge.
+    dist = ndimage.distance_transform_edt(region > 0.5) / S
+    rgb = rgb * (1 - 0.35 * np.clip(1.6 - dist, 0, 1))[..., None]
+    rgb = rgb * region[..., None]
+    alpha = region
+    # Two rows of contacts, the lower with a gap in the middle, and a wide pad
+    # at each end.
+    rgb, alpha = fingers(c, fx0, fx1, 166, 187, count, rgb, alpha, width=0.62)
+    lower = c.layer()
+    for k, fx in enumerate(finger_x):
+        if k == count // 2:
+            continue
+        c.rrect(lower, fx - pitch * 0.31, 192, fx + pitch * 0.31, y1 - 3, 0.4)
+    for ex0, ex1 in ((x0 + 1, x0 + 5), (x1 - 5, x1 - 1)):
+        c.rrect(lower, ex0, 162, ex1, y1 - 1, 0.6)
+    g = f(lower)
+    shine = np.linspace(1.08, 0.86, c.H)[:, None]
+    gold = np.array([208, 164, 72], np.float32) * shine[..., None]
+    rgb = rgb * (1 - g[..., None]) + gold * g[..., None]
+    return rgb, np.maximum(alpha, g)
+
+
+def pokemini():
+    """Only the board: the rest of the Pokémon mini's layers come from
+    tools/cart_art/pokemini.py."""
+    c = Canvas(300, 262)
+    board, balpha = pm_pcb(c)
+    rgba_colour(board, balpha).save(os.path.join(ASSETS, "pm_board.png"))
+
+
+MOULDS = {"ws": wonderswan, "lynx": lynx, "pm": pokemini}
 
 if __name__ == "__main__":
     for name in sys.argv[1:] or MOULDS:
