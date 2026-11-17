@@ -12496,7 +12496,9 @@ impl App {
     }
 
     fn core_picker_input(&mut self, action: Action) {
-        if action == Action::SelectTap {
+        // The opened cart is a Menu context for the gestures, which send SELECT there as a
+        // plain press when it's let go (SelectTap is only made on the shelf itself).
+        if matches!(action, Action::SelectTap | Action::GbaDown(Btn::Select)) {
             return self.print_set();
         }
         let press = match action {

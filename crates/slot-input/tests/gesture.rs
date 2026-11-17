@@ -1022,6 +1022,15 @@ fn select_tap_on_the_shelf() {
 }
 
 #[test]
+fn a_select_press_in_a_menu_arrives_as_select_on_release() {
+    // slotPlus: the opened cart (a Menu context) prints its achievement set on this.
+    let mut g = gestures();
+    g.set_context(Context::Menu);
+    assert!(g.feed(Down(Select), 0).is_empty());
+    assert_eq!(g.feed(Up(Select), 80), vec![GbaDown(Select)]);
+}
+
+#[test]
 fn no_select_tap_in_game() {
     let mut g = gestures();
     assert!(g.feed(Down(Select), 0).is_empty());

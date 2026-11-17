@@ -2517,12 +2517,14 @@ fn select_on_the_opened_cart_prints_its_achievement_set_only_when_it_has_one() {
     let (_d, mut app) = on_shelf(&["Emerald", "Zzz"]);
     fake_picker_faces(&mut app);
     app.apply(Action::GbaDown(Btn::Start));
+    // With the cart open the gestures treat SELECT as a menu press, not a shelf tap.
+    assert_eq!(app.input_context(), slot_input::Context::Menu);
     app.set_core_has_set(false);
-    app.apply(Action::SelectTap);
+    app.apply(Action::GbaDown(Btn::Select));
     assert!(app.set_print().is_none(), "no set on the card, nothing to print");
 
     app.set_core_has_set(true);
-    app.apply(Action::SelectTap);
+    app.apply(Action::GbaDown(Btn::Select));
     assert!(app.set_print().is_some(), "SELECT starts the printer");
     // This card has no set after all: the printer gives up, and the cart stays open.
     for _ in 0..400 {
