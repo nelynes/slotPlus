@@ -85,6 +85,11 @@ build() {
 	for p in "$lr"/patches/*.patch "$here"/*.patch; do
 		[ -e "$p" ] || continue
 		case "$(basename "$p")" in
+		# The wrapper's patch to DSperate's PGO fingerprint was made for v3.3.0, and v3.4
+		# rewrote those lines. This build has PGO off, so the fingerprint is never read.
+		*pgo-fingerprint*) continue ;;
+		esac
+		case "$(basename "$p")" in
 		wrapper-*) into="$lr" ;;
 		*) into="$lr/DSperate" ;;
 		esac

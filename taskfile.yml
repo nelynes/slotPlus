@@ -8,8 +8,8 @@ vars:
   GPSP_COMMIT: 7b2dd37394e2822110cacef321e9bb291a305b77
   CYGNE_COMMIT: 4b01295838ea89e3f1355bbe4cb5cf98aa6108cd
   LYNX_COMMIT: fcdefcfb3c11d6d2e71be076a5d3df2e88ab73ed
-  # Gearsystem 3.9.22
-  GEARSYSTEM_COMMIT: 517ddaaafbab1af7a312c2b6b6f6043275f58500
+  # Gearsystem 3.9.25
+  GEARSYSTEM_COMMIT: 9421f00482be47a901f4b934ea803f63b423710b
   # PokeMini (libretro), 2026-07-31
   POKEMINI_COMMIT: 132111b76343559860532a1ccc094f93f1ed5650
   GAMBATTE_COMMIT: 77f2567d718b8973d02caa2daa8dce4953faf811
@@ -33,9 +33,9 @@ vars:
     | (package(slot-retro) & (binary(options) | binary(netpacket) | binary(libretro)))
   NGP_COMMIT: a50d5ac288a81f2104ddf43195a4efdd15c72227
   PCE_COMMIT: 3f946f277aef3aa99a95551618bbcd1dd2bda0d9
-  # Nintendo DS: DSperate's libretro wrapper, and the DSperate commit it pins (v3.3.0)
+  # Nintendo DS: DSperate's libretro wrapper, and DSperate itself (v3.4.1; the wrapper pins v3.3.0)
   DSPERATE_LR_COMMIT: 27b9d76fb4c900d29f9629806f316527b5da90c2
-  DSPERATE_COMMIT: 99618eb956c66083618395dbae9bb5cbf0241d16
+  DSPERATE_COMMIT: ecb27c96a80dd2c4bf31a0316f9eef9354d73e04
 
 tasks:
   default:

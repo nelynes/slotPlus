@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Nintendo DS: DSperate v3.4.1** (from v3.3.0). Among its fixes: the DS no longer keeps running its main processor while the system sleeps, video memory is remapped incrementally, and a BIOS or firmware dump of the wrong size is refused instead of loaded.
+- **Game Gear: Gearsystem 3.9.25** (from 3.9.22), with its latest fixes.
 - **Pokémon mini.** Put `.min` games in `Games/PokeMini/`; they play on PokeMini, with no BIOS needed. The cart is the little Pokémon mini cart in its own shelf, and with Cart Slot set to Bespoke the slot is the back of a blue Pokémon mini. A and B are A and B, R1 is the C button, L1 is Shake (the handheld rumbles instead of the picture shaking) and SELECT is Power; there's no Start. Settings → Screen → Pokémon mini has its own Shader and Bezel, and Full Screen, which fills the screen at 7.5x instead of 6x. Cart Studio+ makes Pokémon mini carts too.
 
 ## [1.16.0-plus2.9](https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus2.9)
