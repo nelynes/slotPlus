@@ -122,6 +122,16 @@ impl Owed {
     }
 }
 
+/// How many presents' worth of sound a locked present makes: the presents it covers,
+/// never the frames it ran. Slot 1.16 used the frames, which is the same number for a
+/// 60 fps core. A 75 fps core (the WonderSwan) runs two frames in some presents, and each
+/// of those then made two presents of sound: 40% too much, so the sound queue stayed full,
+/// the game waited on it every present and ran slow and stuttering, with most of its sound
+/// thrown away.
+fn locked_span(due: u32) -> u32 {
+    due.max(1)
+}
+
 /// slotPlus: how a game kept up at normal speed, for one line in the log when it stops:
 /// how many presents ran, how many core frames they ran, how long the core took a present
 /// on average and at worst, and how many presents the core finished too late for. A game
@@ -909,7 +919,7 @@ impl Worker {
                     span = cost.span(one, ceiling);
                 }
                 if lock && speed == Speed::Normal {
-                    span = ceiling;
+                    span = locked_span(due);
                 }
                 let ceiling = match lock && speed == Speed::Normal {
                     true => ceiling,
@@ -1768,5 +1778,21 @@ mod tests {
             pace.said(75.47, Some(75.4)).unwrap(),
             "2 presents at normal speed, 1.50 core frames a present (game 75.47 fps, running 75.40), core 13.0 ms a present (worst 18.0), 1 late"
         );
+    }
+
+    #[test]
+    fn a_75_fps_core_makes_one_present_of_sound_a_present_when_locked() {
+        // Sound made is in proportion to frames run x the span's stretch. Over many presents
+        // it must come to one present's worth each, whichever presents ran two frames.
+        let mut owed = Owed::new(75.47);
+        let (mut made, presents) = (0.0, 6000);
+        for _ in 0..presents {
+            let ran = owed.take();
+            made += f64::from(ran) * audio_span(Speed::Normal, owed.nominal(), locked_span(1), ran);
+        }
+        let per_present = made / f64::from(presents);
+        assert!((per_present - 1.0).abs() < 0.001, "{per_present}");
+        // Catching up on two presents at once makes two presents of sound.
+        assert_eq!(locked_span(2), 2);
     }
 }

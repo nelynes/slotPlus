@@ -19,6 +19,7 @@ Work toward slotPlus 3.0, "the cart remembers", on the `cart-remembers` branch. 
 - **gpSP updated** to its 2026-09-19 version: games that run code from video memory, several hardware-register reads, and a ROM whose data merely looks like an EEPROM save no longer losing its real save. slotPlus now asks gpSP for 65536 Hz sound by name, since gpSP's new 32768 Hz default makes its Game Boy–style sound effects fade and slide at half speed.
 - **Switch between slotPlus and slotPlusUltra** from Settings → System → Check for Updates: when you're up to date, X offers the other edition from the same release, and A installs it in place. Games, saves and settings stay.
 - **No more green border on a TV.** Over HDMI, the space around the game was filled with Slot's bright green placeholder for screens it has no bezels for yet; it's black now. The Bezel row, which couldn't change anything there, isn't offered on a TV.
+- **WonderSwan games run at full speed.** Since slotPlus 2.9 they ran slow and stuttering with crackling sound: at the WonderSwan's 75 frames a second the game made 40% more sound than the handheld could play, and waited on it every frame. The Lynx's few 75-frame games had the same fault.
 
 ## [1.16.0-plus2.9](https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus2.9)
 
