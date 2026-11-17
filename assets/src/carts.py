@@ -16,9 +16,9 @@ For each mould it writes, into the repository's `assets/`:
     <mould>_board.png     the board a clear cart shows
     <mould>_decal.png     drawn over the shell untinted (contacts, PCB)
 
-usage: python3 assets/src/carts.py [ws|lynx|pm|gg|gg_board|ngp|ngp_board|tg16|nds ...]
+usage: python3 assets/src/carts.py [ws|lynx|pm|gg|gg_board|ngp|ngp_board|tg16|nds|nds_board ...]
 
-(pm, gg_board and ngp_board draw only the board; the Pokémon mini's other layers come from
+(pm, gg_board, ngp_board and nds_board draw only the board; the Pokémon mini's other layers come from
 tools/cart_art/pokemini.py.)
 """
 
@@ -1117,11 +1117,139 @@ def ds_card():
     rgba(np.full_like(body, 255.0) * body, body).save(os.path.join(ASSETS, "nds_cart.png"))
     interior(c, body, 73, [(w * 0.5, h * 0.5, 7)]).save(os.path.join(ASSETS, "nds_interior.png"))
 
-    board_region = c.rrect(c.layer(), 8, 8, w - 8, h - 8, 5)
-    board = pcb(c, board_region, 74, [(w * 0.22, h * 0.28, w * 0.62, h * 0.62)])
-    board, balpha = fingers(c, w * 0.1, w * 0.9, 6, h * 0.05, 17, board,
-                            f(board_region))
+    nds_board(c)
+
+# --------------------------------------------------------------------------
+# The DS card's board, after the real ones: green, two U-shaped bites in the
+# top edge and small notches in the sides, the big flat chip with its legs down
+# both sides, a small eight-leg chip beside it, three capacitors and a
+# resistor in boxes along the top, a ring of vias over the contacts, a line of
+# silkscreen codes, and seventeen contacts on a bare strip at the foot (the
+# first, the last and the middle one longer). No makers' names; the slotPlus
+# mark instead.
+
+NDS_GREEN = np.array([22, 142, 82], np.float32)
+NDS_TRACE = np.array([46, 170, 104], np.float32)
+# Where the chip's marking goes; `slot_ui::board` writes the game's name there.
+NDS_ROM = (52, 92, 178, 170)
+NDS_BOARD = (20, 26, 268, 290)
+
+
+def nds_pcb(c):
+    rng = np.random.default_rng(91)
+    x0, y0, x1, y1 = NDS_BOARD
+    outline = c.rrect(c.layer(), x0, y0, x1, y1, 3)
+    cut = c.layer()
+    for nx in (74, 220):                       # the bites in the top edge
+        c.rrect(cut, nx - 11, y0 - 4, nx + 11, y0 + 16, 3)
+        c.ellipse(cut, nx - 11, y0 + 5, nx + 11, y0 + 27)
+    for sx in (x0, x1):                        # the notches in the sides
+        c.ellipse(cut, sx - 5, 176 - 5, sx + 5, 176 + 5)
+        c.rrect(cut, sx - 3, 82, sx + 3, 92, 1)
+    c.ellipse(cut, 239 - 6, 172 - 6, 239 + 6, 172 + 6)   # the hole by C3
+    region = np.clip(f(outline) - f(cut), 0, 1)
+
+    rgb = np.ones((c.H, c.W, 3), np.float32) * NDS_GREEN
+    blotch = ndimage.gaussian_filter(rng.normal(0, 1, (c.H // 8 + 1, c.W // 8 + 1)), 2.2)
+    blotch = np.kron(blotch / max(blotch.std(), 1e-6), np.ones((8, 8)))[: c.H, : c.W]
+    rgb += (blotch * 5.0)[..., None].astype(np.float32)
+    rgb += grain((c.H, c.W), 92, 3.5)[..., None]
+
+    rx0, ry0, rx1, ry1 = NDS_ROM
+    count = 17
+    fx0, fx1 = x0 + 4, x1 - 6
+    pitch = (fx1 - fx0) / count
+    finger_x = [fx0 + pitch * (k + 0.5) for k in range(count)]
+    strip_y = 226
+
+    # Traces: from the chip's lower legs, round its foot and fanning down to
+    # the contacts; from the small chip down the right; and the top parts' feed.
+    traces = c.layer()
+    d = ImageDraw.Draw(traces)
+    for n in range(7):
+        ly = ry1 - 4 - n * 3.6
+        lane = rx0 - 6 - n * 2.4
+        fx = finger_x[1 + n]
+        route(d, [(rx0 - 3, ly), (lane, ly), (lane, ry1 + 6 + n * 0.5),
+                  (fx, 196 + n * 0.4), (fx, strip_y)], 1.0)
+    for n in range(6):
+        fx = finger_x[9 + n]
+        sx = rx0 + 30 + n * 14
+        route(d, [(sx, ry1 + 2), (sx, ry1 + 10), (fx, 196), (fx, strip_y)], 1.0)
+    for n in range(3):
+        x = 188 + n * 3
+        route(d, [(x, 66), (x, 196 - n * 3), (finger_x[15 - n], 200), (finger_x[15 - n], strip_y)], 0.9)
+    route(d, [(66, 88), (66, 80), (164, 80), (164, 88)], 1.0)
+    route(d, [(118, 82), (118, 92)], 1.0)
+    rgb = paint(rgb, soft(f(traces), 0.2), NDS_TRACE, 0.8)
+
+    # The chips.
+    rgb = chip_with_legs(c, rgb, rx0, ry0, rx1, ry1, "lr", 3.0, leg=4.5, seed=93)
+    ux0, uy0, ux1, uy1 = 199, 100, 241, 150
+    rgb = chip_with_legs(c, rgb, ux0, uy0, ux1, uy1, "tb", 9.0, leg=4.0, seed=94)
+
+    # The capacitors and resistor in their boxes, and the labels.
+    for x, lab, at in ((62, "C1", (52, 58)), (160, "C2", (150, 58)), (196, "R1", (190, 58))):
+        rgb = silk_box(c, rgb, x - 4, 64, x + 10, 88)
+        rgb = passive(c, rgb, x, 70, True)
+        rgb = silk_text(c, rgb, at[0], at[1], lab, 9)
+    rgb = silk_box(c, rgb, 206, 156, 220, 178)
+    rgb = passive(c, rgb, 210, 162, True)
+    rgb = silk_text(c, rgb, 214, 188, "C3", 9)
+    rgb = silk_text(c, rgb, 132, 72, "U1", 9)
+    rgb = silk_text(c, rgb, 256, 76, "U2", 9)
+    # Pin-one arrows, and the small chip's outline.
+    arrows = c.layer()
+    c.poly(arrows, [(39, 81), (39, 89), (45, 85)])
+    c.poly(arrows, [(252, 81), (252, 89), (246, 85)])
+    c.poly(arrows, [(31, 214), (37, 214), (34, 220)])
+    rgb = paint(rgb, f(arrows), SILK)
+    rgb = silk_box(c, rgb, 196, 108, 199.8, 144, width=0.7)
+
+    # The ring pad top right, two square fiducials, and the ring round the hole.
+    rgb = paint(rgb, np.clip(f(c.ellipse(c.layer(), 238, 28, 254, 44))
+                             - f(c.ellipse(c.layer(), 239.4, 29.4, 252.6, 42.6)), 0, 1), SILK)
+    rgb = vias(c, rgb, [(246, 36)], r=2.6)
+    fid = c.layer()
+    c.rrect(fid, 33, 49, 40, 56, 0.5)
+    c.rrect(fid, 253, 134, 260, 141, 0.5)
+    rgb = paint(rgb, f(fid), [176, 150, 70])
+    rgb = paint(rgb, np.clip(f(c.ellipse(c.layer(), 231, 164, 247, 180)) - f(cut), 0, 1), [190, 160, 80])
+
+    # Vias: a row over the contacts, and along the top and sides.
+    pts = [(fx, 202) for fx in finger_x[1:-1]]
+    pts += [(36, 196), (36, 186), (254, 196), (254, 186), (130, 190), (150, 190)]
+    pts += [(36, 36), (98, 36), (142, 36), (194, 36), (114, 88), (36, 84), (36, 120),
+            (36, 150), (252, 100), (252, 112), (88, 178), (120, 176), (212, 150)]
+    rgb = vias(c, rgb, pts, r=2.4)
+
+    # The codes along the foot, and the board's mark.
+    for x, words in ((62, "S P"), (132, "X-26"), (210, "C26-11")):
+        rgb = silk_text(c, rgb, x, 216, words, 11)
+    rgb = silk_mark(c, rgb, 186, 38, year_px=8, name_px=10)
+
+    dist = ndimage.distance_transform_edt(region > 0.5) / S
+    rgb = rgb * (1 - 0.3 * np.clip(1.6 - dist, 0, 1))[..., None]
+
+    # The bare strip at the foot, cream where there is no mask, and the contacts.
+    strip = f(c.rrect(c.layer(), x0, strip_y, x1, y1, 0)) * region
+    rgb = paint(rgb, strip, [226, 224, 204])
+    rgb = rgb * region[..., None]
+    gold = c.layer()
+    for k, x in enumerate(finger_x):
+        long = k in (0, 8, count - 1)
+        c.rrect(gold, x - pitch * 0.36, strip_y + 1, x + pitch * 0.36, (y1 - 6) if long else (y1 - 13), 0.4)
+    g = f(gold) * region
+    shine = np.linspace(1.04, 0.84, c.H)[:, None]
+    rgb = rgb * (1 - g[..., None]) + (np.array([150, 124, 60], np.float32) * shine[..., None]) * g[..., None]
+    return rgb, region
+
+
+def nds_board(c=None):
+    """Only the board, after the real ones (see nds_pcb)."""
+    board, balpha = nds_pcb(c or Canvas(288, 304))
     rgba_colour(board, balpha).save(os.path.join(ASSETS, "nds_board.png"))
+
 
 # --------------------------------------------------------------------------
 # The Pokémon mini board, after the real one: bright green, a half-round cut in
@@ -1246,6 +1374,7 @@ MOULDS = {
     "ngp_board": ngp_board,
     "tg16": turbochip,
     "nds": ds_card,
+    "nds_board": nds_board,
 }
 
 if __name__ == "__main__":

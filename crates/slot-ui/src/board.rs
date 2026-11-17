@@ -87,6 +87,11 @@ pub const NGP_ROM_X: u32 = 124;
 pub const NGP_ROM_Y: u32 = 63;
 pub const NGP_ROM_W: u32 = 66;
 pub const NGP_ROM_H: u32 = 121;
+/// slotPlus: the same on the DS card board's big chip, as `NDS_ROM` in carts.py.
+pub const NDS_ROM_X: u32 = 52;
+pub const NDS_ROM_Y: u32 = 92;
+pub const NDS_ROM_W: u32 = 126;
+pub const NDS_ROM_H: u32 = 78;
 /// slotPlus: where a NeoGeo Pocket pak's foot starts. The foot, with its plaques, is one
 /// piece with the back, so it stays on when the lid comes off and hides most of the
 /// contacts.
@@ -101,6 +106,7 @@ pub fn shows_board_alone(platform: slot_store::Platform) -> bool {
             | slot_store::Platform::Pm
             | slot_store::Platform::Gg
             | slot_store::Platform::Ngp
+            | slot_store::Platform::Nds
     )
 }
 
@@ -146,6 +152,10 @@ pub fn board_face(cart: &Cart) -> CartFace {
         slot_store::Platform::Gg => {
             Some((bitmaps::Mould::Gg, (GG_ROM_X, GG_ROM_Y, GG_ROM_W, GG_ROM_H)))
         }
+        slot_store::Platform::Nds => Some((
+            bitmaps::Mould::Nds,
+            (NDS_ROM_X, NDS_ROM_Y, NDS_ROM_W, NDS_ROM_H),
+        )),
         slot_store::Platform::Ngp => Some((
             bitmaps::Mould::Ngp,
             (NGP_ROM_X, NGP_ROM_Y, NGP_ROM_W, NGP_ROM_H),
