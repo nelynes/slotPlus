@@ -1402,25 +1402,129 @@ fn sticker(
             paper[at + 3] = 255;
         }
     }
+    // slotPlus: the writing keeps clear of the little icon in the top right corner.
+    let room = sw - ICON_ROOM;
     if let Some(hand) = crate::hand::hand_font() {
         let lines = [text.to_string()];
         let mut px = 17.0;
-        while px > 9.0 && hand.line_width(text, px) > (sw - 8) as f32 {
+        while px > 9.0 && hand.line_width(text, px) > (room - 6) as f32 {
             px -= 1.0;
         }
-        for (i, a) in hand.coverage(sw, sh, &lines, px).into_iter().enumerate() {
-            if a == 0 || paper[i * 4 + 3] == 0 {
+        for (i, a) in hand.coverage(room, sh, &lines, px).into_iter().enumerate() {
+            let at = ((i as u32 / room * sw + i as u32 % room) * 4) as usize;
+            if a == 0 || paper[at + 3] == 0 {
                 continue;
             }
-            mix(&mut paper[i * 4..i * 4 + 4], ink, a as f32 / 255.0);
+            mix(&mut paper[at..at + 4], ink, a as f32 / 255.0);
         }
     }
+    let icon = match which {
+        0 => Icon::Stopwatch,
+        _ => Icon::Trophy,
+    };
+    draw_icon(&mut paper, sw, icon, ink);
     paste(back, &paper, sw, sh, (x0, y0), tilt);
+}
+
+/// slotPlus: how much of a sticker's width, at the right, is kept for its icon.
+const ICON_ROOM: u32 = 12;
+
+/// slotPlus: the little printed icon in a sticker's top right corner: a stopwatch on the
+/// play-time sticker, a trophy on the achievements one.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Icon {
+    Stopwatch,
+    Trophy,
+}
+
+/// Whether a point, in the icon's own 10 x 10 box, is inked.
+fn icon_inked(icon: Icon, x: f32, y: f32) -> bool {
+    let in_box = |x0: f32, y0: f32, x1: f32, y1: f32| x >= x0 && x <= x1 && y >= y0 && y <= y1;
+    match icon {
+        Icon::Stopwatch => {
+            // A ring for the face, a crown and button on top, and one hand.
+            let (cx, cy) = (5.0, 5.9);
+            let d = ((x - cx).powi(2) + (y - cy).powi(2)).sqrt();
+            let ring = (3.0..=4.0).contains(&d);
+            let crown = in_box(4.1, 0.3, 5.9, 1.9);
+            let stem = in_box(4.6, 1.4, 5.4, 2.2);
+            let button = in_box(7.6, 1.6, 8.6, 2.6);
+            let hand = in_box(4.6, 3.4, 5.4, 6.2) || in_box(4.6, 5.4, 6.8, 6.2);
+            ring || crown || stem || button || hand
+        }
+        Icon::Trophy => {
+            // A cup with a handle each side, a stem and a base.
+            let cup = in_box(2.6, 0.6, 7.4, 2.0)
+                || (y >= 2.0 && y <= 5.4 && (x - 5.0).abs() <= 2.4 - (y - 2.0) * 0.38);
+            let handle = |side: f32| {
+                let (hx, hy) = (5.0 + side * 2.9, 2.6);
+                let d = ((x - hx).powi(2) + (y - hy).powi(2)).sqrt();
+                (0.9..=1.7).contains(&d) && (x - 5.0) * side > 2.4
+            };
+            let stem = in_box(4.4, 5.2, 5.6, 7.4);
+            let base = in_box(2.8, 7.6, 7.2, 9.2);
+            cup || handle(-1.0) || handle(1.0) || stem || base
+        }
+    }
+}
+
+/// Draw `icon` into a sticker's paper, in its top right corner, in the sticker's ink.
+fn draw_icon(paper: &mut [u8], sw: u32, icon: Icon, ink: [u8; 3]) {
+    const SIZE: u32 = 10;
+    const SAMPLES: u32 = 4;
+    let (x0, y0) = (sw - SIZE - 3, 3);
+    for py in 0..SIZE {
+        for px in 0..SIZE {
+            let mut hits = 0;
+            for sy in 0..SAMPLES {
+                for sx in 0..SAMPLES {
+                    let x = px as f32 + (sx as f32 + 0.5) / SAMPLES as f32;
+                    let y = py as f32 + (sy as f32 + 0.5) / SAMPLES as f32;
+                    hits += icon_inked(icon, x, y) as u32;
+                }
+            }
+            let at = (((y0 + py) * sw + x0 + px) * 4) as usize;
+            if hits == 0 || paper[at + 3] == 0 {
+                continue;
+            }
+            let cover = hits as f32 / (SAMPLES * SAMPLES) as f32;
+            mix(&mut paper[at..at + 4], ink, cover * 0.9);
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_play_sticker_has_a_stopwatch_and_a_gold_one_a_trophy_in_the_corner() {
+        let (sw, sh) = (STICKER_W, STICKER_H);
+        let paper = |icon| {
+            let mut p = vec![255u8; (sw * sh * 4) as usize];
+            draw_icon(&mut p, sw, icon, [0, 0, 0]);
+            p
+        };
+        let inked = |p: &[u8], x0: u32, x1: u32| {
+            (0..sh)
+                .flat_map(|y| (x0..x1).map(move |x| (x, y)))
+                .filter(|&(x, y)| p[((y * sw + x) * 4) as usize] < 200)
+                .count()
+        };
+        let (watch, cup) = (paper(Icon::Stopwatch), paper(Icon::Trophy));
+        for p in [&watch, &cup] {
+            assert!(
+                inked(p, sw - ICON_ROOM - 1, sw) > 15,
+                "an icon in the top right"
+            );
+            assert_eq!(
+                inked(p, 0, sw - ICON_ROOM - 1),
+                0,
+                "and nothing under the writing"
+            );
+        }
+        assert_ne!(watch, cup, "two different icons");
+    }
 
     #[test]
     fn dust_and_wear_build_in_steps() {
