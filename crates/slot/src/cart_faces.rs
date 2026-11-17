@@ -6,7 +6,7 @@ use std::thread;
 
 use slot_gfx::{Compositor, TexId};
 use slot_store::Cart;
-use slot_ui::shelf_life::{apply_look_labelled, film_of, seed_of, Look};
+use slot_ui::shelf_life::{apply_look_labelled, film_of, seed_of, Look, Money};
 use slot_ui::{cart_face_with, cart_interior, shows_interior, CartFace};
 
 use crate::app::{App, FaceWant};
@@ -100,7 +100,11 @@ impl CartFaces {
         }
         app.show_tears();
         if let Some(cart) = app.tear_wants() {
-            let film = film_of(&cart_face_with(cart, None), seed_of(cart));
+            let film = film_of(
+                &cart_face_with(cart, None),
+                seed_of(cart),
+                Money::of_cart(cart),
+            );
             let tex = self.texture(compositor, &film);
             app.set_tear_film(tex);
         }
@@ -231,7 +235,13 @@ pub fn looked(mut face: CartFace, cart: &Cart, mut look: Look, root: &Path) -> C
         (w as f32 * sx) as u32,
         (h as f32 * sy) as u32,
     ];
-    apply_look_labelled(&mut face, &look, seed_of(cart), Some(label));
+    apply_look_labelled(
+        &mut face,
+        &look,
+        seed_of(cart),
+        Some(label),
+        Money::of_cart(cart),
+    );
     face
 }
 
