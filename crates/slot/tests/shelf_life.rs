@@ -151,6 +151,72 @@ fn inserting_a_dusty_cart_redraws_it_clean() {
     );
 }
 
+/// Hold B on the selected cart long enough to wipe it.
+fn hold_b(a: &mut App) {
+    let t = a.now();
+    a.apply_at(Action::GbaDown(Btn::B), t);
+    a.tick_ms(t + 300);
+    a.tick_ms(t + 700);
+    a.apply_at(Action::GbaUp(Btn::B), t + 800);
+}
+
+/// A cart with 3 levels of dust and 2 of wear, booted with Clean Button Resets at `resets`.
+fn dusty_and_worn(resets: slot_store::CleanResets) -> (tempfile::TempDir, App) {
+    let d = tmp_root_with_carts(&["Emerald", "Fusion"]);
+    let mut log = PlayLog::default();
+    log.add_play(Platform::Gba, "Emerald", 40 * 3600, now() - 100 * 86_400);
+    write_play_log(d.path(), &log).unwrap();
+    let a = boot_with(
+        d.path(),
+        SlotState {
+            clean_resets: resets,
+            ..SlotState::default()
+        },
+    );
+    assert_eq!((look(&a).dust, look(&a).wear), (3, 2));
+    (d, a)
+}
+
+/// slotPlus: Clean Button Resets says what holding B takes off a cart.
+#[test]
+fn the_clean_button_takes_off_only_what_it_is_set_to() {
+    use slot_store::CleanResets;
+    for (resets, left) in [
+        (CleanResets::Both, (0, 0)),
+        (CleanResets::Wear, (3, 0)),
+        (CleanResets::Dust, (0, 2)),
+        (CleanResets::Disabled, (3, 2)),
+    ] {
+        let (_d, mut a) = dusty_and_worn(resets);
+        hold_b(&mut a);
+        assert_eq!((look(&a).dust, look(&a).wear), left, "{resets:?}");
+    }
+}
+
+/// With Wear only, a cart that's dusty but not worn has nothing to wipe: B leaves it be.
+#[test]
+fn a_cart_with_nothing_the_button_takes_off_is_left_alone() {
+    let d = tmp_root_with_carts(&["Emerald", "Fusion"]);
+    let mut log = PlayLog::default();
+    log.add_play(Platform::Gba, "Emerald", 60, now() - 100 * 86_400);
+    write_play_log(d.path(), &log).unwrap();
+    let mut a = boot_with(
+        d.path(),
+        SlotState {
+            clean_resets: slot_store::CleanResets::Wear,
+            ..SlotState::default()
+        },
+    );
+    assert_eq!((look(&a).dust, look(&a).wear), (3, 0));
+    assert!(!a.clean_selected());
+    hold_b(&mut a);
+    assert_eq!(look(&a).dust, 3);
+    assert!(read_play_log(d.path())
+        .record(Platform::Gba, "Emerald")
+        .cleaned
+        .is_none());
+}
+
 #[test]
 fn letting_go_of_b_early_leaves_the_dust() {
     let d = tmp_root_with_carts(&["Emerald", "Fusion"]);

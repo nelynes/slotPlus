@@ -103,10 +103,20 @@ impl PlayLog {
 
     /// Wipe a cart: its dust goes, and so does the wear of the play so far.
     pub fn clean(&mut self, platform: Platform, stem: &str, now: u64) {
+        self.clean_only(platform, stem, now, true, true);
+    }
+
+    /// slotPlus: wipe a cart of its `dust`, its `wear`, or both: the dust starts again from
+    /// `now`, the wear from the play so far.
+    pub fn clean_only(&mut self, platform: Platform, stem: &str, now: u64, dust: bool, wear: bool) {
         let r = self.entry(platform, stem);
-        r.cleaned = Some(now);
-        r.worn_from = r.seconds;
-        r.seen.get_or_insert(now);
+        if dust {
+            r.cleaned = Some(now);
+            r.seen.get_or_insert(now);
+        }
+        if wear {
+            r.worn_from = r.seconds;
+        }
     }
 
     pub fn parse(text: &str) -> PlayLog {

@@ -172,11 +172,13 @@ pub enum QuickRow {
     ShrinkWrap,
     Dust,
     Wear,
+    /// slotPlus Shelf Life: what holding B to wipe a cart takes off it.
+    CleanResets,
     KidAllowance,
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 162 + cfg!(feature = "nds") as usize] = [
+    pub const ALL: [QuickRow; 163 + cfg!(feature = "nds") as usize] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -340,6 +342,7 @@ impl QuickRow {
         QuickRow::ShrinkWrap,
         QuickRow::Dust,
         QuickRow::Wear,
+        QuickRow::CleanResets,
         QuickRow::KidAllowance,
     ];
 
@@ -374,7 +377,12 @@ impl QuickRow {
     ];
 
     /// slotPlus Shelf Life: how the carts on the shelf show the way they've been kept.
-    pub const SHELF_LIFE: [QuickRow; 3] = [QuickRow::ShrinkWrap, QuickRow::Dust, QuickRow::Wear];
+    pub const SHELF_LIFE: [QuickRow; 4] = [
+        QuickRow::ShrinkWrap,
+        QuickRow::Dust,
+        QuickRow::Wear,
+        QuickRow::CleanResets,
+    ];
 
     pub const GENERAL: [QuickRow; 11] = [
         QuickRow::Theme,
@@ -653,7 +661,9 @@ impl QuickRow {
             | QuickRow::KidShelf
             | QuickRow::KidAllowance
             | QuickRow::ShelfLife => &QuickRow::GENERAL,
-            QuickRow::ShrinkWrap | QuickRow::Dust | QuickRow::Wear => &QuickRow::SHELF_LIFE,
+            QuickRow::ShrinkWrap | QuickRow::Dust | QuickRow::Wear | QuickRow::CleanResets => {
+                &QuickRow::SHELF_LIFE
+            }
             QuickRow::Wifi
             | QuickRow::DateTime
             | QuickRow::LidOff
@@ -867,6 +877,7 @@ impl QuickRow {
             QuickRow::ShrinkWrap => "Shrink Wrap",
             QuickRow::Dust => "Dust",
             QuickRow::Wear => "Wear",
+            QuickRow::CleanResets => "Clean Button Resets",
             QuickRow::FetchArt => "Fetch Missing Art",
             #[cfg(feature = "nds")]
             QuickRow::FetchBoxArt => "Fetch Box Art",
@@ -1170,10 +1181,14 @@ pub enum QuickValue {
     Min60,
     Min90,
     Min120,
+    /// slotPlus: what the clean button takes off a cart.
+    WearOnly,
+    DustOnly,
+    Disabled,
 }
 
 impl QuickValue {
-    pub const ALL: [QuickValue; 64] = [
+    pub const ALL: [QuickValue; 67] = [
         QuickValue::Speed1_5,
         QuickValue::Speed2,
         QuickValue::Speed3,
@@ -1238,6 +1253,9 @@ impl QuickValue {
         QuickValue::Min60,
         QuickValue::Min90,
         QuickValue::Min120,
+        QuickValue::WearOnly,
+        QuickValue::DustOnly,
+        QuickValue::Disabled,
     ];
 
     /// slotPlus: a day's play in a locked Kid Mode.
@@ -1322,6 +1340,9 @@ impl QuickValue {
             QuickValue::Min60 => "1 hour",
             QuickValue::Min90 => "1.5 hours",
             QuickValue::Min120 => "2 hours",
+            QuickValue::WearOnly => "Wear",
+            QuickValue::DustOnly => "Dust",
+            QuickValue::Disabled => "Disabled",
             QuickValue::Level0 => "0",
             QuickValue::Level1 => "1",
             QuickValue::Level2 => "2",
