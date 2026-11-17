@@ -149,6 +149,9 @@ fn open_named(
                     palette,
                 );
                 apply_blending_off(&mut opened, core);
+                if core == Core::Dsperate {
+                    apply_ds_console(&mut opened, root);
+                }
                 if let Some(player) = link {
                     apply_link_options(&mut opened, core, player);
                 }
@@ -285,6 +288,40 @@ pub fn blending_off(which: Core) -> Option<(&'static str, &'static str)> {
 pub fn apply_blending_off(core: &mut LibretroCore, which: Core) {
     if let Some((key, value)) = blending_off(which) {
         core.set_option(key, value);
+    }
+}
+
+/// The DS firmware holds up to ten characters of nickname.
+pub const NDS_NAME_MAX: usize = 10;
+
+/// slotPlus: the DS's console name and its clock, as DSperate's options. The name
+/// is Slot's own Nickname (Settings > System), cut to the firmware's ten
+/// characters; with none set DSperate keeps its own ("DSperate"), and a dumped
+/// firmware.bin keeps whatever it holds. DSperate seeds the DS clock from the
+/// system's local time, but the handheld's system clock is UTC with no time zone,
+/// so Slot hands over its own zone's offset at `utc` (cores/dsperate/
+/// 0001-rtc-utc-offset.patch and wrapper-0002-console-name-and-clock.patch).
+pub fn ds_console_options(
+    nickname: &str,
+    zone: slot_store::Zone,
+    utc: i64,
+) -> Vec<(&'static str, String)> {
+    let mut out = Vec::new();
+    let name: String = nickname.trim().chars().take(NDS_NAME_MAX).collect();
+    if !name.is_empty() {
+        out.push(("dsperate_nickname", name));
+    }
+    out.push(("dsperate_utc_offset", zone.offset_min(utc).to_string()));
+    out
+}
+
+fn apply_ds_console(core: &mut LibretroCore, root: &Path) {
+    let state = slot_store::read_slot_state(root);
+    let utc = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs() as i64);
+    for (key, value) in ds_console_options(&state.nickname, state.zone, utc) {
+        core.set_option(key, &value);
     }
 }
 
@@ -529,6 +566,27 @@ pub fn apply_core_options(
 mod tests {
     use super::*;
     use std::sync::Mutex;
+
+    #[test]
+    fn the_ds_gets_slots_nickname_cut_to_ten_and_the_zones_offset() {
+        let tokyo = slot_store::Zone::parse("Asia/Tokyo").unwrap();
+        let opts = ds_console_options("  Marigold Rosalind ", tokyo, 1_800_000_000);
+        assert_eq!(
+            opts,
+            vec![
+                ("dsperate_nickname", "Marigold R".to_string()),
+                ("dsperate_utc_offset", "540".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn with_no_nickname_the_ds_keeps_its_own_but_still_gets_the_time() {
+        let london = slot_store::Zone::parse("Europe/London").unwrap();
+        // 2026-07-01 12:00 UTC: British Summer Time.
+        let opts = ds_console_options("   ", london, 1_782_907_200);
+        assert_eq!(opts, vec![("dsperate_utc_offset", "60".to_string())]);
+    }
 
     static ENV_LOCK: Mutex<()> = Mutex::new(());
 

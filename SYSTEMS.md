@@ -47,6 +47,8 @@ For the Game Boy systems, and everything else Slot does, see the [Slot user guid
 | **Cart** | The DS game card: a small dark card with one bottom corner cut off, the label in a shallow recess and an arrow at the foot. It goes into the slot narrower than the other carts. With Cart Slot set to Bespoke, the slot is the back of a silver DS Lite. |
 | **Saves** | `Saves/NDS/<game name>.sav`. Save states and the resume state work as usual. There is no rewind for DS games, since their states are about 6 MB each. |
 | **Speed** | Full speed on the RG SP. In the heaviest 3D scenes, such as Mario Kart DS's races, it skips drawing the odd frame so the game itself keeps full speed, and the CPU is held at full clock while a DS game plays. |
+| **Console name** | Settings → System → Nickname, its first 10 characters. Games that greet you by your DS's name use it from the next game you start. With no Nickname set, the console is called DSperate, and a `firmware.bin` of your own in `BIOS/` keeps the name it already holds. |
+| **Clock** | The DS clock follows slotPlus's date, time and time zone (Settings → System), from the moment a game starts and again after loading a save state. Games that care about the day and time, such as Animal Crossing: Wild World and Pokémon HeartGold, SoulSilver, Diamond, Pearl and Platinum, see the real time. |
 
 ### Screen layouts
 
