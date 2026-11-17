@@ -4,7 +4,10 @@ use std::thread;
 
 use slot_store::{Cart, Platform};
 use slot_ui::shelf_life::{play_sticker, Look};
-use slot_ui::{board_face, cart_face_with, cart_interior, lynx_back_face, padded, CartFace, TURN_PAD};
+use slot_ui::{
+    board_face, cart_face_with, cart_interior, hucard_back_face, lynx_back_face, padded, CartFace,
+    TURN_PAD,
+};
 
 use crate::label_cache::label_art;
 
@@ -56,6 +59,11 @@ impl FaceBuilder {
                     let cart = &ask.cart;
                     let mut board = match cart.platform {
                         Platform::Lynx => lynx_back_face(cart),
+                        // slotPlus: the back of a HuCard, with Slot's Nickname on its
+                        // NAME line.
+                        Platform::Tg16 => {
+                            hucard_back_face(cart, &slot_store::read_slot_state(&root).nickname)
+                        }
                         _ => board_face(cart),
                     };
                     if let Some(secs) = ask.played {

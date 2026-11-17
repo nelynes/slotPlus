@@ -197,6 +197,15 @@ const PM_BOARD_PNG: &[u8] = include_bytes!("../../../assets/pm_board.png");
 const PM_DECAL_PNG: &[u8] = include_bytes!("../../../assets/pm_decal.png");
 const WS_DECAL_PNG: &[u8] = include_bytes!("../../../assets/ws_decal.png");
 const LYNX_DECAL_PNG: &[u8] = include_bytes!("../../../assets/lynx_decal.png");
+/// slotPlus: what is printed on the back of a HuCard (assets/src/hucard_back.py).
+const TG16_BACK_PNG: &[u8] = include_bytes!("../../../assets/tg16_back.png");
+
+/// slotPlus: the print on the back of a HuCard, on transparency, at the card's size.
+pub fn hucard_back_print() -> &'static [u8] {
+    static P: OnceLock<Vec<u8>> = OnceLock::new();
+    let (w, h) = Mould::Tg16.size();
+    load(TG16_BACK_PNG, w, h, &P)
+}
 
 /// What a slotPlus mould draws over its shell untinted: the gold contacts, and on a
 /// WonderSwan the bare board below the shoulder. A Game Gear or NeoGeo Pocket shows nothing; a

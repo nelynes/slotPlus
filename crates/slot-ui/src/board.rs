@@ -607,6 +607,68 @@ pub fn lynx_back_face(cart: &Cart) -> CartFace {
     face
 }
 
+/// slotPlus: the NAME line printed on the back of a HuCard, as hucard_back.py
+/// draws it: the name is written from just after "NAME:" to the line's end,
+/// sitting on the line at this height.
+const HUCARD_NAME_X: u32 = 58;
+const HUCARD_NAME_END: u32 = 194;
+const HUCARD_NAME_LINE_Y: u32 = 119;
+/// Felt-tip ink, not the navy of the print.
+const HUCARD_PEN: [u8; 3] = [34, 34, 44];
+
+/// slotPlus: the back of a HuCard. It has nothing inside to open, so START turns
+/// it over to this: the back plastic in the card's own colour (its grip tab
+/// moulded in), the print from `assets/tg16_back.png` over it, and `name`
+/// written by hand on the NAME line. An empty name leaves the line blank.
+pub fn hucard_back_face(cart: &Cart, name: &str) -> CartFace {
+    let mut face = cart_back_shell(cart);
+    let (w, h) = bitmaps::Mould::Tg16.size();
+    if (face.w, face.h) == (w, h) {
+        over(
+            &mut face,
+            &bitmap_face(bitmaps::hucard_back_print(), w, h),
+            0,
+            0,
+        );
+    }
+    write_hucard_name(&mut face, name.trim());
+    face
+}
+
+fn write_hucard_name(face: &mut CartFace, name: &str) {
+    let Some(hand) = crate::hand::hand_font() else {
+        return;
+    };
+    if name.is_empty() {
+        return;
+    }
+    let room = (HUCARD_NAME_END - HUCARD_NAME_X) as f32;
+    let mut px = 17.0;
+    while px > 11.0 && hand.line_width(name, px) > room {
+        px -= 1.0;
+    }
+    // A name too long for the line even written small stops where the line does.
+    let mut name: String = name.to_string();
+    while name.chars().count() > 1 && hand.line_width(&name, px) > room - 2.0 {
+        name.pop();
+    }
+    let name = name.trim_end();
+    let bw = (hand.line_width(name, px).ceil() as u32 + 4).min(room as u32);
+    let bh = 22;
+    let top = HUCARD_NAME_LINE_Y + 3 - bh;
+    let cover = hand.coverage(bw, bh, &[name.to_string()], px);
+    let mut band = CartFace {
+        rgba: vec![0; (bw * bh * 4) as usize],
+        w: bw,
+        h: bh,
+    };
+    for (i, a) in cover.into_iter().enumerate() {
+        band.rgba[i * 4..i * 4 + 3].copy_from_slice(&HUCARD_PEN);
+        band.rgba[i * 4 + 3] = a;
+    }
+    over(face, &band, HUCARD_NAME_X, top);
+}
+
 /// The shell's own colour, from the plain plastic near the top of the face.
 fn shell_colour(face: &CartFace) -> [f32; 3] {
     let w = face.w as usize;

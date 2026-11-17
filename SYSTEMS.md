@@ -99,6 +99,7 @@ The TurboExpress was NEC's handheld TurboGrafx-16: it played the same HuCards as
 | **Shaders** | Off, LCD3x, Grid, Dot, Shimmerless. |
 | **Bezel** | Four bundled: TG16, a dark face with the TurboGrafx-16 logo down the left side, and PCE, the PC Engine's white case either side of the screen, each with a Wide version for games that draw 320 wide. Or your own in `Bezels/TG16/`, 720x480 with the 512x480 window from x 104 clear (640x480 from x 40 for a wide one). |
 | **Cart** | The HuCard: a thin white card with gold contacts along the top over a dark textured panel, the label printed square at the bottom of the space below the panel, and a ridged grip tab at the foot. It turns end over end before it goes into the slot, contacts first, and turns back when it comes out. |
+| **Back** | START on the shelf turns the card over to its back, printed like a real HuCard's: GAME CARD across the top, the care notes in Japanese and English, and slotPlus at the foot. Your Nickname (Settings → System) is written on its NAME line, and the play-time sticker, with the gold achievements sticker under it, sits beside the Notes. A or B turns it back. |
 | **Saves** | Games that save to the console's backup memory keep it in `Saves/TG16/`. |
 
 ### Controls

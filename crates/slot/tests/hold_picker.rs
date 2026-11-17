@@ -26,21 +26,31 @@ fn tap(s: &mut Session, now: &mut Millis, btn: Btn) {
 }
 
 fn lynx_card() -> tempfile::TempDir {
+    shelf_card(
+        "Lynx",
+        &[
+            "California Games (USA).lnx",
+            "Chip's Challenge (USA, Europe).lnx",
+        ],
+    )
+}
+
+fn shelf_card(folder: &str, games: &[&str]) -> tempfile::TempDir {
     let d = tempfile::tempdir().unwrap();
     for sub in slot::root::DIRS {
         std::fs::create_dir_all(d.path().join(sub)).unwrap();
     }
-    let dir = d.path().join("Games/Lynx");
+    let dir = d.path().join("Games").join(folder);
     std::fs::create_dir_all(&dir).unwrap();
     // Two games, as a card with one boots straight into it.
-    for stem in ["California Games (USA)", "Chip's Challenge (USA, Europe)"] {
-        std::fs::write(dir.join(format!("{stem}.lnx")), vec![0u8; 0x200]).unwrap();
+    for game in games {
+        std::fs::write(dir.join(game), vec![0u8; 0x200]).unwrap();
     }
     clocked(d.path());
     let mut state = slot_store::read_slot_state(d.path());
     state.cart = None;
     state.cart_platform = None;
-    state.shelf = Some("lynx".into());
+    state.shelf = Some(folder.to_ascii_lowercase());
     slot_store::write_slot_state(d.path(), &state).unwrap();
     d
 }
@@ -87,5 +97,34 @@ fn each_direction_moves_the_chip_to_its_socket_and_a_saves_it() {
     assert!(
         saved.contains("California Games (USA) = flipped"),
         "{saved}"
+    );
+}
+
+/// slotPlus: a HuCard has nothing inside, so START turns it over to show its back;
+/// there is nothing to choose there, and A or B puts it back without writing a hold.
+#[test]
+fn start_turns_a_hucard_over_and_a_or_b_puts_it_back() {
+    let d = shelf_card("TG16", &["Bonk's Adventure (USA).pce", "R-Type (USA).pce"]);
+    for put_back in [Btn::B, Btn::A] {
+        let (mut s, mut now) = picking(d.path());
+        tap(&mut s, &mut now, Btn::Left);
+        assert_eq!(
+            s.app().hold_picker(),
+            Some(Hold::Upright),
+            "nothing to turn to"
+        );
+        tap(&mut s, &mut now, put_back);
+        for _ in 0..60 {
+            step(&mut s, &mut now, &[]);
+        }
+        assert_eq!(s.app().hold_picker(), None, "{put_back:?} puts it back");
+        assert!(
+            matches!(s.app().phase(), Phase::Shelf),
+            "and stays on the shelf"
+        );
+    }
+    assert!(
+        !d.path().join(slot::hold_picker::LYNX_HOLD_FILE).exists(),
+        "a HuCard writes no hold"
     );
 }

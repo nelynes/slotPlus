@@ -466,3 +466,78 @@ fn a_gba_cart_keeps_the_gba_picker_geometry() {
     }
     assert_eq!(slot_ui::seats(None), slot_ui::GBA_SEATS);
 }
+
+fn hucard() -> slot_store::Cart {
+    slot_store::Cart {
+        platform: slot_store::Platform::Tg16,
+        stem: "Bonk's Adventure (USA)".into(),
+        rom: "/c/Games/TG16/Bonk's Adventure (USA).pce".into(),
+        label: None,
+        title: "Bonk's Adventure".into(),
+        code: String::new(),
+        shell: None,
+        tags: vec![],
+    }
+}
+
+/// How many pixels differ between two faces inside a box.
+fn changed(a: &CartFace, b: &CartFace, (x0, y0, x1, y1): (u32, u32, u32, u32)) -> usize {
+    let mut n = 0;
+    for y in y0..y1 {
+        for x in x0..x1 {
+            let at = ((y * a.w + x) * 4) as usize;
+            if a.rgba[at..at + 3] != b.rgba[at..at + 3] {
+                n += 1;
+            }
+        }
+    }
+    n
+}
+
+/// The NAME line printed on a HuCard's back (assets/src/hucard_back.py).
+const NAME_LINE_Y: u32 = 119;
+
+#[test]
+fn a_hucards_back_is_printed_and_has_the_nickname_on_its_name_line() {
+    let cart = hucard();
+    let plain = slot_ui::cart_back_shell(&cart);
+    let blank = slot_ui::hucard_back_face(&cart, "");
+    let named = slot_ui::hucard_back_face(&cart, "Nelson");
+    assert_eq!((blank.w, blank.h), (plain.w, plain.h));
+    assert!(
+        changed(&plain, &blank, (15, 16, 199, 44)) > 3000,
+        "the band is printed"
+    );
+    let line = (58, NAME_LINE_Y - 19, 194, NAME_LINE_Y);
+    assert!(
+        changed(&blank, &named, line) > 50,
+        "the name is written on the line"
+    );
+    let elsewhere = (0, NAME_LINE_Y + 4, blank.w, blank.h);
+    assert_eq!(changed(&blank, &named, elsewhere), 0, "and nowhere else");
+    assert_eq!(
+        slot_ui::hucard_back_face(&cart, "   ").rgba,
+        blank.rgba,
+        "a name of spaces leaves the line blank"
+    );
+}
+
+#[test]
+fn the_stickers_on_a_hucards_back_sit_beside_the_notes_clear_of_the_name() {
+    use slot_ui::shelf_life::{gold_sticker_at, sticker_at, STICKER_H, STICKER_W};
+    let cart = hucard();
+    let back = slot_ui::hucard_back_face(&cart, "Nelson");
+    let play = sticker_at(&cart, &back).expect("a play-time spot");
+    let gold = gold_sticker_at(&cart, &back).expect("a gold spot");
+    for (x, y) in [play, gold] {
+        assert!(y > NAME_LINE_Y + 4, "below the NAME line");
+        assert!(
+            x >= 120 && x + STICKER_W <= back.w - 8,
+            "to the right of the Notes"
+        );
+    }
+    assert!(
+        gold.1 >= play.1 + STICKER_H,
+        "one above the other, not overlapping"
+    );
+}

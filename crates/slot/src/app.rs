@@ -11884,7 +11884,9 @@ impl App {
     fn draw_hold_picker(&self, picker: &HoldPicker, out: &mut Vec<Draw>) {
         let now = self.now();
         let progress = ease(picker.openness(now));
-        let (cw, ch) = slot_ui::cart_box(Platform::Lynx);
+        let platform = self.selected_cart().map_or(Platform::Lynx, |c| c.platform);
+        let turn_only = platform != Platform::Lynx;
+        let (cw, ch) = slot_ui::cart_box(platform);
         let (cw, ch) = (cw as f32, ch as f32);
         let (rest_x, scale) = self.shelf().selected_at(self.canvas());
         let from = Placed {
@@ -11928,7 +11930,9 @@ impl App {
                     alpha: 1.0,
                 });
             }
-            self.draw_hold_chip(picker, drawn, cw, out);
+            if !turn_only {
+                self.draw_hold_chip(picker, drawn, cw, out);
+            }
         } else {
             let front = match ready {
                 true => self.core_lid_face.map(|tex| (tex, TURN_PAD as f32)),
@@ -11952,11 +11956,20 @@ impl App {
                 });
             }
         }
-        // Cancel, the four-way Swap and Choose, along the foot as the core picker's are.
+        // Cancel, the four-way Swap and Choose, along the foot as the core picker's are;
+        // a HuCard only has Back.
         if let [cancel, _, choose, swap, ..] =
             self.core_legend_faces[self.light() as usize].as_slice()
         {
-            self.draw_spread_legends(&[*cancel, *swap, *choose], LINK_LEGEND_Y, progress, out);
+            match turn_only {
+                true => self.draw_spread_legends(&[*cancel], LINK_LEGEND_Y, progress, out),
+                false => self.draw_spread_legends(
+                    &[*cancel, *swap, *choose],
+                    LINK_LEGEND_Y,
+                    progress,
+                    out,
+                ),
+            }
         }
     }
 
@@ -12825,8 +12838,13 @@ impl App {
         let Some(cart) = self.shelf().carts.get(self.shelf().index) else {
             return;
         };
-        if cart.platform == Platform::Lynx {
-            let seat = hold_picker::hold_for(&root, &cart.stem, &cart.rom);
+        // A Lynx card turns over to the sockets for how it is held; slotPlus: a HuCard
+        // has nothing inside, so it turns over just to show its back.
+        if matches!(cart.platform, Platform::Lynx | Platform::Tg16) {
+            let seat = match cart.platform {
+                Platform::Lynx => hold_picker::hold_for(&root, &cart.stem, &cart.rom),
+                _ => Hold::Upright,
+            };
             let now = self.now();
             let mut picker = HoldPicker::open(seat, now);
             if self.core_faces_ready() {
@@ -12860,7 +12878,11 @@ impl App {
 
     fn hold_picker_input(&mut self, action: Action) {
         use hold_picker::{Outcome as HoldOutcome, Press as HoldPress};
+        let turn_only = self.selected_cart().map(|c| c.platform) != Some(Platform::Lynx);
         let press = match action {
+            // slotPlus: a HuCard's back has nothing to choose; A or B puts it back.
+            Action::GbaDown(Btn::A | Btn::B) if turn_only => HoldPress::Back,
+            _ if turn_only => return,
             Action::GbaDown(Btn::Up) => HoldPress::Toward(Hold::Upright),
             Action::GbaDown(Btn::Left) | Action::ShelfLeft => HoldPress::Toward(Hold::Left),
             Action::GbaDown(Btn::Right) | Action::ShelfRight => HoldPress::Toward(Hold::Right),
@@ -16046,6 +16068,8 @@ impl App {
                 self.state.nickname = crate::invite::cut_name(text.trim()).to_string();
                 self.keyboard = None;
                 self.persist();
+                // slotPlus: a HuCard's back has the name written on it.
+                self.core_stale = true;
             }
             KeyboardFor::RommPort => {
                 let port = match text.trim() {
