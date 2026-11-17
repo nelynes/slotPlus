@@ -2,20 +2,20 @@ use crate::plate::UndoFace;
 use crate::quick_menu::print_stop_legend;
 use crate::text;
 
-const PW: usize = 226;
-const PH: usize = 425;
-const CUT: usize = 407;
+pub(crate) const PW: usize = 226;
+pub(crate) const PH: usize = 425;
+pub(crate) const CUT: usize = 407;
 const TOP_PAD: usize = 40;
 const MODULE: usize = 7;
 const FIT_W: f32 = 204.0;
 const MIN_PX: f32 = 8.0;
-const STOP_Y: usize = 368;
-const STOP_LIGHT: f32 = 0.62;
-const STOP_DARK: f32 = 0.5;
+pub(crate) const STOP_Y: usize = 368;
+pub(crate) const STOP_LIGHT: f32 = 0.62;
+pub(crate) const STOP_DARK: f32 = 0.5;
 const TOOTH_W: usize = 6;
 const TOOTH_H: f32 = 5.0;
-const PAPER: [f32; 3] = [0.945, 0.955, 0.945];
-const INK: [f32; 3] = [0.10, 0.145, 0.125];
+pub(crate) const PAPER: [f32; 3] = [0.945, 0.955, 0.945];
+pub(crate) const INK: [f32; 3] = [0.10, 0.145, 0.125];
 
 pub struct ReceiptText {
     pub host: Option<String>,
@@ -23,10 +23,10 @@ pub struct ReceiptText {
     pub pin: String,
 }
 
-struct Rng(u64);
+pub(crate) struct Rng(pub(crate) u64);
 
 impl Rng {
-    fn next(&mut self) -> f32 {
+    pub(crate) fn next(&mut self) -> f32 {
         self.0 ^= self.0 << 13;
         self.0 ^= self.0 >> 7;
         self.0 ^= self.0 << 17;
@@ -39,12 +39,12 @@ impl Rng {
         (-2.0 * a.ln()).sqrt() * (std::f32::consts::TAU * b).cos()
     }
 
-    fn field(&mut self, n: usize) -> Vec<f32> {
+    pub(crate) fn field(&mut self, n: usize) -> Vec<f32> {
         (0..n).map(|_| self.gauss()).collect()
     }
 }
 
-fn kernel(sigma: f32) -> Vec<f32> {
+pub(crate) fn kernel(sigma: f32) -> Vec<f32> {
     let r = (sigma * 3.0).ceil() as i32;
     let mut k: Vec<f32> = (-r..=r)
         .map(|i| (-(i * i) as f32 / (2.0 * sigma * sigma)).exp())
@@ -54,7 +54,7 @@ fn kernel(sigma: f32) -> Vec<f32> {
     k
 }
 
-fn blur_line(src: &[f32], dst: &mut [f32], stride: usize, n: usize, k: &[f32]) {
+pub(crate) fn blur_line(src: &[f32], dst: &mut [f32], stride: usize, n: usize, k: &[f32]) {
     let r = (k.len() / 2) as i32;
     for i in 0..n as i32 {
         let mut acc = 0.0;
@@ -66,7 +66,7 @@ fn blur_line(src: &[f32], dst: &mut [f32], stride: usize, n: usize, k: &[f32]) {
     }
 }
 
-fn blur(buf: &[f32], w: usize, h: usize, sigma: f32) -> Vec<f32> {
+pub(crate) fn blur(buf: &[f32], w: usize, h: usize, sigma: f32) -> Vec<f32> {
     let k = kernel(sigma);
     let mut mid = vec![0.0; w * h];
     for y in 0..h {
@@ -184,7 +184,7 @@ fn stamp_stop(typed: &mut [f32]) {
     }
 }
 
-fn tooth_cut(x: usize, y: usize) -> bool {
+pub(crate) fn tooth_cut(x: usize, y: usize) -> bool {
     let t = (x % TOOTH_W) as f32 + 0.5;
     let depth = TOOTH_H * (1.0 - (t - 3.0).abs() / 3.0);
     let from_top = y as f32 + 0.5;

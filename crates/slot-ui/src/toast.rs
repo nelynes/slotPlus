@@ -37,6 +37,8 @@ pub enum Toast {
     Forgotten,
     Collection,
     KidUnlocked,
+    KidTimeLow,
+    KidTimeUp,
     TintOff,
     TintLow,
     TintMedium,
@@ -57,7 +59,7 @@ pub const DS_LAYOUTS: [&str; 5] = [
 ];
 
 impl Toast {
-    const FIXED: [Toast; 33] = [
+    const FIXED: [Toast; 35] = [
         Toast::StateSaved,
         Toast::StateLoaded,
         Toast::GameReset,
@@ -87,6 +89,8 @@ impl Toast {
         Toast::Forgotten,
         Toast::Collection,
         Toast::KidUnlocked,
+        Toast::KidTimeLow,
+        Toast::KidTimeUp,
         Toast::TintOff,
         Toast::TintLow,
         Toast::TintMedium,
@@ -138,7 +142,9 @@ impl Toast {
     pub fn hold_ms(self) -> crate::hud::Millis {
         match self {
             Toast::CardRepaired | Toast::CardRepairFailed => REPAIR_HOLD_MS,
-            Toast::Duplicate(_) | Toast::KidUnlocked => WARNING_HOLD_MS,
+            Toast::Duplicate(_) | Toast::KidUnlocked | Toast::KidTimeLow | Toast::KidTimeUp => {
+                WARNING_HOLD_MS
+            }
             Toast::TintOff | Toast::TintLow | Toast::TintMedium | Toast::TintHigh => TINT_HOLD_MS,
             _ => crate::hud::HUD_MS,
         }
@@ -193,6 +199,8 @@ impl Toast {
             Toast::Forgotten => "Network forgotten",
             Toast::Collection => "Collection",
             Toast::KidUnlocked => "Kid Mode is off until restart",
+            Toast::KidTimeLow => "5 minutes of play left",
+            Toast::KidTimeUp => "That's all the play for today",
             Toast::TintOff => "Wallpaper Tint: Off",
             Toast::TintLow => "Wallpaper Tint: 25%",
             Toast::TintMedium => "Wallpaper Tint: 45%",

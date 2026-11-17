@@ -846,3 +846,104 @@ pub fn artwork_title(root: &std::path::Path, rom: &std::path::Path) -> Option<St
         && !game.title.starts_with("Unsupported Game Version"))
     .then_some(game.title)
 }
+
+/// slotPlus: how far a game's achievement set has got: achievements earned, of the ones
+/// that can be. Counts what the account had earned when the set was downloaded and what's
+/// been earned on this card since.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Progress {
+    pub earned: u32,
+    pub total: u32,
+}
+
+impl Progress {
+    pub fn mastered(&self) -> bool {
+        self.total > 0 && self.earned >= self.total
+    }
+
+    pub fn text(&self) -> String {
+        format!("{} / {}", self.earned, self.total)
+    }
+}
+
+/// slotPlus: a game's progress from what's on the card: no network, and the ROM itself is
+/// never read (a ROM the library hasn't hashed has no progress yet).
+pub fn progress(root: &std::path::Path, rom: &std::path::Path) -> Option<Progress> {
+    let list = set_list(root, rom)?;
+    let earned = list.entries.iter().filter(|e| e.earned).count() as u32;
+    Some(Progress {
+        earned,
+        total: list.entries.len() as u32,
+    })
+}
+
+/// slotPlus: one achievement of a game's set, as the printout shows it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SetEntry {
+    pub title: String,
+    pub description: String,
+    pub points: u32,
+    /// The badge's picture on the card, when it has been downloaded.
+    pub badge: Option<std::path::PathBuf>,
+    pub earned: bool,
+    /// When it was earned on this card (Unix seconds). Unlocks the account already had when
+    /// the set was downloaded carry no date.
+    pub earned_at: Option<u64>,
+}
+
+/// slotPlus: a game's whole achievement set, in RetroAchievements' order.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SetList {
+    pub game: String,
+    pub entries: Vec<SetEntry>,
+}
+
+impl SetList {
+    pub fn progress(&self) -> Progress {
+        Progress {
+            earned: self.entries.iter().filter(|e| e.earned).count() as u32,
+            total: self.entries.len() as u32,
+        }
+    }
+
+    /// Points earned, of the set's total.
+    pub fn points(&self) -> (u32, u32) {
+        let all = self.entries.iter().map(|e| e.points).sum();
+        let earned = self.entries.iter().filter(|e| e.earned).map(|e| e.points).sum();
+        (earned, all)
+    }
+}
+
+/// slotPlus: a game's achievement set from what's on the card, for the printout. Like
+/// `progress`, no network and the ROM is never read.
+pub fn set_list(root: &std::path::Path, rom: &std::path::Path) -> Option<SetList> {
+    let config = storage::Config::read(&root.join("Config/retroachievements.toml")).ok()?;
+    if !config.enabled || config.username.trim().is_empty() {
+        return None;
+    }
+    let account = format!("{:x}", md5::compute(config.username.to_lowercase()));
+    let dir = root.join("Saves/RetroAchievements").join(account);
+    let hash = library::known_hash(&dir, rom)?;
+    let (game, unlocked): (storage::Game, std::collections::BTreeSet<u32>) =
+        storage::read(&dir.join(format!("{hash}.json"))).ok()?;
+    let here: std::collections::BTreeMap<u32, storage::Unlock> =
+        storage::read(&dir.join("unlocks.json")).unwrap_or_default();
+    let entries: Vec<SetEntry> = game
+        .earnable()
+        .map(|a| {
+            let on_card = here.get(&a.id);
+            SetEntry {
+                title: a.title.clone(),
+                description: a.description.clone(),
+                points: a.points,
+                badge: badges::path(&dir, &a.badge),
+                earned: unlocked.contains(&a.id) || on_card.is_some(),
+                earned_at: on_card.map(|u| u.earned_at).filter(|&t| t > 0),
+            }
+        })
+        .collect();
+    (!entries.is_empty()).then(|| SetList {
+        game: game.title.clone(),
+        entries,
+    })
+}

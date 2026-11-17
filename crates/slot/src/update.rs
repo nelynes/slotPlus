@@ -80,6 +80,15 @@ impl Device {
 /// slotPlus: the release is slotPlus's, with one zip for each edition, and this build takes
 /// its own edition's (`crate::edition`). `device` is Slot's; slotPlus ships only the H700.
 pub fn parse_release(json: &str, _device: Device) -> Result<Release, UpdateFail> {
+    parse_edition(json, crate::edition::KEY, crate::edition::ZIP)
+}
+
+/// slotPlus: the other edition's zip on the same release, to switch to.
+pub fn parse_other_edition(json: &str) -> Option<Release> {
+    parse_edition(json, crate::edition::OTHER_KEY, crate::edition::OTHER_ZIP).ok()
+}
+
+fn parse_edition(json: &str, key: &str, want_zip: &str) -> Result<Release, UpdateFail> {
     let v: serde_json::Value = serde_json::from_str(json).map_err(|_| UpdateFail::Bad)?;
     let stable = &v["stable"];
     let version = stable["version"]
@@ -90,9 +99,9 @@ pub fn parse_release(json: &str, _device: Device) -> Result<Release, UpdateFail>
     if tag != format!("v{version}") {
         return Err(UpdateFail::Bad);
     }
-    let ours = &stable[crate::edition::KEY];
+    let ours = &stable[key];
     let zip = ours["zip"].as_str().ok_or(UpdateFail::Bad)?;
-    if zip != crate::edition::ZIP {
+    if zip != want_zip {
         return Err(UpdateFail::Bad);
     }
     let size = ours["size"].as_u64().ok_or(UpdateFail::Bad)?;
@@ -249,6 +258,8 @@ pub enum UpdateJob {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UpdateEvent {
     Available(Vec<Release>),
+    /// slotPlus: the other edition can be switched to. Sent before the check's answer.
+    OtherEdition(Release),
     UpToDate,
     Progress(u64),
     Staged,
@@ -365,15 +376,32 @@ pub fn check_with(
     fetch: &mut dyn FnMut(&str) -> Result<Vec<u8>, UpdateFail>,
     running: Running,
 ) -> UpdateEvent {
+    check_editions_with(now_unix, fetch, running).0
+}
+
+/// The check, and the other edition's build on the same release when there is one.
+pub fn check_editions_with(
+    now_unix: u64,
+    fetch: &mut dyn FnMut(&str) -> Result<Vec<u8>, UpdateFail>,
+    running: Running,
+) -> (UpdateEvent, Option<Release>) {
     if clock_is_wrong(now_unix) {
-        return UpdateEvent::Failed(UpdateFail::Clock);
+        return (UpdateEvent::Failed(UpdateFail::Clock), None);
     }
     let body = match fetch(LATEST).and_then(|b| String::from_utf8(b).map_err(|_| UpdateFail::Bad)) {
         Ok(body) => body,
-        Err(e) => return UpdateEvent::Failed(e),
+        Err(e) => return (UpdateEvent::Failed(e), None),
     };
+    let other = parse_other_edition(&body).map(|r| Release {
+        running: running.slot.to_string(),
+        ..r
+    });
+    (check_body(&body, running), other)
+}
+
+fn check_body(body: &str, running: Running) -> UpdateEvent {
     let device = Device::of_target(running.baseos.map_or("", |(target, _)| target));
-    let slot = match parse_release(&body, device) {
+    let slot = match parse_release(body, device) {
         Ok(r) => Release {
             running: running.slot.to_string(),
             ..r
@@ -382,7 +410,7 @@ pub fn check_with(
     };
     let baseos = running
         .baseos
-        .and_then(|(target, version)| parse_baseos(&body, target, version));
+        .and_then(|(target, version)| parse_baseos(body, target, version));
     let offers: Vec<Release> = std::iter::once(slot)
         .chain(baseos)
         .filter(|r| newer(&r.version, &r.running))
@@ -674,14 +702,18 @@ fn run(root: &Path, job: &UpdateJob, ticket: &Ticket, tx: &Sender<UpdateEvent>) 
         UpdateJob::Check => {
             let target = crate::baseos::var("BASEOS_TARGET");
             let version = crate::baseos::var("BASEOS_VERSION");
-            check_with(
+            let (event, other) = check_editions_with(
                 now_unix(),
                 &mut |url| fetch(url, API_TIMEOUT, &mut |_| {}),
                 Running {
                     slot: crate::build_info::Build::current().version,
                     baseos: target.as_deref().zip(version.as_deref()),
                 },
-            )
+            );
+            if let Some(other) = other {
+                let _ = tx.send(UpdateEvent::OtherEdition(other));
+            }
+            event
         }
         UpdateJob::Install(release) => {
             let mut report = |got| {

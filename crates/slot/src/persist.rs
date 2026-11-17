@@ -62,6 +62,10 @@ pub fn write_sav(root: &Path, platform: Platform, stem: &str, sav: &[u8]) -> std
         if old == sav {
             return Ok(false);
         }
+        // slotPlus: keep the save being replaced, so a bad write or a bad day can be undone.
+        if let Err(e) = back_up(root, platform, stem, &old, unix_now()) {
+            eprintln!("slot: save backup for {stem}: {e}");
+        }
     }
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)?;
@@ -115,8 +119,84 @@ pub fn read_resume(
     StateRing::new(root, platform, core, stem).read_resume()
 }
 
+/// slotPlus: the card holds a save for this game, as a `.sav` or a RetroArch `.srm`.
+pub fn has_save(root: &Path, platform: Platform, stem: &str) -> bool {
+    let dir = crate::root::saves_dir(root).join(platform.dir_name());
+    ["sav", "srm"]
+        .iter()
+        .any(|ext| dir.join(format!("{stem}.{ext}")).exists())
+}
+
 fn sav_path(root: &Path, platform: Platform, stem: &str) -> PathBuf {
     crate::root::saves_dir(root)
         .join(platform.dir_name())
         .join(format!("{stem}.sav"))
+}
+
+/// slotPlus: copies of a game's earlier saves, kept in `Saves/Backups/<system>/`.
+pub const BACKUPS_DIR: &str = "Backups";
+/// How many earlier saves are kept for each game.
+pub const BACKUPS_KEPT: usize = 3;
+/// A save replaced sooner than this after the newest backup isn't backed up again, so a
+/// long session writing its save every few minutes doesn't push older backups out.
+pub const BACKUP_EVERY_SECS: u64 = 60 * 60;
+
+fn unix_now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+pub fn backups_dir(root: &Path, platform: Platform) -> PathBuf {
+    crate::root::saves_dir(root)
+        .join(BACKUPS_DIR)
+        .join(platform.dir_name())
+}
+
+/// A game's backups, newest first, with the time each was taken.
+pub fn backups(root: &Path, platform: Platform, stem: &str) -> Vec<(u64, PathBuf)> {
+    let dir = backups_dir(root, platform);
+    let Ok(entries) = std::fs::read_dir(&dir) else {
+        return Vec::new();
+    };
+    let prefix = format!("{stem}.");
+    let mut found: Vec<(u64, PathBuf)> = entries
+        .flatten()
+        .filter_map(|e| {
+            let name = e.file_name().into_string().ok()?;
+            let stamp = name.strip_prefix(&prefix)?.strip_suffix(".sav")?;
+            if stamp.is_empty() || !stamp.bytes().all(|b| b.is_ascii_digit()) {
+                return None;
+            }
+            Some((stamp.parse().ok()?, e.path()))
+        })
+        .collect();
+    found.sort_by_key(|b| std::cmp::Reverse(b.0));
+    found
+}
+
+/// Keep `old`, the save about to be replaced, unless the newest backup is recent.
+pub fn back_up(
+    root: &Path,
+    platform: Platform,
+    stem: &str,
+    old: &[u8],
+    now: u64,
+) -> std::io::Result<bool> {
+    let kept = backups(root, platform, stem);
+    if let Some((newest, path)) = kept.first() {
+        let recent = now >= *newest && now - newest < BACKUP_EVERY_SECS;
+        let same = std::fs::read(path).is_ok_and(|b| b == old);
+        if recent || same {
+            return Ok(false);
+        }
+    }
+    let dir = backups_dir(root, platform);
+    std::fs::create_dir_all(&dir)?;
+    atomic_write(&dir.join(format!("{stem}.{now}.sav")), old)?;
+    for (_, path) in backups(root, platform, stem).into_iter().skip(BACKUPS_KEPT) {
+        let _ = std::fs::remove_file(path);
+    }
+    Ok(true)
 }

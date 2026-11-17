@@ -33,6 +33,7 @@ mod power_menu;
 mod quick_menu;
 mod rebuild;
 mod receipt;
+pub mod printout;
 mod refusal;
 mod shelf;
 mod shell;
@@ -43,6 +44,7 @@ mod slot_chrome;
 pub use box_screen::BoxScreen;
 pub mod hand;
 mod sticker;
+pub mod shelf_life;
 pub mod sticker_curl;
 pub mod text;
 mod toast;
@@ -66,10 +68,11 @@ pub use board::{
     bare_board_face, baseos_cart_face, board_at, board_face, board_from, board_from_shaped,
     board_in, board_x, board_zoom, chip_face, chip_face_text, chip_shadow_face, gb_chip_face,
     gb_socket_face, grown, hold_chip_at, hold_socket_at, lid_at,
-    lid_from, lid_from_shaped, lift_of, lynx_back_face, named_socket_face, on_board, padded, rom_marking, rom_marking_face, seats,
+    lid_from, lid_from_shaped, lift_of, lynx_back_face, shows_board_alone, named_socket_face, on_board, padded, rom_marking, rom_marking_face, seats,
     shelf_cart, shelf_cart_at, shelf_cart_shaped, slide_of, socket_face, socket_face_text,
     update_cart_face, Placed, Seats, BOARD_H, BOARD_W, BOARD_Y, CHIP_H, CHIP_TIP, CHIP_U, CHIP_V,
     CHIP_W, FINGERS, FINGER_H, FINGER_Y, GBA_SEATS, HOLD_NAMES, HOP_LIFT, LID_TURN, ROM_H, ROM_W, ROM_X, ROM_Y,
+    WS_ROM_H, WS_ROM_W, WS_ROM_X, WS_ROM_Y,
     SHADOW_H, SHADOW_W, SLIDE_SHARE, SLIDE_UP, SOCKET_H, SOCKET_U, SOCKET_V, SOCKET_W, TURN_PAD,
 };
 pub use cart::{

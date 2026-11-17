@@ -124,6 +124,55 @@ impl Owed {
     }
 }
 
+/// How many presents' worth of sound a locked present makes: the presents it covers,
+/// never the frames it ran. Slot 1.16 used the frames, which is the same number for a
+/// 60 fps core. A 75 fps core (the WonderSwan) runs two frames in some presents, and each
+/// of those then made two presents of sound: 40% too much, so the sound queue stayed full,
+/// the game waited on it every present and ran slow and stuttering, with most of its sound
+/// thrown away.
+fn locked_span(due: u32) -> u32 {
+    due.max(1)
+}
+
+/// slotPlus: how a game kept up at normal speed, for one line in the log when it stops:
+/// how many presents ran, how many core frames they ran, how long the core took a present
+/// on average and at worst, and how many presents the core finished too late for. A game
+/// that feels slow on the handheld shows here as a core near or past the present's 16.7 ms.
+#[derive(Default)]
+struct Pace {
+    presents: u64,
+    frames: u64,
+    core: Duration,
+    worst: Duration,
+    late: u64,
+}
+
+impl Pace {
+    fn ran(&mut self, frames: u32, core: Duration) {
+        self.presents += 1;
+        self.frames += u64::from(frames);
+        self.core += core;
+        self.worst = self.worst.max(core);
+    }
+
+    fn said(&self, nominal_fps: f64, implied_fps: Option<f64>) -> Option<String> {
+        if self.presents == 0 {
+            return None;
+        }
+        let per = |d: Duration| d.as_secs_f64() * 1000.0;
+        Some(format!(
+            "{} presents at normal speed, {:.2} core frames a present (game {:.2} fps, running {:.2}), core {:.1} ms a present (worst {:.1}), {} late",
+            self.presents,
+            self.frames as f64 / self.presents as f64,
+            nominal_fps,
+            implied_fps.unwrap_or(nominal_fps),
+            per(self.core) / self.presents as f64,
+            per(self.worst),
+            self.late,
+        ))
+    }
+}
+
 /// The resampler's ratio is built so that `expected` core frames of audio fill
 /// one present. At normal speed that is the *average* number of frames a
 /// present is owed, not the number this present happened to run: a 75 fps core
@@ -715,6 +764,8 @@ impl Worker {
             rom.display(),
             crate::boot_time::ms()
         );
+        // slotPlus: a romhack or translation patch beside the game is applied here.
+        let rom = crate::rom_patch::prepare(&rom);
         if let Err(e) = core.load(&rom) {
             eprintln!("slot: {e}");
             self.shared
@@ -782,6 +833,8 @@ impl Worker {
         let mut stalled = false;
         let mut turbo_frame = 0u32;
         let mut owed = Owed::new(av.fps);
+        // slotPlus: how the game kept up, said once when it stops (see `Pace`).
+        let mut pace = Pace::default();
         let mut transport: Option<Box<dyn LinkChannel>> = None;
         let mut cable: Option<Cable> = None;
         let mut cable_presents = 0u32;
@@ -901,7 +954,7 @@ impl Worker {
                     span = cost.span(one, ceiling);
                 }
                 if lock && speed == Speed::Normal {
-                    span = ceiling;
+                    span = locked_span(due);
                 }
                 let ceiling = match lock && speed == Speed::Normal {
                     true => ceiling,
@@ -990,6 +1043,9 @@ impl Worker {
                 let core_time = began.elapsed();
                 cost.measured(skipped, drawn);
                 core_trace.report_when_due();
+                if speed == Speed::Normal {
+                    pace.ran(ran, core_time);
+                }
                 if cable.is_some() {
                     cable_presents += 1;
                     cable_core += core_time;
@@ -1117,6 +1173,7 @@ impl Worker {
                             continue;
                         }
                         Wait::Late => {
+                            pace.late += 1;
                             rate.stalled();
                             stalled = true;
                             due = 1;
@@ -1139,6 +1196,9 @@ impl Worker {
         }
         ring.set_muted(false);
         ring.set_idle(false);
+        if let Some(said) = pace.said(av.fps, owed.implied_fps()) {
+            eprintln!("slot: emu: {said}");
+        }
         let (dropped, starved, xruns) = (ring.overruns(), ring.underruns(), ring.xruns());
         if dropped > 0 || starved > 0 || xruns > 0 || crate::session::trace() {
             eprintln!("slot: audio: {dropped} samples dropped, {starved} starved, {xruns} xruns");
@@ -1755,6 +1815,35 @@ mod tests {
         assert_eq!(link.take_inbound().as_deref(), Some(&b"one"[..]));
         assert_eq!(link.take_inbound().as_deref(), Some(&b"two"[..]));
         assert_eq!(link.take_inbound(), None);
+    }
+
+    #[test]
+    fn a_game_s_pace_is_said_once_it_has_run() {
+        let mut pace = Pace::default();
+        assert!(pace.said(75.47, Some(75.4)).is_none(), "nothing ran, nothing to say");
+        pace.ran(1, Duration::from_millis(8));
+        pace.ran(2, Duration::from_millis(18));
+        pace.late = 1;
+        assert_eq!(
+            pace.said(75.47, Some(75.4)).unwrap(),
+            "2 presents at normal speed, 1.50 core frames a present (game 75.47 fps, running 75.40), core 13.0 ms a present (worst 18.0), 1 late"
+        );
+    }
+
+    #[test]
+    fn a_75_fps_core_makes_one_present_of_sound_a_present_when_locked() {
+        // Sound made is in proportion to frames run x the span's stretch. Over many presents
+        // it must come to one present's worth each, whichever presents ran two frames.
+        let mut owed = Owed::new(75.47);
+        let (mut made, presents) = (0.0, 6000);
+        for _ in 0..presents {
+            let ran = owed.take();
+            made += f64::from(ran) * audio_span(Speed::Normal, owed.nominal(), locked_span(1), ran);
+        }
+        let per_present = made / f64::from(presents);
+        assert!((per_present - 1.0).abs() < 0.001, "{per_present}");
+        // Catching up on two presents at once makes two presents of sound.
+        assert_eq!(locked_span(2), 2);
     }
 }
 

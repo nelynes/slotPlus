@@ -68,12 +68,12 @@ class Canvas:
     def text(self, img, cx, cy, words, px, italic=0.0, weight=0):
         font = ImageFont.truetype(FONT, int(px * S))
         d = ImageDraw.Draw(img)
-        l, t, r, b = d.textbbox((0, 0), words, font=font, stroke_width=weight * S)
+        l, t, r, b = d.textbbox((0, 0), words, font=font, stroke_width=int(weight * S))
         tw, th = r - l, b - t
         tile = Image.new("L", (tw + 8 * S, th + 8 * S), 0)
         ImageDraw.Draw(tile).text(
             (4 * S - l, 4 * S - t), words, font=font, fill=255,
-            stroke_width=weight * S, stroke_fill=255,
+            stroke_width=int(weight * S), stroke_fill=255,
         )
         if italic:
             tile = tile.transform(
@@ -234,6 +234,270 @@ def fingers(c, x0, x1, y0, y1, count, rgb, alpha, width=0.55):
 
 
 # --------------------------------------------------------------------------
+# The WonderSwan board, after Bandai's own: a coin cell in its clip on the left,
+# the big ROM in the middle, the mapper square on the right, the save RAM below,
+# a little eight-leg chip, a light band of vias over the contacts, and notches in
+# its sides where the shell's posts come through. No makers' names on anything.
+
+GREEN = np.array([10, 88, 50], np.float32)
+TRACE = np.array([38, 132, 80], np.float32)
+SILK = np.array([226, 230, 222], np.float32)
+CHIP = np.array([20, 24, 34], np.float32)
+LEG = np.array([200, 202, 198], np.float32)
+VIA = np.array([184, 148, 58], np.float32)
+
+# Where the ROM's marking goes; `slot_ui::board` writes the game's name there.
+WS_ROM = (124, 28, 236, 88)
+
+
+def paint(rgb, mask, colour, k=1.0):
+    m = mask[..., None] * k
+    return rgb * (1 - m) + np.asarray(colour, np.float32) * m
+
+
+def chip_with_legs(c, rgb, x0, y0, x1, y1, sides, pitch, leg=3.5, seed=0):
+    """A black chip with silver legs on `sides` (any of "lrtb")."""
+    legs = c.layer()
+    def row(a0, a1, fixed0, fixed1, along_x):
+        for a in np.arange(a0 + pitch * 0.7, a1 - pitch * 0.4, pitch):
+            if along_x:
+                c.rrect(legs, a, fixed0, a + pitch * 0.5, fixed1, 0.2)
+            else:
+                c.rrect(legs, fixed0, a, fixed1, a + pitch * 0.5, 0.2)
+    if "l" in sides:
+        row(y0, y1, x0 - leg, x0 + 0.5, False)
+    if "r" in sides:
+        row(y0, y1, x1 - 0.5, x1 + leg, False)
+    if "t" in sides:
+        row(x0, x1, y0 - leg, y0 + 0.5, True)
+    if "b" in sides:
+        row(x0, x1, y1 - 0.5, y1 + leg, True)
+    lg = f(legs)
+    shine = np.linspace(1.05, 0.85, c.H)[:, None, None]
+    rgb = rgb * (1 - lg[..., None]) + (LEG * shine) * lg[..., None]
+    shadow = soft(f(c.rrect(c.layer(), x0 + 1.2, y0 + 1.6, x1 + 1.2, y1 + 1.6, 1.2)), 1.2)
+    rgb = rgb * (1 - 0.45 * shadow[..., None])
+    body = f(c.rrect(c.layer(), x0, y0, x1, y1, 1.2))
+    rgb = rgb * (1 - body[..., None]) + (CHIP + grain(body.shape, seed, 2.0)[..., None]) * body[..., None]
+    # A soft sheen along the top edge, and the pin-one dimple.
+    top = f(c.rrect(c.layer(), x0 + 1, y0 + 1, x1 - 1, y0 + 2.2, 0.6)) * body
+    rgb = paint(rgb, top, [58, 64, 80], 0.6)
+    r = min(x1 - x0, y1 - y0) * 0.07 + 1.2
+    dimple = f(c.ellipse(c.layer(), x0 + 3, y1 - 3 - 2 * r, x0 + 3 + 2 * r, y1 - 3)) * body
+    rgb = paint(rgb, dimple, [10, 12, 18], 0.9)
+    return rgb
+
+
+def silk_text(c, rgb, cx, cy, words, px, weight=0):
+    t = f(c.text(c.layer(), cx, cy, words, px, weight=weight))
+    shadow = np.roll(np.roll(soft(t, 0.4), S, axis=0), S // 2, axis=1)
+    rgb = paint(rgb, shadow, [0, 30, 14], 0.5)
+    return paint(rgb, t, SILK)
+
+
+def silk_mark(c, rgb, right, cy, year_px=11, name_px=13):
+    """The boards' maker's mark, "2026 SlotPlus+", set to end at `right`."""
+    font = lambda px: ImageFont.truetype(FONT, int(px * S))
+    probe = ImageDraw.Draw(Image.new("L", (1, 1)))
+    width = lambda words, px, weight: (probe.textlength(words, font=font(px)) + 2 * weight * S) / S
+    name_w = width("SlotPlus+", name_px, 0.5)
+    year_w = width("2026", year_px, 0)
+    gap = 4
+    rgb = silk_text(c, rgb, right - name_w / 2, cy, "SlotPlus+", name_px, weight=0.5)
+    return silk_text(c, rgb, right - name_w - gap - year_w / 2, cy + 0.5, "2026", year_px)
+
+
+def silk_box(c, rgb, x0, y0, x1, y1, width=0.6):
+    outer = f(c.rrect(c.layer(), x0, y0, x1, y1, 0.8))
+    inner = f(c.rrect(c.layer(), x0 + width, y0 + width, x1 - width, y1 - width, 0.5))
+    return paint(rgb, np.clip(outer - inner, 0, 1), SILK, 0.9)
+
+
+def passive(c, rgb, x, y, vertical=False, label=None, label_at=None):
+    """A little capacitor or resistor in its silkscreen box."""
+    w, h = (4.0, 7.0) if vertical else (7.0, 4.0)
+    rgb = silk_box(c, rgb, x - 1.6, y - 1.6, x + w + 1.6, y + h + 1.6)
+    body = f(c.rrect(c.layer(), x, y, x + w, y + h, 0.5))
+    rgb = paint(rgb, body, [150, 122, 92])
+    cap = c.layer()
+    if vertical:
+        c.rrect(cap, x, y, x + w, y + 1.6, 0.4)
+        c.rrect(cap, x, y + h - 1.6, x + w, y + h, 0.4)
+    else:
+        c.rrect(cap, x, y, x + 1.6, y + h, 0.4)
+        c.rrect(cap, x + w - 1.6, y, x + w, y + h, 0.4)
+    rgb = paint(rgb, f(cap), [214, 214, 206])
+    if label:
+        lx, ly = label_at or (x + w / 2, y - 6)
+        rgb = silk_text(c, rgb, lx, ly, label, 7)
+    return rgb
+
+
+def vias(c, rgb, points, r=2.1):
+    ring = c.layer()
+    hole = c.layer()
+    for (x, y) in points:
+        c.ellipse(ring, x - r, y - r, x + r, y + r)
+        c.ellipse(hole, x - r * 0.45, y - r * 0.45, x + r * 0.45, y + r * 0.45)
+    rgb = paint(rgb, f(ring), VIA)
+    return paint(rgb, f(hole), [8, 30, 18])
+
+
+def route(d, pts, width):
+    d.line([(x * S, y * S) for x, y in pts], fill=255, width=int(width * S), joint="curve")
+
+
+def ws_pcb(c, shoulder, strip_x0, strip_x1):
+    w, h = c.w, c.h
+    rng = np.random.default_rng(41)
+    x0, x1, y0, y1 = strip_x0 + 4, strip_x1 - 4, 14, h - 2
+    outline = c.rrect(c.layer(), x0, y0, x1, y1, 4)
+    notch = 118
+    cut = c.layer()
+    c.ellipse(cut, x0 - 9, notch - 9, x0 + 9, notch + 9)
+    c.ellipse(cut, x1 - 9, notch - 9, x1 + 9, notch + 9)
+    # A small keyed slot in the top edge.
+    c.rrect(cut, w * 0.5 - 7, y0 - 2, w * 0.5 + 7, y0 + 5, 2)
+    region = np.clip(f(outline) - f(cut), 0, 1)
+
+    # Solder mask: green, mottled, darker where the copper plane shows through.
+    rgb = np.ones((c.H, c.W, 3), np.float32) * GREEN
+    blotch = ndimage.gaussian_filter(rng.normal(0, 1, (c.H // 8 + 1, c.W // 8 + 1)), 2.2)
+    blotch = np.kron(blotch / max(blotch.std(), 1e-6), np.ones((8, 8)))[: c.H, : c.W]
+    rgb += (blotch * 7.0)[..., None].astype(np.float32)
+    rgb += grain((c.H, c.W), 42, 4.0)[..., None]
+
+    band_y0, band_y1 = shoulder - 13, shoulder + 4
+    finger_y0, finger_y1 = shoulder + 5, h - 6
+    count = 72
+    pitch = (strip_x1 - 10 - (strip_x0 + 10)) / count
+
+    # Traces: from the contacts up into the chips, in bundles with 45-degree jogs.
+    traces = c.layer()
+    d = ImageDraw.Draw(traces)
+    for k in range(0, count, 2):
+        fx = strip_x0 + 10 + pitch * (k + 0.5)
+        if 4 <= k < 24:      # to the battery side and the eight-leg chip
+            tx, ty = 40 + (k - 4) * 1.6, 146
+        elif 24 <= k < 50:   # up into the ROM
+            tx, ty = 126 + (k - 24) * 4.1, 92
+        elif 50 <= k < 62:   # the save RAM
+            tx, ty = 150 + (k - 50) * 5.0, 143
+        elif 62 <= k < 70:   # the mapper
+            tx, ty = 266 + (k - 62) * 4.6, 76
+        else:
+            continue
+        up = band_y0 - 3 - (k % 6) * 2.2
+        route(d, [(fx, band_y0 + 2), (fx, up), (tx, up - 6), (tx, ty)], 1.3)
+    for k in range(12):  # ROM to mapper
+        y = 34 + k * 4.2
+        route(d, [(240, y), (250 + k * 0.6, y), (258, y + 2)], 1.0)
+    for k in range(6):   # mapper to save RAM
+        x = 268 + k * 5.5
+        route(d, [(x, 76), (x, 96 + k * 2), (220 + k * 1.5, 118 + k * 3), (214, 118 + k * 3)], 1.0)
+    rgb = paint(rgb, soft(f(traces), 0.2), TRACE, 0.9)
+
+    # Copper fill around the battery, a shade lighter.
+    plane = soft(f(c.rrect(c.layer(), 22, 22, 112, 112, 8)), 0.5)
+    rgb = paint(rgb, plane, [16, 102, 60], 0.35)
+
+    # The coin cell in its clip.
+    bx, by, br = 66, 66, 37
+    rgb = silk_text(c, rgb, bx - 30, 22, "BT1", 7)
+    ring = np.clip(f(c.ellipse(c.layer(), bx - br - 4, by - br - 4, bx + br + 4, by + br + 4))
+                   - f(c.ellipse(c.layer(), bx - br - 3.2, by - br - 3.2, bx + br + 3.2, by + br + 3.2)), 0, 1)
+    rgb = paint(rgb, ring, SILK, 0.9)
+    for px in (bx - br - 7, bx + br + 1):
+        rgb = paint(rgb, f(c.rrect(c.layer(), px, by + 6, px + 7, by + 18, 1)), [196, 160, 70])
+    shadow = soft(f(c.ellipse(c.layer(), bx - br + 2, by - br + 3, bx + br + 2, by + br + 3)), 2.0)
+    rgb = rgb * (1 - 0.5 * shadow[..., None])
+    disc = f(c.ellipse(c.layer(), bx - br, by - br, bx + br, by + br))
+    yy, xx = np.mgrid[0:c.H, 0:c.W] / S
+    dist = np.hypot(xx - bx, yy - by) / br
+    metal = 168 + 46 * (1 - dist) - 22 * ((xx - bx) + (yy - by)) / br
+    metal = metal + 2.5 * np.sin(dist * 90)  # the fine lathe rings
+    rgb = rgb * (1 - disc[..., None]) + np.dstack([metal, metal, metal * 1.02]) * disc[..., None]
+    edge = np.clip(disc - f(c.ellipse(c.layer(), bx - br + 2, by - br + 2, bx + br - 2, by + br - 2)), 0, 1)
+    rgb = paint(rgb, edge, [120, 122, 126], 0.8)
+    plus = c.layer()
+    c.rrect(plus, bx + 10, by - 26, bx + 20, by - 24.6, 0.4)
+    c.rrect(plus, bx + 14.3, by - 30.3, bx + 15.7, by - 20.3, 0.4)
+    rgb = paint(rgb, f(plus), [110, 112, 116], 0.8)
+    strap = f(c.rrect(c.layer(), bx - br + 6, by - 7, bx + br - 6, by + 7, 2)) * disc
+    sy = np.clip((yy - (by - 7)) / 14.0, 0, 1)
+    steel = 206 + 22 * (1 - sy) - 30 * sy
+    rgb = rgb * (1 - strap[..., None]) + np.dstack([steel, steel, steel * 1.02]) * strap[..., None]
+    rgb = paint(rgb, np.clip(strap - f(c.rrect(c.layer(), bx - br + 6, by - 7, bx + br - 6, by + 6, 2)), 0, 1), [120, 122, 126], 0.8)
+    for sx in (bx - 16, bx + 8):
+        bump = f(c.rrect(c.layer(), sx, by - 4, sx + 8, by + 3, 2)) * strap
+        rgb = paint(rgb, bump, [168, 170, 174], 0.6)
+        hi = f(c.rrect(c.layer(), sx + 1, by - 4, sx + 7, by - 2.5, 1)) * strap
+        rgb = paint(rgb, hi, [246, 248, 250], 0.8)
+    tab = f(c.rrect(c.layer(), bx - 6, by + br - 3, bx + 6, by + br + 6, 2))
+    rgb = paint(rgb, tab, [150, 152, 156])
+
+    # The ROM, the mapper, the save RAM and the little eight-leg chip.
+    rx0, ry0, rx1, ry1 = WS_ROM
+    rgb = silk_text(c, rgb, rx0 + 4, ry0 - 8, "U1", 7)
+    rgb = chip_with_legs(c, rgb, rx0, ry0, rx1, ry1, "lr", 2.6, seed=51)
+
+    mx0, my0, mx1, my1 = 262, 30, 306, 74
+    rgb = silk_text(c, rgb, mx1 + 8, my0 - 1, "U2", 7)
+    rgb = chip_with_legs(c, rgb, mx0, my0, mx1, my1, "lrtb", 2.6, leg=3.0, seed=52)
+    rgb = paint(rgb, f(c.text(c.layer(), (mx0 + mx1) / 2, my0 + 18, "2003", 7)), [104, 108, 116])
+    rgb = paint(rgb, f(c.text(c.layer(), (mx0 + mx1) / 2, my0 + 27, "SW-2", 7)), [104, 108, 116])
+
+    sx0, sy0, sx1, sy1 = 146, 104, 214, 140
+    rgb = silk_text(c, rgb, sx0 - 10, sy0 + 2, "U3", 7)
+    rgb = chip_with_legs(c, rgb, sx0, sy0, sx1, sy1, "tb", 2.6, seed=53)
+    rgb = paint(rgb, f(c.text(c.layer(), (sx0 + sx1) / 2, sy0 + 13, "256K", 7)), [104, 108, 116])
+
+    ex0, ey0, ex1, ey1 = 36, 122, 60, 140
+    rgb = silk_text(c, rgb, ex0 - 1, ey0 - 9, "U4", 7)
+    rgb = chip_with_legs(c, rgb, ex0, ey0, ex1, ey1, "tb", 5.2, leg=3.0, seed=54)
+    rgb = paint(rgb, f(c.text(c.layer(), (ex0 + ex1) / 2, ey0 + 9, "8", 6)), [104, 108, 116])
+
+    # Capacitors and resistors.
+    for (x, y, v, lab, at) in [
+        (100, 26, False, "C1", (106, 20)), (100, 40, False, "C2", None),
+        (248, 84, False, "C3", (243, 80)), (248, 96, False, "C4", (243, 92)),
+        (74, 128, True, "C5", (80, 124)), (86, 128, True, "C6", (92, 124)),
+        (222, 112, False, "R1", (235, 114)), (222, 124, False, "R2", (235, 126)),
+        (312, 84, True, "C7", (318, 80)), (114, 140, False, "C8", (110, 135)),
+    ]:
+        rgb = passive(c, rgb, x, y, v, lab, at)
+
+    # Vias, scattered where the traces dive through.
+    pts = [(fx, band_y0 - 3 - (k % 6) * 2.2) for k, fx in
+           ((k, strip_x0 + 10 + pitch * (k + 0.5)) for k in range(1, count, 9))]
+    pts += [(120, 100), (232, 98), (250, 108), (300, 92), (320, 64), (318, 40),
+            (110, 116), (130, 150), (222, 148), (28, 140), (98, 100), (244, 30),
+            (318, 110), (70, 148), (196, 96)]
+    rgb = vias(c, rgb, pts)
+
+    # The light band of vias over the contacts, then the contacts.
+    band = f(c.rrect(c.layer(), strip_x0 + 6, band_y0, strip_x1 - 6, band_y1, 0.5))
+    rgb = paint(rgb, band, [198, 204, 194])
+    rgb = paint(rgb, band * (grain((c.H, c.W), 43, 1.0)[...] > 1.4), [190, 196, 186])
+    dots = c.layer()
+    for k in range(0, count, 3):
+        x = strip_x0 + 10 + pitch * (k + 0.5) + rng.uniform(-1, 1)
+        y = band_y0 + 4 + (k % 2) * 5
+        if rng.random() < 0.7:
+            c.ellipse(dots, x - 1.3, y - 1.3, x + 1.3, y + 1.3)
+    rgb = paint(rgb, f(dots), [150, 132, 70])
+
+    # The board's mark.
+    rgb = silk_mark(c, rgb, 326, 145)
+
+    # A dark rim round the board's edge.
+    dist = ndimage.distance_transform_edt(region > 0.5) / S
+    rgb = rgb * (1 - 0.35 * np.clip(1.6 - dist, 0, 1))[..., None]
+    rgb, alpha = fingers(c, strip_x0 + 10, strip_x1 - 10, finger_y0, finger_y1, count, rgb, region)
+    return rgb, alpha
+
+
+# --------------------------------------------------------------------------
 # WonderSwan: a wide shell with an oval nameplate, and the board's contacts
 # showing below its shoulder.
 
@@ -272,11 +536,7 @@ def wonderswan():
     interior(c, body, 13, [(w * 0.5, h * 0.42, 9), (w * 0.12, h * 0.55, 6),
                            (w * 0.88, h * 0.55, 6)]).save(os.path.join(ASSETS, "ws_interior.png"))
 
-    board_region = c.rrect(c.layer(), strip_x0 + 4, h * 0.08, strip_x1 - 4, h - 2, 4)
-    board = pcb(c, board_region, 14, [(w * 0.18, h * 0.3, w * 0.42, h * 0.58),
-                                       (w * 0.55, h * 0.32, w * 0.72, h * 0.52)])
-    board, balpha = fingers(c, strip_x0 + 10, strip_x1 - 10, shoulder + 5, h - 6, 72,
-                            board, f(board_region))
+    board, balpha = ws_pcb(c, shoulder, strip_x0, strip_x1)
     rgba_colour(board, balpha).save(os.path.join(ASSETS, "ws_board.png"))
 
     # The strip below the shoulder is the bare board, drawn over any shell.
@@ -329,6 +589,7 @@ def lynx():
     board_region = c.rrect(c.layer(), 8, h * 0.18, w - 8, h - 4, 4)
     board = pcb(c, board_region, 24, [(w * 0.2, h * 0.32, w * 0.55, h * 0.6),
                                        (w * 0.62, h * 0.4, w * 0.8, h * 0.55)])
+    board = silk_mark(c, board, w - 22, h * 0.80)
     board, balpha = fingers(c, wx0 + 4, wx1 - 4, wy0 + 3, wy1 - 2, 34, board,
                             f(board_region))
     rgba_colour(board, balpha).save(os.path.join(ASSETS, "lynx_board.png"))

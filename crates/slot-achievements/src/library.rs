@@ -139,6 +139,18 @@ pub(crate) fn hash(dir: &Path, path: &Path) -> Result<String, String> {
     Ok(hash)
 }
 
+/// slotPlus: a ROM's hash if the index already knows it and the file hasn't changed. Never
+/// reads the ROM.
+pub(crate) fn known_hash(dir: &Path, path: &Path) -> Option<String> {
+    let (size, modified_ns) = fingerprint(path).ok()?;
+    with_index(dir, |index, _| {
+        index
+            .get(path)
+            .filter(|e| e.size == size && e.modified_ns == modified_ns && modified_ns != 0)
+            .map(|e| e.hash.clone())
+    })
+}
+
 /// ROMs whose fingerprinted hash still matches the file on the card. Reads only.
 pub(crate) fn indexed(dir: &Path) -> Vec<(PathBuf, String)> {
     let index = with_index(dir, |index, _| index.clone());

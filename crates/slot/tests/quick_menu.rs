@@ -629,7 +629,8 @@ fn tools_sits_between_screen_and_system() {
     assert_eq!(QuickRow::Network.label(), "Tools");
     assert_eq!(QuickRow::General.label(), "Shelf");
     assert_eq!(QuickRow::WIFI, [QuickRow::WifiPower, QuickRow::Networks]);
-    assert_eq!(QuickRow::GENERAL.last(), Some(&QuickRow::KidShelf));
+    // slotPlus: Shelf Life sits at the foot of the Shelf page.
+    assert_eq!(QuickRow::GENERAL.last(), Some(&QuickRow::ShelfLife));
     let (_d, mut a, _) = on_carousel();
     common::connect(&mut a);
     open_at(&mut a, QuickRow::Network);

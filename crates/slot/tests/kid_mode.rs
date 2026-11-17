@@ -761,3 +761,146 @@ fn an_unlocked_shelf_has_no_kid_icon() {
     a.unlock_kid_mode();
     assert!(!shows_the_kid_icon(&a));
 }
+
+// slotPlus: Kid Mode's daily play allowance.
+
+fn playing_with(d: &TempDir, stem: &str, state: SlotState) -> App {
+    write_slot_state(
+        d.path(),
+        &SlotState {
+            cart: Some(stem.to_string()),
+            clock_set: true,
+            ..state
+        },
+    )
+    .expect("write slot.state");
+    let mut a = App::boot(d.path());
+    a.set_snapshot(common::StubSnapshot::boxed());
+    a.on_core_ready();
+    settle(&mut a);
+    assert!(matches!(a.phase(), Phase::Playing { .. }), "{:?}", a.phase());
+    a
+}
+
+fn today() -> i64 {
+    App::boot(tempfile::tempdir().unwrap().path())
+        .wall_secs()
+        .div_euclid(86_400)
+}
+
+#[test]
+fn kid_play_time_shows_whenever_kid_mode_is_on_and_steps_through_its_choices() {
+    for (mode, hidden) in [
+        (KidMode::Off, true),
+        (KidMode::OneShelf, false),
+        (KidMode::Shelves, false),
+    ] {
+        let d = card();
+        let (a, _clock) = boot_on(&d, kid(mode));
+        assert_eq!(a.hidden_rows().contains(&QuickRow::KidAllowance), hidden, "{mode:?}");
+    }
+    let d = card();
+    let (mut a, _clock) = boot_on(&d, kid(KidMode::Shelves));
+    a.unlock_kid_mode();
+    open_at(&mut a, QuickRow::KidAllowance);
+    let mut seen = Vec::new();
+    for _ in 0..7 {
+        press(&mut a, Btn::Right);
+        seen.push(saved(&d).kid_allowance);
+    }
+    assert_eq!(seen, [15, 30, 45, 60, 90, 120, 0]);
+    press(&mut a, Btn::Left);
+    assert_eq!(saved(&d).kid_allowance, 120);
+}
+
+#[test]
+fn the_allowance_warns_then_ejects_and_keeps_the_cart_out_for_the_day() {
+    let d = card();
+    let mut a = playing_with(
+        &d,
+        "Emerald",
+        SlotState {
+            kid_mode: KidMode::Shelves,
+            kid_allowance: 15,
+            kid_day: today(),
+            kid_used: 14 * 60 - 1,
+            ..SlotState::default()
+        },
+    );
+    a.kid_tick(0.5);
+    a.kid_tick(0.5);
+    assert_eq!(a.toast(), Some(slot_ui::Toast::KidTimeLow));
+    assert!(matches!(a.phase(), Phase::Playing { .. }));
+    for _ in 0..121 {
+        a.kid_tick(0.5);
+    }
+    assert_eq!(a.toast(), Some(slot_ui::Toast::KidTimeUp));
+    settle(&mut a);
+    assert!(matches!(a.phase(), Phase::Shelf), "{:?}", a.phase());
+    // Another go is refused for the rest of the day.
+    press(&mut a, Btn::A);
+    settle(&mut a);
+    assert!(matches!(a.phase(), Phase::Shelf), "{:?}", a.phase());
+    assert!(a.kid_time_up());
+}
+
+#[test]
+fn a_new_day_brings_a_new_allowance() {
+    let d = card();
+    let (mut a, _clock) = boot_on(
+        &d,
+        SlotState {
+            kid_mode: KidMode::Shelves,
+            kid_allowance: 30,
+            kid_day: today() - 1,
+            kid_used: 30 * 60,
+            ..SlotState::default()
+        },
+    );
+    assert!(!a.kid_time_up());
+    press(&mut a, Btn::A);
+    assert!(!matches!(a.phase(), Phase::Shelf), "{:?}", a.phase());
+}
+
+#[test]
+fn a_used_up_allowance_keeps_the_resume_out_too() {
+    let d = card();
+    write_slot_state(
+        d.path(),
+        &SlotState {
+            cart: Some("Emerald".into()),
+            clock_set: true,
+            kid_mode: KidMode::Shelves,
+            kid_allowance: 15,
+            kid_day: today(),
+            kid_used: 15 * 60,
+            ..SlotState::default()
+        },
+    )
+    .unwrap();
+    let mut a = App::boot(d.path());
+    settle(&mut a);
+    assert!(matches!(a.phase(), Phase::Shelf), "{:?}", a.phase());
+}
+
+#[test]
+fn an_unlocked_kid_mode_has_no_allowance() {
+    let d = card();
+    let mut a = playing_with(
+        &d,
+        "Emerald",
+        SlotState {
+            kid_mode: KidMode::Shelves,
+            kid_allowance: 15,
+            kid_day: today(),
+            kid_used: 15 * 60 - 2,
+            ..SlotState::default()
+        },
+    );
+    a.unlock_kid_mode();
+    for _ in 0..10 {
+        a.kid_tick(0.5);
+    }
+    settle(&mut a);
+    assert!(matches!(a.phase(), Phase::Playing { .. }), "{:?}", a.phase());
+}

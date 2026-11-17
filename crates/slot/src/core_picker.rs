@@ -87,6 +87,11 @@ impl CorePicker {
         self.pair
     }
 
+    /// slotPlus: a board with one core: only the board to look at.
+    pub fn alone(&self) -> bool {
+        self.pair[0] == self.pair[1]
+    }
+
     pub fn closing(&self) -> bool {
         self.close.is_some()
     }

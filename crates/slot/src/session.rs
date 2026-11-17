@@ -54,7 +54,19 @@ pub struct Session {
     fixed_present: bool,
     sunlight_sent: Option<u8>,
     buzz_ends: Option<Instant>,
+    /// slotPlus: the game being played and the play not yet written to the play log.
+    play_clock: Option<PlayClock>,
 }
+
+/// slotPlus: play time counted for a game, written to the play log when play stops and every
+/// few minutes along the way, so a flat battery loses little.
+struct PlayClock {
+    platform: slot_store::Platform,
+    stem: String,
+    secs: f64,
+}
+
+const PLAY_FLUSH_SECS: f64 = 300.0;
 
 impl Session {
     pub fn boot(root: PathBuf) -> Self {
@@ -91,6 +103,7 @@ impl Session {
             fixed_present: false,
             sunlight_sent: None,
             buzz_ends: None,
+            play_clock: None,
         };
         // A game left running comes straight back. Its core loads on its own thread, so start it
         // now and let the card read overlap the rest of the boot. Waiting for the first update
@@ -521,6 +534,7 @@ impl Session {
 
     pub fn update(&mut self, dt: f32) {
         self.bridge_link(|app| app.update(dt));
+        self.count_play(dt);
         // Slot's Wi-Fi is up on the shelf; unlocks earned in a game wait for it.
         let up = self.app.wifi_up();
         if up && !self.wifi_up {
@@ -629,6 +643,60 @@ impl Session {
         self.sync_pad();
         let now = self.app.now();
         self.prefetch.browse(self.app.browsed_rom(), now);
+    }
+
+    /// slotPlus: count the time a game is actually played: not paused in a menu, not loading,
+    /// not dozing.
+    fn count_play(&mut self, dt: f32) {
+        let playing = self
+            .playing()
+            .then(|| self.app.seated_cart())
+            .flatten()
+            .map(|c| (c.platform, c.stem.clone()));
+        match playing {
+            Some((platform, stem)) => {
+                let same = self
+                    .play_clock
+                    .as_ref()
+                    .is_some_and(|c| c.platform == platform && c.stem == stem);
+                if !same {
+                    self.flush_play();
+                    self.play_clock = Some(PlayClock {
+                        platform,
+                        stem,
+                        secs: 0.0,
+                    });
+                }
+                self.app.kid_tick(dt);
+                if let Some(clock) = &mut self.play_clock {
+                    // A long frame is a stall or a sleep, not play.
+                    clock.secs += f64::from(dt.clamp(0.0, 0.5));
+                    if clock.secs >= PLAY_FLUSH_SECS {
+                        self.flush_play();
+                    }
+                }
+            }
+            None => {
+                if self.play_clock.is_some() {
+                    self.flush_play();
+                    self.play_clock = None;
+                }
+            }
+        }
+    }
+
+    /// Write the whole seconds counted so far; the rest stays on the clock.
+    fn flush_play(&mut self) {
+        let Some(clock) = &mut self.play_clock else {
+            return;
+        };
+        let whole = clock.secs.floor();
+        if whole < 1.0 {
+            return;
+        }
+        clock.secs -= whole;
+        let (platform, stem) = (clock.platform, clock.stem.clone());
+        self.app.add_play_time(platform, &stem, whole as u64);
     }
 
     fn sync_rumble(&mut self) {

@@ -62,17 +62,34 @@ pub fn baseos_cart_face() -> CartFace {
 }
 
 fn marking_face(title: &[String]) -> CartFace {
+    marking_sized(title, ROM_W, ROM_H)
+}
+
+/// slotPlus: the ROM chip on `assets/ws_board.png` (drawn by `assets/src/carts.py`,
+/// `WS_ROM`), a wide one lying across the board.
+pub const WS_ROM_X: u32 = 124;
+pub const WS_ROM_Y: u32 = 28;
+pub const WS_ROM_W: u32 = 112;
+pub const WS_ROM_H: u32 = 60;
+
+/// slotPlus: carts whose back can be turned to, with nothing to pick there, only the
+/// board (and the play-time sticker) to see.
+pub fn shows_board_alone(platform: slot_store::Platform) -> bool {
+    platform == slot_store::Platform::Ws
+}
+
+fn marking_sized(title: &[String], w: u32, h: u32) -> CartFace {
     let mut face = CartFace {
-        rgba: vec![0; (ROM_W * ROM_H * 4) as usize],
-        w: ROM_W,
-        h: ROM_H,
+        rgba: vec![0; (w * h * 4) as usize],
+        w,
+        h,
     };
     let Some(font) = text::label_font() else {
         return face;
     };
-    let max_w = (ROM_W - 2 * MARK_PAD) as f32;
+    let max_w = (w - 2 * MARK_PAD) as f32;
     let line_h = (MARK_PX * 1.25).ceil() as u32;
-    let mut top = ROM_H.saturating_sub(line_h * title.len() as u32) / 2;
+    let mut top = h.saturating_sub(line_h * title.len() as u32) / 2;
     for line in title {
         let layout = text::fit(font, line, max_w, 1, MARK_PX, MARK_MIN_PX);
         ink_band(&mut face, top, line_h, &layout, MARK_INK, 1.0);
@@ -84,6 +101,17 @@ fn marking_face(title: &[String]) -> CartFace {
 pub fn board_face(cart: &Cart) -> CartFace {
     if let Some(shell) = gb_shell_of(cart) {
         return gb_backing(bitmaps::gb_board_empty(), shell);
+    }
+    if cart.platform == slot_store::Platform::Ws {
+        let (w, h) = bitmaps::Mould::Ws.size();
+        let mut face = CartFace {
+            rgba: bitmaps::extra_board(bitmaps::Mould::Ws).to_vec(),
+            w,
+            h,
+        };
+        let mark = marking_sized(&rom_marking(&cart.stem), WS_ROM_W, WS_ROM_H);
+        over(&mut face, &mark, WS_ROM_X, WS_ROM_Y);
+        return face;
     }
     let mut face = CartFace {
         rgba: bitmaps::board().to_vec(),

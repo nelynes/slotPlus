@@ -315,6 +315,11 @@ impl PrintScene {
         }
     }
 
+    /// slotPlus: the sheet has been printed, torn off and laid down, and is still there.
+    pub fn at_rest(&self, now: Millis) -> bool {
+        self.stop.is_none() && self.elapsed(now) >= REST_AT
+    }
+
     pub fn frame(&self, now: Millis) -> PrintFrame {
         let t = self.elapsed(now);
         match self.stop.map(closes_from) {
@@ -487,7 +492,12 @@ impl PrintTextures {
     }
 
     pub fn set_paper(&self, c: &mut Compositor, art: &PrintArt) {
-        c.update_texture(self.paper, art.paper.w, art.paper.h, &art.paper.rgba);
+        self.set_paper_face(c, &art.paper);
+    }
+
+    /// slotPlus: put a sheet straight on the paper, as the achievement printout scrolls.
+    pub fn set_paper_face(&self, c: &mut Compositor, face: &UndoFace) {
+        c.update_texture(self.paper, face.w, face.h, &face.rgba);
     }
 }
 

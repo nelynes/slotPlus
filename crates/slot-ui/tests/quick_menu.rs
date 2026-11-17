@@ -103,7 +103,9 @@ fn the_rows_run_in_the_order_the_user_chose() {
             "Game Titles",
             "Cart Slot",
             "Kid Mode",
-            "Kid Shelf"
+            "Kid Shelf",
+            "Kid Play Time",
+            "Shelf Life"
         ]
     );
     assert_eq!(
@@ -279,7 +281,8 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::RommPort,
             QuickRow::RommPair,
             QuickRow::RommDisconnect,
-            QuickRow::System
+            QuickRow::System,
+            QuickRow::ShelfLife
         ]
     );
     for page in [
@@ -314,7 +317,7 @@ fn a_hidden_row_is_stepped_over_and_takes_no_place() {
     let hidden = [QuickRow::WallpaperTint, QuickRow::DateTime];
     assert_eq!(QuickRow::Wallpaper.down(&hidden), QuickRow::ShelfMode);
     assert_eq!(QuickRow::ShelfMode.up(&hidden), QuickRow::Wallpaper);
-    assert_eq!(QuickRow::Theme.up(&hidden), QuickRow::KidShelf);
+    assert_eq!(QuickRow::Theme.up(&hidden), QuickRow::ShelfLife);
     assert_eq!(QuickRow::ShelfMode.position(&hidden), 2);
     assert_eq!(QuickRow::Wallpaper.down(&[]), QuickRow::WallpaperTint);
     assert_eq!(QuickRow::ShelfMode.position(&[]), 3);
@@ -390,6 +393,10 @@ fn the_values_read_as_the_menu_prints_them() {
             "Both",
             "Icon",
             "Percentage",
+            "45 min",
+            "1 hour",
+            "1.5 hours",
+            "2 hours",
         ]
     );
     assert_eq!(QuickValue::flag(true), QuickValue::On);
@@ -933,5 +940,20 @@ fn every_row_sits_in_all_at_its_own_index() {
             i,
             "{row:?} is declared out of step with QuickRow::ALL, so it would draw another row's label"
         );
+    }
+}
+
+#[test]
+fn shelf_life_is_a_page_at_the_foot_of_the_shelf_page() {
+    assert_eq!(QuickRow::GENERAL.last(), Some(&QuickRow::ShelfLife));
+    assert!(QuickRow::ShelfLife.opens());
+    assert_eq!(QuickRow::ShelfLife.child(), Some(QuickRow::ShrinkWrap));
+    assert_eq!(
+        QuickRow::SHELF_LIFE.map(QuickRow::label),
+        ["Shrink Wrap", "Dust", "Wear"]
+    );
+    for row in QuickRow::SHELF_LIFE {
+        assert_eq!(row.parent(), Some(QuickRow::ShelfLife), "{row:?}");
+        assert!(!row.opens());
     }
 }

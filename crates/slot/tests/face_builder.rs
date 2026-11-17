@@ -130,3 +130,55 @@ fn the_selected_carts_lid_comes_from_the_label_cache() {
         "the lid was not drawn from the cached label"
     );
 }
+
+/// slotPlus: a game with a downloaded set shows how far it's got as a gold sticker on its
+/// board; one without a set has none.
+#[test]
+fn a_game_with_a_set_shows_its_progress() {
+    let root = tempfile::tempdir().unwrap();
+    let r = root.path();
+    std::fs::create_dir_all(r.join("Config")).unwrap();
+    std::fs::write(
+        r.join("Config/retroachievements.toml"),
+        "enabled = true\nusername = 'Player'\n",
+    )
+    .unwrap();
+    std::fs::create_dir_all(r.join("Games/GBA")).unwrap();
+    let rom = r.join("Games/GBA/Metroid Fusion.gba");
+    std::fs::write(&rom, b"a rom").unwrap();
+    let meta = rom.metadata().unwrap();
+    let modified_ns = meta
+        .modified()
+        .unwrap()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    // md5 of the lowercased username, as the achievements crate names an account.
+    let account = "912af0dff974604f1321254ca8ff38b6";
+    let dir = r.join("Saves/RetroAchievements").join(account);
+    std::fs::create_dir_all(&dir).unwrap();
+    let hash = "0123456789abcdef0123456789abcdef";
+    let index = serde_json::json!({
+        rom.to_string_lossy(): { "size": meta.len(), "modified_ns": modified_ns, "hash": hash }
+    });
+    std::fs::write(dir.join("library.json"), index.to_string()).unwrap();
+    let achievement = |id: u32| {
+        serde_json::json!({ "ID": id, "Title": "t", "Description": "d", "Points": 5,
+                            "Flags": 3, "MemAddr": "0xH0=1", "BadgeName": "1" })
+    };
+    let game = serde_json::json!([
+        { "ID": 1, "ConsoleID": 5, "Title": "Metroid Fusion",
+          "Achievements": [achievement(1), achievement(2), achievement(3)] },
+        [2]
+    ]);
+    std::fs::write(dir.join(format!("{hash}.json")), game.to_string()).unwrap();
+
+    let mut with_set = cart("Metroid Fusion");
+    with_set.rom = rom;
+    let builder = FaceBuilder::spawn(r.to_path_buf());
+    builder.request(cart("Drill Dozer"));
+    let plain = collect(&builder, 1).remove(0);
+    builder.request(with_set);
+    let got = collect(&builder, 1).remove(0);
+    assert_ne!(got.board.rgba, plain.board.rgba, "no gold sticker on the board");
+}

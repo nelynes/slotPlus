@@ -180,10 +180,15 @@ pub enum QuickRow {
     Overlay,
     BatteryDisplay,
     System,
+    ShelfLife,
+    ShrinkWrap,
+    Dust,
+    Wear,
+    KidAllowance,
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 169 + cfg!(feature = "nds") as usize] = [
+    pub const ALL: [QuickRow; 174 + cfg!(feature = "nds") as usize] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -355,6 +360,11 @@ impl QuickRow {
         QuickRow::Overlay,
         QuickRow::BatteryDisplay,
         QuickRow::System,
+        QuickRow::ShelfLife,
+        QuickRow::ShrinkWrap,
+        QuickRow::Dust,
+        QuickRow::Wear,
+        QuickRow::KidAllowance,
     ];
 
     pub const MAIN: [QuickRow; 7] = [
@@ -387,7 +397,10 @@ impl QuickRow {
         QuickRow::RaSetsBadges,
     ];
 
-    pub const GENERAL: [QuickRow; 9] = [
+    /// slotPlus Shelf Life: how the carts on the shelf show the way they've been kept.
+    pub const SHELF_LIFE: [QuickRow; 3] = [QuickRow::ShrinkWrap, QuickRow::Dust, QuickRow::Wear];
+
+    pub const GENERAL: [QuickRow; 11] = [
         QuickRow::Theme,
         QuickRow::Wallpaper,
         QuickRow::WallpaperTint,
@@ -397,6 +410,8 @@ impl QuickRow {
         QuickRow::CartSlot,
         QuickRow::KidMode,
         QuickRow::KidShelf,
+        QuickRow::KidAllowance,
+        QuickRow::ShelfLife,
     ];
 
     pub const SYSTEM: [QuickRow; 7] = [
@@ -679,7 +694,10 @@ impl QuickRow {
             | QuickRow::ShowTitles
             | QuickRow::CartSlot
             | QuickRow::KidMode
-            | QuickRow::KidShelf => &QuickRow::GENERAL,
+            | QuickRow::KidShelf
+            | QuickRow::KidAllowance
+            | QuickRow::ShelfLife => &QuickRow::GENERAL,
+            QuickRow::ShrinkWrap | QuickRow::Dust | QuickRow::Wear => &QuickRow::SHELF_LIFE,
             QuickRow::Wifi
             | QuickRow::DateTime
             | QuickRow::LidOff
@@ -768,6 +786,7 @@ impl QuickRow {
             QuickRow::RommProtocol => Some(QuickRow::Romm),
             QuickRow::WifiPower => Some(QuickRow::Wifi),
             QuickRow::RaUsername => Some(QuickRow::Achievements),
+            QuickRow::ShrinkWrap => Some(QuickRow::ShelfLife),
             QuickRow::RaSetsStatus => Some(QuickRow::RaDownload),
             QuickRow::ControlsShelf => Some(QuickRow::Controls),
             QuickRow::ShelfPrev => Some(QuickRow::ControlsShelf),
@@ -807,6 +826,7 @@ impl QuickRow {
             QuickRow::PlayControls => Some(QuickRow::CONTROLS[0]),
             QuickRow::Shortcuts => Some(QuickRow::SHORTCUTS[0]),
             QuickRow::General => Some(QuickRow::GENERAL[0]),
+            QuickRow::ShelfLife => Some(QuickRow::SHELF_LIFE[0]),
             QuickRow::System => Some(QuickRow::SYSTEM[0]),
             QuickRow::Network => Some(QuickRow::NETWORK[0]),
             QuickRow::Achievements => Some(QuickRow::ACHIEVEMENTS[0]),
@@ -894,6 +914,11 @@ impl QuickRow {
             QuickRow::LidOff => "Lid Power Off",
             QuickRow::KidMode => "Kid Mode",
             QuickRow::KidShelf => "Kid Shelf",
+            QuickRow::KidAllowance => "Kid Play Time",
+            QuickRow::ShelfLife => "Shelf Life",
+            QuickRow::ShrinkWrap => "Shrink Wrap",
+            QuickRow::Dust => "Dust",
+            QuickRow::Wear => "Wear",
             QuickRow::FetchArt => "Fetch Missing Art",
             #[cfg(feature = "nds")]
             QuickRow::FetchBoxArt => "Fetch Box Art",
@@ -1038,6 +1063,7 @@ impl QuickRow {
                 | QuickRow::PlayScreen
                 | QuickRow::PlayGameplay
                 | QuickRow::General
+                | QuickRow::ShelfLife
                 | QuickRow::System
                 | QuickRow::Controls
                 | QuickRow::ControlsShelf
@@ -1208,10 +1234,14 @@ pub enum QuickValue {
     Both,
     Icon,
     Percentage,
+    Min45,
+    Min60,
+    Min90,
+    Min120,
 }
 
 impl QuickValue {
-    pub const ALL: [QuickValue; 60] = [
+    pub const ALL: [QuickValue; 64] = [
         QuickValue::Speed1_5,
         QuickValue::Speed2,
         QuickValue::Speed3,
@@ -1272,6 +1302,21 @@ impl QuickValue {
         QuickValue::Both,
         QuickValue::Icon,
         QuickValue::Percentage,
+        QuickValue::Min45,
+        QuickValue::Min60,
+        QuickValue::Min90,
+        QuickValue::Min120,
+    ];
+
+    /// slotPlus: a day's play in a locked Kid Mode.
+    pub const ALLOWANCE: [QuickValue; 7] = [
+        QuickValue::Off,
+        QuickValue::Min15,
+        QuickValue::Min30,
+        QuickValue::Min45,
+        QuickValue::Min60,
+        QuickValue::Min90,
+        QuickValue::Min120,
     ];
 
     pub const LEVELS: [QuickValue; 16] = [
@@ -1341,6 +1386,10 @@ impl QuickValue {
             QuickValue::Min10 => "10 min",
             QuickValue::Min15 => "15 min",
             QuickValue::Min30 => "30 min",
+            QuickValue::Min45 => "45 min",
+            QuickValue::Min60 => "1 hour",
+            QuickValue::Min90 => "1.5 hours",
+            QuickValue::Min120 => "2 hours",
             QuickValue::Level0 => "0",
             QuickValue::Level1 => "1",
             QuickValue::Level2 => "2",
@@ -1395,6 +1444,10 @@ impl QuickValue {
             QuickValue::Min10 => 10,
             QuickValue::Min15 => 15,
             QuickValue::Min30 => 30,
+            QuickValue::Min45 => 45,
+            QuickValue::Min60 => 60,
+            QuickValue::Min90 => 90,
+            QuickValue::Min120 => 120,
             _ => return None,
         })
     }
@@ -1651,6 +1704,8 @@ pub fn core_button_legends(ink: [u8; 3]) -> Vec<UndoFace> {
         with_hint(button_face(ButtonLegend::A), "Choose", hint, false),
         // The Lynx rotation picker's chip goes any of four ways.
         with_hint(four_way(), "Swap", hint, true),
+        // slotPlus: SELECT prints the game's achievement set.
+        with_hint(button_face(ButtonLegend::Select), "Print", hint, false),
     ]
 }
 
@@ -1741,6 +1796,20 @@ fn small_button(which: ButtonLegend) -> UndoFace {
 
 pub fn print_stop_legend(ink: [u8; 3]) -> UndoFace {
     with_hint(small_button(ButtonLegend::B), "Stop", Some(ink), true)
+}
+
+/// slotPlus: the achievement printout's own legends, printed on the paper: Up/Down to
+/// scroll a long list, and B to put it away.
+pub fn print_list_legends(ink: [u8; 3]) -> [UndoFace; 2] {
+    let pair = up_down_pair();
+    let h = PRINT_STOP_BUTTON;
+    let w = (pair.w as f32 * h as f32 / pair.h as f32).round() as u32;
+    let rgba = crate::art::cover_rgba(&pair.rgba, pair.w, pair.h, w, h).unwrap_or_default();
+    let small = UndoFace { rgba, w, h };
+    [
+        with_hint(small, "Scroll", Some(ink), true),
+        with_hint(small_button(ButtonLegend::B), "Done", Some(ink), true),
+    ]
 }
 
 pub fn small_prompt_legends(ink: [u8; 3], no: &str, yes: &str) -> [UndoFace; 2] {
