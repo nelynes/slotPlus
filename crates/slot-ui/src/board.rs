@@ -327,8 +327,39 @@ pub fn shelf_cart_at(canvas: Canvas, x: f32, scale: f32) -> Placed {
     }
 }
 
-pub fn shelf_cart_shaped(canvas: Canvas, shell: Option<GbShell>, x: f32, scale: f32) -> Placed {
+/// slotPlus: whether a cart of `size` opens in the GBA's wide layout. The WonderSwan's is
+/// near enough the GBA's shape; the squarer carts (Pokémon mini, Game Gear, NeoGeo
+/// Pocket, DS) open the way a Game Boy cart does, their board resting larger and lower.
+fn opens_wide((cw, ch): (u32, u32)) -> bool {
+    let wide = CART_W as f32 / CART_H as f32;
+    (cw as f32 / ch as f32) > wide * 0.9
+}
+
+/// slotPlus: where a squarer cart sits on the shelf, at its own shape, as the shelf
+/// draws it.
+fn shelf_cart_sized(canvas: Canvas, (cw, ch): (u32, u32), x: f32, scale: f32) -> Placed {
+    let (w, h) = (cw as f32 * scale, ch as f32 * scale);
+    Placed {
+        x,
+        y: foot_y(canvas, ch as f32) - h,
+        w,
+        h,
+    }
+}
+
+/// `size` is the selected cart's own (`cart_box`); it shapes the opening of a cart that is
+/// not a Game Boy's (`shell` is `None`) and not GBA-shaped.
+pub fn shelf_cart_shaped(
+    canvas: Canvas,
+    shell: Option<GbShell>,
+    size: (u32, u32),
+    x: f32,
+    scale: f32,
+) -> Placed {
     if shell.is_none() {
+        if !opens_wide(size) {
+            return shelf_cart_sized(canvas, size, x, scale);
+        }
         return shelf_cart_at(canvas, x, scale);
     }
     let (w, h) = (GB_CART_W as f32 * scale, GB_CART_H as f32 * scale);
@@ -349,10 +380,24 @@ const GB_SLIDE_UP: f32 = 36.0;
 pub fn board_from_shaped(
     canvas: Canvas,
     shell: Option<GbShell>,
+    size: (u32, u32),
     shelf: Placed,
     progress: f32,
 ) -> Placed {
     if shell.is_none() {
+        if !opens_wide(size) {
+            // As a Game Boy cart's: as tall as its board rests, no wider than a GBA's.
+            let (cw, ch) = (size.0 as f32, size.1 as f32);
+            let k = (GB_BOARD_REST_H / ch).min(BOARD_W as f32 / cw);
+            let (w, h) = (cw * k, ch * k);
+            let rest = Placed {
+                x: canvas.centred(w),
+                y: GB_BOARD_Y + canvas.inset_y() + (GB_BOARD_REST_H - h) / 2.0,
+                w,
+                h,
+            };
+            return lerp(board_in(shelf), rest, lift_of(progress));
+        }
         return board_from(canvas, shelf, progress);
     }
     let w = GB_BOARD_REST_H * GB_CART_W as f32 / GB_CART_H as f32;
@@ -368,17 +413,22 @@ pub fn board_from_shaped(
 pub fn lid_from_shaped(
     canvas: Canvas,
     shell: Option<GbShell>,
+    size: (u32, u32),
     shelf: Placed,
     progress: f32,
 ) -> (Placed, f32) {
-    if shell.is_none() {
+    if shell.is_none() && opens_wide(size) {
         return lid_from(canvas, shelf, progress);
     }
     let slid = Placed {
         y: shelf.y - GB_SLIDE_UP * slide_of(progress),
         ..shelf
     };
-    let w = GB_LID_REST_H * GB_CART_W as f32 / GB_CART_H as f32;
+    let (cw, ch) = match shell {
+        Some(_) => (GB_CART_W, GB_CART_H),
+        None => size,
+    };
+    let w = GB_LID_REST_H * cw as f32 / ch as f32;
     let rest = Placed {
         x: canvas.centred(w),
         y: GB_LID_REST_Y + canvas.inset_y() - GB_LID_REST_H / 2.0,

@@ -454,19 +454,49 @@ fn a_game_boy_cart_shows_its_own_board() {
 fn a_gba_cart_keeps_the_gba_picker_geometry() {
     let canvas = Canvas { w: 720.0, h: 480.0 };
     let shelf = shelf_cart(canvas);
-    for p in [0.0, 0.3, 0.7, 1.0] {
-        assert_eq!(
-            slot_ui::board_from_shaped(canvas, None, shelf, p),
-            slot_ui::board_from(canvas, shelf, p)
-        );
-        assert_eq!(
-            slot_ui::lid_from_shaped(canvas, None, shelf, p),
-            slot_ui::lid_from(canvas, shelf, p)
-        );
+    for platform in [Platform::Gba, Platform::Ws] {
+        let size = slot_ui::cart_box(platform);
+        for p in [0.0, 0.3, 0.7, 1.0] {
+            assert_eq!(
+                slot_ui::board_from_shaped(canvas, None, size, shelf, p),
+                slot_ui::board_from(canvas, shelf, p)
+            );
+            assert_eq!(
+                slot_ui::lid_from_shaped(canvas, None, size, shelf, p),
+                slot_ui::lid_from(canvas, shelf, p)
+            );
+        }
     }
     assert_eq!(slot_ui::seats(None), slot_ui::GBA_SEATS);
 }
 
+/// slotPlus: a squarer cart opens at its own shape, from where it sits on the shelf to
+/// where its board rests, and its lid flies off at its own shape too.
+#[test]
+fn a_squarer_cart_opens_at_its_own_shape() {
+    let canvas = Canvas { w: 720.0, h: 480.0 };
+    for platform in [Platform::Pm] {
+        let size = slot_ui::cart_box(platform);
+        let aspect = size.0 as f32 / size.1 as f32;
+        let shelf = slot_ui::shelf_cart_shaped(canvas, None, size, 200.0, 0.8);
+        for p in [0.0, 0.5, 1.0] {
+            let board = slot_ui::board_from_shaped(canvas, None, size, shelf, p);
+            let (lid, _) = slot_ui::lid_from_shaped(canvas, None, size, shelf, p);
+            for (what, r) in [("board", board), ("lid", lid)] {
+                assert!(
+                    (r.w / r.h - aspect).abs() < 0.02,
+                    "{platform:?} {what} at {p}: {} x {}",
+                    r.w,
+                    r.h
+                );
+            }
+            assert!(
+                board.y + board.h <= canvas.h - 40.0,
+                "{platform:?} clear of the legends"
+            );
+        }
+    }
+}
 #[test]
 fn a_pokemon_mini_cart_shows_its_own_board_with_the_game_on_its_chip() {
     let pm = Cart {
