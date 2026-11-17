@@ -314,3 +314,105 @@ fn a_cart_without_film_goes_straight_in() {
     assert!(!a.tearing());
     assert!(a.seated_cart().is_some());
 }
+
+fn press(a: &mut App, btn: Btn) {
+    a.apply(Action::GbaDown(btn));
+    a.apply(Action::GbaUp(btn));
+}
+
+/// Open Settings at `row`, walking down from the top of the menu.
+fn open_at(a: &mut App, row: slot_ui::QuickRow) {
+    a.apply(Action::QuickMenu);
+    let mut path = vec![row];
+    while let Some(parent) = path.last().and_then(|r| r.parent()) {
+        path.push(parent);
+    }
+    for (depth, step) in path.iter().rev().enumerate() {
+        if depth > 0 {
+            press(a, Btn::A);
+        }
+        for _ in 0..step.position(&a.hidden_rows()) {
+            press(a, Btn::Down);
+        }
+    }
+    assert_eq!(a.quick_menu(), Some(row), "the bar never reached {row:?}");
+}
+
+/// Emerald dusty and worn, Fusion never played (so sealed), at Clean All Carts' prompt.
+fn at_clean_all(resets: slot_store::CleanResets) -> (tempfile::TempDir, App) {
+    let (d, mut a) = dusty_and_worn(resets);
+    open_at(&mut a, slot_ui::QuickRow::CleanAllCarts);
+    press(&mut a, Btn::A);
+    assert!(a.clean_all_prompt(), "A on the row asks first");
+    (d, a)
+}
+
+fn looks(a: &App) -> Vec<(String, Look)> {
+    let mut v: Vec<_> = a
+        .carts()
+        .map(|c| (c.stem.clone(), a.face_look(c)))
+        .collect();
+    v.sort_by(|x, y| x.0.cmp(&y.0));
+    v
+}
+
+#[test]
+fn a_tap_of_b_or_a_backs_out_of_clean_all_carts_and_changes_nothing() {
+    for btn in [Btn::B, Btn::A] {
+        let (_d, mut a) = at_clean_all(slot_store::CleanResets::Both);
+        let before = looks(&a);
+        press(&mut a, btn);
+        assert!(!a.clean_all_prompt(), "{btn:?} backs out");
+        assert_eq!(looks(&a), before);
+    }
+}
+
+#[test]
+fn letting_go_before_five_seconds_starts_the_count_again() {
+    let (_d, mut a) = at_clean_all(slot_store::CleanResets::Both);
+    let before = looks(&a);
+    let t = a.now();
+    a.apply_at(Action::GbaDown(Btn::B), t);
+    a.tick_ms(t + 100);
+    assert_eq!(a.clean_all_countdown(), Some(5));
+    a.tick_ms(t + 3_100);
+    assert_eq!(a.clean_all_countdown(), Some(2));
+    a.apply_at(Action::GbaUp(Btn::B), t + 3_200);
+    assert!(a.clean_all_prompt(), "still asking");
+    assert_eq!(a.clean_all_countdown(), None, "the count starts again");
+    a.tick_ms(t + 9_000);
+    assert_eq!(looks(&a), before, "nothing was cleaned");
+}
+
+/// Five seconds of B: every cart loses its dust and wear and comes out of its shrink wrap,
+/// even with Clean Button Resets set to do nothing.
+#[test]
+fn holding_b_five_seconds_cleans_and_opens_every_cart() {
+    let (d, mut a) = at_clean_all(slot_store::CleanResets::Disabled);
+    let fusion = |a: &App| {
+        let c = a.carts().find(|c| c.stem == "Fusion").unwrap().clone();
+        a.face_look(&c)
+    };
+    assert!(fusion(&a).wrap, "Fusion starts sealed");
+    let t = a.now();
+    a.apply_at(Action::GbaDown(Btn::B), t);
+    a.tick_ms(t + 4_900);
+    assert!(a.clean_all_prompt(), "not yet");
+    a.tick_ms(t + 5_000);
+    assert!(!a.clean_all_prompt(), "done, and the prompt goes");
+    a.apply_at(Action::GbaUp(Btn::B), t + 5_100);
+    for (stem, l) in looks(&a) {
+        assert_eq!(l, Look::default(), "{stem} is clean and open");
+    }
+    let log = landed(d.path(), |l| {
+        l.record(Platform::Gba, "Fusion").opened.is_some()
+    });
+    let fusion_record = log.record(Platform::Gba, "Fusion");
+    assert!(!fusion_record.played(), "opening isn't playing");
+    let emerald = log.record(Platform::Gba, "Emerald");
+    assert_eq!(
+        (emerald.seconds, emerald.worn_seconds()),
+        (40 * 3600, 0),
+        "the play time stays; the wear goes"
+    );
+}

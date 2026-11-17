@@ -61,3 +61,25 @@ fn a_wipe_of_one_leaves_the_other_where_it_was() {
     let r = log.record(Platform::Gba, "Emerald");
     assert_eq!((r.idle_since(), r.worn_seconds()), (Some(9_000), 3600));
 }
+
+/// slotPlus Clean All Carts opens a sealed cart without counting it as played, and the
+/// card remembers it opened.
+#[test]
+fn clean_all_opens_without_playing_and_the_card_keeps_it() {
+    let mut log = PlayLog::default();
+    log.add_play(Platform::Gba, "Emerald", 3600, 1_000);
+    log.clean_all(
+        [(Platform::Gba, "Emerald"), (Platform::Gba, "Fusion")],
+        9_000,
+    );
+    let fusion = log.record(Platform::Gba, "Fusion");
+    assert!(fusion.unwrapped() && !fusion.played());
+    assert_eq!(fusion.opened, Some(9_000));
+    let emerald = log.record(Platform::Gba, "Emerald");
+    assert_eq!(
+        (emerald.idle_since(), emerald.worn_seconds()),
+        (Some(9_000), 0)
+    );
+    let back = PlayLog::parse(&log.text());
+    assert_eq!(back.record(Platform::Gba, "Fusion").opened, Some(9_000));
+}

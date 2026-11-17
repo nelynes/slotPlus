@@ -42,7 +42,7 @@ fn the_link_ending_says_who_ended_it() {
 fn the_banner_says_what_happened_and_never_what_is_on_screen() {
     let all = Toast::all();
     assert_eq!(
-        all[..35],
+        all[..36],
         [
             Toast::StateSaved,
             Toast::StateLoaded,
@@ -79,19 +79,20 @@ fn the_banner_says_what_happened_and_never_what_is_on_screen() {
             Toast::TintLow,
             Toast::TintMedium,
             Toast::TintHigh,
+            Toast::CartsCleaned,
         ],
         "a banner was added or dropped: every face is uploaded by its place in this list"
     );
     let palettes = GbColors::all().count();
     assert_eq!(palettes, 49);
     assert_eq!(
-        all[35..35 + palettes],
+        all[36..36 + palettes],
         GbColors::all().map(Toast::Palette).collect::<Vec<_>>()[..],
         "the palette banners do not follow the fixed ones in palette order"
     );
     let duplicates = QuickRow::ALL.into_iter().filter(|r| r.binds()).count();
     assert_eq!(
-        all[35 + palettes..35 + palettes + duplicates],
+        all[36 + palettes..36 + palettes + duplicates],
         QuickRow::ALL
             .into_iter()
             .filter(|r| r.binds())
@@ -100,7 +101,7 @@ fn the_banner_says_what_happened_and_never_what_is_on_screen() {
         "the duplicate warnings do not follow the palettes in row order"
     );
     assert_eq!(
-        all[35 + palettes + duplicates..],
+        all[36 + palettes + duplicates..],
         (0..5).map(Toast::DsLayout).collect::<Vec<_>>()[..],
         "the DS layouts come last, in the order SELECT + L2 steps them"
     );

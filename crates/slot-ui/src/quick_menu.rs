@@ -186,11 +186,13 @@ pub enum QuickRow {
     Wear,
     /// slotPlus Shelf Life: what holding B to wipe a cart takes off it.
     CleanResets,
+    /// slotPlus Shelf Life: wipe and unwrap every cart at once, after a held confirmation.
+    CleanAllCarts,
     KidAllowance,
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 175 + cfg!(feature = "nds") as usize] = [
+    pub const ALL: [QuickRow; 176 + cfg!(feature = "nds") as usize] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -367,6 +369,7 @@ impl QuickRow {
         QuickRow::Dust,
         QuickRow::Wear,
         QuickRow::CleanResets,
+        QuickRow::CleanAllCarts,
         QuickRow::KidAllowance,
     ];
 
@@ -401,11 +404,12 @@ impl QuickRow {
     ];
 
     /// slotPlus Shelf Life: how the carts on the shelf show the way they've been kept.
-    pub const SHELF_LIFE: [QuickRow; 4] = [
+    pub const SHELF_LIFE: [QuickRow; 5] = [
         QuickRow::ShrinkWrap,
         QuickRow::Dust,
         QuickRow::Wear,
         QuickRow::CleanResets,
+        QuickRow::CleanAllCarts,
     ];
 
     pub const GENERAL: [QuickRow; 11] = [
@@ -705,9 +709,11 @@ impl QuickRow {
             | QuickRow::KidShelf
             | QuickRow::KidAllowance
             | QuickRow::ShelfLife => &QuickRow::GENERAL,
-            QuickRow::ShrinkWrap | QuickRow::Dust | QuickRow::Wear | QuickRow::CleanResets => {
-                &QuickRow::SHELF_LIFE
-            }
+            QuickRow::ShrinkWrap
+            | QuickRow::Dust
+            | QuickRow::Wear
+            | QuickRow::CleanResets
+            | QuickRow::CleanAllCarts => &QuickRow::SHELF_LIFE,
             QuickRow::Wifi
             | QuickRow::DateTime
             | QuickRow::LidOff
@@ -930,6 +936,7 @@ impl QuickRow {
             QuickRow::Dust => "Dust",
             QuickRow::Wear => "Wear",
             QuickRow::CleanResets => "Clean Button Resets",
+            QuickRow::CleanAllCarts => "Clean All Carts",
             QuickRow::FetchArt => "Fetch Missing Art",
             #[cfg(feature = "nds")]
             QuickRow::FetchBoxArt => "Fetch Box Art",
@@ -1075,6 +1082,7 @@ impl QuickRow {
                 | QuickRow::PlayGameplay
                 | QuickRow::General
                 | QuickRow::ShelfLife
+                | QuickRow::CleanAllCarts
                 | QuickRow::System
                 | QuickRow::Controls
                 | QuickRow::ControlsShelf

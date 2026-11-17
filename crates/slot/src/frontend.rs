@@ -1073,6 +1073,7 @@ impl Frontend {
         let reset = faces.reset.into_iter().map(&mut up).collect();
         let delete = faces.delete.into_iter().map(&mut up).collect();
         let kid = faces.kid.into_iter().map(&mut up).collect();
+        let clean_all = faces.clean_all.into_iter().map(&mut up).collect();
         let delete_shot = faces.delete_shot.into_iter().map(&mut up).collect();
         let labels = faces
             .quick_labels
@@ -1137,6 +1138,7 @@ impl Frontend {
         }
         app.set_reset_faces(reset);
         app.set_kid_faces(kid);
+        app.set_clean_all_faces(clean_all);
         app.set_delete_faces(delete);
         app.set_delete_shot_faces(delete_shot);
         app.set_quick_menu_faces(QuickMenuFaces {
@@ -1767,6 +1769,7 @@ struct UiFaces {
     repair: Vec<UndoFace>,
     reset: Vec<UndoFace>,
     kid: Vec<UndoFace>,
+    clean_all: Vec<UndoFace>,
     delete: Vec<UndoFace>,
     delete_shot: Vec<UndoFace>,
     update_legends: [UndoFace; 3],
@@ -1872,6 +1875,21 @@ impl UiFaces {
                     keep,
                     delete,
                 ]
+            },
+            clean_all: {
+                let [hold, cancel] =
+                    prompt_legends(footer_ink(false), "Hold to Clean All", "Cancel");
+                let mut faces = vec![
+                    menu_face("Clean all carts?"),
+                    menu_detail_face("Every cart loses its dust and wear,"),
+                    menu_detail_face("and every sealed cart is opened."),
+                    menu_detail_face("Hold B for 5 seconds to clean them all."),
+                    hold,
+                    cancel,
+                    menu_detail_face("Keep holding B"),
+                ];
+                faces.extend((1..=5).rev().map(|n| menu_face(&n.to_string())));
+                faces
             },
             kid: {
                 let [cancel, on] = prompt_legends(footer_ink(false), "Cancel", "Turn On");

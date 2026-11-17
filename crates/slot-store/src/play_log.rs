@@ -26,6 +26,8 @@ pub struct PlayRecord {
     pub cleaned: Option<u64>,
     /// `seconds` when the cart was last cleaned, so wear builds again only with more play.
     pub worn_from: u64,
+    /// slotPlus: when Clean All Carts took the cart out of its shrink wrap, if it did.
+    pub opened: Option<u64>,
     /// Fields this version doesn't know, kept as they were.
     other: Vec<(String, String)>,
 }
@@ -34,6 +36,11 @@ impl PlayRecord {
     /// The game has been played on this card.
     pub fn played(&self) -> bool {
         self.seconds > 0 || self.last.is_some()
+    }
+
+    /// The cart is out of its shrink wrap: played, or opened by Clean All Carts.
+    pub fn unwrapped(&self) -> bool {
+        self.played() || self.opened.is_some()
     }
 
     /// Since when the cart has sat untouched: the last of being played, cleaned or first seen.
@@ -119,6 +126,18 @@ impl PlayLog {
         }
     }
 
+    /// slotPlus Clean All Carts: every cart wiped of its dust and wear, and opened.
+    pub fn clean_all<'a>(
+        &mut self,
+        games: impl IntoIterator<Item = (Platform, &'a str)>,
+        now: u64,
+    ) {
+        for (platform, stem) in games {
+            self.clean_only(platform, stem, now, true, true);
+            self.entry(platform, stem).opened.get_or_insert(now);
+        }
+    }
+
     pub fn parse(text: &str) -> PlayLog {
         let mut games = HashMap::new();
         for line in text.lines() {
@@ -138,6 +157,7 @@ impl PlayLog {
                     ("seen", Some(n)) => r.seen = Some(n),
                     ("cleaned", Some(n)) => r.cleaned = Some(n),
                     ("worn_from", Some(n)) => r.worn_from = n,
+                    ("opened", Some(n)) => r.opened = Some(n),
                     _ => r.other.push((k.to_string(), v.to_string())),
                 }
             }
@@ -154,7 +174,12 @@ impl PlayLog {
             let r = &self.games[name];
             out.push_str(name);
             out.push_str(&format!("\tseconds={}", r.seconds));
-            for (k, v) in [("last", r.last), ("seen", r.seen), ("cleaned", r.cleaned)] {
+            for (k, v) in [
+                ("last", r.last),
+                ("seen", r.seen),
+                ("cleaned", r.cleaned),
+                ("opened", r.opened),
+            ] {
                 if let Some(v) = v {
                     out.push_str(&format!("\t{k}={v}"));
                 }
