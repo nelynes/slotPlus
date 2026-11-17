@@ -256,7 +256,8 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::RommPair,
             QuickRow::RommDisconnect,
             QuickRow::System,
-            QuickRow::ShelfLife
+            QuickRow::ShelfLife,
+            QuickRow::CleanAllCarts
         ]
     );
     for page in [
@@ -921,10 +922,17 @@ fn shelf_life_is_a_page_at_the_foot_of_the_shelf_page() {
     assert_eq!(QuickRow::ShelfLife.child(), Some(QuickRow::ShrinkWrap));
     assert_eq!(
         QuickRow::SHELF_LIFE.map(QuickRow::label),
-        ["Shrink Wrap", "Dust", "Wear", "Clean Button Resets"]
+        [
+            "Shrink Wrap",
+            "Dust",
+            "Wear",
+            "Clean Button Resets",
+            "Clean All Carts"
+        ]
     );
     for row in QuickRow::SHELF_LIFE {
         assert_eq!(row.parent(), Some(QuickRow::ShelfLife), "{row:?}");
-        assert!(!row.opens());
+        // Clean All Carts asks before it does anything; the rest are settings.
+        assert_eq!(row.opens(), row == QuickRow::CleanAllCarts, "{row:?}");
     }
 }

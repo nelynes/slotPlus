@@ -117,6 +117,11 @@ const PLAY_HOLD_MS: Millis = 500;
 /// slotPlus Shelf Life: how long B is held on the shelf to wipe a cart, and how long the
 /// shine runs across it after.
 const WIPE_HOLD_MS: Millis = 600;
+/// slotPlus Clean All Carts: how long B is held to confirm it, how short a press backs out
+/// instead, and how wide the bar that fills meanwhile is.
+pub const CLEAN_ALL_HOLD_MS: Millis = 5000;
+const CLEAN_ALL_TAP_MS: Millis = 400;
+const CLEAN_ALL_BAR_W: f32 = 260.0;
 const WIPE_SHINE_MS: Millis = 450;
 
 /// slotPlus Shelf Life: a cart being wiped clean.
@@ -811,6 +816,11 @@ pub struct App {
     quick_kid_shelf_faces: Option<[(TexId, u32, u32); 2]>,
     quick_nickname_faces: Option<[(TexId, u32, u32); 2]>,
     kid_faces: Vec<(TexId, u32, u32)>,
+    /// slotPlus Clean All Carts: the prompt is up (`Some`), and since when B has been held.
+    clean_all: Option<Option<Millis>>,
+    /// The prompt's lines, its two legends, then the held countdown's lines: "Keep holding
+    /// B" and 5 down to 1.
+    clean_all_faces: Vec<(TexId, u32, u32)>,
     kid_prompt: Option<KidMode>,
     kid_unlocked: bool,
     kid_toast_due: bool,
@@ -1400,6 +1410,8 @@ impl App {
             quick_kid_shelf_faces: None,
             quick_nickname_faces: None,
             kid_faces: Vec::new(),
+            clean_all: None,
+            clean_all_faces: Vec::new(),
             kid_prompt: None,
             kid_unlocked: false,
             kid_toast_due: false,
@@ -3157,6 +3169,7 @@ impl App {
             | QuickRow::CheckUpdates
             | QuickRow::Server
             | QuickRow::About
+            | QuickRow::CleanAllCarts
             | QuickRow::Screen
             | QuickRow::Game
             | QuickRow::Wallpaper
@@ -3306,6 +3319,95 @@ impl App {
             face,
             out,
         );
+    }
+
+    pub fn set_clean_all_faces(&mut self, faces: Vec<(TexId, u32, u32)>) {
+        self.clean_all_faces = faces;
+    }
+
+    /// slotPlus: the Clean All Carts prompt is up.
+    pub fn clean_all_prompt(&self) -> bool {
+        self.clean_all.is_some()
+    }
+
+    /// slotPlus: whole seconds of B still to hold, while it's held.
+    pub fn clean_all_countdown(&self) -> Option<u64> {
+        let since = self.clean_all.flatten()?;
+        let left = CLEAN_ALL_HOLD_MS.saturating_sub(self.now().saturating_sub(since));
+        Some(left.div_ceil(1000).max(1))
+    }
+
+    fn clean_all_input(&mut self, action: Action) {
+        let now = self.now();
+        match action {
+            Action::GbaDown(Btn::B) => self.clean_all = Some(Some(now)),
+            // A quick tap of B backs out, as B does anywhere; let go during the count and
+            // it starts again.
+            Action::GbaUp(Btn::B) => match self.clean_all.flatten() {
+                Some(at) if now.saturating_sub(at) < CLEAN_ALL_TAP_MS => self.clean_all = None,
+                _ => self.clean_all = Some(None),
+            },
+            Action::GbaDown(Btn::A) => self.clean_all = None,
+            _ => {}
+        }
+    }
+
+    fn clean_all_tick(&mut self) {
+        let Some(Some(at)) = self.clean_all else {
+            return;
+        };
+        if self.now().saturating_sub(at) >= CLEAN_ALL_HOLD_MS {
+            self.clean_all = None;
+            self.clean_all_carts();
+        }
+    }
+
+    /// slotPlus Shelf Life: every cart on the card wiped of its dust and wear, and every
+    /// sealed one opened, whatever Clean Button Resets says.
+    pub fn clean_all_carts(&mut self) {
+        let now = self.unix_now();
+        let games: Vec<(Platform, String)> =
+            self.carts().map(|c| (c.platform, c.stem.clone())).collect();
+        self.play_log
+            .clean_all(games.iter().map(|(p, s)| (*p, s.as_str())), now);
+        self.save_play_log();
+        self.reface_all();
+        self.hud.toast(Toast::CartsCleaned, self.now());
+    }
+
+    fn draw_clean_all(&self, out: &mut Vec<Draw>) {
+        let faces = &self.clean_all_faces;
+        let [title, d1, d2, d3, no, yes, keep, counts @ ..] = &faces[..] else {
+            return;
+        };
+        let Some(left) = self.clean_all_countdown() else {
+            return self.draw_prompt(&[*title, *d1, *d2, *d3, *no, *yes], out);
+        };
+        let n = (left as usize).clamp(1, counts.len().max(1));
+        let Some(count) = counts.get(counts.len().saturating_sub(n)) else {
+            return;
+        };
+        self.draw_prompt(&[*title, *keep, *count, *no, *yes], out);
+        // A bar filling as the count runs down.
+        let since = self.clean_all.flatten().unwrap_or(self.now());
+        let done = (self.now().saturating_sub(since) as f32 / CLEAN_ALL_HOLD_MS as f32).min(1.0);
+        let (w, h) = (CLEAN_ALL_BAR_W, 6.0);
+        let x = self.canvas().centred(w).floor();
+        let y = (self.canvas().h * 0.74).floor();
+        out.push(Draw::Rect {
+            x,
+            y,
+            w,
+            h,
+            colour: [1.0, 1.0, 1.0, 0.18],
+        });
+        out.push(Draw::Rect {
+            x,
+            y,
+            w: w * done,
+            h,
+            colour: [1.0, 1.0, 1.0, 0.9],
+        });
     }
 
     pub fn set_kid_faces(&mut self, faces: Vec<(TexId, u32, u32)>) {
@@ -4606,7 +4708,7 @@ impl App {
             .recents
             .iter()
             .any(|r| r.platform == cart.platform && r.stem == cart.stem);
-        let played = recent || record.is_some_and(|r| r.played());
+        let played = recent || record.is_some_and(|r| r.unwrapped());
         let dust = match (self.state.dust, record.and_then(|r| r.idle_since())) {
             (true, Some(since)) if self.state.clock_set => {
                 dust_level(self.unix_now().saturating_sub(since))
@@ -6914,6 +7016,9 @@ impl App {
             }
             return;
         }
+        if self.clean_all.is_some() {
+            return self.clean_all_input(action);
+        }
         if let Some(mode) = self.kid_prompt {
             match action {
                 Action::GbaDown(Btn::A) => self.confirm_kid_mode(mode),
@@ -7322,6 +7427,7 @@ impl App {
                 self.phase = clock_screen(self.utc_secs(), &self.state, self.has_saved(), true);
             }
             QuickRow::About => self.phase = Phase::About,
+            QuickRow::CleanAllCarts => self.clean_all = Some(None),
             QuickRow::FetchArt => self.open_fetch_missing_art(),
             #[cfg(feature = "nds")]
             QuickRow::FetchBoxArt => self.open_fetch_box_art(),
@@ -7844,6 +7950,7 @@ impl App {
             | QuickRow::KidShelf
             | QuickRow::DateTime
             | QuickRow::About
+            | QuickRow::CleanAllCarts
             | QuickRow::Screen
             | QuickRow::Game
             | QuickRow::Resume
@@ -8636,6 +8743,7 @@ impl App {
         self.take_update_events();
         self.play_hold();
         self.wipe_hold();
+        self.clean_all_tick();
         self.tear_step();
         self.repeat_held_dir();
         self.take_shot_list();
@@ -9285,6 +9393,7 @@ impl App {
             || self.update.is_some()
             || self.repair_prompt
             || self.kid_prompt.is_some()
+            || self.clean_all.is_some()
             || self.reset_prompt.is_some()
             || self.forget_prompt
             || self.delete_prompt
@@ -9389,6 +9498,9 @@ impl App {
         }
         if self.kid_prompt.is_some() {
             return self.draw_prompt(&self.kid_faces, out);
+        }
+        if self.clean_all.is_some() {
+            return self.draw_clean_all(out);
         }
         if let Some(row) = self.reset_prompt {
             return self.draw_prompt(&self.reset_prompt_faces(row), out);

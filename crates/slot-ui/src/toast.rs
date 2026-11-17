@@ -43,12 +43,14 @@ pub enum Toast {
     TintLow,
     TintMedium,
     TintHigh,
+    /// slotPlus: Clean All Carts is done.
+    CartsCleaned,
     Palette(GbColors),
     Duplicate(QuickRow),
 }
 
 impl Toast {
-    const FIXED: [Toast; 35] = [
+    const FIXED: [Toast; 36] = [
         Toast::StateSaved,
         Toast::StateLoaded,
         Toast::GameReset,
@@ -84,6 +86,7 @@ impl Toast {
         Toast::TintLow,
         Toast::TintMedium,
         Toast::TintHigh,
+        Toast::CartsCleaned,
     ];
 
     pub fn all() -> Vec<Toast> {
@@ -187,6 +190,7 @@ impl Toast {
             Toast::TintLow => "Wallpaper Tint: 25%",
             Toast::TintMedium => "Wallpaper Tint: 45%",
             Toast::TintHigh => "Wallpaper Tint: 65%",
+            Toast::CartsCleaned => "Every cart is clean",
             Toast::Palette(p) => p.label(),
             Toast::Duplicate(_) => "",
         }
