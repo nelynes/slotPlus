@@ -12029,7 +12029,7 @@ impl App {
             return;
         };
         let lift = lift_of(progress);
-        let (lid, _) = lid_from_shaped(self.canvas(), shell, shelf, progress);
+        let (lid, _) = lid_from_shaped(self.canvas(), shell, self.selected_box(), shelf, progress);
         let k = lid.w / lid_at(self.canvas(), 1.0).0.w;
         let (w, h) = (LID_SHADOW_W * k, LID_SHADOW_H * k);
         out.push(Draw::Tex {
@@ -12111,14 +12111,20 @@ impl App {
         }
     }
 
+    /// slotPlus: the selected cart's own size, which shapes how it opens.
+    fn selected_box(&self) -> (u32, u32) {
+        slot_ui::cart_box(self.selected_cart().map_or(Platform::Gba, |c| c.platform))
+    }
+
     fn draw_core_picker(&self, picker: &CorePicker, out: &mut Vec<Draw>) {
         let now = self.now();
         let progress = picker.openness(now);
         let lift = lift_of(progress);
         let (rest, scale) = self.shelf().selected_at(self.canvas());
         let shell = self.shelf().selected_shell();
-        let shelf = shelf_cart_shaped(self.canvas(), shell, rest, scale);
-        let board = board_from_shaped(self.canvas(), shell, shelf, progress);
+        let size = self.selected_box();
+        let shelf = shelf_cart_shaped(self.canvas(), shell, size, rest, scale);
+        let board = board_from_shaped(self.canvas(), shell, size, shelf, progress);
         let ready = self.core_faces_ready();
 
         if ready {
@@ -12173,7 +12179,8 @@ impl App {
 
         if ready {
             if let Some(tex) = self.core_lid_face {
-                let (lid, turn) = lid_from_shaped(self.canvas(), shell, shelf, progress);
+                let (lid, turn) =
+                    lid_from_shaped(self.canvas(), shell, self.selected_box(), shelf, progress);
                 let at = grown(lid, TURN_PAD as f32 * lid.w / CART_W as f32);
                 out.push(Draw::Turned {
                     x: at.x,
@@ -12189,7 +12196,8 @@ impl App {
             .selected_stem()
             .and_then(|stem| self.shelf().find(stem))
         {
-            let (lid, turn) = lid_from_shaped(self.canvas(), shell, shelf, progress);
+            let (lid, turn) =
+                lid_from_shaped(self.canvas(), shell, self.selected_box(), shelf, progress);
             out.push(Draw::Turned {
                 x: lid.x,
                 y: lid.y,
