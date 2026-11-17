@@ -128,6 +128,29 @@ fn a_cart_left_alone_gathers_dust_and_holding_b_wipes_it() {
     assert_eq!((r.seconds, r.worn_seconds()), (40 * 3600, 0));
 }
 
+/// Putting a dusty cart in the slot blows the dust off: its face is dropped to be drawn
+/// again clean, not kept dusty until something else redraws it.
+#[test]
+fn inserting_a_dusty_cart_redraws_it_clean() {
+    let d = tmp_root_with_carts(&["Emerald", "Fusion"]);
+    let mut log = PlayLog::default();
+    log.add_play(Platform::Gba, "Emerald", 3600, now() - 120 * 86_400);
+    write_play_log(d.path(), &log).unwrap();
+    let mut a = boot_with(d.path(), SlotState::default());
+    assert_eq!(look(&a).dust, 3);
+    let want = a.face_wants()[0];
+    a.set_cart_face(want.shelf, want.index, slot_gfx::TexId::from_raw(1));
+    assert!(a.shed_faces().is_empty());
+
+    a.apply(Action::Insert);
+    assert_eq!(look(&a).dust, 0, "the dust starts again from now");
+    assert_eq!(
+        a.shed_faces(),
+        vec![slot_gfx::TexId::from_raw(1)],
+        "the dusty face is dropped to be drawn again"
+    );
+}
+
 #[test]
 fn letting_go_of_b_early_leaves_the_dust() {
     let d = tmp_root_with_carts(&["Emerald", "Fusion"]);
