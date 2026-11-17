@@ -1311,8 +1311,8 @@ fn paste(back: &mut CartFace, paper: &[u8], sw: u32, sh: u32, (x0, y0): (u32, u3
 }
 
 /// Where a play-time sticker goes on the back of a cart: on the board of a GBA or Game Boy
-/// or WonderSwan cart, low on the back of a Lynx card, and beside the Notes on the back of
-/// a HuCard. Other carts have no back to show yet.
+/// or WonderSwan or Pokémon mini cart, low on the back of a Lynx card, and beside the Notes
+/// on the back of a HuCard. Other carts have no back to show yet.
 pub fn sticker_at(cart: &Cart, back: &CartFace) -> Option<(u32, u32)> {
     use slot_store::Platform;
     let (sw, sh) = (STICKER_W, STICKER_H);
@@ -1323,6 +1323,8 @@ pub fn sticker_at(cart: &Cart, back: &CartFace) -> Option<(u32, u32)> {
         ),
         Platform::Gba | Platform::Gbav => (224, 56),
         Platform::Ws => (250, 104),
+        // Low on the Pokémon mini board, either side of its mark.
+        Platform::Pm => (38, 126),
         Platform::Gb | Platform::Gbc if gb_shell_of(cart).is_some() => (28, 14),
         // To the right of the Notes on a HuCard's back, clear of the NAME line.
         Platform::Tg16 => (124, 141),
@@ -1352,6 +1354,7 @@ pub fn gold_sticker_at(cart: &Cart, back: &CartFace) -> Option<(u32, u32)> {
         Platform::Lynx => (16, back.h.saturating_sub(sh + 12)),
         Platform::Gba | Platform::Gbav => (224, 27),
         Platform::Ws => (66, 114),
+        Platform::Pm => (186, 126),
         Platform::Gb | Platform::Gbc if gb_shell_of(cart).is_some() => (28, 46),
         Platform::Tg16 => (124, 173),
         _ => return None,

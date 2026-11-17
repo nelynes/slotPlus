@@ -541,3 +541,53 @@ fn the_stickers_on_a_hucards_back_sit_beside_the_notes_clear_of_the_name() {
         "one above the other, not overlapping"
     );
 }
+
+#[test]
+fn a_pokemon_mini_cart_shows_its_own_board_with_the_game_on_its_chip() {
+    let pm = Cart {
+        platform: Platform::Pm,
+        rom: "Games/PokeMini/Pokemon Puzzle Collection.min".into(),
+        ..cart("Pokemon Puzzle Collection", "")
+    };
+    let other = Cart {
+        stem: "Pokemon Party mini".into(),
+        ..pm.clone()
+    };
+    let face = board_face(&pm);
+    assert_eq!((face.w, face.h), (300, 262), "the board fills the cart");
+    let at = |f: &CartFace, x: u32, y: u32| {
+        let i = ((y * f.w + x) * 4) as usize;
+        [f.rgba[i], f.rgba[i + 1], f.rgba[i + 2], f.rgba[i + 3]]
+    };
+    let green = at(&face, 60, 150);
+    assert!(
+        green[1] > green[0] + 40 && green[3] == 255,
+        "green board: {green:?}"
+    );
+    assert_eq!(at(&face, 5, 130)[3], 0, "nothing outside the board");
+    let chip = (
+        slot_ui::PM_ROM_X,
+        slot_ui::PM_ROM_Y,
+        slot_ui::PM_ROM_W,
+        slot_ui::PM_ROM_H,
+    );
+    let differs = (chip.0..chip.0 + chip.2)
+        .flat_map(|x| (chip.1..chip.1 + chip.3).map(move |y| (x, y)))
+        .filter(|&(x, y)| at(&face, x, y) != at(&board_face(&other), x, y))
+        .count();
+    assert!(differs > 30, "each game's name is on its chip: {differs}");
+    let (sw, sh) = (
+        slot_ui::shelf_life::STICKER_W,
+        slot_ui::shelf_life::STICKER_H,
+    );
+    let play = slot_ui::shelf_life::sticker_at(&pm, &face).expect("a play-time spot");
+    let gold = slot_ui::shelf_life::gold_sticker_at(&pm, &face).expect("a gold spot");
+    assert!(play.0 + sw <= gold.0, "side by side");
+    for (x, y) in [play, gold] {
+        assert!(
+            y >= chip.1 + chip.3 && y + sh < 160,
+            "below the chip, above the contacts"
+        );
+        assert!(x >= 30 && x + sw <= 270, "on the board");
+    }
+}
