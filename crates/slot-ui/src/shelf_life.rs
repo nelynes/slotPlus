@@ -47,6 +47,136 @@ impl Look {
     }
 }
 
+/// slotPlus Shelf Life: the money on a wrapped game's price sticker, from where it was sold.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum Money {
+    /// US dollars, and the answer whenever the release is American, worldwide, mixed or
+    /// unknown.
+    #[default]
+    Dollar,
+    /// A Japan-only release.
+    Yen,
+    /// A release for Europe only.
+    Euro,
+}
+
+/// Region tags in a No-Intro name that mean Europe. The UK sold in pounds, but it is
+/// Europe on these games' boxes, and three currencies are plenty for a sticker.
+const EUROPE: [&str; 16] = [
+    "Europe",
+    "Germany",
+    "France",
+    "Spain",
+    "Italy",
+    "Netherlands",
+    "Sweden",
+    "UK",
+    "Denmark",
+    "Norway",
+    "Finland",
+    "Portugal",
+    "Austria",
+    "Belgium",
+    "Switzerland",
+    "Scandinavia",
+];
+
+impl Money {
+    /// From the game's file name: the No-Intro region tag, as in `(Japan)` or
+    /// `(Europe) (En,Fr,De)`. A name with no region tag falls back to a GBA header code's last
+    /// letter (J Japan, E America, P and the European countries' letters Europe).
+    pub fn of(stem: &str, code: &str) -> Money {
+        let mut japan = false;
+        let mut europe = false;
+        let mut other = false;
+        let mut tagged = false;
+        for group in stem.split('(').skip(1) {
+            let group = group.split(')').next().unwrap_or("");
+            let regions: Vec<&str> = group.split(',').map(str::trim).collect();
+            let is_region = |r: &str| {
+                r == "Japan"
+                    || EUROPE.contains(&r)
+                    || matches!(
+                        r,
+                        "USA"
+                            | "World"
+                            | "Korea"
+                            | "Australia"
+                            | "Canada"
+                            | "Brazil"
+                            | "Asia"
+                            | "China"
+                            | "Taiwan"
+                            | "Hong Kong"
+                    )
+            };
+            if regions.is_empty() || !regions.iter().all(|r| is_region(r)) {
+                continue;
+            }
+            tagged = true;
+            for r in regions {
+                match r {
+                    "Japan" => japan = true,
+                    r if EUROPE.contains(&r) => europe = true,
+                    // Australia shares Europe's releases; they're priced as Europe's.
+                    "Australia" => europe = true,
+                    _ => other = true,
+                }
+            }
+            // The first region group is the release; later ones are something else.
+            break;
+        }
+        if !tagged {
+            return match code.chars().nth(3) {
+                Some('J') => Money::Yen,
+                Some('P' | 'D' | 'F' | 'S' | 'I' | 'X' | 'Y' | 'H' | 'U') => Money::Euro,
+                _ => Money::Dollar,
+            };
+        }
+        match (japan, europe, other) {
+            (true, false, false) => Money::Yen,
+            (false, true, false) => Money::Euro,
+            _ => Money::Dollar,
+        }
+    }
+
+    pub fn of_cart(cart: &Cart) -> Money {
+        Money::of(&cart.stem, &cart.code)
+    }
+
+    /// What a shop might have charged, in this money, picked by the game's own seed. The
+    /// same place in each list is the same sort of price.
+    fn prices(self) -> [&'static str; 8] {
+        match self {
+            Money::Dollar => PRICES,
+            Money::Yen => [
+                "2,800", "3,800", "4,200", "4,800", "5,200", "5,800", "6,800", "7,800",
+            ],
+            Money::Euro => [
+                "9,99", "14,99", "19,99", "24,99", "29,99", "34,99", "39,99", "49,99",
+            ],
+        }
+    }
+
+    /// A price as it's written: `$34.99`, `¥4,800`, `29,99 €`.
+    fn show(self, price: &str) -> String {
+        match self {
+            Money::Dollar => format!("${price}"),
+            Money::Yen => format!("¥{price}"),
+            Money::Euro => format!("{price} €"),
+        }
+    }
+
+    /// The same, spaced out as the scalloped label prints it.
+    fn show_spaced(self, price: &str) -> String {
+        match self {
+            Money::Dollar => format!("$ {price}"),
+            Money::Yen => format!("¥ {price}"),
+            Money::Euro => format!("{price} €"),
+        }
+    }
+}
+
 pub fn seed_of(cart: &Cart) -> u64 {
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;
     for b in cart.stem.bytes() {
@@ -184,12 +314,18 @@ fn edge_distance(face: &CartFace, max: u32) -> Vec<u8> {
 
 /// Draw how the cart has been kept into its face.
 pub fn apply_look(face: &mut CartFace, look: &Look, seed: u64) {
-    apply_look_labelled(face, look, seed, None);
+    apply_look_labelled(face, look, seed, None, Money::Dollar);
 }
 
 /// The same, knowing where the label sits on the face (`[x, y, w, h]` in the face's pixels),
 /// so heavy wear can fray, tear and lift it.
-pub fn apply_look_labelled(face: &mut CartFace, look: &Look, seed: u64, label: Option<[u32; 4]>) {
+pub fn apply_look_labelled(
+    face: &mut CartFace,
+    look: &Look,
+    seed: u64,
+    label: Option<[u32; 4]>,
+    money: Money,
+) {
     if look.plain() || face.w == 0 || face.h == 0 {
         return;
     }
@@ -202,7 +338,7 @@ pub fn apply_look_labelled(face: &mut CartFace, look: &Look, seed: u64, label: O
         insert_end(face, level, seed);
     }
     if look.wrap {
-        wrap(face, seed ^ WRAP_SALT);
+        wrap(face, seed ^ WRAP_SALT, money);
     }
     // Dust settles on whatever is outermost, the film included.
     if look.dust > 0 {
@@ -612,7 +748,7 @@ const FILM: [u8; 3] = [238, 243, 250];
 /// the outline turns soft and glassy; a cloudy layer lies over everything, with two glossy
 /// bands, creases at the pinched corners and in from the edges, a crimped heat seal along
 /// the top, and the shop's price sticker.
-fn wrap(face: &mut CartFace, seed: u64) {
+fn wrap(face: &mut CartFace, seed: u64, money: Money) {
     let (w, h) = (face.w, face.h);
     // The cart sits a little smaller inside the face, so the film has room to stand off it.
     shrink(face, FILM_SLACK);
@@ -754,7 +890,7 @@ fn wrap(face: &mut CartFace, seed: u64) {
             }
         }
     }
-    price_sticker(face, seed);
+    price_sticker(face, seed, money);
 }
 
 /// The shrink wrap alone, as a layer to draw over the bare cart while it is torn off: what
@@ -762,7 +898,7 @@ fn wrap(face: &mut CartFace, seed: u64) {
 ///
 /// The film is found by wrapping the outline twice, once black and once white: where the
 /// two differ the cart shows through, and what they share is the film.
-pub fn film_of(face: &CartFace, seed: u64) -> CartFace {
+pub fn film_of(face: &CartFace, seed: u64, money: Money) -> CartFace {
     let painted = |v: u8| {
         let mut f = CartFace {
             w: face.w,
@@ -772,7 +908,7 @@ pub fn film_of(face: &CartFace, seed: u64) -> CartFace {
         for px in f.rgba.chunks_exact_mut(4) {
             px[..3].fill(v);
         }
-        wrap(&mut f, seed ^ WRAP_SALT);
+        wrap(&mut f, seed ^ WRAP_SALT, money);
         f
     };
     let (dark, light) = (painted(0), painted(255));
@@ -993,9 +1129,10 @@ fn scalloped(w: f32, h: f32) -> impl Fn(f32, f32) -> bool {
 /// slotPlus Shelf Life: the shop's price sticker on a wrapped game. Four kinds, and where
 /// one goes, what it says and how straight it was put on all come from the game's seed, so a
 /// game always carries the same one.
-fn price_sticker(face: &mut CartFace, seed: u64) {
+fn price_sticker(face: &mut CartFace, seed: u64, money: Money) {
     let pick = |n: i64, of: usize| (hash(seed ^ 0x9a1c, n, 0) % of as u64) as usize;
-    let price = PRICES[pick(1, PRICES.len())];
+    let prices = money.prices();
+    let price = prices[pick(1, prices.len())];
     // Sizes are worked out at a small scale and printed a third larger, to read on the shelf.
     let z = |v: f32| (v * 1.3).round() as u32;
     let zf = |v: f32| v * 1.3;
@@ -1029,7 +1166,7 @@ fn price_sticker(face: &mut CartFace, seed: u64) {
                 dark,
                 false,
             );
-            let old = format!("${}", PRICES[was]);
+            let old = money.show(prices[was]);
             t.print(
                 z(27.0),
                 z(3.0),
@@ -1042,7 +1179,7 @@ fn price_sticker(face: &mut CartFace, seed: u64) {
             );
             t.rule(z(29.0), z(60.0), z(9.0), dark, 0.85);
             t.print(0, z(16.0), w, z(10.0), "DISCOUNTED", zf(8.5), dark, false);
-            let new = format!("${}", PRICES[now]);
+            let new = money.show(prices[now]);
             t.print(0, z(25.0), w, z(18.0), &new, zf(15.0), STAMP_INK, true);
             t
         }
@@ -1052,7 +1189,7 @@ fn price_sticker(face: &mut CartFace, seed: u64) {
             let mut t = Tag::cut(w, h, TAG_WHITE, seed, notched(w as f32, h as f32));
             t.rule(z(3.0), w - z(3.0), z(5.0), TAG_RED, 0.85);
             t.rule(z(3.0), w - z(3.0), h - z(5.0), TAG_RED, 0.85);
-            let words = format!("${price}");
+            let words = money.show(price);
             t.print(0, z(7.0), w, z(17.0), &words, zf(14.0), STAMP_INK, true);
             t
         }
@@ -1072,7 +1209,7 @@ fn price_sticker(face: &mut CartFace, seed: u64) {
                 STAMP_INK,
                 true,
             );
-            let words = format!("$ {price}");
+            let words = money.show_spaced(price);
             t.print(
                 z(4.0),
                 z(13.0),
@@ -1099,7 +1236,7 @@ fn price_sticker(face: &mut CartFace, seed: u64) {
                 TAG_RED,
                 false,
             );
-            let words = format!("${price}");
+            let words = money.show(price);
             t.print(
                 0,
                 z(11.0),
@@ -1418,7 +1555,7 @@ mod tests {
                 face.rgba[(y * 120 + x) * 4..][..4].copy_from_slice(&[90, 40, 40, 255]);
             }
         }
-        let film = film_of(&face, 7);
+        let film = film_of(&face, 7, Money::Dollar);
         let alpha = |x: usize, y: usize| film.rgba[(y * 120 + x) * 4 + 3];
         assert_eq!(alpha(0, 0), 0, "nothing far outside the cart");
         let thin = film
@@ -1459,7 +1596,7 @@ mod tests {
                 dust: 0,
                 wear: level,
             };
-            apply_look_labelled(&mut f, &look, 99, label);
+            apply_look_labelled(&mut f, &look, 99, label, Money::Dollar);
             f
         };
         let red_left = |f: &CartFace| {
@@ -1487,5 +1624,55 @@ mod tests {
             pale(&worn(3), 138) > pale(&blank(), 138) + 20,
             "the insert end rubs pale"
         );
+    }
+
+    #[test]
+    fn the_price_is_in_the_money_of_where_the_game_was_sold() {
+        let of = |stem: &str| Money::of(stem, "");
+        assert_eq!(of("Mother 3 (Japan)"), Money::Yen);
+        assert_eq!(
+            of("Mother 3 (Japan) (En) (v1.3)"),
+            Money::Yen,
+            "a translation of a Japanese cart"
+        );
+        assert_eq!(of("Golden Sun (Europe) (En,Fr,De)"), Money::Euro);
+        assert_eq!(of("Kuru Kuru Kururin (Europe, Australia)"), Money::Euro);
+        assert_eq!(of("Tetris (World) (Rev 1)"), Money::Dollar);
+        assert_eq!(of("Pokemon Pinball (USA, Australia)"), Money::Dollar);
+        assert_eq!(
+            of("Super Mario Land (Japan, USA)"),
+            Money::Dollar,
+            "a conflict is dollars"
+        );
+        assert_eq!(of("Advance Wars (USA) (Beta)"), Money::Dollar);
+        assert_eq!(of("My Homebrew"), Money::Dollar, "no tag, no code: dollars");
+        assert_eq!(
+            Money::of("Untagged", "AXVJ"),
+            Money::Yen,
+            "a GBA code's region letter"
+        );
+        assert_eq!(Money::of("Untagged", "BPEP"), Money::Euro);
+        assert_eq!(Money::of("Untagged", "BPEE"), Money::Dollar);
+        assert_eq!(Money::Yen.show("4,800"), "¥4,800");
+        assert_eq!(Money::Euro.show("29,99"), "29,99 €");
+    }
+
+    #[test]
+    fn a_yen_sticker_is_not_a_dollar_one() {
+        let face = || {
+            let mut f = CartFace {
+                w: 160,
+                h: 120,
+                rgba: vec![0; 160 * 120 * 4],
+            };
+            for px in f.rgba.chunks_exact_mut(4) {
+                px.copy_from_slice(&[90, 90, 96, 255]);
+            }
+            f
+        };
+        let (mut a, mut b) = (face(), face());
+        price_sticker(&mut a, 5, Money::Dollar);
+        price_sticker(&mut b, 5, Money::Yen);
+        assert_ne!(a.rgba, b.rgba);
     }
 }
