@@ -4,7 +4,7 @@
 
 Work toward slotPlus 3.0, "the cart remembers", on the `cart-remembers` branch. Not released yet.
 
-- **Play time.** slotPlus counts how long you play each game (paused menus, loading and sleep don't count) and keeps it in `Saves/play_log.txt`. Press START on a GBA, Game Boy or WonderSwan cart and its board carries a small handwritten sticker with the time; a Lynx card shows it on its back.
+- **Play time.** slotPlus counts how long you play each game (paused menus, loading and sleep don't count) and keeps it in `Saves/play_log.txt`. Press START on any cart and its board carries a small handwritten sticker with the time, with a tiny stopwatch on it; a Lynx card shows it on its back.
 - **A WonderSwan board.** START on a WonderSwan cart now opens it to show its board, drawn after Bandai's own: the coin cell in its clip, the ROM with the game's name on it, the mapper, the save RAM and the band of vias over the contacts. A or B closes it. The same board shows through clear WonderSwan shells. slotPlus's own boards (WonderSwan, Lynx) are marked "2026 SlotPlus+".
 - **Inside the Pokémon mini cart.** START now opens a Pokémon mini cart to its board, as it opens a WonderSwan's, drawn after a real one: one wide chip with the game's name on it, the small parts round it, and two rows of gold contacts. Its play-time and achievements stickers go low on the board, so a Pokémon mini shows its play time at last. A clear shell shows the new board through it.
 - **Icons on the stickers.** The play-time sticker has a tiny stopwatch printed in its top right corner, and the gold achievements sticker a tiny trophy, on every cart that shows them.
