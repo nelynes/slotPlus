@@ -397,6 +397,9 @@ fn the_values_read_as_the_menu_prints_them() {
             "1 hour",
             "1.5 hours",
             "2 hours",
+            "Wear",
+            "Dust",
+            "Disabled",
         ]
     );
     assert_eq!(QuickValue::flag(true), QuickValue::On);
@@ -950,7 +953,7 @@ fn shelf_life_is_a_page_at_the_foot_of_the_shelf_page() {
     assert_eq!(QuickRow::ShelfLife.child(), Some(QuickRow::ShrinkWrap));
     assert_eq!(
         QuickRow::SHELF_LIFE.map(QuickRow::label),
-        ["Shrink Wrap", "Dust", "Wear"]
+        ["Shrink Wrap", "Dust", "Wear", "Clean Button Resets"]
     );
     for row in QuickRow::SHELF_LIFE {
         assert_eq!(row.parent(), Some(QuickRow::ShelfLife), "{row:?}");

@@ -8,10 +8,10 @@ use slot_power::{Battery, Charge, LedState, LidPolicy, Power, RepairResult};
 use slot_retro::LinkChannel;
 use slot_store::{
     format_stamp, parse_stamp, read_slot_state, scan, write_slot_state, BatteryDisplay, BezelPick,
-    Blending, Cart, Collection, Core, GbColors, KidMode, Platform, Recent, Scale, Shader,
-    ShelfMode, ShotDir, ShotEntry, SlotState, StateEntry, StateRing, Stretch, WallpaperPick,
-    WallpaperTint, BLUE_LIGHT_MAX, BRIGHTNESS_MAX, CONTRAST_MAX, DIM_MAX, FF_SPEEDS, RING_MAX,
-    SATURATION_MAX, SUNLIGHT_MAX, VOLUME_MAX,
+    Blending, Cart, CleanResets, Collection, Core, GbColors, KidMode, Platform, Recent, Scale,
+    Shader, ShelfMode, ShotDir, ShotEntry, SlotState, StateEntry, StateRing, Stretch,
+    WallpaperPick, WallpaperTint, BLUE_LIGHT_MAX, BRIGHTNESS_MAX, CONTRAST_MAX, DIM_MAX, FF_SPEEDS,
+    RING_MAX, SATURATION_MAX, SUNLIGHT_MAX, VOLUME_MAX,
 };
 use slot_ui::{
     board_from_shaped, draw_empty_slot, draw_footer, draw_ground, draw_sticker, ease, footer_ink,
@@ -3155,6 +3155,12 @@ impl App {
             ),
             QuickRow::Dust => Some(QuickValue::flag(self.state.dust)),
             QuickRow::Wear => Some(QuickValue::flag(self.state.wear)),
+            QuickRow::CleanResets => Some(match self.state.clean_resets {
+                CleanResets::Wear => QuickValue::WearOnly,
+                CleanResets::Dust => QuickValue::DustOnly,
+                CleanResets::Both => QuickValue::Both,
+                CleanResets::Disabled => QuickValue::Disabled,
+            }),
             QuickRow::ShelfLife => None,
             QuickRow::RommProtocol => Some(match self.romm.protocol {
                 crate::romm::Protocol::Https => QuickValue::Https,
@@ -4851,11 +4857,20 @@ impl App {
         let Some(cart) = self.selected_cart().cloned() else {
             return false;
         };
-        if !self.face_look(&cart).cleanable() {
+        // Clean Button Resets says what a wipe takes off; with none of that on the cart
+        // there's nothing to wipe.
+        let resets = self.state.clean_resets;
+        let look = self.face_look(&cart);
+        let (dust, wear) = (
+            resets.dust() && look.dust > 0,
+            resets.wear() && look.wear > 0,
+        );
+        if !dust && !wear {
             return false;
         }
         let now = self.unix_now();
-        self.play_log.clean(cart.platform, &cart.stem, now);
+        self.play_log
+            .clean_only(cart.platform, &cart.stem, now, resets.dust(), resets.wear());
         self.save_play_log();
         self.reface(&cart.stem);
         true
@@ -7294,7 +7309,7 @@ impl App {
                 }
                 Action::QuickMenu => self.open_quick_menu(),
                 Action::GbaDown(Btn::A) => self.play_held = Some(now),
-                Action::GbaDown(Btn::B) if self.shelf_life_on() => {
+                Action::GbaDown(Btn::B) if self.can_wipe() => {
                     self.wipe = Some(Wipe::Holding(now))
                 }
                 Action::GbaUp(Btn::B) => {
@@ -7722,6 +7737,7 @@ impl App {
             | QuickRow::ShrinkWrap
             | QuickRow::Dust
             | QuickRow::Wear
+            | QuickRow::CleanResets
             | QuickRow::Wallpaper
             | QuickRow::WallpaperTint
             | QuickRow::Resume
@@ -8112,6 +8128,7 @@ impl App {
                 }
                 self.reface_all();
             }
+            QuickRow::CleanResets => s.clean_resets = s.clean_resets.step(right),
             QuickRow::ShelfLife => return,
             QuickRow::KidAllowance => {
                 let all = QuickValue::ALLOWANCE;
@@ -12560,8 +12577,11 @@ impl App {
         }
     }
 
-    fn shelf_life_on(&self) -> bool {
-        self.state.dust || self.state.wear
+    /// slotPlus: holding B wipes a cart, unless Clean Button Resets turns it off, or
+    /// there's nothing it's set to take off that Shelf Life shows.
+    fn can_wipe(&self) -> bool {
+        let r = self.state.clean_resets;
+        (r.dust() && self.state.dust) || (r.wear() && self.state.wear)
     }
 
     fn wipe_hold(&mut self) {

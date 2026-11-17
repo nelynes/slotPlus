@@ -165,6 +165,65 @@ impl WallpaperTint {
     }
 }
 
+/// slotPlus Shelf Life: what holding B to wipe a cart takes off it.
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
+pub enum CleanResets {
+    /// The dust and the wear.
+    #[default]
+    Both,
+    /// Only the wear; the dust stays.
+    Wear,
+    /// Only the dust; the wear stays.
+    Dust,
+    /// Nothing: holding B doesn't wipe.
+    Disabled,
+}
+
+impl CleanResets {
+    pub const ALL: [CleanResets; 4] = [
+        CleanResets::Wear,
+        CleanResets::Dust,
+        CleanResets::Both,
+        CleanResets::Disabled,
+    ];
+
+    pub fn key(self) -> &'static str {
+        match self {
+            CleanResets::Both => "both",
+            CleanResets::Wear => "wear",
+            CleanResets::Dust => "dust",
+            CleanResets::Disabled => "off",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<CleanResets> {
+        CleanResets::ALL.into_iter().find(|c| c.key() == value)
+    }
+
+    /// Whether a wipe takes off the dust.
+    pub fn dust(self) -> bool {
+        matches!(self, CleanResets::Both | CleanResets::Dust)
+    }
+
+    /// Whether a wipe takes off the wear.
+    pub fn wear(self) -> bool {
+        matches!(self, CleanResets::Both | CleanResets::Wear)
+    }
+
+    pub fn step(self, right: bool) -> CleanResets {
+        let n = CleanResets::ALL.len();
+        let at = CleanResets::ALL
+            .iter()
+            .position(|c| *c == self)
+            .unwrap_or(0);
+        CleanResets::ALL[if right {
+            (at + 1) % n
+        } else {
+            (at + n - 1) % n
+        }]
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
 pub enum BatteryDisplay {
     #[default]
@@ -500,6 +559,8 @@ pub struct SlotState {
     pub dust: bool,
     /// slotPlus Shelf Life: well-played carts show their wear.
     pub wear: bool,
+    /// slotPlus Shelf Life: what holding B to wipe a cart takes off it.
+    pub clean_resets: CleanResets,
     pub wifi_off: bool,
     pub nickname: String,
     pub gb_core: Core,
@@ -741,6 +802,7 @@ impl Default for SlotState {
             shrink_wrap: true,
             dust: true,
             wear: true,
+            clean_resets: CleanResets::Both,
             wifi_off: false,
             nickname: String::new(),
             gb_core: Core::Gambatte,
@@ -892,6 +954,7 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     text.push_str(&format!("battery_display={}\n", s.battery_display.key()));
     text.push_str(&format!("shrink_wrap={}\n", s.shrink_wrap as u8));
     text.push_str(&format!("dust={}\n", s.dust as u8));
+    text.push_str(&format!("clean_resets={}\n", s.clean_resets.key()));
     text.push_str(&format!("wear={}\n", s.wear as u8));
     if s.wifi_off {
         text.push_str("wifi_off=1\n");
@@ -1027,6 +1090,7 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut shrink_wrap = None;
     let mut dust = None;
     let mut wear = None;
+    let mut clean_resets = None;
     let mut wifi_off = None;
     let mut nickname = None;
     let mut gb_core = None;
@@ -1111,6 +1175,7 @@ fn parse(text: &str) -> Option<SlotState> {
             "shrink_wrap" => shrink_wrap = flag(value),
             "dust" => dust = flag(value),
             "wear" => wear = flag(value),
+            "clean_resets" => clean_resets = CleanResets::parse(value),
             "wifi_off" => wifi_off = flag(value),
             "nickname" => nickname = Some(value.to_string()),
             "gb_core" => gb_core = Core::parse(value).filter(|c| c.runs(Platform::Gb)),
@@ -1239,6 +1304,7 @@ fn parse(text: &str) -> Option<SlotState> {
         shrink_wrap: shrink_wrap.unwrap_or(fallback.shrink_wrap),
         dust: dust.unwrap_or(fallback.dust),
         wear: wear.unwrap_or(fallback.wear),
+        clean_resets: clean_resets.unwrap_or(fallback.clean_resets),
         wifi_off: wifi_off.unwrap_or(fallback.wifi_off),
         nickname: nickname.unwrap_or_default(),
         gb_core: gb_core.unwrap_or(Core::Mgba),
