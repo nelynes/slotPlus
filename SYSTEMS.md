@@ -129,7 +129,7 @@ The buttons follow the TurboExpress's layout: II on the left, I on the right.
 | **Picture** | The 160x152 screen at 3x, or stretched to fill the screen. |
 | **Shaders** | Off, LCD3x, Grid, Simpletex, Shimmerless. |
 | **Bezel** | A bundled Default with the NeoGeo Pocket name and logo down the left side, or your own in `Bezels/NGP/`. |
-| **Cart** | The NeoGeo Pocket pak: a ridged cap, the label in a recessed frame, and a lower band with SNK and NGP plaques and a down arrow. Dark grey by default. |
+| **Cart** | The NeoGeo Pocket pak: a ridged cap, the label in a recessed frame, and a lower band with SNK and NGP plaques and a down arrow. Dark grey by default. START opens it to its board, drawn after the real ones: one tall chip with the game's name on it, lettering in bare copper, and fine traces fanning down to two banks of contacts. As on the real pak, the foot with its plaques stays on, so only the tips of the contacts show. The play-time and gold achievements stickers sit on the left of the board. A clear shell shows the same board through it. |
 | **Saves** | `Saves/NGP/<game name>.flash`. |
 
 The core writes its `.flash` save itself when the game stops. Eject the cart, power off or restart from the menu as usual, and slotPlus stops the core first so the save is written. Switching off with the power switch mid-game can lose it.

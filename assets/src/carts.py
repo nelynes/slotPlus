@@ -16,9 +16,9 @@ For each mould it writes, into the repository's `assets/`:
     <mould>_board.png     the board a clear cart shows
     <mould>_decal.png     drawn over the shell untinted (contacts, PCB)
 
-usage: python3 assets/src/carts.py [ws|lynx|pm|gg|ngp|tg16|nds ...]
+usage: python3 assets/src/carts.py [ws|lynx|pm|gg|gg_board|ngp|ngp_board|tg16|nds ...]
 
-(pm draws only pm_board.png; the Pokémon mini's other layers come from
+(pm, gg_board and ngp_board draw only the board; the Pokémon mini's other layers come from
 tools/cart_art/pokemini.py.)
 """
 
@@ -881,11 +881,117 @@ def neogeo_pocket():
     interior(c, body, 43, [(w * 0.5, h * 0.16, 8), (w * 0.12, h * 0.6, 6),
                            (w * 0.88, h * 0.6, 6)]).save(os.path.join(ASSETS, "ngp_interior.png"))
 
-    board_region = c.rrect(c.layer(), 10, h * 0.16, w - 10, h - 3, 5)
-    board = pcb(c, board_region, 44, [(w * 0.18, h * 0.3, w * 0.5, h * 0.58),
-                                       (w * 0.6, h * 0.34, w * 0.8, h * 0.5)])
-    board, balpha = fingers(c, w * 0.07, w * 0.93, h * 0.935, h - 5, 44, board,
-                            f(board_region))
+    ngp_board(c)
+
+
+# --------------------------------------------------------------------------
+# The NeoGeo Pocket board, after the real ones: green, a bite out of the top
+# edge, one tall chip with its legs along the top and bottom, a post pad each
+# side of it, a hole near each edge, lettering in bare copper on the right,
+# fine traces fanning down to two banks of long contacts either side of a slot.
+# The pak's foot stays on when the lid comes off, so slot-ui lays it over the
+# bottom of this and only the tips of the contacts show. No makers' names.
+
+NGP_GREEN = np.array([24, 128, 84], np.float32)
+NGP_TRACE = np.array([70, 184, 128], np.float32)
+NGP_COPPER = [214, 184, 112]
+# Where the chip's marking goes; `slot_ui::board` writes the game's name there.
+NGP_ROM = (124, 63, 190, 184)
+NGP_BOARD = (10, 43, 302, 265)
+
+
+def ngp_pcb(c):
+    rng = np.random.default_rng(81)
+    x0, y0, x1, y1 = NGP_BOARD
+    outline = c.rrect(c.layer(), x0, y0, x1, y1, 4)
+    cut = c.layer()
+    c.ellipse(cut, 163 - 8, y0 - 8, 163 + 8, y0 + 8)        # the bite in the top edge
+    c.rrect(cut, 151, 182, 158, y1 + 2, 3)                  # the slot between the banks
+    for hx in (24, 288):
+        c.ellipse(cut, hx - 5, 153 - 5, hx + 5, 153 + 5)    # the holes by the edges
+    region = np.clip(f(outline) - f(cut), 0, 1)
+
+    rgb = np.ones((c.H, c.W, 3), np.float32) * NGP_GREEN
+    blotch = ndimage.gaussian_filter(rng.normal(0, 1, (c.H // 8 + 1, c.W // 8 + 1)), 2.4)
+    blotch = np.kron(blotch / max(blotch.std(), 1e-6), np.ones((8, 8)))[: c.H, : c.W]
+    rgb += (blotch * 5.0)[..., None].astype(np.float32)
+    rgb += grain((c.H, c.W), 82, 3.5)[..., None]
+
+    rx0, ry0, rx1, ry1 = NGP_ROM
+    legs = 20
+    pitch = (rx1 - rx0) / legs
+    bank = 18
+    left = [14 + k * (151 - 14) / bank + (151 - 14) / bank / 2 for k in range(bank)]
+    right = [158 + k * (300 - 158) / bank + (300 - 158) / bank / 2 for k in range(bank)]
+    tip_y = 204
+
+    # Traces: from the legs along the chip's foot, out to either side and down
+    # to the contacts, the outermost leg to the outermost contact so none cross.
+    traces = c.layer()
+    d = ImageDraw.Draw(traces)
+    for i in range(legs):
+        lx = rx0 + pitch * (i + 0.5)
+        if i < legs // 2:
+            fx = left[int(round(i * (bank - 1) / (legs // 2 - 1)))]
+        else:
+            n = legs - 1 - i
+            fx = right[bank - 1 - int(round(n * (bank - 1) / (legs // 2 - 1)))]
+        route(d, [(lx, ry1 + 2), (lx, ry1 + 5), (fx, tip_y - 4), (fx, tip_y)], 0.9)
+    # Some from the top legs off to the posts and round the edges.
+    for i in range(0, legs, 3):
+        lx = rx0 + pitch * (i + 0.5)
+        side = -1 if lx < (rx0 + rx1) / 2 else 1
+        ex = (x0 + 18) if side < 0 else (x1 - 18)
+        route(d, [(lx, ry0 - 2), (lx, ry0 - 8 - i * 0.3), (ex, ry0 - 8 - i * 0.3 + 30),
+                  (ex, 190)], 0.9)
+    rgb = paint(rgb, soft(f(traces), 0.2), NGP_TRACE, 0.8)
+
+    # The chip, legs along its top and bottom.
+    rgb = chip_with_legs(c, rgb, rx0, ry0, rx1, ry1, "tb", pitch, leg=4.0, seed=83)
+
+    copper = lambda rgb, mask: paint(rgb, mask, NGP_COPPER, 0.95)
+    rgb = copper(rgb, f(c.text(c.layer(), 115, 70, "40", 7)))
+    rgb = copper(rgb, f(c.text(c.layer(), 198, 70, "21", 7)))
+    rgb = copper(rgb, f(c.text(c.layer(), 118, 191, "1", 7)))
+    rgb = copper(rgb, f(c.text(c.layer(), 112, 146, "IC1", 7)))
+    rgb = copper(rgb, f(c.text(c.layer(), 196, 55, "C1", 7)))
+    rgb = copper(rgb, f(c.text(c.layer(), 18, 197, "36", 6)))
+    rgb = copper(rgb, f(c.text(c.layer(), 294, 197, "1", 6)))
+    # The lettering on the right, where the real boards have theirs.
+    rgb = copper(rgb, f(c.text(c.layer(), 246, 82, "2026 SlotPlus+", 9)))
+    rgb = copper(rgb, f(c.text(c.layer(), 246, 102, "NP-SP26", 15, weight=0.3)))
+    rgb = copper(rgb, f(c.text(c.layer(), 246, 122, "MADE FOR RG SP", 9)))
+    rgb = copper(rgb, f(c.text(c.layer(), 246, 136, "2026.11.17", 9)))
+
+    # C1, the post pads, and copper round the holes.
+    rgb = passive(c, rgb, 174, 52, False)
+    for px, py in ((90, 92), (216, 156)):
+        rgb = paint(rgb, f(c.ellipse(c.layer(), px - 9, py - 9, px + 9, py + 9)), [40, 150, 100])
+        rgb = paint(rgb, f(c.rrect(c.layer(), px - 2.5, py - 2.5, px + 2.5, py + 2.5, 0.4)), NGP_COPPER)
+    for hx in (24, 288):
+        ring = np.clip(f(c.ellipse(c.layer(), hx - 8, 145, hx + 8, 161)) - f(cut), 0, 1)
+        rgb = paint(rgb, ring, [40, 150, 100])
+
+    dist = ndimage.distance_transform_edt(region > 0.5) / S
+    rgb = rgb * (1 - 0.3 * np.clip(1.6 - dist, 0, 1))[..., None]
+    rgb = rgb * region[..., None]
+    alpha = region
+
+    # Two banks of long contacts, either side of the slot.
+    gold = c.layer()
+    for xs in (left, right):
+        w = (xs[1] - xs[0]) * 0.62
+        for x in xs:
+            c.rrect(gold, x - w / 2, tip_y, x + w / 2, y1 - 1, 0.6)
+    g = f(gold) * region
+    shine = np.linspace(1.06, 0.88, c.H)[:, None]
+    rgb = rgb * (1 - g[..., None]) + (np.array([212, 172, 84], np.float32) * shine[..., None]) * g[..., None]
+    return rgb, alpha
+
+
+def ngp_board(c=None):
+    """Only the board, after the real ones (see ngp_pcb)."""
+    board, balpha = ngp_pcb(c or Canvas(312, 268))
     rgba_colour(board, balpha).save(os.path.join(ASSETS, "ngp_board.png"))
 
 
@@ -1137,6 +1243,7 @@ MOULDS = {
     "gg": gamegear,
     "gg_board": gg_board,
     "ngp": neogeo_pocket,
+    "ngp_board": ngp_board,
     "tg16": turbochip,
     "nds": ds_card,
 }

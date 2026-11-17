@@ -82,13 +82,25 @@ pub const GG_ROM_X: u32 = 136;
 pub const GG_ROM_Y: u32 = 112;
 pub const GG_ROM_W: u32 = 66;
 pub const GG_ROM_H: u32 = 90;
+/// slotPlus: the same on the NeoGeo Pocket board's tall chip, as `NGP_ROM` in carts.py.
+pub const NGP_ROM_X: u32 = 124;
+pub const NGP_ROM_Y: u32 = 63;
+pub const NGP_ROM_W: u32 = 66;
+pub const NGP_ROM_H: u32 = 121;
+/// slotPlus: where a NeoGeo Pocket pak's foot starts. The foot, with its plaques, is one
+/// piece with the back, so it stays on when the lid comes off and hides most of the
+/// contacts.
+const NGP_FOOT_Y: u32 = 211;
 
 /// slotPlus: carts whose back can be turned to, with nothing to pick there, only the
 /// board (and the play-time sticker) to see.
 pub fn shows_board_alone(platform: slot_store::Platform) -> bool {
     matches!(
         platform,
-        slot_store::Platform::Ws | slot_store::Platform::Pm | slot_store::Platform::Gg
+        slot_store::Platform::Ws
+            | slot_store::Platform::Pm
+            | slot_store::Platform::Gg
+            | slot_store::Platform::Ngp
     )
 }
 
@@ -134,6 +146,10 @@ pub fn board_face(cart: &Cart) -> CartFace {
         slot_store::Platform::Gg => {
             Some((bitmaps::Mould::Gg, (GG_ROM_X, GG_ROM_Y, GG_ROM_W, GG_ROM_H)))
         }
+        slot_store::Platform::Ngp => Some((
+            bitmaps::Mould::Ngp,
+            (NGP_ROM_X, NGP_ROM_Y, NGP_ROM_W, NGP_ROM_H),
+        )),
         _ => None,
     };
     if let Some((mould, (x, y, w, h))) = chip {
@@ -145,6 +161,13 @@ pub fn board_face(cart: &Cart) -> CartFace {
         };
         let mark = marking_sized(&rom_marking(&cart.stem), w, h);
         over(&mut face, &mark, x, y);
+        if cart.platform == slot_store::Platform::Ngp {
+            keep_foot(
+                &mut face,
+                &crate::cart::cart_face_with(cart, None),
+                NGP_FOOT_Y,
+            );
+        }
         return face;
     }
     let mut face = CartFace {
@@ -154,6 +177,22 @@ pub fn board_face(cart: &Cart) -> CartFace {
     };
     over(&mut face, &rom_marking_face(&cart.stem), ROM_X, ROM_Y);
     face
+}
+
+/// Lay the rows of the cart's own face from `from_y` down over the board: the part of
+/// the shell that stays when the lid comes off.
+fn keep_foot(board: &mut CartFace, front: &CartFace, from_y: u32) {
+    if (board.w, board.h) != (front.w, front.h) {
+        return;
+    }
+    let start = (from_y * front.w * 4) as usize;
+    let mut foot = CartFace {
+        rgba: vec![0; front.rgba.len()],
+        w: front.w,
+        h: front.h,
+    };
+    foot.rgba[start..].copy_from_slice(&front.rgba[start..]);
+    over(board, &foot, 0, 0);
 }
 
 fn ink_band(
