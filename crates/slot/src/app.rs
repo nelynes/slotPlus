@@ -4766,6 +4766,7 @@ impl App {
     }
 
     /// A cart going into the slot: its shrink wrap comes off, and its dust starts again.
+    /// Its face is redrawn whenever either changes, so a dusty cart comes back out clean.
     fn note_inserted(&mut self, platform: Platform, stem: &str) {
         if !self.state.clock_set {
             return;
@@ -4773,9 +4774,7 @@ impl App {
         let before = self.look_of(platform, stem);
         let now = self.unix_now();
         self.play_log.add_play(platform, stem, 0, now);
-        if before.is_some_and(|l| l.wrap) {
-            self.reface_if(platform, stem, before);
-        }
+        self.reface_if(platform, stem, before);
     }
 
     /// slotPlus: the day's play a locked Kid Mode allows, in seconds.
