@@ -77,13 +77,18 @@ pub const PM_ROM_X: u32 = 95;
 pub const PM_ROM_Y: u32 = 24;
 pub const PM_ROM_W: u32 = 102;
 pub const PM_ROM_H: u32 = 46;
+/// slotPlus: the same on the Game Gear board's tall chip, as `GG_ROM` in carts.py.
+pub const GG_ROM_X: u32 = 136;
+pub const GG_ROM_Y: u32 = 112;
+pub const GG_ROM_W: u32 = 66;
+pub const GG_ROM_H: u32 = 90;
 
 /// slotPlus: carts whose back can be turned to, with nothing to pick there, only the
 /// board (and the play-time sticker) to see.
 pub fn shows_board_alone(platform: slot_store::Platform) -> bool {
     matches!(
         platform,
-        slot_store::Platform::Ws | slot_store::Platform::Pm
+        slot_store::Platform::Ws | slot_store::Platform::Pm | slot_store::Platform::Gg
     )
 }
 
@@ -122,15 +127,24 @@ pub fn board_face(cart: &Cart) -> CartFace {
         over(&mut face, &mark, WS_ROM_X, WS_ROM_Y);
         return face;
     }
-    if cart.platform == slot_store::Platform::Pm {
-        let (w, h) = bitmaps::Mould::Pm.size();
+    let chip = match cart.platform {
+        slot_store::Platform::Pm => {
+            Some((bitmaps::Mould::Pm, (PM_ROM_X, PM_ROM_Y, PM_ROM_W, PM_ROM_H)))
+        }
+        slot_store::Platform::Gg => {
+            Some((bitmaps::Mould::Gg, (GG_ROM_X, GG_ROM_Y, GG_ROM_W, GG_ROM_H)))
+        }
+        _ => None,
+    };
+    if let Some((mould, (x, y, w, h))) = chip {
+        let (fw, fh) = mould.size();
         let mut face = CartFace {
-            rgba: bitmaps::extra_board(bitmaps::Mould::Pm).to_vec(),
-            w,
-            h,
+            rgba: bitmaps::extra_board(mould).to_vec(),
+            w: fw,
+            h: fh,
         };
-        let mark = marking_sized(&rom_marking(&cart.stem), PM_ROM_W, PM_ROM_H);
-        over(&mut face, &mark, PM_ROM_X, PM_ROM_Y);
+        let mark = marking_sized(&rom_marking(&cart.stem), w, h);
+        over(&mut face, &mark, x, y);
         return face;
     }
     let mut face = CartFace {

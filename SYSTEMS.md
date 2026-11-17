@@ -161,7 +161,7 @@ The buttons follow the NeoGeo Pocket's own layout, so its A is the left button a
 | **Picture** | The 160x144 screen at 3x, or stretched to fill the screen. |
 | **Shaders** | Off, LCD3x, Grid, Simpletex, Shimmerless. |
 | **Bezel** | A bundled Default, a black face with the Game Gear's green power light glowing above the screen, or your own in `Bezels/GG/`. |
-| **Cart** | The Game Gear pak: a raised hood with grip ridges arching over the label, and the SEGA plaque at the foot. Black by default. |
+| **Cart** | The Game Gear pak: a raised hood with grip ridges arching over the label, and the SEGA plaque at the foot. Black by default. START opens it to its board, drawn after the real ones: one tall chip with the game's name on it, a capacitor each side, a big hole below the chip, bundles of traces down to two rows of gold contacts, and the play-time and gold achievements stickers low on either side. A clear shell shows the same board through it. |
 | **Saves** | Games with battery saves keep them in `Saves/GG/`. |
 
 ### Controls

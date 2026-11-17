@@ -666,12 +666,144 @@ def gamegear():
     interior(c, body, 33, [(w * 0.5, h * 0.2, 9), (w * 0.14, h * 0.6, 6),
                            (w * 0.86, h * 0.6, 6)]).save(os.path.join(ASSETS, "gg_interior.png"))
 
-    board_region = c.rrect(c.layer(), 12, h * 0.16, w - 12, h - 3, 5)
-    board = pcb(c, board_region, 34, [(w * 0.2, h * 0.3, w * 0.5, h * 0.55),
-                                       (w * 0.6, h * 0.36, w * 0.78, h * 0.5)])
-    board, balpha = fingers(c, w * 0.08, w * 0.92, h * 0.94, h - 5, 50, board,
-                            f(board_region))
+    gg_board(c)
+
+
+def gg_board(c=None):
+    """Only the board, after the real ones (see gg_pcb)."""
+    board, balpha = gg_pcb(c or Canvas(352, 329))
     rgba_colour(board, balpha).save(os.path.join(ASSETS, "gg_board.png"))
+
+
+# --------------------------------------------------------------------------
+# The Game Gear board, after the real ones: green, a thin trace framing the top
+# from one capacitor's pads to the other's, one tall chip with its legs down
+# both sides, a post hole each side and a big one below the chip, dense bundles
+# of traces running down round it, and two staggered rows of gold contacts.
+# No makers' names or part numbers; the slotPlus mark instead.
+
+GG_GREEN = np.array([22, 112, 52], np.float32)
+GG_TRACE = np.array([60, 170, 92], np.float32)
+GG_GOLD = [214, 176, 92]
+# Where the chip's marking goes; `slot_ui::board` writes the game's name there.
+GG_ROM = (136, 112, 202, 202)
+GG_BOARD = (12, 53, 340, 326)
+GG_HOLE = (176, 240, 15)
+
+
+def gg_pcb(c):
+    rng = np.random.default_rng(71)
+    x0, y0, x1, y1 = GG_BOARD
+    outline = c.rrect(c.layer(), x0, y0, x1, y1, 4)
+    hx, hy, hr = GG_HOLE
+    cut = c.ellipse(c.layer(), hx - hr, hy - hr, hx + hr, hy + hr)
+    region = np.clip(f(outline) - f(cut), 0, 1)
+
+    rgb = np.ones((c.H, c.W, 3), np.float32) * GG_GREEN
+    blotch = ndimage.gaussian_filter(rng.normal(0, 1, (c.H // 8 + 1, c.W // 8 + 1)), 2.4)
+    blotch = np.kron(blotch / max(blotch.std(), 1e-6), np.ones((8, 8)))[: c.H, : c.W]
+    rgb += (blotch * 5.0)[..., None].astype(np.float32)
+    rgb += grain((c.H, c.W), 72, 3.5)[..., None]
+
+    rx0, ry0, rx1, ry1 = GG_ROM
+    legs = 16
+    pitch = (ry1 - ry0) / legs
+    top_count, low_count = 22, 23
+    fx0, fx1 = x0 + 10, x1 - 10
+    top_pitch = (fx1 - fx0) / top_count
+    top_x = [fx0 + top_pitch * (k + 0.5) for k in range(top_count)]
+    top_y0, top_y1 = 286, 306
+    low_y0, low_y1 = 309, 324
+
+    # The ground plane, a shade lighter under the mask, round the edge and the hole.
+    plane = c.layer()
+    c.rrect(plane, x0 + 6, y0 + 16, x0 + 70, top_y0 - 8, 3)
+    c.rrect(plane, x1 - 70, y0 + 16, x1 - 6, top_y0 - 8, 3)
+    c.ellipse(plane, hx - hr - 9, hy - hr - 9, hx + hr + 9, hy + hr + 9)
+    rgb = paint(rgb, soft(f(plane), 0.6), [34, 132, 64], 0.55)
+
+    # Traces: legs out sideways to lanes down the side of the chip (the top leg
+    # the farthest out, so none cross), down past it, then fanning out evenly
+    # to the contacts. The legs between go to vias by the chip.
+    traces = c.layer()
+    d = ImageDraw.Draw(traces)
+    routed = [0, 1, 3, 4, 6, 7, 9, 10, 12, 13, 15]
+    stubs = []
+    for side, edge in ((-1, rx0), (1, rx1)):
+        for i in range(legs):
+            ly = ry0 + pitch * (i + 0.5)
+            if i not in routed:
+                vx = edge + side * (8 + (i % 2) * 5)
+                route(d, [(edge + side * 3, ly), (vx, ly)], 1.1)
+                stubs.append((vx + side * 2, ly))
+                continue
+            n = routed.index(i)
+            lane = edge + side * (12 + (len(routed) - 1 - n) * 6.0)
+            k = n if side < 0 else top_count - 1 - n
+            fx = top_x[k]
+            route(d, [(edge + side * 3, ly), (lane, ly), (lane, 226),
+                      (fx, 274), (fx, top_y0)], 1.2)
+    stubs = stubs[::2]
+    # The frame across the top, from C1's pads to C2's.
+    route(d, [(56, 104), (56, 80), (296, 80), (296, 104)], 1.4)
+    route(d, [(176, 80), (176, 98)], 1.4)
+    rgb = paint(rgb, soft(f(traces), 0.2), GG_TRACE, 0.85)
+
+    # Gold pads: a pair each side for C1 and C2, one over the chip, CE at the top.
+    pads = c.layer()
+    for px in (46, 286):
+        c.rrect(pads, px, 98, px + 18, 116, 1.2)
+        c.rrect(pads, px, 140, px + 18, 158, 1.2)
+    c.rrect(pads, 168, 92, 184, 104, 1.2)
+    c.rrect(pads, 168, 60, 184, 70, 1.2)
+    for k in range(top_count):
+        x = top_x[k]
+        c.rrect(pads, x - top_pitch * 0.3, top_y0, x + top_pitch * 0.3, top_y1, 2.0)
+    for k in range(low_count):
+        x = fx0 + top_pitch * (k + 0.0)
+        if x0 + 4 < x < x1 - 4:
+            c.rrect(pads, x - top_pitch * 0.3, low_y0, x + top_pitch * 0.3, low_y1, 1.5)
+    g = f(pads)
+    shine = np.linspace(1.06, 0.88, c.H)[:, None]
+    rgb = rgb * (1 - g[..., None]) + (np.array(GG_GOLD, np.float32) * shine[..., None]) * g[..., None]
+
+    # The small caps beside the pads, in silkscreen boxes.
+    rgb = passive(c, rgb, 72, 124, True)
+    rgb = passive(c, rgb, 276, 124, True)
+    rgb = silk_box(c, rgb, 46, 120, 64, 136)
+    rgb = silk_box(c, rgb, 286, 120, 304, 136)
+
+    # The chip, legs down both long sides.
+    rgb = chip_with_legs(c, rgb, rx0, ry0, rx1, ry1, "lr", pitch, leg=5.0, seed=73)
+    rgb = silk_text(c, rgb, rx0 - 16, ry0 + 4, "IC1", 7)
+    rgb = silk_text(c, rgb, rx0 - 9, ry0 + 13, "1", 6)
+    rgb = silk_text(c, rgb, rx1 + 12, ry0 + 4, "32", 6)
+    rgb = silk_text(c, rgb, rx1 + 12, ry1 - 4, "17", 6)
+    rgb = silk_text(c, rgb, 36, 92, "C1", 7)
+    rgb = silk_text(c, rgb, 316, 92, "C2", 7)
+    rgb = silk_text(c, rgb, 160, 65, "CE", 6)
+    rgb = silk_text(c, rgb, 192, 62, "+", 6)
+
+    # The marks along the top edge, and a fiducial in two corners.
+    rgb = silk_text(c, rgb, 76, 66, "SP-2026A", 7)
+    rgb = silk_mark(c, rgb, 330, 66, year_px=9, name_px=11)
+    fid = c.layer()
+    c.rrect(fid, x0 + 6, y0 + 6, x0 + 13, y0 + 13, 0.6)
+    c.rrect(fid, x1 - 14, top_y0 - 22, x1 - 7, top_y0 - 15, 0.6)
+    rgb = paint(rgb, f(fid), [150, 160, 170])
+
+    # The post holes each side, and a copper ring round the big one.
+    ring = np.clip(f(c.ellipse(c.layer(), hx - hr - 3, hy - hr - 3, hx + hr + 3, hy + hr + 3))
+                   - f(cut), 0, 1)
+    rgb = paint(rgb, ring, [24, 96, 46])
+    for px, py in ((49, 197), (303, 197)):
+        rgb = paint(rgb, f(c.ellipse(c.layer(), px - 7, py - 7, px + 7, py + 7)), [30, 124, 60])
+        rgb = paint(rgb, f(c.ellipse(c.layer(), px - 4, py - 4, px + 4, py + 4)), [12, 40, 22])
+    rgb = vias(c, rgb, stubs + [(118, 96), (234, 96), (176, 214)], r=1.9)
+
+    dist = ndimage.distance_transform_edt(region > 0.5) / S
+    rgb = rgb * (1 - 0.35 * np.clip(1.6 - dist, 0, 1))[..., None]
+    return rgb * region[..., None], region
 
 
 # --------------------------------------------------------------------------
@@ -1003,6 +1135,7 @@ MOULDS = {
     "lynx": lynx,
     "pm": pokemini,
     "gg": gamegear,
+    "gg_board": gg_board,
     "ngp": neogeo_pocket,
     "tg16": turbochip,
     "nds": ds_card,

@@ -72,7 +72,7 @@ pub use board::{
     shelf_cart, shelf_cart_at, shelf_cart_shaped, slide_of, socket_face, socket_face_text,
     update_cart_face, Placed, Seats, BOARD_H, BOARD_W, BOARD_Y, CHIP_H, CHIP_TIP, CHIP_U, CHIP_V,
     CHIP_W, FINGERS, FINGER_H, FINGER_Y, GBA_SEATS, HOLD_NAMES, HOP_LIFT, LID_TURN, ROM_H, ROM_W, ROM_X, ROM_Y,
-    WS_ROM_H, WS_ROM_W, WS_ROM_X, WS_ROM_Y, PM_ROM_H, PM_ROM_W, PM_ROM_X, PM_ROM_Y,
+    WS_ROM_H, WS_ROM_W, WS_ROM_X, WS_ROM_Y, PM_ROM_H, PM_ROM_W, PM_ROM_X, PM_ROM_Y, GG_ROM_H, GG_ROM_W, GG_ROM_X, GG_ROM_Y,
     SHADOW_H, SHADOW_W, SLIDE_SHARE, SLIDE_UP, SOCKET_H, SOCKET_U, SOCKET_V, SOCKET_W, TURN_PAD,
 };
 pub use cart::{

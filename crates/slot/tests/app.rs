@@ -2774,6 +2774,28 @@ fn start_on_a_wonderswan_cart_shows_its_board_alone() {
     assert!(!d.path().join(slot_store::SELECTED_CORE_FILE).exists());
 }
 
+/// slotPlus: so does a Game Gear cart.
+#[test]
+fn start_on_a_game_gear_cart_shows_its_board_alone() {
+    let d = common::tmp_root_with_carts(&[]);
+    let gg = d.path().join("Games/GG");
+    std::fs::create_dir_all(&gg).unwrap();
+    for stem in ["Sonic & Tails", "Shinobi"] {
+        std::fs::write(gg.join(format!("{stem}.gg")), vec![0u8; 0x10000]).unwrap();
+    }
+    let (d, mut app) = booted_on_shelf(d);
+    fake_picker_faces(&mut app);
+    assert_eq!(app.selected_cart().map(|c| c.platform), Some(Platform::Gg));
+    app.apply(Action::GbaDown(Btn::Start));
+    assert_eq!(app.core_picker(), Some(Core::Gearsystem));
+    let_it_hop(&mut app);
+    app.apply(Action::GbaDown(Btn::B));
+    let_it_close(&mut app);
+    let_it_close(&mut app);
+    assert_eq!(app.core_picker(), None);
+    assert!(!d.path().join(slot_store::SELECTED_CORE_FILE).exists());
+}
+
 /// slotPlus: a Pokémon mini cart opens the same way, to its board.
 #[test]
 fn start_on_a_pokemon_mini_cart_shows_its_board_alone() {
