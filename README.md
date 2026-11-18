@@ -6,20 +6,38 @@
 
 ---
 
+# New on 3.0: The Cart Remembers
+
+Your carts now keep a record of how they've been played. Full notes are in the [3.0 release](https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus3.0).
+
+<p align="center">
+<img src=".github/resources/new-in-3.0/01-shelf-life.jpg" width="49%" alt="Shelf Life: a shrink-wrapped cart, three levels of dust and three of wear">
+<img src=".github/resources/new-in-3.0/02-price-stickers.jpg" width="49%" alt="Shrink-wrapped carts with price stickers in dollars, yen and euros">
+</p>
+<p align="center">
+<img src=".github/resources/new-in-3.0/03-every-cart-opens.jpg" width="49%" alt="Every cart opens: the boards inside each system's cart, with play-time and achievement stickers">
+<img src=".github/resources/new-in-3.0/04-achievement-printout.jpg" width="49%" alt="Achievement progress on a gold sticker inside the cart, and the whole set printed on the Game Boy Printer">
+</p>
+<p align="center">
+<img src=".github/resources/new-in-3.0/05-pokemon-mini.jpg" width="49%" alt="Pokémon mini carts on their own shelf">
+<img src=".github/resources/new-in-3.0/06-and-more.jpg" width="49%" alt="And more: romhack patches, Kid Play Time, save backups, switching editions and fixes">
+</p>
+
+- **Shelf Life.** Games you've never played come shrink-wrapped with a price sticker, and the film tears off the first time you play. Carts left alone gather dust, and carts you play a lot show their wear. Hold B on a cart to clean it, or clean them all at once from Settings → Shelf → Shelf Life.
+- **Every cart opens.** START opens any cart to show the board inside, now on every system: new boards for WonderSwan and Pokémon mini, and in slotPlusUltra Game Gear, NeoGeo Pocket and DS, with the back of a HuCard for the TurboGrafx-16. Your play time is handwritten on a sticker inside.
+- **Achievements on the cart and on paper.** A gold sticker inside shows how far you've got, and SELECT prints the whole set on the Game Boy Printer.
+- **Pokémon mini**, in both editions.
+- **Romhack and translation patches** (`.ips`, `.bps`, `.ups`) applied as the game loads.
+- **Kid Play Time**, a daily limit for Kid Mode.
+- **Save backups:** the last three versions of each save are kept.
+- **Switch between slotPlus and slotPlusUltra** from Check for Updates.
+- **New options in Settings are marked with a blue dot.**
+- In slotPlusUltra, **the DS uses your Nickname and the real time**, and DSperate and Gearsystem are updated.
+- **Fixes:** WonderSwan games run at full speed again, and there's no more green border on a TV.
+
 # Coming Soon
 
 <img width="3200" height="1800" alt="slotplus-3-roadmap" src="https://github.com/user-attachments/assets/d0ea4840-7e64-4084-b8b9-c69646cca75c" />
-
-# New on 2.9
-
-- **RetroAchievements for slotPlusUltra's Game Gear, NeoGeo Pocket and TurboGrafx-16.** Download Achievement Sets checks those games too, and they earn achievements like the rest. The DS is still to come.
-- **Now built on Slot 1.16.0,** with handwritten titles on carts without label art, Frame Blending on the GPU and the rest of [Slot's 1.16 changes](https://github.com/slot-cfw/slot/releases/tag/v1.16.0).
-- **A faster Nintendo DS core in slotPlusUltra.** DSperate v3.3.0 with its own frame skip: Mario Kart DS now holds full speed, and leaving a DS game no longer freezes the handheld.
-
-# New on 2.8
-
-- **RetroAchievements for WonderSwan, WonderSwan Color and Atari Lynx.** Download Achievement Sets now checks those games too, and they earn achievements just like the Game Boy family.
-- RA support for ultra systems in development (Game Gear, NeoGeo Pocket and TurboGrafx-16 arrived in 2.9).
 
 # What is slotPlus?
 
@@ -50,7 +68,7 @@ Each release comes in two versions. Pick the one you want from the [releases pag
 - **Folders:** each system's folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
 - **Carts:** each system has its own cart, drawn in Slot's look. WonderSwan games get a black cart, WonderSwan Color games a frosted clear one, and a HuCard turns over to go into the slot contacts first.
 - **RetroAchievements:** Game Boy, Game Boy Color, Game Boy Advance, WonderSwan and Atari Lynx games (and in slotPlusUltra, Game Gear, NeoGeo Pocket and TurboGrafx-16 games) earn softcore achievements, with a banner in Slot's style. Enter your account in Settings → RetroAchievements and download the sets for your games from there. Achievements earned with Wi-Fi off are sent from the shelf. [More](crates/slot-achievements/README.md).
-- **Cart Slot:** set Settings > General > Cart Slot to Bespoke and the slot on each shelf becomes the back of that system's handheld: a pearl WonderSwan, a Lynx II and a blue Pokémon mini, plus a Game Gear, a carbon NeoGeo Pocket Color, a TurboExpress and a silver DS Lite in Ultra. The Game Boy shelves keep Slot's own.
+- **Cart Slot:** set Settings → Shelf → Cart Slot to Bespoke and the slot on each shelf becomes the back of that system's handheld: a pearl WonderSwan, a Lynx II and a blue Pokémon mini, plus a Game Gear, a carbon NeoGeo Pocket Color, a TurboExpress and a silver DS Lite in Ultra. The Game Boy shelves keep Slot's own.
 
 **Controls, label art sizes, bezels, saves, the DS's screen layouts and stylus, and how Lynx and WonderSwan games that turn sideways work are all in the [systems guide](SYSTEMS.md).**
 
