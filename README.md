@@ -6,6 +6,10 @@
 
 ---
 
+# Coming Soon
+
+<img width="3200" height="1800" alt="slotplus-3-roadmap" src="https://github.com/user-attachments/assets/d0ea4840-7e64-4084-b8b9-c69646cca75c" />
+
 # New on 2.9
 
 - **RetroAchievements for slotPlusUltra's Game Gear, NeoGeo Pocket and TurboGrafx-16.** Download Achievement Sets checks those games too, and they earn achievements like the rest. The DS is still to come.
