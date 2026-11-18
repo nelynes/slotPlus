@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>slot+</title>
-<meta name="description" content="slotPlus: Slot's bespoke, Game Boy-centric frontend for the Anbernic RG SP, plus WonderSwan, Atari Lynx, Game Gear, NeoGeo Pocket, TurboGrafx-16, Nintendo DS, HDMI out and RetroAchievements.">
+<meta name="description" content="slotPlus: Slot's bespoke, Game Boy-centric frontend for the Anbernic RG SP, plus WonderSwan, Atari Lynx, Pokémon mini, Game Gear, NeoGeo Pocket, TurboGrafx-16, Nintendo DS, HDMI out and RetroAchievements.">
 <meta property="og:title" content="slot+">
 <meta property="og:description" content="Slot's bespoke, Game Boy-centric frontend for the Anbernic RG SP, plus more handhelds and HDMI out.">
 <meta property="og:type" content="website">
@@ -26,6 +26,7 @@
     <span class="menu-bars" aria-hidden="true"></span>
   </button>
   <nav class="tabs" id="section-tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" id="t-new" aria-controls="new" aria-selected="false" tabindex="-1">New in 3.0</button>
     <button class="tab" role="tab" id="t-install" aria-controls="install" aria-selected="false" tabindex="-1">Installing</button>
     <button class="tab" role="tab" id="t-features" aria-controls="features" aria-selected="false" tabindex="-1"><span class="tab-plus">+</span>Features</button>
     <button class="tab" role="tab" id="t-systems" aria-controls="systems" aria-selected="false" tabindex="-1">Systems</button>
@@ -50,9 +51,10 @@
       <a class="btn ultra" href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-plusultra.zip">Download Ultra</a>
     </div>
     <ul class="editions" aria-label="The two versions">
-      <li class="edition plus-ed"><span class="ed-name">Plus</span><span class="ed-sys">WonderSwan, WonderSwan Color, Atari Lynx</span></li>
+      <li class="edition plus-ed"><span class="ed-name">Plus</span><span class="ed-sys">WonderSwan, WonderSwan Color, Atari Lynx, Pokémon mini</span></li>
       <li class="edition ultra-ed"><span class="ed-name">Ultra</span><span class="ed-sys">All of Plus, and Game Gear, NeoGeo Pocket, TurboGrafx-16, Nintendo DS</span></li>
     </ul>
+    <p class="sub news-link"><span class="new-dot" aria-hidden="true"></span>slotPlus 3.0 is out. <a href="#new">See what's new</a></p>
     <p class="sub">Both keep everything Slot does for Game Boy, Game Boy Color and Game Boy Advance. <a href="https://github.com/nelynes/slotPlus/releases/latest">All releases</a></p>
   </div>
 
@@ -86,6 +88,74 @@
   </div>
 </section>
 
+<section class="panel reference news" id="new" role="tabpanel" aria-labelledby="t-new" hidden>
+  <div class="wrap">
+    <h2>New in 3.0: The Cart Remembers</h2>
+    <p class="lede">Your carts now keep a record of how they've been played. Every change is in the <a href="https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus3.0">release notes</a>.</p>
+
+    <figure class="news-item" id="new-shelf-life">
+      <img src="media/new/01-shelf-life.jpg" width="1600" height="900" loading="lazy" alt="A shrink-wrapped cart, then three levels of dust and three of wear">
+      <figcaption>
+        <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+        <h3>Shelf Life</h3>
+        <p>Carts left alone gather dust: a little after two weeks, thick after three months. Carts you play show their wear after 3, 8 and 25 hours. Hold <kbd>B</kbd> on a cart to clean it, choose what the clean takes off, or clean every cart at once. It's all in Settings → Shelf → Shelf Life.</p>
+      </figcaption>
+    </figure>
+
+    <figure class="news-item" id="new-shrink-wrap">
+      <img src="media/new/02-price-stickers.jpg" width="1600" height="900" loading="lazy" alt="Shrink-wrapped carts with price stickers in dollars, yen and euros">
+      <figcaption>
+        <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+        <h3>Still in the Shrink Wrap</h3>
+        <p>A game you've never played sits in shrink wrap with a price sticker, priced in dollars, yen or euros by where the game was sold. The first time you put it in, the film rips open with a crackle of cellophane.</p>
+      </figcaption>
+    </figure>
+
+    <figure class="news-item" id="new-carts-open">
+      <img src="media/new/03-every-cart-opens.jpg" width="1600" height="900" loading="lazy" alt="The boards inside each system's cart, with play-time and achievement stickers">
+      <figcaption>
+        <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+        <h3>Every Cart Opens</h3>
+        <p>START opens any cart to the board inside, now on every system: new boards for WonderSwan and Pokémon mini, and in Ultra the Game Gear, NeoGeo Pocket and DS. A HuCard turns over to a printed back with your Nickname on it. Your play time is handwritten on a sticker inside.</p>
+      </figcaption>
+    </figure>
+
+    <figure class="news-item" id="new-achievements">
+      <img src="media/new/04-achievement-printout.jpg" width="1600" height="900" loading="lazy" alt="A gold achievements sticker inside the cart, and the whole set printed on the Game Boy Printer">
+      <figcaption>
+        <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+        <h3>Your Progress, on the Cart and on Paper</h3>
+        <p>A gold sticker inside the cart shows how many of a game's RetroAchievements you've earned. With the cart open, <kbd>SELECT</kbd> prints the whole set on the Game Boy Printer, and the printout is kept beside your screenshots.</p>
+      </figcaption>
+    </figure>
+
+    <figure class="news-item" id="new-pokemon-mini">
+      <img src="media/new/05-pokemon-mini.jpg" width="1600" height="900" loading="lazy" alt="Pokémon mini carts on their own shelf">
+      <figcaption>
+        <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+        <h3>Pokémon mini</h3>
+        <p>Put <code>.min</code> games in <code>Games/PokeMini/</code>. They get their own shelf and little carts, and with Cart Slot on Bespoke the slot is the back of a blue Pokémon mini. <a href="#sys-pm">Controls and details</a></p>
+      </figcaption>
+    </figure>
+
+    <figure class="news-item" id="new-more">
+      <img src="media/new/06-and-more.jpg" width="1600" height="900" loading="lazy" alt="And more: romhack patches, Kid Play Time, save backups, switching editions and fixes">
+      <figcaption>
+        <h3>And More</h3>
+        <ul class="news-list">
+          <li><strong>Romhacks and translations:</strong> put a <code>.ips</code>, <code>.bps</code> or <code>.ups</code> patch beside a game with the same name and it's applied as the game loads.</li>
+          <li><strong>Kid Play Time:</strong> a daily limit for Kid Mode, from 15 minutes to 2 hours.</li>
+          <li><strong>Save backups:</strong> the last three versions of each save are kept in <code>Saves/Backups/</code>.</li>
+          <li><strong>Switch editions:</strong> move between Plus and Ultra from Settings → System → Check for Updates.</li>
+          <li><strong>What's new is marked:</strong> a blue dot in Settings beside every new option.</li>
+          <li><strong>Nintendo DS</strong> <span class="badge ultra">Ultra</span> uses your Nickname and the real time, on DSperate v3.4.1.</li>
+          <li><strong>Fixes:</strong> WonderSwan games run at full speed again, and no more green border on a TV.</li>
+        </ul>
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
 <section class="panel install" id="install" role="tabpanel" aria-labelledby="t-install" hidden>
   <div class="wrap">
     <h2>Installing</h2>
@@ -107,6 +177,7 @@
             <li>Game Boy Advance, Game Boy Color and Game Boy</li>
             <li>WonderSwan and WonderSwan Color</li>
             <li>Atari Lynx</li>
+            <li>Pokémon mini</li>
           </ul>
           <a class="btn" href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-plus.zip">Download <code>slot-plus.zip</code></a>
         </div>
@@ -304,7 +375,7 @@
       <li class="step" id="cartslot" data-clip="cartslot.mp4">
         <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
         <h3>A Cart Slot for Every System</h3>
-        <p>Set Settings &gt; General &gt; Cart Slot to Bespoke and the slot on each shelf becomes the back of that system's handheld.<br>Plus has a pearl WonderSwan and a Lynx II. Ultra adds a Game Gear, a carbon NeoGeo Pocket Color, a TurboExpress and a silver DS Lite.<br>The Game Boy shelves keep slot's own.</p>
+        <p>Set Settings &gt; Shelf &gt; Cart Slot to Bespoke and the slot on each shelf becomes the back of that system's handheld.<br>Plus has a pearl WonderSwan, a Lynx II and a blue Pokémon mini. Ultra adds a Game Gear, a carbon NeoGeo Pocket Color, a TurboExpress and a silver DS Lite.<br>The Game Boy shelves keep slot's own.</p>
       </li>
       <li class="step" id="hucard" data-clip="hucard.mp4">
         <p class="badges"><span class="badge ultra">Ultra</span></p>
@@ -363,6 +434,7 @@
       <button class="subtab" role="tab" id="t-sys-shared" aria-controls="sys-shared" aria-selected="true">Every System</button>
       <button class="subtab" role="tab" id="t-sys-ws" aria-controls="sys-ws" aria-selected="false" tabindex="-1">WonderSwan</button>
       <button class="subtab" role="tab" id="t-sys-lynx" aria-controls="sys-lynx" aria-selected="false" tabindex="-1">Atari Lynx</button>
+      <button class="subtab" role="tab" id="t-sys-pm" aria-controls="sys-pm" aria-selected="false" tabindex="-1">Pokémon mini</button>
       <button class="subtab" role="tab" id="t-sys-gg" aria-controls="sys-gg" aria-selected="false" tabindex="-1">Game Gear</button>
       <button class="subtab" role="tab" id="t-sys-ngp" aria-controls="sys-ngp" aria-selected="false" tabindex="-1">NeoGeo Pocket</button>
       <button class="subtab" role="tab" id="t-sys-tg16" aria-controls="sys-tg16" aria-selected="false" tabindex="-1">TurboGrafx-16</button>
@@ -449,6 +521,31 @@
       <p class="note">For a sideways game slotPlus doesn't recognise, add a line to <code>Config/lynx_rotation.txt</code> so it knows which way the game is made:</p>
       <pre><code>Game Name (USA) = 90</code></pre>
       <p class="note">The values are <code>auto</code>, <code>0</code>, <code>90</code>, <code>270</code>, <code>180</code> and <code>manual</code>. If a game comes up upside down, swap 90 for 270. With <code>manual</code>, each <kbd>SELECT</kbd> turns the picture another quarter, so you can find the right value.</p>
+    </div>
+
+    <div class="subpanel" id="sys-pm" role="tabpanel" aria-labelledby="t-sys-pm" hidden>
+      <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+      <dl class="keys">
+        <div class="key"><dt>Games</dt><dd><code>.min</code> in <code>Games/PokeMini/</code></dd></div>
+        <div class="key"><dt>BIOS</dt><dd>Not needed: PokeMini has its own</dd></div>
+        <div class="key"><dt>Core</dt><dd>PokeMini</dd></div>
+        <div class="key"><dt>Label art</dt><dd><code>Labels/PokeMini/</code>, about 248x136 px</dd></div>
+        <div class="key"><dt>Picture</dt><dd>Shown at 6x, or at 7.5x to fill the screen with Settings → Screen → Pokémon mini → Full Screen. The screen's grey shades come from its LCD's ghosting, so they're kept.</dd></div>
+        <div class="key"><dt>Shaders</dt><dd>Off, LCD3x, Grid (the default), Dot, Shimmerless, Transparent</dd></div>
+        <div class="key"><dt>Bezel</dt><dd>Your own in <code>Bezels/PokeMini/</code></dd></div>
+        <div class="key"><dt>Cart</dt><dd>The small Pokémon mini cart. With Cart Slot on Bespoke, the slot is the back of a blue Pokémon mini. START opens the cart to its board.</dd></div>
+        <div class="key"><dt>Saves</dt><dd><code>Saves/PokeMini/</code>, plus save states and the resume state</dd></div>
+      </dl>
+      <h3>Controls</h3>
+      <p class="note">The Pokémon mini has no Start button. L1 and R1 are the game's own buttons, so its picture size is the one Full Screen setting rather than each game's.</p>
+      <dl class="keys">
+        <div class="key"><dt><kbd>D-pad</kbd></dt><dd>D-pad</dd></div>
+        <div class="key"><dt><kbd>A</kbd> / <kbd>B</kbd></dt><dd>A / B</dd></div>
+        <div class="key"><dt><kbd>R1</kbd></dt><dd>C button</dd></div>
+        <div class="key"><dt><kbd>L1</kbd></dt><dd>Shake (the handheld rumbles)</dd></div>
+        <div class="key"><dt><kbd>SELECT</kbd></dt><dd>Power</dd></div>
+        <div class="key"><dt>Hold <kbd>X</kbd> / <kbd>Y</kbd></dt><dd>Turbo A / turbo B</dd></div>
+      </dl>
     </div>
 
     <div class="subpanel" id="sys-gg" role="tabpanel" aria-labelledby="t-sys-gg" hidden>
@@ -583,6 +680,7 @@
       <div class="key"><dt>Game Boy and Color</dt><dd><a href="https://mgba.io">mGBA</a></dd></div>
       <div class="key"><dt>WonderSwan</dt><dd><a href="https://github.com/libretro/beetle-wswan-libretro">Beetle WonderSwan</a>, from Mednafen's Cygne</dd></div>
       <div class="key"><dt>Atari Lynx</dt><dd><a href="https://github.com/libretro/beetle-lynx-libretro">Beetle Lynx</a>, from Mednafen</dd></div>
+      <div class="key"><dt>Pokémon mini</dt><dd><a href="https://github.com/libretro/PokeMini">PokeMini</a> by JustBurn</dd></div>
       <div class="key"><dt>Game Gear</dt><dd><a href="https://github.com/drhelius/Gearsystem">Gearsystem</a> by Ignacio Sanchez</dd></div>
       <div class="key"><dt>NeoGeo Pocket</dt><dd><a href="https://github.com/libretro/beetle-ngp-libretro">Beetle NeoPop</a>, from Mednafen</dd></div>
       <div class="key"><dt>TurboGrafx-16</dt><dd><a href="https://github.com/libretro/beetle-pce-fast-libretro">Beetle PCE Fast</a>, from Mednafen</dd></div>

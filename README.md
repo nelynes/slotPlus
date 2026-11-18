@@ -37,7 +37,7 @@ Your carts now keep a record of how they've been played. Full notes are in the [
 
 # Coming Soon
 
-<img width="3200" height="1800" alt="slotplus-3-roadmap" src="https://github.com/user-attachments/assets/d0ea4840-7e64-4084-b8b9-c69646cca75c" />
+<img src=".github/resources/roadmap.jpg" width="100%" alt="The slotPlus roadmap: 3.0, The Cart Remembers, is out now, with 3.1 and later releases to come">
 
 # What is slotPlus?
 

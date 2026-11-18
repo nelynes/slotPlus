@@ -892,3 +892,17 @@ kbd{
   .editions{margin-left:auto;margin-right:auto;text-align:left}
   .hero-copy p.sub{text-align:center}
 }
+
+/* New in 3.0 */
+.news-item{margin:0 0 clamp(30px,5vh,48px)}
+.news-item img{display:block;width:100%;height:auto;border-radius:10px;border:1px solid var(--rule);background:#1b1b21}
+.news-item figcaption{margin-top:14px}
+.news-item h3{margin:0 0 6px;font-size:21px;line-height:30px;color:var(--ink)}
+.news-item p{color:var(--muted);line-height:1.65;max-width:64ch;margin:0}
+.news-item p.badges{margin:0 0 8px}
+.news-item a{color:var(--ink)}
+.news-list{margin:0;padding:0 0 0 18px;color:var(--muted);line-height:1.65;max-width:64ch}
+.news-list li{margin:0 0 6px}
+.news-list strong{color:var(--ink)}
+.news-list .badge{vertical-align:2px;margin-right:2px}
+.new-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#2f8cff;margin-right:8px;vertical-align:2px}
