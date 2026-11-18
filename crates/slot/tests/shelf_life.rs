@@ -101,7 +101,7 @@ fn the_card_notes_when_it_first_saw_each_game() {
 fn a_cart_left_alone_gathers_dust_and_holding_b_wipes_it() {
     let d = tmp_root_with_carts(&["Emerald", "Fusion"]);
     let mut log = PlayLog::default();
-    log.add_play(Platform::Gba, "Emerald", 40 * 3600, now() - 100 * 86_400);
+    log.add_play(Platform::Gba, "Emerald", 12 * 3600, now() - 100 * 86_400);
     write_play_log(d.path(), &log).unwrap();
     let mut a = boot_with(d.path(), SlotState::default());
     assert_eq!(
@@ -125,7 +125,7 @@ fn a_cart_left_alone_gathers_dust_and_holding_b_wipes_it() {
         l.record(Platform::Gba, "Emerald").cleaned.is_some()
     });
     let r = log.record(Platform::Gba, "Emerald");
-    assert_eq!((r.seconds, r.worn_seconds()), (40 * 3600, 0));
+    assert_eq!((r.seconds, r.worn_seconds()), (12 * 3600, 0));
 }
 
 /// Putting a dusty cart in the slot blows the dust off: its face is dropped to be drawn
@@ -164,7 +164,7 @@ fn hold_b(a: &mut App) {
 fn dusty_and_worn(resets: slot_store::CleanResets) -> (tempfile::TempDir, App) {
     let d = tmp_root_with_carts(&["Emerald", "Fusion"]);
     let mut log = PlayLog::default();
-    log.add_play(Platform::Gba, "Emerald", 40 * 3600, now() - 100 * 86_400);
+    log.add_play(Platform::Gba, "Emerald", 12 * 3600, now() - 100 * 86_400);
     write_play_log(d.path(), &log).unwrap();
     let a = boot_with(
         d.path(),
@@ -237,8 +237,8 @@ fn play_time_adds_up_and_wears_the_cart() {
     let mut a = boot_with(d.path(), SlotState::default());
     let (platform, stem) = selected(&a);
     assert_eq!(a.play_seconds(a.selected_cart().unwrap()), None);
-    a.add_play_time(platform, &stem, 11 * 3600);
-    assert_eq!(a.play_seconds(a.selected_cart().unwrap()), Some(11 * 3600));
+    a.add_play_time(platform, &stem, 4 * 3600);
+    assert_eq!(a.play_seconds(a.selected_cart().unwrap()), Some(4 * 3600));
     assert_eq!(
         look(&a),
         Look {
@@ -247,7 +247,7 @@ fn play_time_adds_up_and_wears_the_cart() {
             wear: 1
         }
     );
-    landed(d.path(), |l| l.record(platform, &stem).seconds == 11 * 3600);
+    landed(d.path(), |l| l.record(platform, &stem).seconds == 4 * 3600);
 }
 
 #[test]
@@ -412,7 +412,7 @@ fn holding_b_five_seconds_cleans_and_opens_every_cart() {
     let emerald = log.record(Platform::Gba, "Emerald");
     assert_eq!(
         (emerald.seconds, emerald.worn_seconds()),
-        (40 * 3600, 0),
+        (12 * 3600, 0),
         "the play time stays; the wear goes"
     );
 }
