@@ -44,9 +44,11 @@ For the Game Boy systems, and everything else Slot does, see the [Slot user guid
 | **Picture** | The two 256x192 screens, in the layout you pick (see below). |
 | **Shaders** | Off, LCD3x, Grid, Dot, Shimmerless. A shader shows where the main screen is drawn at 2x or more. Both Screens, at 1.25x, and the small second screen are drawn plain. |
 | **Bezel** | DS Lite, bundled and the default: a bezel for each layout, by nelynes. Or your own in `Bezels/NDS/`: a single 720x480 PNG drawn over every layout, or a bezel set, a folder with one PNG for each layout (`both-screens.png`, `one-screen.png`, `full-screen.png`, `side-by-side.png`, `picture-in-picture.png`) that follows the layout as you change it. A layout with no PNG in the set draws no bezel. |
-| **Cart** | The DS game card: a small dark card with one bottom corner cut off, the label in a shallow recess and an arrow at the foot. It goes into the slot narrower than the other carts. With Cart Slot set to Bespoke, the slot is the back of a silver DS Lite. |
+| **Cart** | The DS game card: a small dark card with one bottom corner cut off, the label in a shallow recess and an arrow at the foot. It goes into the slot narrower than the other carts. With Cart Slot set to Bespoke, the slot is the back of a silver DS Lite. START opens it to its board, drawn after the real ones: the big flat chip with the game's name on it, a small eight-leg chip beside it, the capacitors along the top, and seventeen contacts on a bare strip at the foot. The play-time and gold achievements stickers sit side by side below the big chip. A clear shell shows the same board through it. |
 | **Saves** | `Saves/NDS/<game name>.sav`. Save states and the resume state work as usual. There is no rewind for DS games, since their states are about 6 MB each. |
 | **Speed** | Full speed on the RG SP. In the heaviest 3D scenes, such as Mario Kart DS's races, it skips drawing the odd frame so the game itself keeps full speed, and the CPU is held at full clock while a DS game plays. |
+| **Console name** | Settings → System → Nickname, its first 10 characters. Games that greet you by your DS's name use it from the next game you start. With no Nickname set, the console is called DSperate, and a `firmware.bin` of your own in `BIOS/` keeps the name it already holds. |
+| **Clock** | The DS clock follows slotPlus's date, time and time zone (Settings → System), from the moment a game starts and again after loading a save state. Games that care about the day and time, such as Animal Crossing: Wild World and Pokémon HeartGold, SoulSilver, Diamond, Pearl and Platinum, see the real time. |
 
 ### Screen layouts
 
@@ -97,6 +99,7 @@ The TurboExpress was NEC's handheld TurboGrafx-16: it played the same HuCards as
 | **Shaders** | Off, LCD3x, Grid, Dot, Shimmerless. |
 | **Bezel** | Four bundled: TG16, a dark face with the TurboGrafx-16 logo down the left side, and PCE, the PC Engine's white case either side of the screen, each with a Wide version for games that draw 320 wide. Or your own in `Bezels/TG16/`, 720x480 with the 512x480 window from x 104 clear (640x480 from x 40 for a wide one). |
 | **Cart** | The HuCard: a thin white card with gold contacts along the top over a dark textured panel, the label printed square at the bottom of the space below the panel, and a ridged grip tab at the foot. It turns end over end before it goes into the slot, contacts first, and turns back when it comes out. |
+| **Back** | START on the shelf turns the card over to its back, printed like a real HuCard's: GAME CARD across the top, the care notes in Japanese and English, and slotPlus at the foot. Your Nickname (Settings → System) is written on its NAME line, and the play-time sticker, with the gold achievements sticker under it, sits beside the Notes. A or B turns it back. |
 | **Saves** | Games that save to the console's backup memory keep it in `Saves/TG16/`. |
 
 ### Controls
@@ -126,7 +129,7 @@ The buttons follow the TurboExpress's layout: II on the left, I on the right.
 | **Picture** | The 160x152 screen at 3x, or stretched to fill the screen. |
 | **Shaders** | Off, LCD3x, Grid, Simpletex, Shimmerless. |
 | **Bezel** | A bundled Default with the NeoGeo Pocket name and logo down the left side, or your own in `Bezels/NGP/`. |
-| **Cart** | The NeoGeo Pocket pak: a ridged cap, the label in a recessed frame, and a lower band with SNK and NGP plaques and a down arrow. Dark grey by default. |
+| **Cart** | The NeoGeo Pocket pak: a ridged cap, the label in a recessed frame, and a lower band with SNK and NGP plaques and a down arrow. Dark grey by default. START opens it to its board, drawn after the real ones: one tall chip with the game's name on it, lettering in bare copper, and fine traces fanning down to two banks of contacts. As on the real pak, the foot with its plaques stays on, so only the tips of the contacts show. The play-time and gold achievements stickers sit on the left of the board. A clear shell shows the same board through it. |
 | **Saves** | `Saves/NGP/<game name>.flash`. |
 
 The core writes its `.flash` save itself when the game stops. Eject the cart, power off or restart from the menu as usual, and slotPlus stops the core first so the save is written. Switching off with the power switch mid-game can lose it.
@@ -158,7 +161,7 @@ The buttons follow the NeoGeo Pocket's own layout, so its A is the left button a
 | **Picture** | The 160x144 screen at 3x, or stretched to fill the screen. |
 | **Shaders** | Off, LCD3x, Grid, Simpletex, Shimmerless. |
 | **Bezel** | A bundled Default, a black face with the Game Gear's green power light glowing above the screen, or your own in `Bezels/GG/`. |
-| **Cart** | The Game Gear pak: a raised hood with grip ridges arching over the label, and the SEGA plaque at the foot. Black by default. |
+| **Cart** | The Game Gear pak: a raised hood with grip ridges arching over the label, and the SEGA plaque at the foot. Black by default. START opens it to its board, drawn after the real ones: one tall chip with the game's name on it, a capacitor each side, a big hole below the chip, bundles of traces down to two rows of gold contacts, and the play-time and gold achievements stickers low on either side. A clear shell shows the same board through it. |
 | **Saves** | Games with battery saves keep them in `Saves/GG/`. |
 
 ### Controls
