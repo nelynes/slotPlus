@@ -868,6 +868,35 @@ impl QuickRow {
         }
     }
 
+    /// slotPlus: the rows added in this version. Each gets a blue dot beside it, and so does
+    /// every row on the way to one, so someone who has just updated can find what's new.
+    /// Start the list again for each new version.
+    pub const NEW: [QuickRow; 11] = [
+        QuickRow::KidAllowance,
+        QuickRow::ShelfLife,
+        QuickRow::ShrinkWrap,
+        QuickRow::Dust,
+        QuickRow::Wear,
+        QuickRow::CleanResets,
+        QuickRow::CleanAllCarts,
+        QuickRow::ScreenPm,
+        QuickRow::PmShader,
+        QuickRow::PmBezel,
+        QuickRow::PmFullScreen,
+    ];
+
+    /// slotPlus: whether this row wears the blue dot: it's new, or it opens a page with a new
+    /// row on it that isn't hidden.
+    pub fn marked_new(self, hidden: &[QuickRow]) -> bool {
+        if hidden.contains(&self) {
+            return false;
+        }
+        QuickRow::NEW.contains(&self)
+            || self
+                .child()
+                .is_some_and(|c| c.page().iter().any(|r| r.marked_new(hidden)))
+    }
+
     pub fn shown(self, hidden: &[QuickRow]) -> Vec<QuickRow> {
         self.page()
             .iter()
@@ -1543,6 +1572,42 @@ fn cap_centre(label: &fontdue::Font, h: u32) -> f32 {
     }
 }
 
+/// slotPlus: the new-row dot sits this far left of the label, in the space between the label and
+/// the pointer.
+pub const NEW_DOT_GAP: f32 = 3.5;
+const NEW_DOT_D: f32 = 8.0;
+/// A clear blue, the colour other apps use to mark what's new.
+pub const NEW_DOT_INK: [u8; 3] = [0x2f, 0x8c, 0xff];
+
+/// slotPlus: a small blue dot, as tall as the pointer's face and centred on the label's
+/// capitals the same way, so it lines up with the row like the pointer does.
+pub fn quick_new_dot_face() -> UndoFace {
+    let h = (MENU_H + 2 * POINTER_BLEED) as usize;
+    let w = NEW_DOT_D.ceil() as usize + 2;
+    let cy = match text::label_font() {
+        Some(label) => cap_centre(label, MENU_H),
+        None => MENU_H as f32 / 2.0,
+    } + POINTER_BLEED as f32;
+    let (cx, r) = (w as f32 / 2.0, NEW_DOT_D / 2.0);
+    let mut rgba = vec![0u8; w * h * 4];
+    for y in 0..h {
+        for x in 0..w {
+            let d = (x as f32 + 0.5 - cx).hypot(y as f32 + 0.5 - cy);
+            let cover = (r + 0.5 - d).clamp(0.0, 1.0);
+            if cover > 0.0 {
+                let at = (y * w + x) * 4;
+                rgba[at..at + 3].copy_from_slice(&NEW_DOT_INK);
+                rgba[at + 3] = (cover * 255.0).round() as u8;
+            }
+        }
+    }
+    UndoFace {
+        rgba,
+        w: w as u32,
+        h: h as u32,
+    }
+}
+
 pub fn quick_pointer_face() -> UndoFace {
     let s = POINTER_SCALE;
     let w = POINTER[0].len() * s;
@@ -2105,6 +2170,8 @@ pub struct QuickMenuFaces {
     /// The L, R and Select labels for a Pokémon mini game, see `PM_BUTTON_LABELS`.
     pub pm_labels: [FacePair; 3],
     pub pointer: (TexId, u32, u32),
+    /// slotPlus: the blue dot beside a row that's new in this version, see `quick_new_dot_face`.
+    pub new_dot: (TexId, u32, u32),
     pub values: Vec<[(TexId, u32, u32); 2]>,
     pub legend: [(TexId, u32); 8],
     pub legend_light: [(TexId, u32); 8],
@@ -2216,6 +2283,19 @@ impl QuickMenu<'_> {
                     tex,
                     alpha: if greyed { GREYED_ALPHA } else { 1.0 },
                 });
+                // slotPlus: new in this version: a blue dot between the pointer and the label.
+                if row.marked_new(self.hidden) {
+                    let (tex, dw, dh) = faces.new_dot;
+                    let dx = x + pad - NEW_DOT_GAP - dw as f32;
+                    out.push(Draw::Tex {
+                        x: dx.round(),
+                        y: (y - POINTER_BLEED as f32).round(),
+                        w: dw as f32,
+                        h: dh as f32,
+                        tex,
+                        alpha: if greyed { GREYED_ALPHA } else { 1.0 },
+                    });
+                }
                 if lit && !report {
                     let (tex, pw, ph) = faces.pointer;
                     let px = x + pad - POINTER_GAP - pw as f32;

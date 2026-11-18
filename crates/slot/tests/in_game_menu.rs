@@ -660,6 +660,7 @@ fn menu_faces(a: &mut App) {
             ],
         ],
         pointer: (id(700), 16, 40),
+        new_dot: (id(750), 10, 40),
         values: Vec::new(),
         legend: [
             (id(400), 70),

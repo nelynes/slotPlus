@@ -932,6 +932,7 @@ fn fake_faces(a: &mut App) {
             ],
         ],
         pointer: (id(700), 32, 48),
+        new_dot: (id(750), 10, 48),
         values: (0..QuickValue::ALL.len())
             .map(|i| [(id(2000 + i), 60, 40), (id(2100 + i), 60, 40)])
             .collect(),
@@ -1417,6 +1418,7 @@ fn no_row_in_hand_runs_its_value_into_its_label() {
             ],
         ],
         pointer: (id(700), 32, 48),
+        new_dot: (id(750), 10, 48),
         values: QuickValue::ALL
             .iter()
             .enumerate()
@@ -2481,4 +2483,48 @@ fn battery_display_steps_through_its_three_choices_and_is_saved() {
         a.quick_value(QuickRow::BatteryDisplay),
         Some(QuickValue::Percentage)
     );
+}
+
+/// slotPlus: rows new in this version wear a blue dot between the pointer and the label, and
+/// so does every row on the way to one.
+#[test]
+fn new_rows_and_the_way_to_them_wear_a_blue_dot() {
+    let dots = |out: &[Draw]| -> Vec<[f32; 4]> {
+        out.iter()
+            .filter_map(|d| match *d {
+                Draw::Tex {
+                    x, y, w, h, tex, ..
+                } if tex == TexId::from_raw(750) => Some([x, y, w, h]),
+                _ => None,
+            })
+            .collect()
+    };
+    let (_d, mut a, _) = on_carousel();
+    fake_faces(&mut a);
+    a.apply(Action::QuickMenu);
+    let hidden = a.hidden_rows();
+    let marked: Vec<_> = QuickRow::MAIN
+        .into_iter()
+        .filter(|r| r.marked_new(&hidden))
+        .collect();
+    assert_eq!(marked, [QuickRow::General, QuickRow::Screen]);
+    assert_eq!(dots(&frame(&a)).len(), 2, "Shelf and Screen lead to new rows");
+
+    let (_d, mut a, _) = on_carousel();
+    fake_faces(&mut a);
+    open_at(&mut a, QuickRow::ShrinkWrap);
+    let out = frame(&a);
+    let on_page = dots(&out);
+    assert_eq!(on_page.len(), QuickRow::SHELF_LIFE.len(), "the whole page is new");
+    let [px, _, pw, _] = placed(&out, 700).expect("the pointer");
+    let [lx, ly, _, lh] = placed(&out, label(QuickRow::ShrinkWrap, true)).unwrap();
+    let [dx, dy, dw, dh] = on_page[0];
+    assert!(px + pw <= dx, "the dot clears the pointer");
+    assert!(dx + dw <= lx + MENU_PAD as f32, "the dot clears the label");
+    assert_eq!(dy + dh / 2.0, ly + lh / 2.0, "the dot sits on the row");
+
+    let (_d, mut a, _) = on_carousel();
+    fake_faces(&mut a);
+    open_at(&mut a, QuickRow::SYSTEM[0]);
+    assert!(dots(&frame(&a)).is_empty(), "nothing new on the System page");
 }

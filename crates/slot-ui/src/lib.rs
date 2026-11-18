@@ -160,7 +160,7 @@ pub use quick_menu::{
     fetch_choice_legends, fetch_legends, fetch_skip_legend, link_button_legends, picking_legend_faces,
     pm_button_label_faces, print_stop_legend, ra_refresh_legend,
     prompt_legends, quick_description_face, quick_label_face, quick_legend_faces,
-    quick_pointer_face, quick_row_top, quick_row_top_at, quick_scroll, quick_value_face,
+    quick_new_dot_face, quick_pointer_face, quick_row_top, quick_row_top_at, quick_scroll, quick_value_face,
     quick_warning_value_face, quick_window, repair_legends, studio_legend, update_legends,
     visible_rows, ws_turbo_label_faces, QuickMenu, QuickMenuFaces, QuickRow, QuickScroll, QuickValue,
     StudioGlyph, QUICK_EDGE, QUICK_LABEL_X, QUICK_PITCH, QUICK_VISIBLE, WS_TURBO_LABELS,
