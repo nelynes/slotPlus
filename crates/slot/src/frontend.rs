@@ -13,13 +13,13 @@ use slot_ui::{
     chip_shadow_face, core_button_legends, date_time_text, default_game_bezel_face, delete_legends,
     footer_ink, game_bezel_face, gb_cart_shadow, hint_face, icon_face, link_button_legends,
     menu_detail_face, menu_face, padded, photo_face, prompt_legends, quick_description_face,
-    quick_label_face, quick_legend_faces, quick_placeholder_face, quick_pointer_face,
-    quick_value_face, quick_warning_value_face, rebuild_count_face, rebuild_title_face,
-    repair_legends, slot_back, slot_back_light, slot_front, slot_front_light, socket_face,
-    socket_face_text, sticker_face, time_text, title_face, toast_face, update_cart_face,
-    update_legends, wallpaper_face, word_ink, BezelArt, CartFace, GbShell, Icon, LinkBadge,
-    PowerChoice, QuickMenuFaces, QuickRow, QuickValue, RebuildScreen, StickerFields, Toast,
-    UndoFace, ALERT_PX, BOLT_PX, HUD_ICON_PX, HUD_INK, LEGEND, TURN_PAD,
+    quick_label_face, quick_legend_faces, quick_new_dot_face, quick_placeholder_face,
+    quick_pointer_face, quick_value_face, quick_warning_value_face, rebuild_count_face,
+    rebuild_title_face, repair_legends, slot_back, slot_back_light, slot_front, slot_front_light,
+    socket_face, socket_face_text, sticker_face, time_text, title_face, toast_face,
+    update_cart_face, update_legends, wallpaper_face, word_ink, BezelArt, CartFace, GbShell, Icon,
+    LinkBadge, PowerChoice, QuickMenuFaces, QuickRow, QuickValue, RebuildScreen, StickerFields,
+    Toast, UndoFace, ALERT_PX, BOLT_PX, HUD_ICON_PX, HUD_INK, LEGEND, TURN_PAD,
 };
 
 use crate::app::{App, LinkRow, Phase, UpdateCart, UpdateScene};
@@ -1075,6 +1075,7 @@ impl Frontend {
         let ws_turbo_labels = faces.ws_turbo_labels.map(|l| l.map(&mut up));
         let pm_labels = faces.pm_labels.map(|l| l.map(&mut up));
         let pointer = up(faces.quick_pointer);
+        let new_dot = up(faces.quick_new_dot);
         let values = faces
             .quick_values
             .into_iter()
@@ -1138,6 +1139,7 @@ impl Frontend {
             ws_turbo_labels,
             pm_labels,
             pointer,
+            new_dot,
             values,
             legend,
             legend_light,
@@ -1732,6 +1734,7 @@ struct UiFaces {
     ws_turbo_labels: [[UndoFace; 2]; 2],
     pm_labels: [[UndoFace; 2]; 3],
     quick_pointer: UndoFace,
+    quick_new_dot: UndoFace,
     quick_values: Vec<[UndoFace; 2]>,
     quick_legend: [UndoFace; 8],
     quick_legend_light: [UndoFace; 8],
@@ -1793,6 +1796,7 @@ impl UiFaces {
             ws_turbo_labels: slot_ui::ws_turbo_label_faces(),
             pm_labels: slot_ui::pm_button_label_faces(),
             quick_pointer: quick_pointer_face(),
+            quick_new_dot: quick_new_dot_face(),
             quick_values: QuickValue::ALL
                 .iter()
                 .map(|v| [false, true].map(|lit| quick_value_face(v.text(), lit)))
