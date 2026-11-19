@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+Work toward slotPlus 3.1 on the `pokedaisy` branch. Not released yet.
+
+- **A PokeDaisy shelf.** Put Pokémon games for Game Boy Advance, Game Boy and Game Boy Color in `Games/PokeDaisy/` and they play on [PokeDaisy](https://github.com/lidor30/pokedaisy), with its companion (party, bag, Pokédex, map, guide) on X and its quick menu on Y. Each game keeps its own system's cart and its own save, so moving a game between shelves keeps its progress. Based on PokeDaisy by Lidor Itzhari.
+
 ## [1.16.0-plus3.0](https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus3.0)
 
 slotPlus 3.0, "The Cart Remembers": your carts now keep a record of how they've been played. Unplayed games come shrink-wrapped, carts left alone gather dust, favourites show their wear, and every cart opens to show its insides, with your play time on a sticker. Also new: Pokémon mini, romhack patches, Kid Play Time, save backups and a printout of your achievements. Still built on Slot 1.16.0.
