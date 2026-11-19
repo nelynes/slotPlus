@@ -100,6 +100,7 @@ const NGP_FOOT_Y: u32 = 211;
 /// slotPlus: carts whose back can be turned to, with nothing to pick there, only the
 /// board (and the play-time sticker) to see.
 pub fn shows_board_alone(platform: slot_store::Platform) -> bool {
+    // slotPlus: the PokeDaisy shelf's carts play on PokeDaisy alone, so START just opens them.
     matches!(
         platform,
         slot_store::Platform::Ws
@@ -107,6 +108,9 @@ pub fn shows_board_alone(platform: slot_store::Platform) -> bool {
             | slot_store::Platform::Gg
             | slot_store::Platform::Ngp
             | slot_store::Platform::Nds
+            | slot_store::Platform::PdGba
+            | slot_store::Platform::PdGb
+            | slot_store::Platform::PdGbc
     )
 }
 

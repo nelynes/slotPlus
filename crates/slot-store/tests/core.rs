@@ -303,9 +303,9 @@ fn writing_a_core_moves_a_line_without_a_system_onto_one_with() {
 }
 
 #[test]
-fn the_core_list_has_ten_entries() {
-    // slotPlus: Slot's three, then slotPlus's six, then the experiment.
-    assert_eq!(Core::ALL.len(), 10);
+fn the_core_list_has_twelve_entries() {
+    // slotPlus: Slot's three, then slotPlus's six, then the experiment, then PokeDaisy's two.
+    assert_eq!(Core::ALL.len(), 12);
 }
 
 #[test]

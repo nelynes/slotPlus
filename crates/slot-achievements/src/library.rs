@@ -190,6 +190,8 @@ pub(crate) fn console_of(platform: Platform) -> u32 {
         Platform::Ws => 53,
         // Not tracked: no SYSTEMS entry, so never scanned or loaded.
         Platform::Pm => 24,
+        // PokeDaisy's shelf is not tracked either; its games are their own systems'.
+        Platform::PdGba | Platform::PdGb | Platform::PdGbc => console_of(platform.hardware()),
     }
 }
 

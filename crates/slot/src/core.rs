@@ -168,6 +168,9 @@ fn open_named(
                     let (w, h) = big.source_size();
                     opened.set_video_size(w, h);
                 }
+                if matches!(core, Core::PokedaisyGba | Core::PokedaisyGbc) {
+                    apply_pokedaisy(&mut opened);
+                }
                 eprintln!("slot: core {}", path.display());
                 return Some(Box::new(opened));
             }
@@ -175,6 +178,18 @@ fn open_named(
         }
     }
     None
+}
+
+/// slotPlus: the screen PokeDaisy draws for: the 720x480 canvas, so it sizes its companion and
+/// menus to fill it at a whole scale. Its frames land in a buffer big enough for its largest
+/// canvas, and X and Y reach it as buttons.
+pub const POKEDAISY_PANEL: &str = "720x480";
+
+fn apply_pokedaisy(core: &mut LibretroCore) {
+    core.set_option("pokedaisy_panel", POKEDAISY_PANEL);
+    let (w, h) = Platform::PdGba.source_size();
+    core.set_video_size(w, h);
+    core.set_takes_xy(true);
 }
 
 pub fn palette_for(
@@ -232,7 +247,9 @@ pub fn colour_option(
         | Core::Ngp
         | Core::Pce
         | Core::Dsperate
-        | Core::Pokemini => None,
+        | Core::Pokemini
+        | Core::PokedaisyGba
+        | Core::PokedaisyGbc => None,
         Core::Gpsp => Some((
             "gpsp_color_correction",
             if on { "enabled" } else { "disabled" },

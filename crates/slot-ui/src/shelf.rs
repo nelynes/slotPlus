@@ -40,7 +40,7 @@ pub fn foot_y(canvas: Canvas, h: f32) -> f32 {
 }
 
 pub fn box_size(platform: Platform) -> (u32, u32) {
-    match platform {
+    match platform.hardware() {
         Platform::Gba | Platform::Gbav => (318, 282),
         #[cfg(feature = "nds")]
         Platform::Nds => (318, 282),
@@ -111,12 +111,14 @@ impl Shelf {
         let Some(cart) = self.carts.get(i) else {
             return Mould::Gba;
         };
-        match cart.platform {
-            Platform::Gb | Platform::Gbc | Platform::Gba | Platform::Gbav => match shelf_shape(cart).0 {
-                None => Mould::Gba,
-                Some(GbShell::Notched) => Mould::Notched,
-                Some(GbShell::Rounded) => Mould::Rounded,
-            },
+        match cart.platform.hardware() {
+            Platform::Gb | Platform::Gbc | Platform::Gba | Platform::Gbav => {
+                match shelf_shape(cart).0 {
+                    None => Mould::Gba,
+                    Some(GbShell::Notched) => Mould::Notched,
+                    Some(GbShell::Rounded) => Mould::Rounded,
+                }
+            }
             // slotPlus's systems: one mould each.
             other => crate::cart::mould_for(other),
         }
@@ -488,7 +490,7 @@ impl Shelf {
     }
 
     fn slot_width(&self, slot: i32) -> (f32, bool) {
-        match self.cart_at_offset(slot).map(|i| self.carts[i].platform) {
+        match self.cart_at_offset(slot).map(|i| self.carts[i].platform.hardware()) {
             Some(Platform::Gba | Platform::Gbav) | None => (CART_W as f32, true),
             Some(p) => (cart_box(p).0 as f32, false),
         }

@@ -269,6 +269,9 @@ pub fn mould_for(platform: Platform) -> Mould {
         Platform::Tg16 => Mould::Tg16,
         Platform::Nds => Mould::Nds,
         Platform::Pm => Mould::Pm,
+        // slotPlus: a PokeDaisy cart is its own system's cart.
+        Platform::PdGba => Mould::Gba,
+        Platform::PdGb | Platform::PdGbc => Mould::Notched,
     }
 }
 
@@ -287,12 +290,14 @@ pub fn folder_gb_shell(cart: &Cart) -> Option<GbShell> {
     match cart.platform {
         #[cfg(feature = "nds")]
         Platform::Nds => None,
-        Platform::Gb | Platform::Gbc => Some(match cart.shell.map(|c| c.outline) {
-            Some(Outline::Notched) => GbShell::Notched,
-            Some(Outline::Rounded) => GbShell::Rounded,
-            _ if cart.platform == Platform::Gbc => GbShell::Rounded,
-            _ => GbShell::Notched,
-        }),
+        Platform::Gb | Platform::Gbc | Platform::PdGb | Platform::PdGbc => {
+            Some(match cart.shell.map(|c| c.outline) {
+                Some(Outline::Notched) => GbShell::Notched,
+                Some(Outline::Rounded) => GbShell::Rounded,
+                _ if cart.platform.hardware() == Platform::Gbc => GbShell::Rounded,
+                _ => GbShell::Notched,
+            })
+        }
         // The GBA, and slotPlus's systems: no Game Boy pak.
         _ => None,
     }
@@ -312,7 +317,7 @@ pub fn shelf_shape(cart: &Cart) -> (Option<GbShell>, bool) {
     let outline = cart.shell.map(|c| c.outline);
     let shape = match (cart.platform, outline) {
         // slotPlus: only the Game Boy family has a pak shape to find.
-        (p, _) if !matches!(p, Platform::Gb | Platform::Gbc) => None,
+        (p, _) if !matches!(p.hardware(), Platform::Gb | Platform::Gbc) => None,
         (_, Some(Outline::Notched)) => Some(GbShell::Notched),
         (_, Some(Outline::Rounded)) => Some(GbShell::Rounded),
         _ => match slot_store::header_index::peek_gb_header(&cart.rom).flatten() {
@@ -334,15 +339,18 @@ pub fn gb_shell_of(cart: &Cart) -> Option<GbShell> {
         | Platform::Ngp
         | Platform::Tg16
         | Platform::Nds
-        | Platform::Pm => None,
-        Platform::Gb | Platform::Gbc => Some(match cart.shell.map(|c| c.outline) {
-            Some(Outline::Notched) => GbShell::Notched,
-            Some(Outline::Rounded) => GbShell::Rounded,
-            _ => match slot_store::gb::cached_class(&cart.rom) {
-                Class::ColourOnly => GbShell::Rounded,
-                Class::Original | Class::DualMode => GbShell::Notched,
-            },
-        }),
+        | Platform::Pm
+        | Platform::PdGba => None,
+        Platform::Gb | Platform::Gbc | Platform::PdGb | Platform::PdGbc => {
+            Some(match cart.shell.map(|c| c.outline) {
+                Some(Outline::Notched) => GbShell::Notched,
+                Some(Outline::Rounded) => GbShell::Rounded,
+                _ => match slot_store::gb::cached_class(&cart.rom) {
+                    Class::ColourOnly => GbShell::Rounded,
+                    Class::Original | Class::DualMode => GbShell::Notched,
+                },
+            })
+        }
     }
 }
 
@@ -449,7 +457,7 @@ const GB_SEATED_H: u32 = 259;
 pub const NDS_SEATED_W: u32 = 168;
 
 pub fn seated_box(platform: Platform) -> (u32, u32) {
-    match platform {
+    match platform.hardware() {
         Platform::Gba | Platform::Gbav => (SEATED_W, SEATED_H),
         #[cfg(feature = "nds")]
         Platform::Nds => (

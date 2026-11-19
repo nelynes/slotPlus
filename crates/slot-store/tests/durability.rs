@@ -523,7 +523,7 @@ fn every_platform_round_trips_as_its_own_line() {
             "{platform:?} did not come back"
         );
         let text = std::fs::read_to_string(d.path().join("Config/slot.state")).unwrap();
-        let want = format!("cart_platform={}", platform.dir_name().to_lowercase());
+        let want = format!("cart_platform={}", platform.key());
         assert!(text.lines().any(|l| l == want), "no {want} in {text:?}");
     }
 }

@@ -14,11 +14,17 @@ pub enum Platform {
     Gbav,
     /// The Pokémon mini: a 96x64 black-and-white screen, run by PokeMini.
     Pm,
+    /// slotPlus: the PokeDaisy shelf, `Games/PokeDaisy/`. Its Game Boy Advance, Game Boy and
+    /// Game Boy Color carts share one folder and one shelf, and play on PokeDaisy's cores; each
+    /// is its own system's cart in every other way (`hardware`).
+    PdGba,
+    PdGb,
+    PdGbc,
     Nds,
 }
 
 impl Platform {
-    pub const ALL: [Platform; 11] = [
+    pub const ALL: [Platform; 14] = [
         Platform::Gba,
         Platform::Gbav,
         Platform::Gbc,
@@ -30,6 +36,9 @@ impl Platform {
         Platform::Tg16,
         Platform::Nds,
         Platform::Pm,
+        Platform::PdGba,
+        Platform::PdGb,
+        Platform::PdGbc,
     ];
     #[cfg(feature = "nds")]
     pub const ALL: [Platform; 7] = [
@@ -55,6 +64,7 @@ impl Platform {
             Platform::Nds => "Nintendo DS",
             Platform::Gbav => "Game Boy Advance Video",
             Platform::Pm => "Pokémon mini",
+            Platform::PdGba | Platform::PdGb | Platform::PdGbc => "PokeDaisy",
             #[cfg(feature = "nds")]
             Platform::Nds => "Nintendo DS",
         }
@@ -73,6 +83,7 @@ impl Platform {
             Platform::Nds => "NDS",
             Platform::Gbav => "GBAV",
             Platform::Pm => "PokeMini",
+            Platform::PdGba | Platform::PdGb | Platform::PdGbc => "PokeDaisy",
             #[cfg(feature = "nds")]
             Platform::Nds => "NDS",
         }
@@ -80,15 +91,57 @@ impl Platform {
 
     pub fn hardware(self) -> Platform {
         match self {
-            Platform::Gbav => Platform::Gba,
+            Platform::Gbav | Platform::PdGba => Platform::Gba,
+            Platform::PdGb => Platform::Gb,
+            Platform::PdGbc => Platform::Gbc,
             p => p,
+        }
+    }
+
+    /// What names the platform in Slot's own files (recents, favorites, the last cart): its
+    /// folder, lowercased, except the PokeDaisy shelf's Game Boy and Game Boy Color games, which
+    /// share `PokeDaisy` with its Game Boy Advance ones and so take a key of their own.
+    pub fn key(self) -> String {
+        match self {
+            Platform::PdGb => "pokedaisy-gb".into(),
+            Platform::PdGbc => "pokedaisy-gbc".into(),
+            p => p.dir_name().to_ascii_lowercase(),
+        }
+    }
+
+    /// slotPlus: a PokeDaisy cart (`Games/PokeDaisy/`), of any of its three systems.
+    pub fn is_pokedaisy(self) -> bool {
+        matches!(self, Platform::PdGba | Platform::PdGb | Platform::PdGbc)
+    }
+
+    /// slotPlus: the platform whose shelf a cart sits on. The PokeDaisy shelf gathers its three
+    /// systems' carts on one shelf, which goes by `PdGba`; every other platform is its own.
+    pub fn shelf(self) -> Platform {
+        if self.is_pokedaisy() {
+            Platform::PdGba
+        } else {
+            self
+        }
+    }
+
+    /// slotPlus: the folder under `Saves/` that holds a game's battery save. A PokeDaisy game
+    /// shares its system's (`Saves/GBA/` for a Game Boy Advance game), so a game moved between
+    /// the PokeDaisy shelf and its own keeps its save. Save states stay apart, per core.
+    pub fn save_dir_name(self) -> &'static str {
+        if self.is_pokedaisy() {
+            self.hardware().dir_name()
+        } else {
+            self.dir_name()
         }
     }
 
     pub fn extensions(self) -> &'static [&'static str] {
         match self {
-            Platform::Gba | Platform::Gbav => &["gba"],
+            Platform::Gba | Platform::Gbav | Platform::PdGba => &["gba"],
             Platform::Gb | Platform::Gbc => &["gb", "gbc"],
+            // One folder: the extension says which system a PokeDaisy game is.
+            Platform::PdGb => &["gb"],
+            Platform::PdGbc => &["gbc"],
             Platform::Ws => &["ws", "wsc"],
             Platform::Lynx => &["lnx", "lyx"],
             Platform::Gg => &["gg"],
@@ -103,8 +156,9 @@ impl Platform {
 
     pub fn picture(self) -> (u32, u32) {
         match self {
-            Platform::Gba | Platform::Gbav => (240, 160),
+            Platform::Gba | Platform::Gbav | Platform::PdGba => (240, 160),
             Platform::Gb | Platform::Gbc | Platform::Gg => (160, 144),
+            Platform::PdGb | Platform::PdGbc => (160, 144),
             Platform::Ngp => (160, 152),
             // Most HuCard games draw 256x240; some switch to 320, 336 or 512
             // wide, and the frame's own size is used when it does.
@@ -154,6 +208,10 @@ impl Platform {
             | Platform::Gg
             | Platform::Ngp
             | Platform::Pm => (240, 160),
+            // PokeDaisy draws its own canvas round the game: 240x160 while playing, 360x240 for its
+            // companion and menus, 480x320 for its GBA quick menu (`pokedaisy_panel` is the
+            // 720x480 canvas). Each frame is centred in this buffer and fills the screen.
+            Platform::PdGba | Platform::PdGb | Platform::PdGbc => (480, 320),
             Platform::Ws => (360, 240),
             // Room for a 512-wide high resolution picture, and 240 lines.
             Platform::Tg16 => (720, 240),

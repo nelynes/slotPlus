@@ -1435,7 +1435,7 @@ fn paste(back: &mut CartFace, paper: &[u8], sw: u32, sh: u32, (x0, y0): (u32, u3
 pub fn sticker_at(cart: &Cart, back: &CartFace) -> Option<(u32, u32)> {
     use slot_store::Platform;
     let (sw, sh) = (STICKER_W, STICKER_H);
-    let spot = match cart.platform {
+    let spot = match cart.platform.hardware() {
         Platform::Lynx => (
             back.w.saturating_sub(sw + 16),
             back.h.saturating_sub(sh + 12),
@@ -1475,7 +1475,7 @@ pub fn play_sticker(back: &mut CartFace, cart: &Cart, text: &str) {
 pub fn gold_sticker_at(cart: &Cart, back: &CartFace) -> Option<(u32, u32)> {
     use slot_store::Platform;
     let (sw, sh) = (STICKER_W, STICKER_H);
-    let spot = match cart.platform {
+    let spot = match cart.platform.hardware() {
         Platform::Lynx => (16, back.h.saturating_sub(sh + 12)),
         Platform::Gba | Platform::Gbav => (224, 27),
         Platform::Ws => (66, 114),

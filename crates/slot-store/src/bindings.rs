@@ -272,6 +272,8 @@ impl GameButton {
                 &GameButton::GAME_BOY
             }
             Platform::Pm => &GameButton::POKEMON_MINI,
+            // PokeDaisy takes X (its companion) and Y (its quick menu) from the turbo buttons.
+            Platform::PdGba | Platform::PdGb | Platform::PdGbc => &GameButton::ALL,
         }
     }
 

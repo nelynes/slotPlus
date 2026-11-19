@@ -19,7 +19,7 @@ pub const DS_W: u32 = 1024;
 pub const DS_H: u32 = 1104;
 
 pub fn size(platform: Platform) -> (u32, u32) {
-    match platform {
+    match platform.hardware() {
         Platform::Gba | Platform::Gbav => (W, H),
         #[cfg(feature = "nds")]
         Platform::Nds => (DS_W, DS_H),

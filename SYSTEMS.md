@@ -13,6 +13,7 @@ For the Game Boy systems, and everything else Slot does, see the [Slot user guid
 - [Atari Lynx](#atari-lynx)
 - [WonderSwan / WonderSwan Color](#wonderswan--wonderswan-color)
 - [Pokémon mini](#pokémon-mini)
+- [PokeDaisy](#pokedaisy)
 
 ## Things every added system shares
 
@@ -304,3 +305,28 @@ Either way the D-pad is the Y pad, the four face buttons are the X pad, L1 is A 
 | Hold X / Y | Turbo A / turbo B                            |
 
 The Pokémon mini has no Start button. Because L1 and R1 are the game's own buttons, its picture size is the one Full Screen setting rather than each game's.
+
+## PokeDaisy
+
+A shelf for Pokémon games played on [PokeDaisy](https://github.com/lidor30/pokedaisy), which runs them with a companion: your party, bag, Pokédex, map and a guide, read live from the game, plus a quick menu of shortcuts (PC, Fly, Repel and more). Based on PokeDaisy by Lidor Itzhari - https://github.com/lidor30/pokedaisy
+
+| | |
+|---|---|
+| **Version** | slotPlus and slotPlusUltra |
+| **Games** | `.gba`, `.gb` and `.gbc` together in `Games/PokeDaisy/`. Putting a game there is how you choose PokeDaisy for it; the same game can stay on its own shelf too. |
+| **Core** | PokeDaisy: over armGBA for Game Boy Advance games, over mGBA for Game Boy and Game Boy Color games. |
+| **Label art** | `Labels/PokeDaisy/`, or the game's own system's (`Labels/GBA/` and so on) when that folder has none. |
+| **Picture** | PokeDaisy draws its own screen round the game, and it always fills the screen. No shader, bezel or overlay. |
+| **Cart** | Each game's own system's cart, side by side on one shelf. START opens it to its board, with the play-time sticker. |
+| **Saves** | The game's save is its system's (`Saves/GBA/` for a Game Boy Advance game), so a game moved between its shelf and this one keeps its save. Save states and the resume state are PokeDaisy's own, in `States/PokeDaisy/`. |
+| **RetroAchievements** | Not on this shelf. |
+
+### Controls
+
+| Press | Does |
+|-------|------|
+| X | PokeDaisy's companion |
+| Y | PokeDaisy's quick menu |
+| The rest | As on the game's own shelf |
+
+X and Y aren't turbo buttons on this shelf: they open PokeDaisy's companion and quick menu. Gamebit doesn't show the PokeDaisy folder yet.
