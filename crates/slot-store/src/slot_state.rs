@@ -1269,7 +1269,7 @@ fn parse(text: &str) -> Option<SlotState> {
 }
 
 pub(crate) fn platform_key(platform: Platform) -> String {
-    platform.dir_name().to_ascii_lowercase()
+    platform.key()
 }
 
 pub(crate) fn recent_value(value: &str) -> Option<Recent> {
@@ -1284,7 +1284,7 @@ pub(crate) fn recent_value(value: &str) -> Option<Recent> {
 fn platform_value(value: &str) -> Option<Platform> {
     Platform::ALL
         .into_iter()
-        .find(|p| value.eq_ignore_ascii_case(p.dir_name()))
+        .find(|p| value.eq_ignore_ascii_case(&p.key()))
 }
 
 fn offset(value: &str) -> Option<i16> {

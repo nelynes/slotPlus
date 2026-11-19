@@ -81,9 +81,14 @@ pub const PM_ROM_H: u32 = 46;
 /// slotPlus: carts whose back can be turned to, with nothing to pick there, only the
 /// board (and the play-time sticker) to see.
 pub fn shows_board_alone(platform: slot_store::Platform) -> bool {
+    // slotPlus: the PokeDaisy shelf's carts play on PokeDaisy alone, so START just opens them.
     matches!(
         platform,
-        slot_store::Platform::Ws | slot_store::Platform::Pm
+        slot_store::Platform::Ws
+            | slot_store::Platform::Pm
+            | slot_store::Platform::PdGba
+            | slot_store::Platform::PdGb
+            | slot_store::Platform::PdGbc
     )
 }
 

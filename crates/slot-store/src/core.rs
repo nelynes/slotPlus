@@ -15,19 +15,25 @@ pub enum Core {
     Cygne,
     Lynx,
     Pokemini,
+    /// slotPlus: PokeDaisy over armGBA, for the PokeDaisy shelf's Game Boy Advance games.
+    PokedaisyGba,
+    /// slotPlus: PokeDaisy over mGBA, for its Game Boy and Game Boy Color games.
+    PokedaisyGbc,
     #[cfg(feature = "nds")]
     Dsperate,
 }
 
 impl Core {
     #[cfg(not(feature = "nds"))]
-    pub const ALL: [Core; 6] = [
+    pub const ALL: [Core; 8] = [
         Core::Mgba,
         Core::Gpsp,
         Core::Gambatte,
         Core::Cygne,
         Core::Lynx,
         Core::Pokemini,
+        Core::PokedaisyGba,
+        Core::PokedaisyGbc,
     ];
     #[cfg(feature = "nds")]
     pub const ALL: [Core; 6] = [
@@ -47,6 +53,8 @@ impl Core {
             Core::Cygne => "cygne",
             Core::Lynx => "lynx",
             Core::Pokemini => "pokemini",
+            Core::PokedaisyGba => "pokedaisy_gba",
+            Core::PokedaisyGbc => "pokedaisy_gbc",
             #[cfg(feature = "nds")]
             Core::Dsperate => "dsperate",
         }
@@ -64,6 +72,7 @@ impl Core {
             Core::Cygne => "Beetle Cygne",
             Core::Lynx => "Beetle Lynx",
             Core::Pokemini => "PokeMini",
+            Core::PokedaisyGba | Core::PokedaisyGbc => "PokeDaisy",
             #[cfg(feature = "nds")]
             Core::Dsperate => "DSperate",
         }
@@ -77,6 +86,8 @@ impl Core {
             "cygne" => Some(Core::Cygne),
             "lynx" => Some(Core::Lynx),
             "pokemini" => Some(Core::Pokemini),
+            "pokedaisy_gba" => Some(Core::PokedaisyGba),
+            "pokedaisy_gbc" => Some(Core::PokedaisyGbc),
             #[cfg(feature = "nds")]
             "dsperate" => Some(Core::Dsperate),
             _ => None,
@@ -91,11 +102,13 @@ impl Core {
                 platform,
                 Platform::Gba | Platform::Gbav | Platform::Gb | Platform::Gbc
             ),
-            Core::Gpsp => platform.hardware() == Platform::Gba,
+            Core::Gpsp => platform.hardware() == Platform::Gba && !platform.is_pokedaisy(),
             Core::Gambatte => matches!(platform, Platform::Gb | Platform::Gbc),
             Core::Cygne => platform == Platform::Ws,
             Core::Lynx => platform == Platform::Lynx,
             Core::Pokemini => platform == Platform::Pm,
+            Core::PokedaisyGba => platform == Platform::PdGba,
+            Core::PokedaisyGbc => matches!(platform, Platform::PdGb | Platform::PdGbc),
             #[cfg(feature = "nds")]
             Core::Dsperate => false,
         }
@@ -123,6 +136,8 @@ impl Core {
             Platform::Ws => Core::Cygne,
             Platform::Lynx => Core::Lynx,
             Platform::Pm => Core::Pokemini,
+            Platform::PdGba => Core::PokedaisyGba,
+            Platform::PdGb | Platform::PdGbc => Core::PokedaisyGbc,
             #[cfg(feature = "nds")]
             Platform::Nds => Core::Dsperate,
         }

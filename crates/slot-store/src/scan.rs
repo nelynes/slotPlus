@@ -85,6 +85,13 @@ fn scan_of(root: &Path, platforms: &[Platform]) -> Result<Vec<Cart>, StoreError>
         };
         let labels_dir = root.join("Labels").join(platform.dir_name());
         let labels = listing(&labels_dir);
+        // slotPlus: a PokeDaisy game takes its own system's label when the PokeDaisy folder has
+        // none, so art already on the card shows.
+        let system_dir = root.join("Labels").join(platform.hardware().dir_name());
+        let system_labels = match platform.is_pokedaisy() {
+            true => listing(&system_dir),
+            false => HashMap::new(),
+        };
         for entry in entries {
             let Ok(entry) = entry else {
                 continue;
@@ -96,9 +103,11 @@ fn scan_of(root: &Path, platforms: &[Platform]) -> Result<Vec<Cart>, StoreError>
             let Some(stem) = rom.file_stem().and_then(|s| s.to_str()) else {
                 continue;
             };
+            let png = format!("{stem}.png").to_lowercase();
             let label = labels
-                .get(&format!("{stem}.png").to_lowercase())
-                .map(|name| labels_dir.join(name));
+                .get(&png)
+                .map(|name| labels_dir.join(name))
+                .or_else(|| system_labels.get(&png).map(|name| system_dir.join(name)));
             carts.push(Cart {
                 platform,
                 stem: stem.to_string(),
@@ -111,8 +120,13 @@ fn scan_of(root: &Path, platforms: &[Platform]) -> Result<Vec<Cart>, StoreError>
             });
         }
     }
-    carts.sort_by(|a, b| {
-        (a.platform as u8, sort_key(&a.stem)).cmp(&(b.platform as u8, sort_key(&b.stem)))
+    // By shelf, then by name: the PokeDaisy shelf's three systems' carts sort together.
+    carts.sort_by_key(|c| {
+        (
+            c.platform.shelf() as u8,
+            sort_key(&c.stem),
+            c.platform as u8,
+        )
     });
     tell_twins_apart(&mut carts);
     Ok(carts)

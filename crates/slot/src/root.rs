@@ -22,6 +22,7 @@ pub const DIRS: &[&str] = &[
     "Games/WS",
     "Games/Lynx",
     "Games/PokeMini",
+    "Games/PokeDaisy",
     #[cfg(feature = "nds")]
     "Games/NDS",
     "Guides",
@@ -40,6 +41,7 @@ pub const DIRS: &[&str] = &[
     "Labels/WS",
     "Labels/Lynx",
     "Labels/PokeMini",
+    "Labels/PokeDaisy",
     #[cfg(feature = "nds")]
     "Labels/NDS",
     "Logs",
@@ -67,6 +69,7 @@ pub const DIRS: &[&str] = &[
     "States/WS",
     "States/Lynx",
     "States/PokeMini",
+    "States/PokeDaisy",
     #[cfg(feature = "nds")]
     "States/NDS",
     "System",
