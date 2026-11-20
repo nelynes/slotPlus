@@ -1554,3 +1554,87 @@ fn the_pause_is_told_once_the_set_is_active_and_forgotten_with_the_game() {
 
 /// How many frames apart a pause is asked about.
 const PAUSE_FRAMES: u32 = 60;
+
+/// A core that records what reaches it through the tracker.
+#[derive(Default)]
+struct Witness {
+    resets: Arc<AtomicU64>,
+    touch: Arc<Mutex<Option<(u8, u8)>>>,
+    lid: Arc<AtomicBool>,
+}
+impl RetroCore for Witness {
+    fn load(&mut self, _: &Path) -> Result<(), CoreError> {
+        Ok(())
+    }
+    fn run_frame(&mut self, _: ButtonMask) {}
+    fn reset(&mut self) {
+        self.resets.fetch_add(1, Ordering::Relaxed);
+    }
+    fn set_touch(&mut self, at: Option<(u8, u8)>) {
+        *self.touch.lock().unwrap() = at;
+    }
+    fn set_lid(&mut self, shut: bool) {
+        self.lid.store(shut, Ordering::Relaxed);
+    }
+    fn takes_xy(&self) -> bool {
+        true
+    }
+    fn video_xrgb8888(&self) -> &[u8] {
+        &[]
+    }
+    fn take_audio(&mut self) -> Vec<i16> {
+        vec![]
+    }
+    fn serialize(&mut self) -> Result<Vec<u8>, CoreError> {
+        Ok(vec![])
+    }
+    fn unserialize(&mut self, _: &[u8]) -> Result<(), CoreError> {
+        Ok(())
+    }
+    fn save_ram(&self) -> Option<Vec<u8>> {
+        None
+    }
+    fn load_save_ram(&mut self, _: &[u8]) -> Result<(), CoreError> {
+        Ok(())
+    }
+    fn av_info(&self) -> AvInfo {
+        AvInfo {
+            fps: 60.0,
+            sample_rate: 48000.0,
+        }
+    }
+}
+
+#[test]
+fn the_tracker_passes_reset_touch_the_lid_and_x_and_y_through_to_the_core() {
+    let (controls, _controls_rx) = mpsc::channel();
+    let (frames, _frames_rx) = mpsc::sync_channel(QUEUE_SIZE);
+    let (_, notices) = mpsc::channel();
+    let service = Service {
+        controls,
+        frames,
+        notices,
+        enabled: Arc::new(AtomicBool::new(true)),
+        current: Arc::new(AtomicU64::new(0)),
+        tracking: Arc::new(AtomicU64::new(0)),
+        flushing: AtomicBool::new(false),
+        flushed: Arc::new(AtomicBool::new(false)),
+        status: Arc::new(Status::default()),
+    };
+    let witness = Witness::default();
+    let (resets, touch, lid) = (
+        witness.resets.clone(),
+        witness.touch.clone(),
+        witness.lid.clone(),
+    );
+    let mut core = service.wrap(Box::new(witness));
+    // A reset the tracker swallowed made the Reset shortcut do nothing with achievements on,
+    // and X and Y left as turbo buttons took PokeDaisy's companion and quick menu away.
+    core.reset();
+    assert_eq!(resets.load(Ordering::Relaxed), 1);
+    assert!(core.takes_xy());
+    core.set_touch(Some((3, 4)));
+    assert_eq!(*touch.lock().unwrap(), Some((3, 4)));
+    core.set_lid(true);
+    assert!(lid.load(Ordering::Relaxed));
+}
