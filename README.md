@@ -41,7 +41,7 @@ Your carts now keep a record of how they've been played. Full notes are in the [
 
 # What is slotPlus?
 
-A slightly modified Slot. Alongside Slot's Game Boy Advance, Game Boy and Game Boy Color, it plays more handhelds, each on its own shelf with its own cart, and it can play on a TV over HDMI.
+A modified Slot. Alongside Slot's Game Boy Advance, Game Boy and Game Boy Color, it plays more handhelds, each on its own shelf with its own cart, and it can play on a TV over HDMI.
 
 **See it in action, and find installing steps and what each system adds, at [nelynes.github.io/slotPlus](https://nelynes.github.io/slotPlus/).**
 
