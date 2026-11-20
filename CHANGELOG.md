@@ -4,7 +4,7 @@
 
 Work toward slotPlus 3.1. Not released yet.
 
-- **A PokeDaisy shelf.** Put Pokémon games for Game Boy Advance, Game Boy and Game Boy Color in `Games/PokeDaisy/` and they play on [PokeDaisy](https://github.com/lidor30/pokedaisy), with its companion (party, bag, Pokédex, map, guide) on X and its quick menu on Y. Each game keeps its own system's cart and its own save, so moving a game between shelves keeps its progress. Gamebit shows the folder with all its games, and with Cart Slot set to Bespoke the shelf has a slot of its own, a meadow with daisies. Based on PokeDaisy by Lidor Itzhari.
+- **A PokeDaisy shelf.** Put Pokémon games for Game Boy Advance, Game Boy and Game Boy Color in `Games/PokeDaisy/` and they play on [PokeDaisy](https://github.com/lidor30/pokedaisy), with its companion (party, bag, Pokédex, map, guide) on X and its quick menu on Y. Each game keeps its own system's cart and its own save, so moving a game between shelves keeps its progress. Gamebit shows the folder with all its games, and with Cart Slot set to Bespoke the shelf has a slot of its own, a meadow with daisies. Its games earn RetroAchievements (softcore) from the same sets as on their own shelves, paused while PokeDaisy's Flight Area is Anywhere, as PokeDaisy's own apps do. Based on PokeDaisy by Lidor Itzhari.
 
 ## [1.16.0-plus3.0](https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus3.0)
 

@@ -71,6 +71,7 @@ pub mod network_faces;
 pub mod networks;
 pub mod overlay;
 pub mod pacer;
+pub mod pokedaisy;
 pub mod panel_turn;
 pub mod persist;
 pub mod prefetch;

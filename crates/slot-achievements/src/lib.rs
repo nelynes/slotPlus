@@ -394,6 +394,17 @@ impl Service {
         Box::new(core::Tracked::new(core, library::console_of(platform), self))
     }
 
+    /// `wrap_for`, with nothing checked while `pause` says so. It's asked about once a second.
+    pub fn wrap_pausing(
+        &self,
+        core: Box<dyn RetroCore>,
+        platform: slot_store::Platform,
+        pause: Box<dyn FnMut() -> bool + Send>,
+    ) -> Box<dyn RetroCore> {
+        let console = library::console_of(platform);
+        Box::new(core::Tracked::new(core, console, self).pausing(pause))
+    }
+
     pub fn take_notice(&self) -> Option<Notice> {
         while let Ok(notice) = self.notices.try_recv() {
             // Earned notices survive an eject; stale loading notices do not.
