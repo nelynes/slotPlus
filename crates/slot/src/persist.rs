@@ -121,7 +121,7 @@ pub fn read_resume(
 
 /// slotPlus: the card holds a save for this game, as a `.sav` or a RetroArch `.srm`.
 pub fn has_save(root: &Path, platform: Platform, stem: &str) -> bool {
-    let dir = crate::root::saves_dir(root).join(platform.dir_name());
+    let dir = crate::root::saves_dir(root).join(platform.save_dir_name());
     ["sav", "srm"]
         .iter()
         .any(|ext| dir.join(format!("{stem}.{ext}")).exists())
@@ -129,7 +129,7 @@ pub fn has_save(root: &Path, platform: Platform, stem: &str) -> bool {
 
 fn sav_path(root: &Path, platform: Platform, stem: &str) -> PathBuf {
     crate::root::saves_dir(root)
-        .join(platform.dir_name())
+        .join(platform.save_dir_name())
         .join(format!("{stem}.sav"))
 }
 
@@ -151,7 +151,7 @@ fn unix_now() -> u64 {
 pub fn backups_dir(root: &Path, platform: Platform) -> PathBuf {
     crate::root::saves_dir(root)
         .join(BACKUPS_DIR)
-        .join(platform.dir_name())
+        .join(platform.save_dir_name())
 }
 
 /// A game's backups, newest first, with the time each was taken.

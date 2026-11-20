@@ -118,13 +118,13 @@ pub fn shell_for(cart: &Cart) -> Shell {
         return shell;
     }
     match cart.platform {
-        Platform::Gba | Platform::Gbav => gba_shell_for(&gba_code(cart)),
+        Platform::Gba | Platform::Gbav | Platform::PdGba => gba_shell_for(&gba_code(cart)),
         Platform::Ws => ws_shell_for(&cart.rom),
         Platform::Lynx => LYNX_SHELL,
         Platform::Pm => PM_SHELL,
         #[cfg(feature = "nds")]
         Platform::Nds => gba_shell_for(""),
-        Platform::Gb | Platform::Gbc => gb_shell_for(&cart.rom),
+        Platform::Gb | Platform::Gbc | Platform::PdGb | Platform::PdGbc => gb_shell_for(&cart.rom),
     }
 }
 
@@ -141,7 +141,7 @@ pub fn indexed_shell(cart: &Cart) -> Option<Shell> {
     if let Some(shell) = chosen_shell(cart) {
         return Some(shell);
     }
-    match cart.platform {
+    match cart.platform.hardware() {
         Platform::Gba | Platform::Gbav => match cart.code.is_empty() {
             false => Some(gba_shell_for(&cart.code)),
             true => slot_store::header_index::peek_gba_code(&cart.rom).map(|c| gba_shell_for(&c)),

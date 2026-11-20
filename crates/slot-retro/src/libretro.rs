@@ -581,6 +581,9 @@ pub struct LibretroCore {
     av: AvInfo,
     loaded: bool,
     state_size: Option<(usize, usize)>,
+    /// slotPlus: X and Y go to the core as themselves, not as turbo A and B (PokeDaisy's
+    /// companion and quick menu).
+    takes_xy: bool,
     _lib: Library,
 }
 
@@ -614,6 +617,11 @@ impl LibretroCore {
 
     /// Resize the host's video buffer. Frames the core draws are centred in
     /// it; anything bigger than the buffer is cropped. Call before running.
+    /// slotPlus: hand X and Y to the core as buttons of its own (see `takes_xy`).
+    pub fn set_takes_xy(&mut self, yes: bool) {
+        self.takes_xy = yes;
+    }
+
     pub fn set_video_size(&mut self, w: u32, h: u32) {
         self.host.video_w = w;
         self.host.video_h = h;
@@ -735,6 +743,7 @@ impl LibretroCore {
             },
             loaded: false,
             state_size: None,
+            takes_xy: false,
             _lib: lib,
         })
     }
@@ -937,6 +946,10 @@ impl RetroCore for LibretroCore {
 
     fn video_size(&self) -> (u32, u32) {
         (self.host.video_w, self.host.video_h)
+    }
+
+    fn takes_xy(&self) -> bool {
+        self.takes_xy
     }
 
     fn frame_size(&self) -> (u32, u32) {

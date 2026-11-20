@@ -26,11 +26,14 @@ pub(super) fn ok() -> Reply {
     Reply::json(json!({ "ok": true }))
 }
 
+/// slotPlus: Gamebit doesn't serve the PokeDaisy folder yet: its three systems share it.
 fn served() -> impl Iterator<Item = Platform> {
     #[cfg(feature = "nds")]
-    return Platform::ALL.into_iter().filter(|p| *p != Platform::Nds);
+    return Platform::ALL
+        .into_iter()
+        .filter(|p| *p != Platform::Nds && !p.is_pokedaisy());
     #[cfg(not(feature = "nds"))]
-    Platform::ALL.into_iter()
+    Platform::ALL.into_iter().filter(|p| !p.is_pokedaisy())
 }
 
 fn platform_for(tag: &str) -> Option<Platform> {

@@ -799,6 +799,8 @@ pub struct App {
     named_core: bool,
     video_mode: VideoMode,
     portrait: bool,
+    /// slotPlus: the size of the frame the core last drew (PokeDaisy's canvas changes size).
+    frame_shape: (u32, u32),
     link: Option<LinkSession>,
     sfx: Option<Sfx>,
     polaroids: Option<Polaroids>,
@@ -1056,12 +1058,19 @@ fn shelves_of(carts: Vec<Cart>, collections: usize) -> Vec<(Rack, Shelf)> {
     let mut rows: Vec<(Rack, Vec<Cart>)> = [Rack::Recents, Rack::Favorites]
         .into_iter()
         .chain((0..collections).map(Rack::Collection))
-        .chain(Platform::ALL.iter().map(|p| Rack::Of(*p)))
+        // slotPlus: the PokeDaisy shelf's three systems share one shelf, `PdGba`'s.
+        .chain(
+            Platform::ALL
+                .iter()
+                .filter(|p| p.shelf() == **p)
+                .map(|p| Rack::Of(*p)),
+        )
         .chain(std::iter::once(Rack::AllGames))
         .map(|r| (r, Vec::new()))
         .collect();
     for cart in carts {
-        if let Some((_, row)) = rows.iter_mut().find(|(r, _)| *r == Rack::Of(cart.platform)) {
+        let rack = Rack::Of(cart.platform.shelf());
+        if let Some((_, row)) = rows.iter_mut().find(|(r, _)| *r == rack) {
             row.push(cart);
         }
     }
@@ -1393,6 +1402,7 @@ impl App {
             named_core: false,
             video_mode: VideoMode::default(),
             portrait: false,
+            frame_shape: (0, 0),
             link: None,
             sfx: None,
             polaroids: None,
@@ -2871,8 +2881,22 @@ impl App {
         }
         // L1 and R1 are the Lynx's Option 1 and 2 and the WonderSwan's Y-pad
         // and vertical A and B, so only the Game Boys go without them.
-        if matches!(platform, Platform::Gb | Platform::Gbc) {
+        if matches!(platform.hardware(), Platform::Gb | Platform::Gbc) && !platform.is_pokedaisy() {
             hidden.extend([QuickRow::GameL, QuickRow::GameR]);
+        }
+        // slotPlus: PokeDaisy draws its own canvas over the whole screen, so the picture's
+        // settings have nothing to change there.
+        if platform.is_pokedaisy() {
+            hidden.extend([
+                QuickRow::Shader,
+                QuickRow::Overlay,
+                QuickRow::Bezel,
+                QuickRow::Scale,
+                QuickRow::Stretch,
+                QuickRow::Palette,
+                QuickRow::ColourCorrection,
+                QuickRow::Blending,
+            ]);
         }
         #[cfg(feature = "nds")]
         if self.playing_platform() == Platform::Nds {
@@ -3619,7 +3643,11 @@ impl App {
 
     fn bezel_pick(&mut self, platform: Platform) -> &mut BezelPick {
         match platform {
-            Platform::Gba | Platform::Gbav => &mut self.state.bezel_gba,
+            // slotPlus: PokeDaisy fills the screen with its own canvas, so no bezel is drawn
+            // (`resolved_bezel`); its row, if ever reached, is its system's.
+            Platform::Gba | Platform::Gbav | Platform::PdGba => &mut self.state.bezel_gba,
+            Platform::PdGb => &mut self.state.bezel_gb,
+            Platform::PdGbc => &mut self.state.bezel_gbc,
             #[cfg(feature = "nds")]
             Platform::Nds => &mut self.state.bezel_gba,
             Platform::Gb => &mut self.state.bezel_gb,
@@ -3632,6 +3660,7 @@ impl App {
 
     pub fn resolved_bezel(&self, platform: Platform) -> BezelPick {
         let pick = match platform {
+            Platform::PdGba | Platform::PdGb | Platform::PdGbc => return BezelPick::None,
             Platform::Gba | Platform::Gbav => &self.state.bezel_gba,
             #[cfg(feature = "nds")]
             Platform::Nds => &self.state.bezel_gba,
@@ -3696,6 +3725,7 @@ impl App {
             Platform::Nds => &mut self.state.overlay_nds,
             Platform::Gb => &mut self.state.overlay_gb,
             Platform::Gbc | Platform::Ws | Platform::Lynx | Platform::Pm => &mut self.state.overlay_gbc,
+            Platform::PdGba | Platform::PdGb | Platform::PdGbc => &mut self.state.overlay_gbc,
         }
     }
 
@@ -3707,6 +3737,7 @@ impl App {
             Platform::Gb => &self.state.overlay_gb,
             Platform::Gbc => &self.state.overlay_gbc,
             Platform::Ws | Platform::Lynx | Platform::Pm => return None,
+            Platform::PdGba | Platform::PdGb | Platform::PdGbc => return None,
         };
         let name = pick.as_deref()?;
         self.overlay_entries(platform)
@@ -4992,6 +5023,17 @@ impl App {
     /// WonderSwan or Lynx game turned on its side makes it taller than wide.
     pub fn set_frame_shape(&mut self, shown: (u32, u32)) {
         self.portrait = shown.1 > shown.0;
+        self.frame_shape = shown;
+    }
+
+    /// slotPlus: PokeDaisy's frame, centred in its buffer: 240x160 in play, 360x240 for its
+    /// companion and 480x320 for its quick menu, all 3:2, each filling the screen.
+    fn pokedaisy_frame(&self, platform: Platform) -> (u32, u32) {
+        let (bw, bh) = platform.source_size();
+        match self.frame_shape {
+            (w, h) if w > 0 && h > 0 => (w.min(bw), h.min(bh)),
+            _ => platform.picture(),
+        }
     }
 
     /// Whether the core is drawing a frame taller than wide.
@@ -5010,6 +5052,16 @@ impl App {
 
     fn picture(&self) -> (Sizing, [f32; 4]) {
         let platform = self.playing_platform();
+        if platform.is_pokedaisy() {
+            let (bw, bh) = platform.source_size();
+            let (w, h) = self.pokedaisy_frame(platform);
+            let (x, y) = ((bw - w) / 2, (bh - h) / 2);
+            let (bw, bh) = (bw as f32, bh as f32);
+            return (
+                Sizing::Fit,
+                [x as f32 / bw, y as f32 / bh, w as f32 / bw, h as f32 / bh],
+            );
+        }
         video_mode::picture_for(
             platform,
             self.video_mode,
@@ -5043,6 +5095,9 @@ impl App {
     }
 
     fn layout_of(&self, platform: Platform, sizing: Sizing, source: [f32; 4]) -> GameLayout {
+        if platform.is_pokedaisy() {
+            return slot_gfx::game_layout(self.panel, self.pokedaisy_frame(platform), sizing);
+        }
         #[cfg(feature = "nds")]
         if platform == Platform::Nds {
             return slot_gfx::game_layout(self.panel, platform.picture(), sizing);
@@ -5206,7 +5261,8 @@ impl App {
 
     fn slot_owns_the_shoulders(&self) -> bool {
         matches!(self.phase, Phase::Playing { .. })
-            && matches!(self.platform, Platform::Gb | Platform::Gbc)
+            && matches!(self.platform.hardware(), Platform::Gb | Platform::Gbc)
+            && !self.platform.is_pokedaisy()
     }
 
     pub fn taken_buttons(&self) -> Vec<Btn> {
@@ -5625,6 +5681,7 @@ impl App {
     pub fn picture_rect(&self) -> [f32; 4] {
         let (w, h) = match self.portrait() {
             true => (self.platform.picture().1, self.platform.picture().0),
+            false if self.platform.is_pokedaisy() => self.pokedaisy_frame(self.platform),
             false => self.platform.picture(),
         };
         let (sw, sh) = self.platform.source_size();
@@ -5840,6 +5897,9 @@ impl App {
             Platform::Ws => self.state.shader_ws,
             Platform::Lynx => self.state.shader_lynx,
             Platform::Pm => self.state.shader_pm,
+            // slotPlus: PokeDaisy's canvas is drawn at 1.5x to 3x, under its companion's text:
+            // no shader.
+            Platform::PdGba | Platform::PdGb | Platform::PdGbc => Shader::Off,
         }
     }
 
@@ -5881,6 +5941,7 @@ impl App {
             Platform::Gbc => self.state.colour_correction_gbc,
             // None of their cores has colour correction.
             Platform::Ws | Platform::Lynx | Platform::Pm => false,
+            Platform::PdGba | Platform::PdGb | Platform::PdGbc => false,
         }
     }
 
@@ -8093,6 +8154,7 @@ impl App {
             Platform::Ws => (&mut self.state.shader_ws, &Shader::WS[..]),
             Platform::Lynx => (&mut self.state.shader_lynx, &Shader::LYNX[..]),
             Platform::Pm => (&mut self.state.shader_pm, &Shader::PM[..]),
+            Platform::PdGba | Platform::PdGb | Platform::PdGbc => return,
         };
         *shader = shader.step(choices, right);
         let said = match *shader {
@@ -8150,6 +8212,7 @@ impl App {
                 Platform::Gb => QuickRow::GbColourCorrection,
                 Platform::Gbc => QuickRow::GbcColourCorrection,
                 Platform::Ws | Platform::Lynx | Platform::Pm => return true,
+                Platform::PdGba | Platform::PdGb | Platform::PdGbc => return true,
             };
             self.change_setting(row, true);
             let said = match self.colour_correction() {
@@ -11169,12 +11232,12 @@ impl App {
         let at = self
             .shelves
             .iter()
-            .position(|(r, _)| *r == Rack::Of(g.platform))?;
+            .position(|(r, _)| *r == Rack::Of(g.platform.shelf()))?;
         let i = self.shelves[at]
             .1
             .carts
             .iter()
-            .position(|c| c.stem == g.stem)?;
+            .position(|c| c.stem == g.stem && c.platform == g.platform)?;
         Some((at, i))
     }
 
@@ -14714,7 +14777,7 @@ impl App {
         else {
             return;
         };
-        let (scale, well) = match scene.cart.platform {
+        let (scale, well) = match scene.cart.platform.hardware() {
             Platform::Gba | Platform::Gbav => (
                 1.0,
                 [
@@ -17973,6 +18036,7 @@ pub fn overlay_slot(platform: Platform) -> usize {
         Platform::Gb => 1,
         Platform::Gbc => 2,
         Platform::Ws | Platform::Lynx | Platform::Pm => 3,
+        Platform::PdGba | Platform::PdGb | Platform::PdGbc => 3,
         #[cfg(feature = "nds")]
         Platform::Nds => 3,
     }
@@ -17988,6 +18052,9 @@ fn bezel_slot(platform: Platform) -> usize {
         Platform::Ws => 3,
         Platform::Lynx => 4,
         Platform::Pm => 5,
+        Platform::PdGba => 0,
+        Platform::PdGb => 1,
+        Platform::PdGbc => 2,
     }
 }
 

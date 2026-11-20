@@ -304,9 +304,9 @@ fn writing_a_core_moves_a_line_without_a_system_onto_one_with() {
 
 #[cfg(not(feature = "nds"))]
 #[test]
-fn the_core_list_has_six_entries() {
-    // slotPlus: Slot's three, then Beetle Cygne, Beetle Lynx and the experiment.
-    assert_eq!(Core::ALL.len(), 6);
+fn the_core_list_has_eight_entries() {
+    // slotPlus: Slot's three, then Beetle Cygne, Beetle Lynx, PokeMini and PokeDaisy's two.
+    assert_eq!(Core::ALL.len(), 8);
 }
 
 #[test]
