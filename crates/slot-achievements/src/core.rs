@@ -21,7 +21,14 @@ pub(crate) struct Tracked {
     sequence: u64,
     timeline: u64,
     allocated: usize,
+    /// slotPlus: asked about once a second whether the game is doing something that pauses
+    /// achievements, as PokeDaisy's own apps pause them; nothing is checked while it is.
+    pause: Option<Box<dyn FnMut() -> bool + Send>>,
+    paused: bool,
 }
+
+/// How many frames apart `pause` is asked.
+const PAUSE_EVERY: u64 = 60;
 
 impl Tracked {
     pub fn new(core: Box<dyn RetroCore>, service: &Service) -> Self {
@@ -39,11 +46,28 @@ impl Tracked {
             sequence: 0,
             timeline: 0,
             allocated: 0,
+            pause: None,
+            paused: false,
         }
+    }
+
+    pub fn pausing(mut self, pause: Box<dyn FnMut() -> bool + Send>) -> Self {
+        self.pause = Some(pause);
+        self
     }
 
     fn snapshot(&mut self) {
         self.sequence += 1;
+        if self.sequence % PAUSE_EVERY == 1 {
+            if let Some(pause) = &mut self.pause {
+                self.paused = pause();
+            }
+        }
+        // Skipped frames leave a gap in the sequence, which resets hit counts as a dropped
+        // frame does, so nothing carries across the pause.
+        if self.paused {
+            return;
+        }
         // slotPlus: RAM is copied only once this game's achievements are active, so a game
         // with none, or one still being identified, costs nothing per frame.
         if !self.enabled.load(Ordering::Acquire)

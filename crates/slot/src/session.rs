@@ -855,16 +855,23 @@ impl Session {
         let resume = self.app.card_read("resume", loaded.resume);
         let (sav_unread, resume_unread) = (sav.is_none(), resume.is_none());
         // Tracked for the Game Boy family, the WonderSwan and the Lynx, never over a link cable.
+        // slotPlus: and the PokeDaisy shelf, paused while its Flight Area is Anywhere.
         let tracked = crate::ACHIEVEMENTS
-            && matches!(
+            && (matches!(
                 loaded.platform,
                 Platform::Gb | Platform::Gbc | Platform::Gba | Platform::Ws | Platform::Lynx
-            )
+            ) || loaded.platform.is_pokedaisy())
             && loaded.player.is_none();
-        let core = if tracked {
-            self.achievements.wrap(loaded.opened.core)
-        } else {
-            loaded.opened.core
+        let core = match (
+            tracked,
+            self.app.root().filter(|_| loaded.platform.is_pokedaisy()),
+        ) {
+            (true, Some(root)) => self.achievements.wrap_pausing(
+                loaded.opened.core,
+                Box::new(crate::pokedaisy::flying_anywhere(root)),
+            ),
+            (true, None) => self.achievements.wrap(loaded.opened.core),
+            (false, _) => loaded.opened.core,
         };
         let (core, rom, sav, resume) = (core, loaded.rom, sav.flatten(), resume.flatten());
         let emu = match loaded.player.filter(|_| loaded.platform == Platform::Gba) {
