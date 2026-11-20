@@ -144,6 +144,9 @@ impl RetroCore for Tracked {
     fn set_touch(&mut self, at: Option<(u8, u8)>) {
         self.core.set_touch(at);
     }
+    fn set_pointer(&mut self, pointer: Option<slot_retro::Pointer>) {
+        self.core.set_pointer(pointer);
+    }
     fn set_lid(&mut self, shut: bool) {
         self.core.set_lid(shut);
     }
