@@ -4,7 +4,7 @@ use std::sync::{mpsc, Arc};
 
 use slot_retro::{AchievementMemory, AvInfo, ButtonMask, CoreError, Link, RetroCore, Rumble};
 
-use crate::{network, Control, Frame, Service, QUEUE_SIZE, RAM_SIZE};
+use crate::{network, Control, Frame, Service, Status, QUEUE_SIZE, RAM_SIZE};
 
 static NEXT_GAME: AtomicU64 = AtomicU64::new(1);
 
@@ -25,6 +25,7 @@ pub(crate) struct Tracked {
     /// achievements, as PokeDaisy's own apps pause them; nothing is checked while it is.
     pause: Option<Box<dyn FnMut() -> bool + Send>>,
     paused: bool,
+    status: Arc<Status>,
 }
 
 /// How many frames apart `pause` is asked.
@@ -48,6 +49,7 @@ impl Tracked {
             allocated: 0,
             pause: None,
             paused: false,
+            status: service.status.clone(),
         }
     }
 
@@ -61,6 +63,8 @@ impl Tracked {
         if self.sequence % PAUSE_EVERY == 1 {
             if let Some(pause) = &mut self.pause {
                 self.paused = pause();
+                let state = 1 + u8::from(self.paused);
+                self.status.paused.store(state, Ordering::Release);
             }
         }
         // Skipped frames leave a gap in the sequence, which resets hit counts as a dropped
@@ -181,6 +185,9 @@ impl RetroCore for Tracked {
 impl Drop for Tracked {
     fn drop(&mut self) {
         let _ = self.controls.send(Control::Unload(self.generation));
+        if self.pause.is_some() {
+            self.status.paused.store(0, Ordering::Release);
+        }
         let _ =
             self.current
                 .compare_exchange(self.generation, 0, Ordering::AcqRel, Ordering::Relaxed);

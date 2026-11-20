@@ -195,6 +195,12 @@ impl Session {
         self.achievements.take_set_ready()
     }
 
+    /// slotPlus: whether the game in play has its achievements paused (PokeDaisy's Flight
+    /// Area set to Anywhere). None when it can't pause or has no set active.
+    pub fn achievements_paused(&self) -> Option<bool> {
+        self.achievements.paused()
+    }
+
     pub fn achievement_flush_ready(&self) -> bool {
         self.achievements.flush_ready()
     }
