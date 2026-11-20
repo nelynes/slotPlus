@@ -4,6 +4,7 @@
 
 Work toward slotPlus 3.1 on the `pokedaisy` branch. Not released yet.
 
+- **Fixed: Reset did nothing.** The Reset shortcut never reached the game on any system with RetroAchievements (Game Boy, Game Boy Color, Game Boy Advance, WonderSwan and Atari Lynx), whether or not you'd signed in.
 - **A PokeDaisy shelf.** Put Pokémon games for Game Boy Advance, Game Boy and Game Boy Color in `Games/PokeDaisy/` and they play on [PokeDaisy](https://github.com/lidor30/pokedaisy), with its companion (party, bag, Pokédex, map, guide) on X and its quick menu on Y. Each game keeps its own system's cart and its own save, so moving a game between shelves keeps its progress. Based on PokeDaisy by Lidor Itzhari.
 
 ## [1.16.0-plus3.0](https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus3.0)
