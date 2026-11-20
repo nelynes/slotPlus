@@ -131,6 +131,22 @@ impl RetroCore for Tracked {
     fn set_frame_skip(&mut self, skip: bool) {
         self.core.set_frame_skip(skip);
     }
+    // Everything the core does is passed through, defaults included: a call left to
+    // RetroCore's default would be swallowed here. A reset starts a new timeline, as a loaded
+    // state does, so no hit count carries across it.
+    fn reset(&mut self) {
+        self.core.reset();
+        self.timeline += 1;
+    }
+    fn set_touch(&mut self, at: Option<(u8, u8)>) {
+        self.core.set_touch(at);
+    }
+    fn set_lid(&mut self, shut: bool) {
+        self.core.set_lid(shut);
+    }
+    fn takes_xy(&self) -> bool {
+        self.core.takes_xy()
+    }
     fn video_xrgb8888(&self) -> &[u8] {
         self.core.video_xrgb8888()
     }
