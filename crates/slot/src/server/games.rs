@@ -5,7 +5,9 @@ use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
 use serde_json::{json, Value};
-use slot_store::{atomic_write, listing, scan_platform, Cart, Core, Platform, StateRing};
+use slot_store::{
+    atomic_write, listing, scan_platform, scan_shelf, Cart, Core, Platform, StateRing,
+};
 
 use super::files::same_inode;
 use super::paths::{card_name, resolve, Refused};
@@ -26,14 +28,15 @@ pub(super) fn ok() -> Reply {
     Reply::json(json!({ "ok": true }))
 }
 
-/// slotPlus: Gamebit doesn't serve the PokeDaisy folder yet: its three systems share it.
+/// One tag per shelf. slotPlus: the PokeDaisy shelf's three systems share its folder and its
+/// tag, which goes by `PdGba`, as the shelf does.
 fn served() -> impl Iterator<Item = Platform> {
     #[cfg(feature = "nds")]
     return Platform::ALL
         .into_iter()
-        .filter(|p| *p != Platform::Nds && !p.is_pokedaisy());
+        .filter(|p| *p != Platform::Nds && p.shelf() == *p);
     #[cfg(not(feature = "nds"))]
-    Platform::ALL.into_iter().filter(|p| !p.is_pokedaisy())
+    Platform::ALL.into_iter().filter(|p| p.shelf() == *p)
 }
 
 fn platform_for(tag: &str) -> Option<Platform> {
@@ -94,7 +97,7 @@ impl Index {
     fn new(root: &Path, platform: Platform) -> Index {
         let tag = platform.dir_name();
         let mut saves: HashMap<String, Vec<String>> = HashMap::new();
-        if let Some(entries) = at(root, &["Saves", tag])
+        if let Some(entries) = at(root, &["Saves", platform.save_dir_name()])
             .ok()
             .and_then(|d| fs::read_dir(d).ok())
         {
@@ -177,7 +180,60 @@ fn resume_cores(root: &Path, cart: &Cart) -> Vec<&'static str> {
 }
 
 fn carts(root: &Path, platform: Platform) -> Vec<Cart> {
-    scan_platform(root, platform).unwrap_or_default()
+    scan_shelf(root, platform).unwrap_or_default()
+}
+
+/// Each of a shelf's platforms' saves, guides and states, for listing the shelf.
+struct Indexes(Vec<(Platform, Index)>);
+
+impl Indexes {
+    fn new(root: &Path, shelf: Platform) -> Indexes {
+        let members = Platform::ALL.into_iter().filter(|p| p.shelf() == shelf);
+        Indexes(members.map(|p| (p, Index::new(root, p))).collect())
+    }
+
+    fn of(&self, platform: Platform) -> &Index {
+        let found = self.0.iter().find(|(p, _)| *p == platform);
+        &found.unwrap_or(&self.0[0]).1
+    }
+}
+
+/// slotPlus: the folder under `Labels/` that a cart's label is in. A PokeDaisy game with no
+/// label of its own shows its system's (`Labels/GBA/` for a Game Boy Advance game), which it
+/// borrows: Gamebit shows it, but never changes, moves or deletes it.
+fn label_tag(cart: &Cart) -> &'static str {
+    let system = cart.platform.hardware().dir_name();
+    let in_system = cart
+        .label
+        .as_deref()
+        .and_then(Path::parent)
+        .and_then(Path::file_name)
+        .is_some_and(|d| d.to_string_lossy() == system);
+    if cart.platform.is_pokedaisy() && in_system {
+        system
+    } else {
+        cart.platform.dir_name()
+    }
+}
+
+fn borrows_label(cart: &Cart) -> bool {
+    label_tag(cart) != cart.platform.dir_name()
+}
+
+/// slotPlus: whether another shelf has this game too and shares its battery save, as a
+/// PokeDaisy game and the same game on its own system's shelf do.
+fn save_shared(root: &Path, cart: &Cart) -> bool {
+    let saves = cart.platform.save_dir_name();
+    Platform::ALL
+        .into_iter()
+        .filter(|p| p.dir_name() != cart.platform.dir_name() && p.save_dir_name() == saves)
+        .any(|p| {
+            at(root, &["Games", p.dir_name()])
+                .map(|d| listing(&d))
+                .unwrap_or_default()
+                .values()
+                .any(|name| stem_of(name) == cart.stem && p.accepts(Path::new(name)))
+        })
 }
 
 fn row(root: &Path, index: &Index, cart: &Cart, id: usize) -> Value {
@@ -220,16 +276,15 @@ pub fn games(root: &Path, mut req: Request) -> Reply {
         }
     }
     let list = carts(root, platform);
-    let index = || Index::new(root, platform);
     if req.path.len() == 3 {
         if req.method != "GET" && req.method != "HEAD" {
             return Reply::error(405, "method not allowed");
         }
-        let index = index();
+        let indexes = Indexes::new(root, platform);
         let rows: Vec<Value> = list
             .iter()
             .enumerate()
-            .map(|(i, c)| row(root, &index, c, i))
+            .map(|(i, c)| row(root, indexes.of(c.platform), c, i))
             .collect();
         return Reply::json(json!({
             "platform": platform.dir_name(),
@@ -242,6 +297,7 @@ pub fn games(root: &Path, mut req: Request) -> Reply {
         return Reply::error(404, "game not found");
     };
     let cart = &list[id];
+    let index = || Index::new(root, cart.platform);
     let method = req.method.clone();
     let method = method.as_str();
     let read = method == "GET" || method == "HEAD";
@@ -300,7 +356,7 @@ pub fn games(root: &Path, mut req: Request) -> Reply {
             if req.query.get("file").is_some_and(|f| *f != name) {
                 return Reply::error(404, "not found");
             }
-            match at(root, &["Games", platform.dir_name(), &name]) {
+            match at(root, &["Games", cart.platform.dir_name(), &name]) {
                 Ok(p) => Reply::file(p),
                 Err(r) => refused(r),
             }
@@ -324,15 +380,17 @@ fn art(root: &Path, cart: &Cart, req: &mut Request) -> Reply {
             let Some(label) = &cart.label else {
                 return Reply::error(404, "not found");
             };
-            match at(root, &["Labels", tag, &file_name(label)]) {
+            match at(root, &["Labels", label_tag(cart), &file_name(label)]) {
                 Ok(path) => Reply::file(path).with_header("Cache-Control", IMMUTABLE),
                 Err(r) => refused(r),
             }
         }
         "POST" => {
+            // A borrowed label stays its shelf's: the new one is this game's own.
             let name = cart
                 .label
                 .as_ref()
+                .filter(|_| !borrows_label(cart))
                 .map(|l| file_name(l))
                 .unwrap_or_else(|| format!("{}.png", cart.stem));
             let dest = card_name(&name).and_then(|_| at(root, &["Labels", tag, &name]));
@@ -367,6 +425,10 @@ fn art(root: &Path, cart: &Cart, req: &mut Request) -> Reply {
             let Some(label) = &cart.label else {
                 return Reply::error(404, "not found");
             };
+            if borrows_label(cart) {
+                let shelf = cart.platform.hardware().name();
+                return Reply::error(409, &format!("that label is the {shelf} shelf's"));
+            }
             match at(root, &["Labels", tag, &file_name(label)]) {
                 Ok(p) => match fs::remove_file(p) {
                     Ok(()) => ok(),
@@ -395,10 +457,13 @@ fn state_dirs(root: &Path, cart: &Cart) -> Vec<PathBuf> {
 fn companions(root: &Path, index: &Index, cart: &Cart) -> Result<Vec<PathBuf>, Refused> {
     let tag = cart.platform.dir_name();
     let mut out = Vec::new();
-    for name in index.saves(&cart.stem) {
-        out.push(at(root, &["Saves", tag, name])?);
+    // A save the same game on another shelf still plays from stays.
+    if !save_shared(root, cart) {
+        for name in index.saves(&cart.stem) {
+            out.push(at(root, &["Saves", cart.platform.save_dir_name(), name])?);
+        }
     }
-    if let Some(label) = &cart.label {
+    if let Some(label) = cart.label.as_ref().filter(|_| !borrows_label(cart)) {
         out.push(at(root, &["Labels", tag, &file_name(label)])?);
     }
     if let Some(guide) = index.guide(&cart.stem) {
@@ -529,7 +594,7 @@ pub fn sweep_names(root: &Path) {
             continue;
         }
         let index = Index::new(root, platform);
-        for cart in carts(root, platform) {
+        for cart in scan_platform(root, platform).unwrap_or_default() {
             let clean = clean_stem(&cart.stem);
             if clean.is_empty() || clean == cart.stem {
                 continue;
@@ -565,10 +630,20 @@ fn rename(root: &Path, index: &Index, cart: &Cart, name: &str) -> Result<(), Ref
         at(root, &["Games", tag, &rom_name])?,
         at(root, &["Games", tag, &new_rom])?,
     ));
+    // A save another shelf's copy of the game shares is copied, so both keep playing from it.
+    let shared = save_shared(root, cart);
+    let saves_tag = cart.platform.save_dir_name();
+    let mut copies: Vec<(PathBuf, PathBuf)> = Vec::new();
     for save in index.saves(&cart.stem) {
-        plan_step(&mut plan, root, tag, &new_stem, "Saves", save)?;
+        match shared {
+            false => plan_step(&mut plan, root, saves_tag, &new_stem, "Saves", save)?,
+            true => copies.push((
+                at(root, &["Saves", saves_tag, save])?,
+                at(root, &["Saves", saves_tag, &renamed(save, &new_stem)?])?,
+            )),
+        }
     }
-    if let Some(label) = &cart.label {
+    if let Some(label) = cart.label.as_ref().filter(|_| !borrows_label(cart)) {
         plan_step(&mut plan, root, tag, &new_stem, "Labels", &file_name(label))?;
     }
     let guide = index.guide(&cart.stem);
@@ -589,7 +664,7 @@ fn rename(root: &Path, index: &Index, cart: &Cart, name: &str) -> Result<(), Ref
             plan.push((from, at(root, &["States", tag, core.as_str(), &new_stem])?));
         }
     }
-    for (from, to) in &plan {
+    for (from, to) in plan.iter().chain(&copies) {
         if fs::symlink_metadata(to).is_ok() && !same_inode(from, to) {
             return Err(Refused::new(
                 409,
@@ -606,6 +681,11 @@ fn rename(root: &Path, index: &Index, cart: &Cart, name: &str) -> Result<(), Ref
             return Err(Refused::new(500, format!("rename failed: {e}")));
         }
         done.push(step);
+    }
+    for (from, to) in &copies {
+        if let Err(e) = fs::copy(from, to) {
+            eprintln!("slot: rename: could not copy {}: {e}", from.display());
+        }
     }
     let guide_move = match (guide, guide_to.as_deref()) {
         (Some(from), Some(to)) => Some(GuideMove { from, to }),
@@ -669,7 +749,7 @@ fn upload(
 }
 
 fn saves(root: &Path, index: &Index, cart: &Cart, req: &mut Request) -> Reply {
-    let tag = cart.platform.dir_name();
+    let tag = cart.platform.save_dir_name();
     let owned = index.saves(&cart.stem);
     match req.method.as_str() {
         "GET" | "HEAD" => match req.query.get("file") {
