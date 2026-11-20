@@ -853,8 +853,12 @@ impl Frontend {
                 [upload(slot_back_light()), upload(slot_front_light())],
             ]
         };
-        // The systems with a cart slot of their own, for Cart Slot set to Bespoke.
-        for platform in slot_store::Platform::ALL {
+        // The systems with a cart slot of their own, for Cart Slot set to Bespoke. A shelf of
+        // several systems (slotPlus's PokeDaisy) has one, uploaded once, under its shelf.
+        for platform in slot_store::Platform::ALL
+            .into_iter()
+            .filter(|p| p.shelf() == *p)
+        {
             if let Some(strips) = slot_ui::bespoke_slot(platform) {
                 let [back, front, plugged] = strips.map(|bytes| {
                     compositor.create_texture(slot_ui::SLOT_W, slot_ui::SLOT_H, bytes)

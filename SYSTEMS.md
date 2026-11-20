@@ -317,7 +317,7 @@ A shelf for Pokémon games played on [PokeDaisy](https://github.com/lidor30/poke
 | **Core** | PokeDaisy: over armGBA for Game Boy Advance games, over mGBA for Game Boy and Game Boy Color games. |
 | **Label art** | `Labels/PokeDaisy/`, or the game's own system's (`Labels/GBA/` and so on) when that folder has none. |
 | **Picture** | PokeDaisy draws its own screen round the game, and it always fills the screen. No shader, bezel or overlay. |
-| **Cart** | Each game's own system's cart, side by side on one shelf. START opens it to its board, with the play-time sticker. |
+| **Cart** | Each game's own system's cart, side by side on one shelf. START opens it to its board, with the play-time sticker. With Cart Slot set to Bespoke, the slot is slotPlus's own: a meadow-green shell with small daisies, for all three systems' carts. |
 | **Saves** | The game's save is its system's (`Saves/GBA/` for a Game Boy Advance game), so a game moved between its shelf and this one keeps its save. Save states and the resume state are PokeDaisy's own, in `States/PokeDaisy/`. |
 | **RetroAchievements** | Not on this shelf. |
 
@@ -329,4 +329,6 @@ A shelf for Pokémon games played on [PokeDaisy](https://github.com/lidor30/poke
 | Y | PokeDaisy's quick menu |
 | The rest | As on the game's own shelf |
 
-X and Y aren't turbo buttons on this shelf: they open PokeDaisy's companion and quick menu. Gamebit doesn't show the PokeDaisy folder yet.
+X and Y aren't turbo buttons on this shelf: they open PokeDaisy's companion and quick menu.
+
+In Gamebit, the PokeDaisy folder is one system with all three systems' games in it. A game there that's also on its own system's shelf shares its save with it: deleting it with its files keeps that save, and renaming it copies the save so both keep playing from it. A label it borrows from its system's folder shows, but Gamebit never changes or deletes it; uploading a label gives the game its own, in `Labels/PokeDaisy/`.

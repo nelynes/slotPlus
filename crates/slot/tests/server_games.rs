@@ -75,9 +75,23 @@ fn tags_are_the_four_platforms() {
         .collect();
     tags.sort();
     // slotPlus: every shelf, its own systems too.
+    // The PokeDaisy shelf's three systems share one tag, as they share a folder.
     assert_eq!(
         tags,
-        ["GB", "GBA", "GBAV", "GBC", "GG", "Lynx", "NDS", "NGP", "PokeMini", "TG16", "WS"]
+        [
+            "GB",
+            "GBA",
+            "GBAV",
+            "GBC",
+            "GG",
+            "Lynx",
+            "NDS",
+            "NGP",
+            "PokeDaisy",
+            "PokeMini",
+            "TG16",
+            "WS"
+        ]
     );
     server.stop();
 }
@@ -733,3 +747,135 @@ fn purge_removes_from_collections() {
     server.stop();
 }
 
+/// A PokeDaisy shelf of a Game Boy Advance, a Game Boy and a Game Boy Color game. Emerald is on
+/// the GBA shelf too and shares its save; Red borrows the GB shelf's label.
+fn pokedaisy(root: &Path) {
+    put(root, "Games/PokeDaisy/Emerald.gba", b"emerald");
+    put(root, "Games/PokeDaisy/Red.gb", b"red");
+    put(root, "Games/PokeDaisy/Crystal.gbc", b"crystal");
+    put(root, "Games/PokeDaisy/notes.txt", b"not a game");
+    put(root, "Games/GBA/Emerald.gba", b"emerald");
+    put(root, "Saves/GBA/Emerald.sav", b"emerald-save");
+    put(root, "Saves/GB/Red.sav", b"red-save");
+    put(root, "Saves/GBC/Crystal.sav", b"crystal-save");
+    put(root, "Labels/GB/Red.png", b"gb-shelf-label");
+    put(root, "Labels/PokeDaisy/Crystal.png", b"own-label");
+}
+
+fn pokedaisy_game(port: u16, rom: &str) -> serde_json::Value {
+    let (status, body) = call(port, "GET", "/api/games/PokeDaisy", b"");
+    assert_eq!(status, 200, "{body}");
+    let v = json(&body);
+    v["games"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|g| g["rom"] == rom)
+        .unwrap_or_else(|| panic!("{rom} not listed: {body}"))
+        .clone()
+}
+
+#[test]
+fn the_pokedaisy_shelf_lists_its_three_systems_games_with_their_saves() {
+    let (d, server) = start();
+    pokedaisy(d.path());
+    let p = server.port();
+    let (status, body) = call(p, "GET", "/api/games/PokeDaisy", b"");
+    assert_eq!(status, 200, "{body}");
+    let v = json(&body);
+    assert_eq!(v["platform"], "PokeDaisy");
+    assert_eq!(v["displayName"], "PokeDaisy");
+    let roms: Vec<&str> = v["games"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|g| g["rom"].as_str().unwrap())
+        .collect();
+    assert_eq!(roms, ["Crystal.gbc", "Emerald.gba", "Red.gb"]);
+    for (i, g) in v["games"].as_array().unwrap().iter().enumerate() {
+        assert_eq!(g["id"], i);
+        assert_eq!(g["savesCount"], 1, "{g}");
+        assert_eq!(g["hasArt"], g["rom"] != "Emerald.gba", "{g}");
+        assert!(g["path"].as_str().unwrap().starts_with("PokeDaisy/"), "{g}");
+    }
+    let (status, body) = call(p, "GET", "/api/games/PokeDaisy/2/saves?file=Red.sav", b"");
+    assert_eq!((status, body.as_str()), (200, "red-save"));
+    let (status, body) = call(p, "GET", "/api/games/PokeDaisy/0/rom?file=Crystal.gbc", b"");
+    assert_eq!((status, body.as_str()), (200, "crystal"));
+    let (status, body) = call(p, "GET", "/api/games/PokeDaisy/1", b"");
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(json(&body)["platform"], "PokeDaisy");
+    server.stop();
+}
+
+#[test]
+fn a_borrowed_label_shows_but_is_never_changed() {
+    let (d, server) = start();
+    pokedaisy(d.path());
+    let p = server.port();
+    let red = pokedaisy_game(p, "Red.gb");
+    let id = red["id"].as_u64().unwrap();
+    let (status, body) = call(p, "GET", &format!("/api/games/PokeDaisy/{id}/art"), b"");
+    assert_eq!((status, body.as_str()), (200, "gb-shelf-label"));
+    let (status, _) = call(p, "DELETE", &format!("/api/games/PokeDaisy/{id}/art"), b"");
+    assert_eq!(status, 409);
+    assert!(d.path().join("Labels/GB/Red.png").exists());
+    let png = b"\x89PNG\r\n\x1a\nmine";
+    let (status, _) = call(p, "POST", &format!("/api/games/PokeDaisy/{id}/art"), png);
+    assert_eq!(status, 200);
+    assert_eq!(
+        std::fs::read(d.path().join("Labels/PokeDaisy/Red.png")).unwrap(),
+        png
+    );
+    assert_eq!(
+        std::fs::read(d.path().join("Labels/GB/Red.png")).unwrap(),
+        b"gb-shelf-label"
+    );
+    server.stop();
+}
+
+#[test]
+fn a_purge_keeps_a_save_another_shelf_shares() {
+    let (d, server) = start();
+    pokedaisy(d.path());
+    let p = server.port();
+    let r = d.path();
+    let emerald = pokedaisy_game(p, "Emerald.gba")["id"].as_u64().unwrap();
+    let target = format!("/api/games/PokeDaisy/{emerald}?purge=true&rom=Emerald.gba");
+    assert_eq!(call(p, "DELETE", &target, b"").0, 200);
+    assert!(!r.join("Games/PokeDaisy/Emerald.gba").exists());
+    assert!(r.join("Saves/GBA/Emerald.sav").exists());
+    let red = pokedaisy_game(p, "Red.gb")["id"].as_u64().unwrap();
+    let target = format!("/api/games/PokeDaisy/{red}?purge=true&rom=Red.gb");
+    assert_eq!(call(p, "DELETE", &target, b"").0, 200);
+    assert!(!r.join("Saves/GB/Red.sav").exists());
+    assert!(r.join("Labels/GB/Red.png").exists());
+    server.stop();
+}
+
+#[test]
+fn a_rename_copies_a_save_another_shelf_shares() {
+    let (d, server) = start();
+    pokedaisy(d.path());
+    let p = server.port();
+    let r = d.path();
+    let emerald = pokedaisy_game(p, "Emerald.gba")["id"].as_u64().unwrap();
+    let target = format!("/api/games/PokeDaisy/{emerald}/rename?name=Emerald%20Rogue.gba");
+    assert_eq!(call(p, "POST", &target, b"").0, 200);
+    assert!(r.join("Games/PokeDaisy/Emerald Rogue.gba").exists());
+    assert_eq!(
+        std::fs::read(r.join("Saves/GBA/Emerald.sav")).unwrap(),
+        b"emerald-save"
+    );
+    assert_eq!(
+        std::fs::read(r.join("Saves/GBA/Emerald Rogue.sav")).unwrap(),
+        b"emerald-save"
+    );
+    let crystal = pokedaisy_game(p, "Crystal.gbc")["id"].as_u64().unwrap();
+    let target = format!("/api/games/PokeDaisy/{crystal}/rename?name=Crystal%20Clear.gbc");
+    assert_eq!(call(p, "POST", &target, b"").0, 200);
+    assert!(!r.join("Saves/GBC/Crystal.sav").exists());
+    assert!(r.join("Saves/GBC/Crystal Clear.sav").exists());
+    assert!(r.join("Labels/PokeDaisy/Crystal Clear.png").exists());
+    server.stop();
+}

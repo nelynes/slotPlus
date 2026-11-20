@@ -61,8 +61,8 @@ pub use play_log::{
 };
 pub use ring::{is_stamp, StateEntry, StateRing, RING_MAX};
 pub use scan::{
-    clean_label, initial, is_hidden, label_tags, listing, scan, scan_platform, sort_key, Cart,
-    StoreError,
+    clean_label, initial, is_hidden, label_tags, listing, scan, scan_platform, scan_shelf,
+    sort_key, Cart, StoreError,
 };
 pub use shots::{shot_stamp, ShotDir, ShotEntry, SCREENSHOTS_DIR};
 pub use slot_state::{
