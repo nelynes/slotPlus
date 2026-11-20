@@ -51,7 +51,7 @@ fn the_row_asks_for_wifi_until_connected() {
     let (_d, mut a) = booted(true);
     common::connect(&mut a);
     open_network(&mut a);
-    assert_eq!(a.quick_menu(), Some(QuickRow::Server));
+    assert_eq!(a.quick_menu(), Some(QuickRow::ShelfMode));
     assert!(!a.hidden_rows().contains(&QuickRow::FetchArt));
 }
 

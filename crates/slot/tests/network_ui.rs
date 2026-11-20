@@ -58,7 +58,7 @@ fn logged(log: &Log, line: &str) -> bool {
 
 fn open_networks(a: &mut App) {
     a.apply(Action::QuickMenu);
-    for row in [QuickRow::System, QuickRow::Wifi, QuickRow::Networks] {
+    for row in [QuickRow::Online, QuickRow::Wifi, QuickRow::Networks] {
         for _ in 0..12 {
             if a.quick_menu() == Some(row) {
                 break;

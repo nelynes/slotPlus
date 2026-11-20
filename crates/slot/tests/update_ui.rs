@@ -99,7 +99,7 @@ fn on_updates() -> (TempDir, App, FakeJobs) {
     assert!(matches!(a.phase(), Phase::Shelf), "{:?}", a.phase());
     connect(&mut a);
     a.apply(Action::QuickMenu);
-    while a.quick_menu() != Some(QuickRow::System) {
+    while a.quick_menu() != Some(QuickRow::Online) {
         press(&mut a, Btn::Down);
     }
     press(&mut a, Btn::A);
@@ -274,7 +274,7 @@ fn every_failure_has_its_own_words() {
         (
             UpdateFail::NoWifi,
             "Could not join Wi-Fi",
-            "Check Wi-Fi in the System menu.",
+            "Check Wi-Fi in the Online menu.",
         ),
         (
             UpdateFail::Offline,
@@ -343,22 +343,22 @@ fn a_check_that_cannot_reach_the_server_says_to_try_again_later() {
         text(&a),
         Some((
             "Could not join Wi-Fi".into(),
-            "Check Wi-Fi in the System menu.".into()
+            "Check Wi-Fi in the Online menu.".into()
         ))
     );
 }
 
 #[test]
-fn leaving_the_system_page_mid_check_drops_the_result() {
+fn leaving_the_online_page_mid_check_drops_the_result() {
     let (_d, mut a, jobs) = on_updates();
     press(&mut a, Btn::A);
     press(&mut a, Btn::B);
     assert!(on_updates_row(&a));
     press(&mut a, Btn::B);
-    assert_eq!(a.quick_menu(), Some(QuickRow::System));
+    assert_eq!(a.quick_menu(), Some(QuickRow::Online));
     jobs.send(&mut a, UpdateEvent::Available(vec![release()]));
     assert!(!a.update_shown());
-    assert_eq!(a.quick_menu(), Some(QuickRow::System));
+    assert_eq!(a.quick_menu(), Some(QuickRow::Online));
 }
 
 #[test]
