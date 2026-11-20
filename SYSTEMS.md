@@ -319,7 +319,7 @@ A shelf for Pokémon games played on [PokeDaisy](https://github.com/lidor30/poke
 | **Picture** | PokeDaisy draws its own screen round the game, and it always fills the screen. No shader, bezel or overlay. |
 | **Cart** | Each game's own system's cart, side by side on one shelf. START opens it to its board, with the play-time sticker. With Cart Slot set to Bespoke, the slot is slotPlus's own: a meadow-green shell with small daisies, for all three systems' carts. |
 | **Saves** | The game's save is its system's (`Saves/GBA/` for a Game Boy Advance game), so a game moved between its shelf and this one keeps its save. Save states and the resume state are PokeDaisy's own, in `States/PokeDaisy/`. |
-| **RetroAchievements** | Yes, softcore, as on the game's own shelf: the same file earns from the same set. Paused while PokeDaisy's Flight Area is set to Anywhere, as PokeDaisy's own apps pause them, since flying ahead could reach a set's places early. |
+| **RetroAchievements** | Yes, softcore, as on the game's own shelf: the same file earns from the same set. Paused while PokeDaisy's Flight Area is set to Anywhere, as PokeDaisy's own apps pause them, since flying ahead could reach a set's places early. A pill in the corner says ACHIEVEMENTS PAUSED when that starts (or when a game starts paused) and ACHIEVEMENTS ON when it ends. |
 
 ### Controls
 

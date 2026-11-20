@@ -1513,3 +1513,44 @@ fn the_pokedaisy_shelf_is_scanned_as_one_system_of_all_three_kinds() {
         .collect();
     assert_eq!(names, ["Crystal.gbc", "Emerald.gba", "Red.gb"]);
 }
+
+#[test]
+fn the_pause_is_told_once_the_set_is_active_and_forgotten_with_the_game() {
+    let (controls, _controls_rx) = mpsc::channel();
+    let (frames, _frames_rx) = mpsc::sync_channel(QUEUE_SIZE);
+    let (_, notices) = mpsc::channel();
+    let service = Service {
+        controls,
+        frames,
+        notices,
+        enabled: Arc::new(AtomicBool::new(true)),
+        current: Arc::new(AtomicU64::new(1)),
+        tracking: Arc::new(AtomicU64::new(1)),
+        flushing: AtomicBool::new(false),
+        flushed: Arc::new(AtomicBool::new(false)),
+        status: Arc::new(Status::default()),
+    };
+    assert_eq!(service.paused(), None, "nothing asked yet");
+    let paused = Arc::new(AtomicBool::new(true));
+    let asked = paused.clone();
+    let mut core = service.wrap_pausing(
+        Box::<TestCore>::default(),
+        slot_store::Platform::PdGba,
+        Box::new(move || asked.load(Ordering::Acquire)),
+    );
+    core.run_frame(ButtonMask(0));
+    assert_eq!(service.paused(), Some(true));
+    paused.store(false, Ordering::Release);
+    for _ in 0..PAUSE_FRAMES {
+        core.run_frame(ButtonMask(0));
+    }
+    assert_eq!(service.paused(), Some(false));
+    service.tracking.store(0, Ordering::Release);
+    assert_eq!(service.paused(), None, "no set active");
+    service.tracking.store(1, Ordering::Release);
+    drop(core);
+    assert_eq!(service.paused(), None, "the game is gone");
+}
+
+/// How many frames apart a pause is asked about.
+const PAUSE_FRAMES: u32 = 60;
