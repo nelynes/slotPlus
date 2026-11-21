@@ -56,20 +56,28 @@ pub fn has_music(root: &Path) -> bool {
     holds_music(&music_dir(root), 3)
 }
 
-/// The music cart, with its label if the card has one in `Labels/GBA/`.
+/// The label slotPlus ships for the cart, in `System/`.
+pub const MUSIC_LABEL: &str = "System/music_label.png";
+/// The cart's plastic: black, like the music carts sold for the GBA.
+pub const MUSIC_SHELL: &str = "auto 1c1c21 solid";
+
+/// The music cart: the card's own label for it if `Labels/GBA/` has one, or the one slotPlus
+/// ships.
 pub fn music_cart(root: &Path) -> Cart {
-    let label = root
+    let own = root
         .join("Labels")
         .join(Platform::Gba.dir_name())
         .join(format!("{MUSIC_STEM}.png"));
+    let shipped = root.join(MUSIC_LABEL);
+    let label = [own, shipped].into_iter().find(|p| p.is_file());
     Cart {
         platform: Platform::Gba,
         stem: MUSIC_STEM.to_string(),
         rom: music_dir(root),
-        label: label.is_file().then_some(label),
+        label,
         title: MUSIC_TITLE.to_string(),
         code: String::new(),
-        shell: None,
+        shell: crate::ShellChoice::parse(MUSIC_SHELL),
         tags: Vec::new(),
     }
 }
@@ -95,5 +103,18 @@ mod tests {
         let cart = music_cart(d.path());
         assert!(is_music(&cart));
         assert_eq!(cart.title, "Music");
+        assert_eq!(cart.label, None);
+        assert!(cart.shell.is_some(), "a black cart");
+        std::fs::create_dir_all(d.path().join("System")).unwrap();
+        std::fs::write(d.path().join(MUSIC_LABEL), b"png").unwrap();
+        assert_eq!(music_cart(d.path()).label, Some(d.path().join(MUSIC_LABEL)));
+        let own = d.path().join("Labels/GBA/slotPlus Music.png");
+        std::fs::create_dir_all(own.parent().unwrap()).unwrap();
+        std::fs::write(&own, b"png").unwrap();
+        assert_eq!(
+            music_cart(d.path()).label,
+            Some(own),
+            "the card's own label first"
+        );
     }
 }

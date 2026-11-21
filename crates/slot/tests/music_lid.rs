@@ -61,6 +61,14 @@ fn shutting_the_lid_on_a_playing_song_only_turns_the_screen_off() {
     s.feed([RawEvent::Up(Btn::A)], 400);
     let lit = backlight.load(Ordering::Relaxed);
 
+    // While a song plays, Up and Down are the handheld's volume, kept from the player.
+    assert_eq!(s.app().taken_buttons(), vec![Btn::Up, Btn::Down]);
+    let before = s.app().volume();
+    s.app_mut().apply(Action::GbaDown(Btn::Down));
+    assert!(s.app().volume() < before, "Down turns it down");
+    s.app_mut().apply(Action::GbaDown(Btn::Up));
+    assert_eq!(s.app().volume(), before, "and Up back up");
+
     s.app_mut().apply(Action::LidClose);
     assert!(s.app().music_dark());
     assert!(
@@ -93,6 +101,10 @@ fn shutting_the_lid_with_no_song_playing_sleeps_as_ever() {
     until(&mut s, "seating", |s| {
         matches!(s.app().phase(), Phase::Playing { .. })
     });
+    assert!(
+        s.app().taken_buttons().is_empty(),
+        "Up and Down are the player's to browse with"
+    );
     s.app_mut().apply(Action::LidClose);
     assert!(matches!(s.app().phase(), Phase::Doze { .. }));
 }

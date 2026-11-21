@@ -5554,6 +5554,10 @@ impl App {
     }
 
     pub fn taken_buttons(&self) -> Vec<Btn> {
+        // slotPlus: while the music cart plays a song, Up and Down are the handheld's volume.
+        if self.music_plays_on() {
+            return vec![Btn::Up, Btn::Down];
+        }
         if !self.slot_owns_the_shoulders() {
             return Vec::new();
         }
@@ -7550,6 +7554,12 @@ impl App {
             },
             Phase::Inserting { .. } if action == Action::Eject => self.eject(),
             Phase::Playing { .. } => match action {
+                Action::GbaDown(Btn::Up) if self.music_plays_on() => {
+                    self.adjust(Action::VolumeUp);
+                }
+                Action::GbaDown(Btn::Down) if self.music_plays_on() => {
+                    self.adjust(Action::VolumeDown);
+                }
                 Action::GbaDown(Btn::L1)
                     if self.slot_owns_the_shoulders()
                         && !self.bound_to_game(Btn::L1)
