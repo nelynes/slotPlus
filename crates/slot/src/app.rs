@@ -717,6 +717,8 @@ pub struct App {
     core_board_face: Option<TexId>,
     core_interior_face: Option<TexId>,
     core_lid_face: Option<TexId>,
+    /// slotPlus: the lid is shut on the music cart, which plays on with the screen off.
+    music_dark: bool,
     core_faces_for: Option<(Platform, String)>,
     core_socket_faces: Vec<TexId>,
     core_chip_faces: Vec<TexId>,
@@ -1325,6 +1327,7 @@ impl App {
             core_board_face: None,
             core_interior_face: None,
             core_lid_face: None,
+            music_dark: false,
             core_faces_for: None,
             core_socket_faces: Vec::new(),
             core_chip_faces: Vec::new(),
@@ -7283,7 +7286,22 @@ impl App {
             return;
         }
         self.track_held_dir(action);
+        // slotPlus: with the lid shut on the music cart, only the screen is off. The lid
+        // lights it again, and the volume buttons still work; nothing else is in reach.
+        if self.music_dark {
+            match action {
+                Action::LidOpen => return self.light_music(),
+                Action::LidClose => return,
+                Action::VolumeUp | Action::VolumeDown => {}
+                Action::PowerPress | Action::PowerTap => {
+                    self.light_music();
+                    return self.doze();
+                }
+                _ => return,
+            }
+        }
         match action {
+            Action::LidClose if self.music_plays_on() => return self.darken_for_music(),
             Action::LidClose => return self.doze(),
             Action::LidOpen => return self.wake(),
             Action::PowerPress => {
@@ -8819,6 +8837,7 @@ impl App {
             self.hud.toast(Toast::KidUnlocked, self.now());
         }
         self.lock_kid_on_close();
+        self.music_dark_ends();
         self.take_eject_write(false);
         if self.name_pending && self.shelf_platform.face.is_some() {
             self.name_pending = false;
@@ -12999,6 +13018,7 @@ impl App {
     }
 
     fn doze(&mut self) {
+        self.music_dark = false;
         self.cancel_fetch_art();
         self.stop_romm();
         self.abandon_server();
@@ -13040,6 +13060,42 @@ impl App {
         if let Some(power) = &mut self.power {
             power.on_close();
         }
+    }
+
+    /// slotPlus: the music cart is in and a song is playing, so shutting the lid should
+    /// only turn the screen off.
+    fn music_plays_on(&self) -> bool {
+        matches!(self.phase, Phase::Playing { .. })
+            && self.seated_cart().is_some_and(slot_store::music::is_music)
+            && self.root.as_deref().is_some_and(crate::music::playing)
+    }
+
+    fn darken_for_music(&mut self) {
+        self.close_game_menu();
+        self.music_dark = true;
+        if let Some(power) = &mut self.power {
+            power.darken();
+        }
+    }
+
+    fn light_music(&mut self) {
+        self.music_dark = false;
+        if let Some(power) = &mut self.power {
+            power.on_open();
+        }
+    }
+
+    /// slotPlus: with the lid shut on the music cart, once the music stops (paused from
+    /// outside, or the last song over), the handheld goes to sleep as a shut lid would.
+    fn music_dark_ends(&mut self) {
+        if self.music_dark && !self.root.as_deref().is_some_and(crate::music::playing) {
+            self.music_dark = false;
+            self.doze();
+        }
+    }
+
+    pub fn music_dark(&self) -> bool {
+        self.music_dark
     }
 
     fn wake(&mut self) {

@@ -8,4 +8,4 @@ pub mod player;
 pub mod screen;
 
 pub use library::{has_music, music_dir, MUSIC_DIR};
-pub use player::MusicPlayer;
+pub use player::{playing, MusicPlayer};

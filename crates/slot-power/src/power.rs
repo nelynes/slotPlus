@@ -7,6 +7,9 @@ pub struct Power {
     platform: Box<dyn Platform>,
     level: u8,
     closed: bool,
+    /// slotPlus: the screen is off with the lid shut, but the handheld stays awake (the
+    /// music cart playing on).
+    dark: bool,
     timeout: Duration,
 }
 
@@ -16,15 +19,23 @@ impl Power {
             platform,
             level: 0,
             closed: false,
+            dark: false,
             timeout,
         }
     }
 
     pub fn set_backlight(&mut self, step: u8) {
         self.level = step;
-        if !self.closed {
+        if !self.closed && !self.dark {
             self.platform.set_backlight(step);
         }
+    }
+
+    /// slotPlus: the lid is shut but the handheld stays awake: only the screen goes off.
+    /// `on_open` lights it again; `on_close` from here sleeps as usual.
+    pub fn darken(&mut self) {
+        self.dark = true;
+        self.platform.set_backlight(0);
     }
 
     pub fn set_bottom_backlight(&mut self, on: bool) {
@@ -108,6 +119,7 @@ impl LidPolicy for Power {
 
     fn on_open(&mut self) {
         self.closed = false;
+        self.dark = false;
         self.platform.set_backlight(self.level);
     }
 

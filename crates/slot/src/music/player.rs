@@ -29,6 +29,29 @@ const WIND_MS: u64 = 10_000;
 const RESTART_AFTER_MS: u64 = 3_000;
 const SAVE_MAGIC: &str = "slotplus-music 1";
 
+/// The music folder whose cart is playing a song right now (not paused, not stopped), for
+/// the lid: shut while a song plays, only the screen goes off.
+static PLAYING: std::sync::Mutex<Option<PathBuf>> = std::sync::Mutex::new(None);
+
+/// Whether the music cart for the card at `root` is playing a song.
+pub fn playing(root: &Path) -> bool {
+    let music = library::music_dir(root);
+    PLAYING
+        .lock()
+        .map(|p| p.as_deref() == Some(music.as_path()))
+        .unwrap_or(false)
+}
+
+fn set_playing(top: &Path, on: bool) {
+    if let Ok(mut p) = PLAYING.lock() {
+        match on {
+            true => *p = Some(top.to_path_buf()),
+            false if p.as_deref() == Some(top) => *p = None,
+            false => {}
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Order {
     #[default]
@@ -567,6 +590,12 @@ impl MusicPlayer {
     }
 }
 
+impl Drop for MusicPlayer {
+    fn drop(&mut self) {
+        set_playing(&self.top, false);
+    }
+}
+
 impl RetroCore for MusicPlayer {
     fn load(&mut self, rom: &Path) -> Result<(), CoreError> {
         // The cart's "ROM" is the music folder itself.
@@ -583,6 +612,7 @@ impl RetroCore for MusicPlayer {
         self.frame += 1;
         let frames = (samples_at(self.frame) - start) as usize;
         self.play(frames);
+        set_playing(&self.top, self.song.is_some() && !self.paused);
         self.draw();
     }
 
