@@ -185,10 +185,15 @@ fn stamp_stop(typed: &mut [f32]) {
 }
 
 pub(crate) fn tooth_cut(x: usize, y: usize) -> bool {
+    tooth_cut_in(x, y, PH)
+}
+
+/// The same teeth, at both ends of a strip `h` tall.
+pub(crate) fn tooth_cut_in(x: usize, y: usize, h: usize) -> bool {
     let t = (x % TOOTH_W) as f32 + 0.5;
     let depth = TOOTH_H * (1.0 - (t - 3.0).abs() / 3.0);
     let from_top = y as f32 + 0.5;
-    let from_bottom = PH as f32 - from_top;
+    let from_bottom = h as f32 - from_top;
     from_top < depth || from_bottom < depth
 }
 

@@ -127,7 +127,7 @@ fn each_mode_has_its_legend() {
     let mut v = viewer(2);
     assert_eq!(labels(&v), ["View", "Back", "Delete", "Multi"]);
     v.open();
-    assert_eq!(labels(&v), ["Zoom", "Back", "Delete"]);
+    assert_eq!(labels(&v), ["Zoom", "Back", "Delete", "Print"]);
 }
 
 #[test]

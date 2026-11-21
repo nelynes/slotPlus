@@ -4,11 +4,14 @@
 //! size it always is, and shows a window onto the strip: scrolling moves the strip through
 //! the window. Each window is cheap to make (the paper's texture is worked out once, a
 //! sheet tall, and repeats down the strip), so it can be remade as the list scrolls.
+//!
+//! A screenshot prints on the same paper, in the Game Boy Printer's four greys.
 
 use crate::plate::UndoFace;
 use crate::quick_menu::print_list_legends;
 use crate::receipt::{
-    blur, blur_line, kernel, tooth_cut, Rng, CUT, INK, PAPER, PH, PW, STOP_DARK, STOP_LIGHT, STOP_Y,
+    blur, blur_line, kernel, tooth_cut, tooth_cut_in, Rng, CUT, INK, PAPER, PH, PW, STOP_DARK,
+    STOP_LIGHT, STOP_Y,
 };
 use crate::text;
 
@@ -40,6 +43,46 @@ pub struct PrintRow {
     pub earned: bool,
     /// When it was earned, already written out ("16 NOV 2026"), if the card knows.
     pub date: Option<String>,
+}
+
+/// slotPlus: a screenshot to print, with what goes above and below it.
+pub struct PrintShot {
+    pub game: String,
+    /// When it was taken, already written out.
+    pub taken: String,
+    pub rgba: Vec<u8>,
+    pub w: u32,
+    pub h: u32,
+}
+
+/// An ordered dither, the way a thermal head prints a picture.
+const BAYER: [[f32; 4]; 4] = [
+    [0.0, 8.0, 2.0, 10.0],
+    [12.0, 4.0, 14.0, 6.0],
+    [3.0, 11.0, 1.0, 9.0],
+    [15.0, 7.0, 13.0, 5.0],
+];
+
+/// How dark each of the Game Boy Printer's four greys prints.
+pub const GREYS: [f32; 4] = [0.0, 1.0 / 3.0, 2.0 / 3.0, 1.0];
+
+/// A picture `w` by `h` fitted to `most` wide: never made bigger, so a Game Boy shot
+/// prints pixel for pixel, as the real printer printed it.
+pub fn shot_fit(w: u32, h: u32, most: usize) -> (usize, usize) {
+    let (w, h) = (w.max(1) as usize, h.max(1) as usize);
+    match w <= most {
+        true => (w, h),
+        false => (most, (h * most).div_ceil(w).max(1)),
+    }
+}
+
+/// One printed pixel's grey: how dark (0 light to 1 black), dithered at `(x, y)` down to
+/// one of the four greys.
+pub fn grey_at(dark: f32, x: usize, y: usize) -> f32 {
+    let v = dark.clamp(0.0, 1.0) * 3.0;
+    let base = v.floor().min(3.0);
+    let step = (v - base > (BAYER[y % 4][x % 4] + 0.5) / 16.0) as usize;
+    GREYS[(base as usize + step).min(3)]
 }
 
 pub struct PrintList {
@@ -233,12 +276,6 @@ impl Strip {
 
     /// A badge in grey, dithered the way a thermal head prints a picture.
     fn badge(&mut self, badge: Option<&PrintBadge>, x: usize, y: usize, a: f32) {
-        const BAYER: [[f32; 4]; 4] = [
-            [0.0, 8.0, 2.0, 10.0],
-            [12.0, 4.0, 14.0, 6.0],
-            [3.0, 11.0, 1.0, 9.0],
-            [15.0, 7.0, 13.0, 5.0],
-        ];
         let Some(b) = badge.filter(|b| b.w > 0 && b.h > 0) else {
             self.frame(x, y, BADGE, BADGE, 1, 0.5 * a);
             return;
@@ -258,6 +295,33 @@ impl Strip {
             }
         }
         self.frame(x, y, BADGE, BADGE, 1, 0.8 * a);
+    }
+
+    /// A screenshot shrunk to `pw` by `ph` (each printed pixel the average of the ones it
+    /// covers) and printed in four greys, with its top left at `(x, y)`.
+    fn picture(&mut self, shot: &PrintShot, x: usize, y: usize, pw: usize, ph: usize) {
+        let (w, h) = (shot.w as usize, shot.h as usize);
+        if w == 0 || h == 0 || shot.rgba.len() < w * h * 4 {
+            return;
+        }
+        for dy in 0..ph {
+            let (sy0, sy1) = (dy * h / ph, ((dy + 1) * h / ph).max(dy * h / ph + 1).min(h));
+            for dx in 0..pw {
+                let (sx0, sx1) = (dx * w / pw, ((dx + 1) * w / pw).max(dx * w / pw + 1).min(w));
+                let mut sum = 0.0;
+                for sy in sy0..sy1 {
+                    for sx in sx0..sx1 {
+                        let p = &shot.rgba[(sy * w + sx) * 4..][..3];
+                        sum += 0.299 * p[0] as f32 + 0.587 * p[1] as f32 + 0.114 * p[2] as f32;
+                    }
+                }
+                let lum = sum / ((sy1 - sy0) * (sx1 - sx0)) as f32 / 255.0;
+                let a = grey_at(1.0 - lum, dx, dy);
+                if a > 0.0 {
+                    self.put((x + dx) as i32, (y + dy) as i32, a);
+                }
+            }
+        }
     }
 
     /// A small black box with a check mark knocked out of it, on an earned badge's corner.
@@ -327,6 +391,8 @@ pub struct Printout {
     strip: Strip,
     paper: Paper,
     legends: Vec<(UndoFace, usize)>,
+    /// Kept with the teeth of the tear bar at both ends, as a strip torn off the printer.
+    torn: bool,
 }
 
 impl Printout {
@@ -410,7 +476,36 @@ impl Printout {
         y += s.line(&format!("PRINTED {}", list.printed), 11.0, None, y, 0.8) + 8.0;
         y += s.line("SLOTPLUS", 10.0, None, y, 0.6);
         s.grow(y as usize + 18);
+        Printout::finish(s, false)
+    }
 
+    /// slotPlus: a screenshot, under the game's name and over when it was taken.
+    pub fn shot(shot: &PrintShot) -> Printout {
+        let mut s = Strip::new();
+        let wide = PW - 2 * SIDE;
+        let mut y = 14.0;
+        y = s.wrapped(
+            &shot.game.to_uppercase(),
+            15.0,
+            None,
+            wide as f32,
+            y,
+            1.0,
+            2,
+        ) + 8.0;
+        let top = y.round() as usize;
+        let (pw, ph) = shot_fit(shot.w, shot.h, wide - 4);
+        let x = (PW - pw) / 2;
+        s.picture(shot, x, top, pw, ph);
+        s.frame(x - 2, top - 2, pw + 4, ph + 4, 1, 0.9);
+        y = (top + ph + 12) as f32;
+        y += s.line(&shot.taken, 11.0, None, y, 0.85) + 6.0;
+        y += s.line("SLOTPLUS", 10.0, None, y, 0.6);
+        s.grow(y as usize + 18);
+        Printout::finish(s, true)
+    }
+
+    fn finish(s: Strip, torn: bool) -> Printout {
         let legends = print_list_legends([0, 0, 0]);
         let scrolls = s.h > VIEW_H;
         let mut placed = Vec::new();
@@ -431,6 +526,7 @@ impl Printout {
             strip: s,
             paper: Paper::new(),
             legends: placed,
+            torn,
         }
     }
 
@@ -515,6 +611,9 @@ impl Printout {
         for y in 0..h {
             let (curl, band) = (curl(y, h.max(2)), self.paper.band(y));
             for (x, (roll, sheen)) in across.iter().enumerate() {
+                if self.torn && tooth_cut_in(x, y, h) {
+                    continue;
+                }
                 let at = y * PW + x;
                 let ink = self.strip.ink[at];
                 let px = self.paper.pixel(x, y, band, ink, (roll * curl, *sheen));
@@ -588,6 +687,66 @@ mod tests {
         assert_eq!(p.window(usize::MAX).rgba, p.window(p.max_scroll()).rgba);
         let whole = p.whole();
         assert_eq!(whole.h as usize, p.height());
+    }
+
+    fn shot(w: u32, h: u32) -> PrintShot {
+        // A left-to-right ramp from white to black.
+        let mut rgba = Vec::new();
+        for _ in 0..h {
+            for x in 0..w {
+                let v = 255 - (x * 255 / (w - 1)) as u8;
+                rgba.extend_from_slice(&[v, v, v, 255]);
+            }
+        }
+        PrintShot {
+            game: "Test Game".into(),
+            taken: "20 NOV 2026 · 10:45 PM".into(),
+            rgba,
+            w,
+            h,
+        }
+    }
+
+    #[test]
+    fn a_game_boy_shot_prints_pixel_for_pixel_and_a_wider_one_shrinks_to_the_paper() {
+        assert_eq!(shot_fit(160, 144, 198), (160, 144));
+        assert_eq!(shot_fit(240, 160, 198), (198, 132));
+        assert_eq!(shot_fit(256, 384, 198), (198, 297));
+        assert_eq!(shot_fit(0, 0, 198), (1, 1));
+    }
+
+    #[test]
+    fn a_shot_prints_in_the_four_greys_only() {
+        let p = Printout::shot(&shot(160, 144));
+        let mut seen = [false; 4];
+        for v in &p.strip.ink {
+            if let Some(i) = GREYS.iter().position(|g| (g - v).abs() < 1e-6) {
+                seen[i] = true;
+            }
+        }
+        assert_eq!(seen, [true; 4], "a ramp uses all four");
+        assert!(GREYS.iter().all(|g| (0.0..=1.0).contains(g)));
+        assert_eq!(grey_at(0.0, 3, 3), 0.0);
+        assert_eq!(grey_at(1.0, 0, 0), 1.0);
+    }
+
+    #[test]
+    fn a_kept_shot_is_torn_at_both_ends_and_a_set_is_not() {
+        let whole = Printout::shot(&shot(160, 144)).whole();
+        let alpha = |f: &UndoFace, x: usize, y: usize| f.rgba[(y * f.w as usize + x) * 4 + 3];
+        let h = whole.h as usize;
+        assert_eq!(alpha(&whole, 3, 0), 0, "a tooth bitten out at the top");
+        assert_eq!(alpha(&whole, 3, h - 1), 0, "and at the bottom");
+        assert_eq!(alpha(&whole, 3, h / 2), 255);
+        let set = Printout::new(&list(1, 1)).whole();
+        assert_eq!(alpha(&set, 3, 0), 255);
+    }
+
+    #[test]
+    fn a_tall_shot_scrolls_like_a_long_set() {
+        let p = Printout::shot(&shot(256, 384));
+        assert!(p.max_scroll() > 0, "two DS screens run past the sheet");
+        assert_eq!(Printout::shot(&shot(160, 144)).max_scroll(), 0);
     }
 
     #[test]

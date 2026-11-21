@@ -11988,6 +11988,24 @@ impl App {
         ));
     }
 
+    /// slotPlus: SELECT on a screenshot prints it on the Game Boy Printer.
+    fn print_shot(&mut self) {
+        let shot = self.shot_viewer.as_ref().and_then(|v| v.selected()).cloned();
+        let (Some(shot), Some(cart)) = (shot, self.seated_cart().cloned()) else {
+            return self.refuse();
+        };
+        if self.set_print.is_some() || self.server.is_some() {
+            return;
+        }
+        let now = self.now();
+        self.set_print = Some(crate::set_print::SetPrint::shot(
+            cart,
+            shot,
+            self.state.clock_24h,
+            now,
+        ));
+    }
+
     /// For tests: print a printout already laid out.
     pub fn print_set_with(&mut self, printout: slot_ui::printout::Printout) {
         let now = self.now();
@@ -17774,6 +17792,9 @@ impl App {
             }
             _ => return,
         };
+        if (mode, pressed) == (ShotMode::Full, Btn::Select) {
+            return self.print_shot();
+        }
         let Some(v) = &mut self.shot_viewer else {
             return;
         };

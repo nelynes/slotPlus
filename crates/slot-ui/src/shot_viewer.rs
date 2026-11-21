@@ -11,7 +11,7 @@ use crate::polaroids::{draw_album_chrome, AlbumChrome, Polaroids};
 
 pub const PAN_KEY: &str = "PAN";
 
-pub const SHOT_HINTS: [(&str, &str); 9] = [
+pub const SHOT_HINTS: [(&str, &str); 10] = [
     ("A", "View"),
     ("B", "Back"),
     ("Y", "Delete"),
@@ -21,11 +21,12 @@ pub const SHOT_HINTS: [(&str, &str); 9] = [
     ("SELECT", "Multi"),
     ("A", "Tick"),
     ("B", "Done"),
+    ("SELECT", "Print"),
 ];
 
 const GRID_LEGEND: [usize; 4] = [0, 1, 2, 6];
 const PICK_LEGEND: [usize; 3] = [7, 2, 8];
-const FULL_LEGEND: [usize; 3] = [3, 1, 2];
+const FULL_LEGEND: [usize; 4] = [3, 1, 2, 9];
 const ZOOM_LEGEND: [usize; 3] = [4, 3, 5];
 const ZOOM_MAX_LEGEND: [usize; 2] = [4, 5];
 

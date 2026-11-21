@@ -549,3 +549,37 @@ fn a_pending_shot_is_dropped_on_doze() {
     a.apply(Action::PowerTap);
     assert!(!a.shot_requested(), "the shot would fire on waking");
 }
+
+#[test]
+fn select_on_a_shot_prints_it_and_keeps_the_print_beside_it() {
+    let (d, mut a) = shots(1);
+    let shot = ShotDir::new(d.path(), Platform::Gba, "Emerald")
+        .list()
+        .unwrap()
+        .remove(0);
+    open_viewer(&mut a);
+    press(&mut a, slot_input::Btn::Select);
+    assert!(a.set_print().is_none(), "the grid's SELECT still picks shots");
+    press(&mut a, slot_input::Btn::Select);
+    press(&mut a, slot_input::Btn::A);
+    assert_eq!(mode(&a), Some(slot_ui::ShotMode::Full));
+    press(&mut a, slot_input::Btn::Select);
+    assert!(a.set_print().is_some(), "SELECT prints the shot");
+    let kept = shot.path.with_file_name(format!("{} Print.png", shot.stamp));
+    for _ in 0..200 {
+        if kept.exists() {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    assert!(kept.exists(), "the print is kept beside the shot");
+    assert_eq!(
+        ShotDir::new(d.path(), Platform::Gba, "Emerald")
+            .list()
+            .unwrap(),
+        vec![shot],
+        "and isn't listed as a shot"
+    );
+    press(&mut a, slot_input::Btn::B);
+    assert_eq!(mode(&a), Some(slot_ui::ShotMode::Full), "B puts the print away first");
+}
