@@ -3108,7 +3108,9 @@ impl App {
                 n => QuickValue::level(n),
             }),
             QuickRow::ScreenGeneral => None,
-            QuickRow::FastForward => QuickValue::speed(self.state.ff_speed),
+            QuickRow::FastForward => {
+                QuickValue::speed_with(self.state.ff_speed, self.state.ff_sound)
+            }
             QuickRow::FastForwardSound => Some(QuickValue::flag(self.state.ff_sound)),
             QuickRow::GbaColourCorrection => {
                 Some(QuickValue::flag(self.state.colour_correction_gba))
@@ -3130,7 +3132,10 @@ impl App {
             QuickRow::PmFullScreen => Some(QuickValue::flag(self.state.pm_full_screen)),
             QuickRow::Rumble => Some(QuickValue::flag(self.state.rumble)),
             QuickRow::LeftStick => Some(QuickValue::flag(self.state.left_stick_dpad)),
-            QuickRow::ResumeInsert => Some(QuickValue::flag(self.state.resume_insert)),
+            QuickRow::ResumeInsert => Some(QuickValue::resume(
+                self.state.resume_insert,
+                self.state.resume_power_on,
+            )),
             QuickRow::ResumePowerOn => Some(QuickValue::flag(self.state.resume_power_on)),
             QuickRow::Rewind => Some(QuickValue::flag(self.state.rewind)),
             QuickRow::Recents => Some(if self.state.show_recents {
@@ -3272,6 +3277,8 @@ impl App {
             | QuickRow::Bezel
             | QuickRow::General
             | QuickRow::System
+            | QuickRow::Online
+            | QuickRow::Kid
             | QuickRow::ShelfPrev
             | QuickRow::ShelfNext
             | QuickRow::ShelfFavorite
@@ -4198,8 +4205,34 @@ impl App {
         if !self.server_allowed() {
             hidden.push(QuickRow::Server);
         }
+        // A handheld with no Wi-Fi: Library keeps how games are arranged, and Online keeps
+        // RetroAchievements and updates (from a file on the card).
         if self.wifi_probe.is_some() {
-            hidden.extend([QuickRow::Network, QuickRow::Wifi]);
+            hidden.extend([
+                QuickRow::Wifi,
+                QuickRow::Server,
+                QuickRow::Romm,
+                QuickRow::FetchArt,
+            ]);
+            #[cfg(feature = "nds")]
+            hidden.push(QuickRow::FetchBoxArt);
+        }
+        // slotPlus 3.1: a system's Screen page shows only when the card has games for it.
+        for (row, system) in [
+            (QuickRow::ScreenGba, Platform::Gba),
+            (QuickRow::ScreenGbc, Platform::Gbc),
+            (QuickRow::ScreenGb, Platform::Gb),
+            (QuickRow::ScreenWs, Platform::Ws),
+            (QuickRow::ScreenLynx, Platform::Lynx),
+            (QuickRow::ScreenPm, Platform::Pm),
+            (QuickRow::ScreenGg, Platform::Gg),
+            (QuickRow::ScreenNgp, Platform::Ngp),
+            (QuickRow::ScreenTg16, Platform::Tg16),
+            (QuickRow::ScreenNds, Platform::Nds),
+        ] {
+            if !self.has_games_for(system) {
+                hidden.push(row);
+            }
         }
         if self.state.wifi_off {
             hidden.push(QuickRow::Networks);
@@ -4215,6 +4248,13 @@ impl App {
             hidden.push(QuickRow::RommSelfSigned);
         }
         hidden
+    }
+
+    /// Whether the card has games whose picture a system's Screen page sets: its own, and
+    /// GBA Video's for the GBA. PokeDaisy draws its own picture, so its games don't count.
+    fn has_games_for(&self, system: Platform) -> bool {
+        self.carts()
+            .any(|c| !c.platform.is_pokedaisy() && c.platform.hardware() == system)
     }
 
     pub fn lid_off_min(&self) -> u8 {
@@ -7848,6 +7888,8 @@ impl App {
             | QuickRow::General
             | QuickRow::ShelfLife
             | QuickRow::System
+            | QuickRow::Online
+            | QuickRow::Kid
             | QuickRow::Network
             | QuickRow::Romm
             | QuickRow::Wifi
@@ -8179,11 +8221,11 @@ impl App {
         let s = &mut self.state;
         match row {
             QuickRow::FastForward => {
-                let to = ff_next(s.ff_speed, right);
-                if to == s.ff_speed {
+                let to = ff_next_with(s.ff_speed, s.ff_sound, right);
+                if to == (s.ff_speed, s.ff_sound) {
                     return;
                 }
-                s.ff_speed = to;
+                (s.ff_speed, s.ff_sound) = to;
             }
             QuickRow::FastForwardSound => s.ff_sound = !s.ff_sound,
             QuickRow::GbaColourCorrection => {
@@ -8270,7 +8312,13 @@ impl App {
             }
             QuickRow::Rumble => s.rumble = !s.rumble,
             QuickRow::LeftStick => s.left_stick_dpad = !s.left_stick_dpad,
-            QuickRow::ResumeInsert => s.resume_insert = !s.resume_insert,
+            QuickRow::ResumeInsert => {
+                // Off, Insert, Power On, Both.
+                let at = usize::from(s.resume_insert) + 2 * usize::from(s.resume_power_on);
+                let to = if right { (at + 1) % 4 } else { (at + 3) % 4 };
+                s.resume_insert = to & 1 != 0;
+                s.resume_power_on = to & 2 != 0;
+            }
             QuickRow::ResumePowerOn => s.resume_power_on = !s.resume_power_on,
             QuickRow::Rewind => s.rewind = !s.rewind,
             QuickRow::GbaBlending => {
@@ -8379,6 +8427,8 @@ impl App {
             | QuickRow::Bezel
             | QuickRow::General
             | QuickRow::System
+            | QuickRow::Online
+            | QuickRow::Kid
             | QuickRow::ShelfPrev
             | QuickRow::ShelfNext
             | QuickRow::ShelfFavorite
@@ -16677,7 +16727,7 @@ impl App {
             UpdateState::Failed(f) => {
                 let (title, detail) = match f {
                     UpdateFail::NoWifi => {
-                        ("Could not join Wi-Fi", "Check Wi-Fi in the System menu.")
+                        ("Could not join Wi-Fi", "Check Wi-Fi in the Online menu.")
                     }
                     UpdateFail::Offline => (
                         "Could not connect",
@@ -18389,10 +18439,22 @@ fn tint_alpha(tint: WallpaperTint) -> f32 {
     }
 }
 
-fn ff_next(from: u8, right: bool) -> u8 {
-    let n = FF_SPEEDS.len();
-    let at = FF_SPEEDS.iter().position(|&v| v == from).unwrap_or(0);
-    FF_SPEEDS[if right {
+/// slotPlus 3.1: Fast Forward's one row steps through each speed, then the same with sound:
+/// Off, 1.5×, 1.5× Sound, 2×, 2× Sound… Off has no sound.
+fn ff_next_with(speed: u8, sound: bool, right: bool) -> (u8, bool) {
+    let steps: Vec<(u8, bool)> = FF_SPEEDS
+        .iter()
+        .flat_map(|&s| match s {
+            0 => vec![(0, false)],
+            s => vec![(s, false), (s, true)],
+        })
+        .collect();
+    let n = steps.len();
+    let at = steps
+        .iter()
+        .position(|&v| v == (speed, sound && speed > 0))
+        .unwrap_or(0);
+    steps[if right {
         (at + 1) % n
     } else {
         (at + n - 1) % n

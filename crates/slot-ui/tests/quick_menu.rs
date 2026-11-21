@@ -82,15 +82,7 @@ fn the_fast_forward_row_offers_off_a_slow_speed_and_the_four_ceilings() {
 fn the_rows_run_in_the_order_the_user_chose() {
     assert_eq!(
         QuickRow::MAIN.map(QuickRow::label),
-        [
-            "Shelf",
-            "Gameplay",
-            "Controls",
-            "Screen",
-            "Tools",
-            "RetroAchievements",
-            "System"
-        ]
+        ["Look", "Library", "Play", "Screen", "Controls", "Online", "System"]
     );
     assert_eq!(
         QuickRow::GENERAL.map(QuickRow::label),
@@ -98,27 +90,29 @@ fn the_rows_run_in_the_order_the_user_chose() {
             "Theme",
             "Wallpaper",
             "Wallpaper Tint",
-            "Shelf Mode",
-            "Recents",
-            "Game Titles",
             "Cart Slot",
-            "Kid Mode",
-            "Kid Shelf",
-            "Kid Play Time",
+            "Game Titles",
             "Shelf Life"
         ]
     );
     assert_eq!(
         QuickRow::SYSTEM.map(QuickRow::label),
         [
-            "Wi-Fi",
+            "Kid Mode",
             "Date & Time",
             "Nickname",
             "Lid Power Off",
             "Battery Display",
-            "Check for Updates",
             "About"
         ]
+    );
+    assert_eq!(
+        QuickRow::ONLINE.map(QuickRow::label),
+        ["Wi-Fi", "RetroAchievements", "Check for Updates"]
+    );
+    assert_eq!(
+        QuickRow::KID.map(QuickRow::label),
+        ["Mode", "Kid Shelf", "Play Time"]
     );
     assert_eq!(
         QuickRow::NETWORK.map(QuickRow::label).to_vec(),
@@ -218,12 +212,10 @@ fn the_rows_run_in_the_order_the_user_chose() {
         QuickRow::GAME.map(QuickRow::label),
         [
             "Fast Forward",
-            "Fast Forward Sound",
             "Rewind",
             "Rumble",
             "Left Stick as D-Pad",
-            "Resume on Insert",
-            "Resume on Power On"
+            "Resume"
         ]
     );
     let opens: Vec<QuickRow> = QuickRow::ALL.into_iter().filter(|r| r.opens()).collect();
@@ -283,7 +275,9 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::RommDisconnect,
             QuickRow::System,
             QuickRow::ShelfLife,
-            QuickRow::CleanAllCarts
+            QuickRow::CleanAllCarts,
+            QuickRow::Online,
+            QuickRow::Kid
         ]
     );
     for page in [
@@ -293,6 +287,8 @@ fn the_rows_run_in_the_order_the_user_chose() {
         &QuickRow::GAME[..],
         &QuickRow::GENERAL[..],
         &QuickRow::SYSTEM[..],
+        &QuickRow::ONLINE[..],
+        &QuickRow::KID[..],
         &QuickRow::NETWORK[..],
         &QuickRow::ROMM[..],
         &QuickRow::PLAY[..],
@@ -316,14 +312,14 @@ fn the_rows_run_in_the_order_the_user_chose() {
 #[test]
 fn a_hidden_row_is_stepped_over_and_takes_no_place() {
     let hidden = [QuickRow::WallpaperTint, QuickRow::DateTime];
-    assert_eq!(QuickRow::Wallpaper.down(&hidden), QuickRow::ShelfMode);
-    assert_eq!(QuickRow::ShelfMode.up(&hidden), QuickRow::Wallpaper);
+    assert_eq!(QuickRow::Wallpaper.down(&hidden), QuickRow::CartSlot);
+    assert_eq!(QuickRow::CartSlot.up(&hidden), QuickRow::Wallpaper);
     assert_eq!(QuickRow::Theme.up(&hidden), QuickRow::ShelfLife);
-    assert_eq!(QuickRow::ShelfMode.position(&hidden), 2);
+    assert_eq!(QuickRow::CartSlot.position(&hidden), 2);
     assert_eq!(QuickRow::Wallpaper.down(&[]), QuickRow::WallpaperTint);
-    assert_eq!(QuickRow::ShelfMode.position(&[]), 3);
+    assert_eq!(QuickRow::CartSlot.position(&[]), 3);
     assert_eq!(
-        slot_ui::quick_row_top(slot_ui::Canvas::FRAMED, QuickRow::ShelfMode, &hidden)
+        slot_ui::quick_row_top(slot_ui::Canvas::FRAMED, QuickRow::CartSlot, &hidden)
             - slot_ui::quick_row_top(slot_ui::Canvas::FRAMED, QuickRow::Wallpaper, &hidden),
         slot_ui::QUICK_PITCH
     );
@@ -401,6 +397,13 @@ fn the_values_read_as_the_menu_prints_them() {
             "Wear",
             "Dust",
             "Disabled",
+            "1.5× Sound",
+            "2× Sound",
+            "3× Sound",
+            "4× Sound",
+            "6× Sound",
+            "Insert",
+            "Power On",
         ]
     );
     assert_eq!(QuickValue::flag(true), QuickValue::On);
@@ -753,20 +756,20 @@ fn the_wallpaper_tint_reads_as_how_much_it_darkens() {
 }
 
 #[test]
-fn show_titles_sits_under_recents_on_the_general_page() {
+fn show_titles_sits_under_cart_slot_on_the_look_page() {
     let at = |r: QuickRow| QuickRow::GENERAL.iter().position(|g| *g == r);
     assert_eq!(
         at(QuickRow::ShowTitles),
-        at(QuickRow::Recents).map(|i| i + 1)
+        at(QuickRow::CartSlot).map(|i| i + 1)
     );
     assert_eq!(QuickRow::ShowTitles.parent(), Some(QuickRow::General));
 }
 
 #[test]
-fn the_battery_display_sits_above_check_for_updates_on_the_system_page() {
+fn the_battery_display_sits_above_about_on_the_system_page() {
     let at = |r: QuickRow| QuickRow::SYSTEM.iter().position(|g| *g == r);
     assert_eq!(
-        at(QuickRow::CheckUpdates),
+        at(QuickRow::About),
         at(QuickRow::BatteryDisplay).map(|i| i + 1)
     );
     assert_eq!(QuickRow::BatteryDisplay.label(), "Battery Display");
@@ -779,10 +782,14 @@ fn the_battery_display_sits_above_check_for_updates_on_the_system_page() {
 }
 
 #[test]
-fn system_holds_wifi_the_clock_lid_power_off_updates_and_about() {
+fn system_holds_kid_mode_the_clock_lid_power_off_and_about() {
     assert_eq!(QuickRow::MAIN.last(), Some(&QuickRow::System));
     assert!(!QuickRow::MAIN.contains(&QuickRow::About));
-    assert_eq!(QuickRow::System.child(), Some(QuickRow::Wifi));
+    assert_eq!(QuickRow::System.child(), Some(QuickRow::Kid));
+    assert_eq!(QuickRow::Kid.child(), Some(QuickRow::KidMode));
+    for row in QuickRow::KID {
+        assert_eq!(row.parent(), Some(QuickRow::Kid), "{row:?}");
+    }
     for row in QuickRow::SYSTEM {
         assert_eq!(row.parent(), Some(QuickRow::System), "{row:?}");
         assert!(!QuickRow::GENERAL.contains(&row), "{row:?}");
@@ -796,12 +803,9 @@ fn system_holds_wifi_the_clock_lid_power_off_updates_and_about() {
     assert_eq!(QuickRow::Nickname.parent(), Some(QuickRow::System));
     assert!(!QuickRow::NETWORK.contains(&QuickRow::Nickname));
     assert_eq!(QuickRow::WifiPower.parent(), Some(QuickRow::Wifi));
-    assert_eq!(QuickRow::CheckUpdates.parent(), Some(QuickRow::System));
+    assert_eq!(QuickRow::Wifi.parent(), Some(QuickRow::Online));
+    assert_eq!(QuickRow::CheckUpdates.parent(), Some(QuickRow::Online));
     assert!(!QuickRow::BatteryDisplay.opens());
-    assert_eq!(
-        [QuickValue::Both, QuickValue::Icon, QuickValue::Percentage].map(QuickValue::text),
-        ["Both", "Icon", "Percentage"]
-    );
 }
 
 #[test]
@@ -817,7 +821,7 @@ fn fetch_legends_are_built_like_the_other_prompts() {
 }
 
 #[test]
-fn fetch_art_sits_below_romm_on_the_tools_page() {
+fn fetch_art_sits_below_recents_on_the_library_page() {
     assert!(!slot_ui::QuickRow::NETWORK.contains(&slot_ui::QuickRow::CheckUpdates));
     assert_eq!(slot_ui::QuickRow::NETWORK[2], slot_ui::QuickRow::FetchArt);
     assert_eq!(slot_ui::QuickRow::FetchArt.label(), "Fetch Missing Art");
@@ -825,9 +829,12 @@ fn fetch_art_sits_below_romm_on_the_tools_page() {
 }
 
 #[test]
-fn the_tools_page_is_centred_like_the_screen_page() {
-    for row in slot_ui::QuickRow::NETWORK {
+fn the_online_page_is_centred_and_the_library_page_holds_values() {
+    for row in slot_ui::QuickRow::ONLINE {
         assert!(row.centred(), "{row:?}");
+    }
+    for row in slot_ui::QuickRow::NETWORK {
+        assert!(!row.centred(), "{row:?}");
     }
     assert!(!slot_ui::QuickRow::RommProtocol.centred());
 }
@@ -840,9 +847,9 @@ fn skip_keeps_its_button_on_the_outer_edge() {
 }
 
 #[test]
-fn server_sits_first_on_the_tools_page() {
-    assert_eq!(QuickRow::NETWORK[0], QuickRow::Server);
-    assert_eq!(QuickRow::Network.child(), Some(QuickRow::Server));
+fn server_sits_on_the_library_page() {
+    assert_eq!(QuickRow::NETWORK[3], QuickRow::Server);
+    assert_eq!(QuickRow::Network.child(), Some(QuickRow::ShelfMode));
     assert!(!QuickRow::MAIN.contains(&QuickRow::Server));
     assert_eq!(QuickRow::Server.parent(), Some(QuickRow::Network));
     assert_eq!(QuickRow::MAIN.len(), 7);
@@ -929,7 +936,13 @@ fn a_taller_canvas_shows_more_rows_at_the_same_height() {
 }
 
 fn tools_labels() -> Vec<&'static str> {
-    let mut labels = vec!["Gamebit", "RomM", "Fetch Missing Art"];
+    let mut labels = vec![
+        "Shelf Mode",
+        "Recents",
+        "Fetch Missing Art",
+        "Gamebit",
+        "RomM",
+    ];
     if cfg!(feature = "nds") {
         labels.push("Fetch Box Art");
     }
@@ -948,7 +961,7 @@ fn every_row_sits_in_all_at_its_own_index() {
 }
 
 #[test]
-fn shelf_life_is_a_page_at_the_foot_of_the_shelf_page() {
+fn shelf_life_is_a_page_at_the_foot_of_the_look_page() {
     assert_eq!(QuickRow::GENERAL.last(), Some(&QuickRow::ShelfLife));
     assert!(QuickRow::ShelfLife.opens());
     assert_eq!(QuickRow::ShelfLife.child(), Some(QuickRow::ShrinkWrap));

@@ -189,10 +189,14 @@ pub enum QuickRow {
     /// slotPlus Shelf Life: wipe and unwrap every cart at once, after a held confirmation.
     CleanAllCarts,
     KidAllowance,
+    /// slotPlus 3.1: everything that needs the network: Wi-Fi, RetroAchievements, updates.
+    Online,
+    /// slotPlus 3.1: Kid Mode's own page, under System.
+    Kid,
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 176 + cfg!(feature = "nds") as usize] = [
+    pub const ALL: [QuickRow; 178 + cfg!(feature = "nds") as usize] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -371,16 +375,33 @@ impl QuickRow {
         QuickRow::CleanResets,
         QuickRow::CleanAllCarts,
         QuickRow::KidAllowance,
+        QuickRow::Online,
+        QuickRow::Kid,
     ];
 
+    /// slotPlus 3.1: grouped by what someone is trying to do. Look is how the shelf looks
+    /// (`General`), Library how games arrive and are arranged (`Network`), Play how they play
+    /// (`Game`), Online whatever needs the network, and System the handheld itself.
     pub const MAIN: [QuickRow; 7] = [
         QuickRow::General,
-        QuickRow::Game,
-        QuickRow::Controls,
-        QuickRow::Screen,
         QuickRow::Network,
-        QuickRow::Achievements,
+        QuickRow::Game,
+        QuickRow::Screen,
+        QuickRow::Controls,
+        QuickRow::Online,
         QuickRow::System,
+    ];
+
+    pub const ONLINE: [QuickRow; 3] = [
+        QuickRow::Wifi,
+        QuickRow::Achievements,
+        QuickRow::CheckUpdates,
+    ];
+
+    pub const KID: [QuickRow; 3] = [
+        QuickRow::KidMode,
+        QuickRow::KidShelf,
+        QuickRow::KidAllowance,
     ];
 
     /// slotPlus: the RetroAchievements page. Hardcore needs a live connection and no save
@@ -412,36 +433,34 @@ impl QuickRow {
         QuickRow::CleanAllCarts,
     ];
 
-    pub const GENERAL: [QuickRow; 11] = [
+    /// Look. Wallpaper Tint shows only once a picture is the wallpaper.
+    pub const GENERAL: [QuickRow; 6] = [
         QuickRow::Theme,
         QuickRow::Wallpaper,
         QuickRow::WallpaperTint,
-        QuickRow::ShelfMode,
-        QuickRow::Recents,
-        QuickRow::ShowTitles,
         QuickRow::CartSlot,
-        QuickRow::KidMode,
-        QuickRow::KidShelf,
-        QuickRow::KidAllowance,
+        QuickRow::ShowTitles,
         QuickRow::ShelfLife,
     ];
 
-    pub const SYSTEM: [QuickRow; 7] = [
-        QuickRow::Wifi,
+    pub const SYSTEM: [QuickRow; 6] = [
+        QuickRow::Kid,
         QuickRow::DateTime,
         QuickRow::Nickname,
         QuickRow::LidOff,
         QuickRow::BatteryDisplay,
-        QuickRow::CheckUpdates,
         QuickRow::About,
     ];
 
     pub const WIFI: [QuickRow; 2] = [QuickRow::WifiPower, QuickRow::Networks];
 
-    pub const NETWORK: [QuickRow; 3 + cfg!(feature = "nds") as usize] = [
+    /// Library: how games are arranged, and how they and their art reach the card.
+    pub const NETWORK: [QuickRow; 5 + cfg!(feature = "nds") as usize] = [
+        QuickRow::ShelfMode,
+        QuickRow::Recents,
+        QuickRow::FetchArt,
         QuickRow::Server,
         QuickRow::Romm,
-        QuickRow::FetchArt,
         #[cfg(feature = "nds")]
         QuickRow::FetchBoxArt,
     ];
@@ -595,14 +614,14 @@ impl QuickRow {
         QuickRow::GbStretch,
     ];
 
-    pub const GAME: [QuickRow; 7] = [
+    /// Play. Fast Forward's speed carries its sound, and one Resume row covers a cart going
+    /// in and the handheld starting up.
+    pub const GAME: [QuickRow; 5] = [
         QuickRow::FastForward,
-        QuickRow::FastForwardSound,
         QuickRow::Rewind,
         QuickRow::Rumble,
         QuickRow::LeftStick,
         QuickRow::ResumeInsert,
-        QuickRow::ResumePowerOn,
     ];
 
     pub const PLAY: [QuickRow; 9] = [
@@ -701,28 +720,26 @@ impl QuickRow {
             QuickRow::Wallpaper
             | QuickRow::WallpaperTint
             | QuickRow::Theme
-            | QuickRow::Recents
-            | QuickRow::ShelfMode
             | QuickRow::ShowTitles
             | QuickRow::CartSlot
-            | QuickRow::KidMode
-            | QuickRow::KidShelf
-            | QuickRow::KidAllowance
             | QuickRow::ShelfLife => &QuickRow::GENERAL,
+            QuickRow::KidMode | QuickRow::KidShelf | QuickRow::KidAllowance => &QuickRow::KID,
             QuickRow::ShrinkWrap
             | QuickRow::Dust
             | QuickRow::Wear
             | QuickRow::CleanResets
             | QuickRow::CleanAllCarts => &QuickRow::SHELF_LIFE,
-            QuickRow::Wifi
+            QuickRow::Kid
             | QuickRow::DateTime
             | QuickRow::LidOff
             | QuickRow::BatteryDisplay
-            | QuickRow::CheckUpdates
             | QuickRow::About
             | QuickRow::Nickname => &QuickRow::SYSTEM,
+            QuickRow::Wifi | QuickRow::Achievements | QuickRow::CheckUpdates => &QuickRow::ONLINE,
             QuickRow::WifiPower | QuickRow::Networks => &QuickRow::WIFI,
-            QuickRow::FetchArt
+            QuickRow::ShelfMode
+            | QuickRow::Recents
+            | QuickRow::FetchArt
             | QuickRow::Romm
             | QuickRow::Server => &QuickRow::NETWORK,
             QuickRow::RaUsername
@@ -797,8 +814,10 @@ impl QuickRow {
             QuickRow::GameUp => Some(QuickRow::ControlsInGame),
             QuickRow::ScSave => Some(QuickRow::Shortcuts),
             QuickRow::Theme => Some(QuickRow::General),
-            QuickRow::Wifi => Some(QuickRow::System),
-            QuickRow::Server => Some(QuickRow::Network),
+            QuickRow::Kid => Some(QuickRow::System),
+            QuickRow::KidMode => Some(QuickRow::Kid),
+            QuickRow::Wifi => Some(QuickRow::Online),
+            QuickRow::ShelfMode => Some(QuickRow::Network),
             QuickRow::RommProtocol => Some(QuickRow::Romm),
             QuickRow::WifiPower => Some(QuickRow::Wifi),
             QuickRow::RaUsername => Some(QuickRow::Achievements),
@@ -826,7 +845,7 @@ impl QuickRow {
             &QuickRow::PLAY,
             &QuickRow::SETTINGS,
             &QuickRow::SCREEN,
-            &QuickRow::NETWORK,
+            &QuickRow::ONLINE,
             &QuickRow::CONTROL_PAGES,
         ]
         .contains(&self.page())
@@ -844,6 +863,8 @@ impl QuickRow {
             QuickRow::General => Some(QuickRow::GENERAL[0]),
             QuickRow::ShelfLife => Some(QuickRow::SHELF_LIFE[0]),
             QuickRow::System => Some(QuickRow::SYSTEM[0]),
+            QuickRow::Online => Some(QuickRow::ONLINE[0]),
+            QuickRow::Kid => Some(QuickRow::KID[0]),
             QuickRow::Network => Some(QuickRow::NETWORK[0]),
             QuickRow::Achievements => Some(QuickRow::ACHIEVEMENTS[0]),
             QuickRow::RaDownload => Some(QuickRow::ACHIEVEMENT_SETS[0]),
@@ -932,8 +953,8 @@ impl QuickRow {
             QuickRow::GbaColourCorrection => "Color Correction",
             QuickRow::GbColourCorrection => "Color Correction",
             QuickRow::GbcColourCorrection => "Color Correction",
-            QuickRow::Game => "Gameplay",
-            QuickRow::ResumeInsert => "Resume on Insert",
+            QuickRow::Game => "Play",
+            QuickRow::ResumeInsert => "Resume",
             QuickRow::ResumePowerOn => "Resume on Power On",
             QuickRow::Rewind => "Rewind",
             QuickRow::GbPalette => "Palette",
@@ -953,13 +974,15 @@ impl QuickRow {
             QuickRow::Guide => "Guide",
             QuickRow::Settings => "Settings",
             QuickRow::ExitGame => "Exit Game",
-            QuickRow::General => "Shelf",
+            QuickRow::General => "Look",
             QuickRow::System => "System",
             QuickRow::BatteryDisplay => "Battery Display",
             QuickRow::LidOff => "Lid Power Off",
-            QuickRow::KidMode => "Kid Mode",
+            QuickRow::KidMode => "Mode",
             QuickRow::KidShelf => "Kid Shelf",
-            QuickRow::KidAllowance => "Kid Play Time",
+            QuickRow::KidAllowance => "Play Time",
+            QuickRow::Kid => "Kid Mode",
+            QuickRow::Online => "Online",
             QuickRow::ShelfLife => "Shelf Life",
             QuickRow::ShrinkWrap => "Shrink Wrap",
             QuickRow::Dust => "Dust",
@@ -969,7 +992,7 @@ impl QuickRow {
             QuickRow::FetchArt => "Fetch Missing Art",
             #[cfg(feature = "nds")]
             QuickRow::FetchBoxArt => "Fetch Box Art",
-            QuickRow::Network => "Tools",
+            QuickRow::Network => "Library",
             QuickRow::Wifi | QuickRow::WifiPower => "Wi-Fi",
             QuickRow::Networks => "Network",
             QuickRow::Achievements => "RetroAchievements",
@@ -1113,6 +1136,8 @@ impl QuickRow {
                 | QuickRow::ShelfLife
                 | QuickRow::CleanAllCarts
                 | QuickRow::System
+                | QuickRow::Online
+                | QuickRow::Kid
                 | QuickRow::Controls
                 | QuickRow::ControlsShelf
                 | QuickRow::ControlsCollections
@@ -1290,10 +1315,19 @@ pub enum QuickValue {
     WearOnly,
     DustOnly,
     Disabled,
+    /// slotPlus 3.1: Fast Forward with its sound on.
+    Speed1_5Sound,
+    Speed2Sound,
+    Speed3Sound,
+    Speed4Sound,
+    Speed6Sound,
+    /// slotPlus 3.1: when Resume picks up a game: a cart going in, the handheld starting up.
+    Insert,
+    PowerOn,
 }
 
 impl QuickValue {
-    pub const ALL: [QuickValue; 67] = [
+    pub const ALL: [QuickValue; 74] = [
         QuickValue::Speed1_5,
         QuickValue::Speed2,
         QuickValue::Speed3,
@@ -1361,6 +1395,13 @@ impl QuickValue {
         QuickValue::WearOnly,
         QuickValue::DustOnly,
         QuickValue::Disabled,
+        QuickValue::Speed1_5Sound,
+        QuickValue::Speed2Sound,
+        QuickValue::Speed3Sound,
+        QuickValue::Speed4Sound,
+        QuickValue::Speed6Sound,
+        QuickValue::Insert,
+        QuickValue::PowerOn,
     ];
 
     /// slotPlus: a day's play in a locked Kid Mode.
@@ -1415,6 +1456,13 @@ impl QuickValue {
             QuickValue::Speed6 => "6×",
             QuickValue::On => "On",
             QuickValue::Off => "Off",
+            QuickValue::Speed1_5Sound => "1.5× Sound",
+            QuickValue::Speed2Sound => "2× Sound",
+            QuickValue::Speed3Sound => "3× Sound",
+            QuickValue::Speed4Sound => "4× Sound",
+            QuickValue::Speed6Sound => "6× Sound",
+            QuickValue::Insert => "Insert",
+            QuickValue::PowerOn => "Power On",
             QuickValue::Lcd3x => "LCD",
             QuickValue::Grid => "Grid",
             QuickValue::Dot => "Dot",
@@ -1480,6 +1528,28 @@ impl QuickValue {
 
     pub fn level(n: u8) -> QuickValue {
         QuickValue::LEVELS[usize::from(n).min(QuickValue::LEVELS.len() - 1)]
+    }
+
+    /// Fast Forward's speed, with its sound.
+    pub fn speed_with(quarters: u8, sound: bool) -> Option<QuickValue> {
+        Some(match (QuickValue::speed(quarters)?, sound) {
+            (QuickValue::Speed1_5, true) => QuickValue::Speed1_5Sound,
+            (QuickValue::Speed2, true) => QuickValue::Speed2Sound,
+            (QuickValue::Speed3, true) => QuickValue::Speed3Sound,
+            (QuickValue::Speed4, true) => QuickValue::Speed4Sound,
+            (QuickValue::Speed6, true) => QuickValue::Speed6Sound,
+            (value, _) => value,
+        })
+    }
+
+    /// Resume's one row: on a cart going in, on the handheld starting up, both or neither.
+    pub fn resume(insert: bool, power_on: bool) -> QuickValue {
+        match (insert, power_on) {
+            (false, false) => QuickValue::Off,
+            (true, false) => QuickValue::Insert,
+            (false, true) => QuickValue::PowerOn,
+            (true, true) => QuickValue::Both,
+        }
     }
 
     pub fn speed(quarters: u8) -> Option<QuickValue> {
