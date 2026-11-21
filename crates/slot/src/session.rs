@@ -195,6 +195,12 @@ impl Session {
         self.achievements.take_set_ready()
     }
 
+    /// slotPlus: whether the game in play has its achievements paused (PokeDaisy's Flight
+    /// Area set to Anywhere). None when it can't pause or has no set active.
+    pub fn achievements_paused(&self) -> Option<bool> {
+        self.achievements.paused()
+    }
+
     pub fn achievement_flush_ready(&self) -> bool {
         self.achievements.flush_ready()
     }
@@ -947,8 +953,9 @@ impl Session {
         let (sav_unread, resume_unread) = (sav.is_none(), resume.is_none());
         // Tracked for the Game Boy family, the WonderSwan, the Lynx, the Game Gear, the
         // NeoGeo Pocket and the TurboGrafx-16, never over a link cable.
+        // slotPlus: and the PokeDaisy shelf, paused while its Flight Area is Anywhere.
         let tracked = crate::ACHIEVEMENTS
-            && matches!(
+            && (matches!(
                 loaded.platform,
                 Platform::Gb
                     | Platform::Gbc
@@ -958,12 +965,21 @@ impl Session {
                     | Platform::Gg
                     | Platform::Ngp
                     | Platform::Tg16
-            )
+            ) || loaded.platform.is_pokedaisy())
             && loaded.player.is_none();
-        let core = if tracked {
-            self.achievements.wrap_for(loaded.opened.core, loaded.platform)
-        } else {
-            loaded.opened.core
+        let core = match (
+            tracked,
+            self.app.root().filter(|_| loaded.platform.is_pokedaisy()),
+        ) {
+            (true, Some(root)) => self.achievements.wrap_pausing(
+                loaded.opened.core,
+                loaded.platform,
+                Box::new(crate::pokedaisy::flying_anywhere(root)),
+            ),
+            (true, None) => self
+                .achievements
+                .wrap_for(loaded.opened.core, loaded.platform),
+            (false, _) => loaded.opened.core,
         };
         let (core, rom, sav, resume) = (core, loaded.rom, sav.flatten(), resume.flatten());
         let emu = match loaded.player.filter(|_| loaded.platform == Platform::Gba) {

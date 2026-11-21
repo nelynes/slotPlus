@@ -163,8 +163,9 @@ pub(crate) fn indexed(dir: &Path) -> Vec<(PathBuf, String)> {
         .collect()
 }
 
-/// The systems slot tracks achievements for, in the order a scan visits them.
-pub(crate) const SYSTEMS: [Platform; 8] = [
+/// The systems slot tracks achievements for, in the order a scan visits them. slotPlus: the
+/// PokeDaisy shelf counts as one, its three systems' games together (`PdGba` is its shelf).
+pub(crate) const SYSTEMS: [Platform; 9] = [
     Platform::Gb,
     Platform::Gbc,
     Platform::Gba,
@@ -173,6 +174,7 @@ pub(crate) const SYSTEMS: [Platform; 8] = [
     Platform::Gg,
     Platform::Ngp,
     Platform::Tg16,
+    Platform::PdGba,
 ];
 
 /// slotPlus: a system's RetroAchievements console ID (rcheevos rc_consoles.h). The
@@ -190,7 +192,7 @@ pub(crate) fn console_of(platform: Platform) -> u32 {
         Platform::Ws => 53,
         // Not tracked: no SYSTEMS entry, so never scanned or loaded.
         Platform::Pm => 24,
-        // PokeDaisy's shelf is not tracked either; its games are their own systems'.
+        // A PokeDaisy game is its own system's, for RetroAchievements as for everything else.
         Platform::PdGba | Platform::PdGb | Platform::PdGbc => console_of(platform.hardware()),
     }
 }
@@ -209,7 +211,9 @@ pub(crate) fn roms(root: &Path) -> Vec<(Platform, Vec<PathBuf>)> {
                     .map(|e| e.path())
                     .filter(|path| {
                         path.is_file()
-                            && platform.accepts(path)
+                            && Platform::ALL
+                                .into_iter()
+                                .any(|p| p.shelf() == platform && p.accepts(path))
                             && !path
                                 .file_name()
                                 .is_some_and(|name| name.to_string_lossy().starts_with('.'))

@@ -4587,8 +4587,8 @@ impl App {
         // A seated cart's own system; on the shelf, the shelf's. Recents and
         // Favorites mix systems, so they keep Slot's slot.
         let platform = match self.seated_cart() {
-            Some(cart) => cart.platform,
-            None => self.shelves[self.shelf_at].0.platform()?,
+            Some(cart) => cart.platform.shelf(),
+            None => self.shelves[self.shelf_at].0.platform()?.shelf(),
         };
         self.bespoke_slots
             .iter()

@@ -51,6 +51,8 @@ struct Status {
     cached: AtomicU64,
     // Shared only by the evaluator and HTTP workers, never gameplay/UI.
     presence: Mutex<Option<(u64, String)>>,
+    // slotPlus: a pausable game's pause: 0 none or not known yet, 1 running, 2 paused.
+    paused: AtomicU8,
     // slotPlus: Download Achievement Sets: asked for, asked to stop, and how it's going.
     scan_request: AtomicBool,
     scan_stop: AtomicBool,
@@ -361,6 +363,20 @@ impl Service {
         self.status.set_ready.swap(false, Ordering::AcqRel)
     }
 
+    /// slotPlus: whether the game in play has its achievements paused, once its set is active.
+    /// None for a game that can't pause, or has no set active.
+    pub fn paused(&self) -> Option<bool> {
+        let current = self.current.load(Ordering::Acquire);
+        if current == 0 || self.tracking.load(Ordering::Acquire) != current {
+            return None;
+        }
+        match self.status.paused.load(Ordering::Acquire) {
+            1 => Some(false),
+            2 => Some(true),
+            _ => None,
+        }
+    }
+
     /// The Wi-Fi worker observed a new connection. Wake retries without blocking the UI.
     pub fn network_available(&self) {
         self.status.reconnect.store(true, Ordering::Release);
@@ -392,6 +408,17 @@ impl Service {
         platform: slot_store::Platform,
     ) -> Box<dyn RetroCore> {
         Box::new(core::Tracked::new(core, library::console_of(platform), self))
+    }
+
+    /// `wrap_for`, with nothing checked while `pause` says so. It's asked about once a second.
+    pub fn wrap_pausing(
+        &self,
+        core: Box<dyn RetroCore>,
+        platform: slot_store::Platform,
+        pause: Box<dyn FnMut() -> bool + Send>,
+    ) -> Box<dyn RetroCore> {
+        let console = library::console_of(platform);
+        Box::new(core::Tracked::new(core, console, self).pausing(pause))
     }
 
     pub fn take_notice(&self) -> Option<Notice> {

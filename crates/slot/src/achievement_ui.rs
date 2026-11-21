@@ -37,9 +37,21 @@ pub(crate) struct Notifications {
     requested_progress: Option<u8>,
     displayed_progress: Option<u8>,
     progress: Option<[TexId; 2]>,
-    /// slotPlus: "Achievements Ready" with its gold trophy, and when it was last shown.
-    ready: Option<(TexId, u32, u32)>,
+    /// slotPlus: the corner pills, "Achievements Ready", "Paused" and "On", which one was
+    /// last shown, and when.
+    pills: Option<[(TexId, u32, u32); 3]>,
+    pill: Pill,
     ready_since: Option<Instant>,
+    /// slotPlus: the game's pause as last seen, to show the pill when it changes.
+    paused: Option<bool>,
+}
+
+/// slotPlus: which corner pill shows, an index into `Notifications::pills`.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Pill {
+    Ready,
+    Paused,
+    On,
 }
 
 enum Request {
@@ -50,8 +62,8 @@ enum Request {
 enum Built {
     Progress(u8, [CartFace; 2]),
     Sync([CartFace; 2]),
-    /// The shelf's trophy, and the in-game "Achievements Ready" plate.
-    Trophy(CartFace, CartFace),
+    /// The shelf's trophy, and the in-game corner pills: Ready, Paused, On.
+    Trophy(CartFace, [CartFace; 3]),
     Banner(CartFace, CartFace, Vec<i16>),
 }
 
@@ -68,7 +80,11 @@ impl Notifications {
                     || outbox
                         .send(Built::Trophy(
                             slot_ui::ra_trophy_face(slot_ui::TROPHY_PX),
-                            ready_face(),
+                            [
+                                pill_face("Achievements Ready", false),
+                                pill_face("Achievements Paused", true),
+                                pill_face("Achievements On", false),
+                            ],
                         ))
                         .is_err()
                 {
@@ -115,8 +131,10 @@ impl Notifications {
             requested_progress: None,
             displayed_progress: None,
             progress: None,
-            ready: None,
+            pills: None,
+            pill: Pill::Ready,
             ready_since: None,
+            paused: None,
         }
     }
 
@@ -150,11 +168,12 @@ impl Notifications {
                     });
                     self.displayed_progress = Some(percent);
                 }
-                Built::Trophy(trophy, ready) => {
+                Built::Trophy(trophy, pills) => {
                     let tex = compositor.create_texture(trophy.w, trophy.h, &trophy.rgba);
                     session.app_mut().set_trophy_face((tex, trophy.w, trophy.h));
-                    let tex = compositor.create_texture(ready.w, ready.h, &ready.rgba);
-                    self.ready = Some((tex, ready.w, ready.h));
+                    self.pills = Some(
+                        pills.map(|p| (compositor.create_texture(p.w, p.h, &p.rgba), p.w, p.h)),
+                    );
                 }
                 Built::Sync(face) => {
                     self.sync = Some(
@@ -182,7 +201,11 @@ impl Notifications {
                 }
             }
         }
-        if session.take_achievements_ready() {
+        let paused = session.achievements_paused();
+        let shown = pill_now(session.take_achievements_ready(), self.paused, paused);
+        self.paused = paused;
+        if let Some(pill) = shown {
+            self.pill = pill;
             self.ready_since = Some(Instant::now());
         }
         let status = session.achievement_sync_status();
@@ -234,7 +257,8 @@ impl Notifications {
         if ready.is_some_and(|t| t >= READY_S) {
             self.ready_since = None;
         }
-        if let (Some((tex, w, h)), Some(t)) = (self.ready, ready.filter(|_| ready_shown(session))) {
+        let pill = self.pills.map(|pills| pills[self.pill as usize]);
+        if let (Some((tex, w, h)), Some(t)) = (pill, ready.filter(|_| ready_shown(session))) {
             let alpha = (t / 0.25).min(1.0) * ((READY_S - t) / 0.4).clamp(0.0, 1.0);
             draws.push(Draw::Tex {
                 x: READY_MARGIN,
@@ -271,11 +295,28 @@ fn ready_shown(session: &Session) -> bool {
     matches!(app.phase(), Phase::Playing { .. }) && app.in_game_menu().is_none()
 }
 
-/// The gold trophy and "ACHIEVEMENTS READY" on Slot's dark HUD plate.
-fn ready_face() -> CartFace {
+/// slotPlus: which pill a frame shows, if any. A set coming ready shows Ready, or Paused when
+/// the game starts paused; a pause starting or ending while the set is active shows Paused or
+/// On. A game with no set, or that can't pause, shows only Ready.
+fn pill_now(ready: bool, was: Option<bool>, now: Option<bool>) -> Option<Pill> {
+    if ready {
+        return Some(match now {
+            Some(true) => Pill::Paused,
+            _ => Pill::Ready,
+        });
+    }
+    match (was, now) {
+        (Some(false), Some(true)) => Some(Pill::Paused),
+        (Some(true), Some(false)) => Some(Pill::On),
+        _ => None,
+    }
+}
+
+/// The trophy and a label ("ACHIEVEMENTS READY") on Slot's dark HUD plate. slotPlus: the
+/// trophy greyed for Paused.
+fn pill_face(label: &str, grey: bool) -> CartFace {
     const PAD: u32 = 8;
     const GAP: u32 = 8;
-    let label = "Achievements Ready";
     let text_w = text::label_font().map_or(150.0, |font| {
         text::line_width(font, &label.to_uppercase(), READY_PX, tracking(READY_PX))
     });
@@ -294,7 +335,13 @@ fn ready_face() -> CartFace {
             rgba[at + 3] = (PLATE[3] as f32 * cover) as u8;
         }
     }
-    let trophy = slot_ui::ra_trophy_face(READY_TROPHY);
+    let mut trophy = slot_ui::ra_trophy_face(READY_TROPHY);
+    if grey {
+        for px in trophy.rgba.chunks_exact_mut(4) {
+            let l = f32::from(px[0]) * 0.3 + f32::from(px[1]) * 0.59 + f32::from(px[2]) * 0.11;
+            px[..3].fill((l * 0.7) as u8);
+        }
+    }
     let top = (h - READY_TROPHY) / 2;
     for y in 0..READY_TROPHY {
         for x in 0..READY_TROPHY {
@@ -763,5 +810,50 @@ mod tests {
                 save(&format!("animation-{frame:03}"), &compositor.read_frame());
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod pill_tests {
+    use super::*;
+
+    #[test]
+    fn a_set_coming_ready_shows_ready_or_paused() {
+        assert_eq!(pill_now(true, None, None), Some(Pill::Ready));
+        assert_eq!(pill_now(true, None, Some(false)), Some(Pill::Ready));
+        assert_eq!(pill_now(true, None, Some(true)), Some(Pill::Paused));
+    }
+
+    #[test]
+    fn a_pause_starting_or_ending_shows_paused_or_on() {
+        assert_eq!(pill_now(false, Some(false), Some(true)), Some(Pill::Paused));
+        assert_eq!(pill_now(false, Some(true), Some(false)), Some(Pill::On));
+        assert_eq!(pill_now(false, Some(true), Some(true)), None);
+        assert_eq!(pill_now(false, Some(false), Some(false)), None);
+    }
+
+    #[test]
+    fn a_game_with_no_set_or_no_pause_shows_nothing_more() {
+        assert_eq!(
+            pill_now(false, None, Some(true)),
+            None,
+            "the set coming ready says so"
+        );
+        assert_eq!(pill_now(false, Some(true), None), None, "leaving the game");
+        assert_eq!(pill_now(false, None, None), None);
+    }
+
+    #[test]
+    fn the_pills_are_one_plate_high_and_paused_is_grey() {
+        let ready = pill_face("Achievements Ready", false);
+        let paused = pill_face("Achievements Paused", true);
+        assert_eq!((ready.h, paused.h), (READY_H, READY_H));
+        assert!(paused.w > ready.w);
+        // The trophy's middle: gold on Ready, grey on Paused.
+        let at = |f: &CartFace| (((READY_H / 2) * f.w + 8 + READY_TROPHY / 2) * 4) as usize;
+        let gold = &ready.rgba[at(&ready)..at(&ready) + 3];
+        let grey = &paused.rgba[at(&paused)..at(&paused) + 3];
+        assert!(gold[0] > gold[2] + 40, "gold: {gold:?}");
+        assert!(grey[0] == grey[1] && grey[1] == grey[2], "grey: {grey:?}");
     }
 }

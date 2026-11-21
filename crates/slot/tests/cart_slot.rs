@@ -177,3 +177,53 @@ fn the_pokemon_mini_has_a_slot_of_its_own() {
     }
     assert!(!bespoke_slot_light(Platform::Pm), "blue keeps light ink");
 }
+
+#[test]
+fn the_pokedaisy_shelf_has_a_dark_slot_of_its_own_for_all_three_systems() {
+    use slot_ui::{bespoke_slot, bespoke_slot_light, SLOT_H, SLOT_W};
+    for p in [Platform::PdGba, Platform::PdGb, Platform::PdGbc] {
+        let strips = bespoke_slot(p).expect("its own");
+        for s in strips {
+            assert_eq!(s.len(), (SLOT_W * SLOT_H * 4) as usize);
+        }
+        assert!(!bespoke_slot_light(p), "meadow green keeps light ink");
+    }
+}
+
+#[test]
+fn the_pokedaisy_shelf_shows_its_slot_whichever_system_is_in_front() {
+    let d = common::tmp_root_with_carts(&["Emerald"]);
+    let pd = d.path().join("Games/PokeDaisy");
+    std::fs::create_dir_all(&pd).unwrap();
+    std::fs::write(pd.join("Blue.gb"), vec![0u8; 0x8000]).unwrap();
+    std::fs::write(pd.join("Crystal.gbc"), vec![0u8; 0x8000]).unwrap();
+    let mut state = slot_store::read_slot_state(d.path());
+    state.clock_set = true;
+    state.bespoke_slot = true;
+    slot_store::write_slot_state(d.path(), &state).unwrap();
+    let mut a = App::boot(d.path());
+    a.set_slot_faces(TexId::from_raw(1), TexId::from_raw(2));
+    a.set_plugged_face(TexId::from_raw(3));
+    // Registered once, under the shelf, as the frontend does.
+    a.set_bespoke_slot(
+        Platform::PdGba,
+        TexId::from_raw(31),
+        TexId::from_raw(32),
+        TexId::from_raw(33),
+        false,
+    );
+    for _ in 0..30 {
+        a.update(1.0 / 60.0);
+    }
+    for _ in 0..10 {
+        if a.shelf_platform_name() == Some("PokeDaisy") {
+            break;
+        }
+        a.apply(slot_input::Action::NextShelf);
+        for _ in 0..60 {
+            a.update(1.0 / 60.0);
+        }
+    }
+    assert_eq!(a.shelf_platform_name(), Some("PokeDaisy"));
+    assert!(drawn(&a, 31) && drawn(&a, 32) && !drawn(&a, 1));
+}
