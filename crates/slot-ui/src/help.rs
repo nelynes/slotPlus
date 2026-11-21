@@ -12,7 +12,7 @@ impl QuickRow {
             QuickRow::General => "Theme, wallpaper, cart slot and shelf life.",
             QuickRow::Network => "How games are arranged, and how games and art arrive.",
             QuickRow::Game => "Fast forward, rewind, rumble and resuming games.",
-            QuickRow::Screen => "Brightness, colour, and how each system's games look.",
+            QuickRow::Screen => "Brightness, color, and how each system's games look.",
             QuickRow::Controls => "Shelf buttons, in-game shortcuts and game buttons.",
             QuickRow::Online => "Wi-Fi, RetroAchievements and updates.",
             QuickRow::System => "Kid Mode, clock, nickname, power and battery.",
@@ -57,13 +57,13 @@ impl QuickRow {
             QuickRow::ResumePowerOn => "Puts the last game back in when the handheld starts.",
 
             // Screen.
-            QuickRow::ScreenGeneral => "Brightness and colour for the whole screen.",
-            QuickRow::PlayScreen => "This game's picture: filter, frame, colours and size.",
+            QuickRow::ScreenGeneral => "Brightness and color for the whole screen.",
+            QuickRow::PlayScreen => "This game's picture: filter, frame, colors and size.",
             QuickRow::Brightness | QuickRow::PlayBrightness => "How bright the screen is.",
             QuickRow::BlueLight | QuickRow::PlayBlueLight => {
                 "Warms the picture, easier on the eyes at night."
             }
-            QuickRow::Saturation | QuickRow::PlaySaturation => "Makes colours more vivid.",
+            QuickRow::Saturation | QuickRow::PlaySaturation => "Makes colors more vivid.",
             QuickRow::Contrast | QuickRow::PlayContrast => "Deepens darks and brightens lights.",
             QuickRow::ScreenGba => "How Game Boy Advance games look.",
             QuickRow::ScreenGbc => "How Game Boy Color games look.",
@@ -89,9 +89,9 @@ impl QuickRow {
             QuickRow::ColourCorrection
             | QuickRow::GbaColourCorrection
             | QuickRow::GbcColourCorrection
-            | QuickRow::GbColourCorrection => "Shifts colours to look like the original screen.",
+            | QuickRow::GbColourCorrection => "Shifts colors to look like the original screen.",
             QuickRow::Palette | QuickRow::GbPalette => {
-                "The colours original Game Boy games are shown in."
+                "The colors original Game Boy games are shown in."
             }
             QuickRow::Bezel
             | QuickRow::GbaBezel
@@ -189,7 +189,7 @@ impl QuickRow {
             QuickRow::Nickname => "Your name, used for link play and the DS.",
             QuickRow::LidOff => "How long the lid can stay shut before power off.",
             QuickRow::BatteryDisplay => "Shows the battery as an icon, a percentage or both.",
-            QuickRow::About => "Version, credits and licences.",
+            QuickRow::About => "Version, credits and licenses.",
 
             // The in-game menu.
             QuickRow::Resume => "Back to the game.",
