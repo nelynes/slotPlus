@@ -56,6 +56,13 @@ pub fn open_core(
     palette: Option<GbColors>,
     link: Option<u8>,
 ) -> Opened {
+    // slotPlus: the music cart's player is built in: there's no library to find.
+    if core == Core::Music {
+        return Opened {
+            core: Box::new(crate::music::MusicPlayer::new()),
+            named: true,
+        };
+    }
     let paths = candidates(root, core);
     #[cfg(feature = "nds")]
     if core == Core::Dsperate {
@@ -249,7 +256,8 @@ pub fn colour_option(
         | Core::Dsperate
         | Core::Pokemini
         | Core::PokedaisyGba
-        | Core::PokedaisyGbc => None,
+        | Core::PokedaisyGbc
+        | Core::Music => None,
         Core::Gpsp => Some((
             "gpsp_color_correction",
             if on { "enabled" } else { "disabled" },
@@ -370,7 +378,7 @@ pub fn option_prefix(which: Core) -> &'static str {
 fn has_frameskip(which: Core) -> bool {
     !matches!(
         which,
-        Core::Lynx | Core::Gearsystem | Core::Ngp | Core::Gambatte | Core::Pokemini
+        Core::Lynx | Core::Gearsystem | Core::Ngp | Core::Gambatte | Core::Pokemini | Core::Music
     )
 }
 

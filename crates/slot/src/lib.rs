@@ -23,6 +23,7 @@ pub mod app;
 pub mod art;
 pub mod audio;
 pub mod baseos;
+pub mod music;
 pub mod edition;
 pub mod bezel;
 pub mod ble;

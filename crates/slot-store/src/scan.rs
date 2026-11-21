@@ -131,6 +131,10 @@ fn scan_of(root: &Path, platforms: &[Platform]) -> Result<Vec<Cart>, StoreError>
             });
         }
     }
+    // slotPlus: the music cart, on the Game Boy Advance shelf whenever there's music.
+    if platforms.contains(&Platform::Gba) && crate::music::has_music(root) {
+        carts.push(crate::music::music_cart(root));
+    }
     // By shelf, then by name: the PokeDaisy shelf's three systems' carts sort together.
     carts.sort_by_key(|c| {
         (

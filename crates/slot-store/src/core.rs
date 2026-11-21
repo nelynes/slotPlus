@@ -23,6 +23,8 @@ pub enum Core {
     /// slotPlus: PokeDaisy over mGBA, for its Game Boy and Game Boy Color games.
     PokedaisyGbc,
     Dsperate,
+    /// slotPlus: the music cart's player, built into slotPlus. Never offered in the picker.
+    Music,
 }
 
 impl Core {
@@ -55,6 +57,7 @@ impl Core {
             Core::PokedaisyGba => "pokedaisy_gba",
             Core::PokedaisyGbc => "pokedaisy_gbc",
             Core::Dsperate => "dsperate",
+            Core::Music => "music",
         }
     }
 
@@ -75,6 +78,7 @@ impl Core {
             Core::Pokemini => "PokeMini",
             Core::PokedaisyGba | Core::PokedaisyGbc => "PokeDaisy",
             Core::Dsperate => "DSperate",
+            Core::Music => "slotPlus Music",
         }
     }
 
@@ -92,6 +96,7 @@ impl Core {
             "pokedaisy_gba" => Some(Core::PokedaisyGba),
             "pokedaisy_gbc" => Some(Core::PokedaisyGbc),
             "dsperate" => Some(Core::Dsperate),
+            "music" => Some(Core::Music),
             _ => None,
         }
     }
@@ -115,6 +120,7 @@ impl Core {
             Core::Pokemini => platform == Platform::Pm,
             Core::PokedaisyGba => platform == Platform::PdGba,
             Core::PokedaisyGbc => matches!(platform, Platform::PdGb | Platform::PdGbc),
+            Core::Music => false,
         }
     }
 

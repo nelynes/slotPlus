@@ -876,7 +876,15 @@ impl Session {
         else {
             return;
         };
-        let own = slot_store::core_for_platform(&self.root, stem, platform, self.app.gb_core());
+        // slotPlus: the music cart always plays on its own player.
+        let music = self
+            .app
+            .seated_cart()
+            .is_some_and(slot_store::music::is_music);
+        let own = match music {
+            true => slot_store::Core::Music,
+            false => slot_store::core_for_platform(&self.root, stem, platform, self.app.gb_core()),
+        };
         let core = self
             .app
             .link_core()
@@ -966,7 +974,9 @@ impl Session {
                     | Platform::Ngp
                     | Platform::Tg16
             ) || loaded.platform.is_pokedaisy())
-            && loaded.player.is_none();
+            && loaded.player.is_none()
+            // slotPlus: the music cart has no achievements.
+            && !loaded.rom.is_dir();
         let core = match (
             tracked,
             self.app.root().filter(|_| loaded.platform.is_pokedaisy()),

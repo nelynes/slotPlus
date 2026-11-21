@@ -21,6 +21,7 @@ pub mod ini;
 mod nds_header;
 pub mod overlay;
 mod platform;
+pub mod music;
 pub mod play_log;
 mod ring;
 mod scan;

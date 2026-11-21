@@ -40,6 +40,7 @@ crc32fast = { workspace = true }
 flate2 = { workspace = true }
 jpeg-decoder = { workspace = true }
 image-webp = { workspace = true }
+symphonia = { workspace = true }
 
 [dev-dependencies]
 slot-gfx = { path = "../slot-gfx", default-features = false, features = ["test-support"] }
