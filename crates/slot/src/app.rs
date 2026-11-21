@@ -5835,15 +5835,18 @@ impl App {
         }
     }
 
+    /// The line just above the slot: while a button is being set, which buttons it takes;
+    /// otherwise, slotPlus's help for the row.
     fn description(&self, row: QuickRow) -> Option<(TexId, u32, u32)> {
         let faces = self.quick_menu_faces.as_ref()?;
-        if row.shortcut().is_some() || row.carousel_action().is_some() {
-            Some(faces.descriptions[1])
-        } else if row.binds() {
-            Some(faces.descriptions[0])
-        } else {
-            None
+        if self.capture_row() == Some(row) {
+            if row.shortcut().is_some() || row.carousel_action().is_some() {
+                return Some(faces.descriptions[1]);
+            } else if row.binds() {
+                return Some(faces.descriptions[0]);
+            }
         }
+        faces.help.get(row.index()).copied()
     }
 
     pub fn carousel(&self) -> CarouselKeys {

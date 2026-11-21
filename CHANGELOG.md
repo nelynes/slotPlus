@@ -14,6 +14,7 @@ Work toward slotPlus 3.1. Not released yet.
   - **System:** Kid Mode on a page of its own, then the clock, Nickname, Lid Power Off, Battery Display and About.
   - **Screen** shows a page only for the systems with games on the card.
   - Nothing is stored differently, so every choice carries over.
+- **Help in the menus.** A line just above the slot says, in a sentence, what the chosen menu row does.
 
 ## [1.16.0-plus3.0](https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus3.0)
 

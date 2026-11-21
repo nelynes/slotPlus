@@ -740,9 +740,10 @@ fn screen_rows_in_game_sit_in_a_panel_at_the_bottom() {
     let shader = slot_ui::quick_row_top(slot_ui::Canvas::FRAMED, QuickRow::Shader, &hidden);
     let bezel = slot_ui::quick_row_top(slot_ui::Canvas::FRAMED, QuickRow::Bezel, &hidden);
     assert_eq!(bezel - shader, slot_ui::QUICK_PITCH);
+    // slotPlus: three rows just above the help line, which sits just above the slot.
     assert!(
-        shader > slot_ui::OUT_H as f32 / 2.0,
-        "the panel starts at {shader}, covering more than three rows of the game"
+        shader > slot_ui::OUT_H as f32 / 2.0 - 32.0,
+        "the panel starts at {shader}, covering more than three rows and the help line"
     );
     assert!(slot_ui::quick_row_top(slot_ui::Canvas::FRAMED, QuickRow::FastForward, &[]) < shader);
 }
