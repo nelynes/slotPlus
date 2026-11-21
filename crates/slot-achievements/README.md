@@ -1,7 +1,9 @@
 # RetroAchievements
 
 slotPlus earns **softcore RetroAchievements for Game Boy, Game Boy Color, Game Boy
-Advance, WonderSwan, WonderSwan Color and Atari Lynx games**, and in slotPlusUltra **Game Gear,
+Advance, WonderSwan, WonderSwan Color and Atari Lynx games**, the PokeDaisy shelf's games (paused
+while PokeDaisy's Flight Area is Anywhere, read from `Saves/pokedaisy/settings.ini`, with an
+ACHIEVEMENTS PAUSED pill in the corner, and ACHIEVEMENTS ON when it lifts), and in slotPlusUltra **Game Gear,
 NeoGeo Pocket, NeoGeo Pocket Color and TurboGrafx-16 games** (not yet the DS). Earning one shows a short banner in Slot's style, the achievement's title and
 points on one line and its description below, with its own badge, and plays a quiet chime that
 follows the game's volume. There is no achievement browser, leaderboards or hardcore mode.

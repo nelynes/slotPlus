@@ -19,8 +19,8 @@ For the Game Boy systems, and everything else Slot does, see the [Slot user guid
 
 - **Shelf:** each system gets its own shelf. Its folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
 - **Label art:** optional PNGs go in `Labels/<folder>/<game name>.png`, named after the game's file without its extension. Each system's cart has its own label size, given below. Art of a different size is scaled to cover the label and cropped, except on HuCards, where it keeps its own shape (see the TurboGrafx-16).
-- **Wallpapers:** with Wallpaper set to Shelf, a wallpaper named after a shelf (`ws.png`, `lynx.png`, `pokemini.png`, and in slotPlusUltra `gg.png`, `ngp.png`, `tg16.png`, `nds.png`) shows on that shelf.
-- **RetroAchievements:** Game Boy, Game Boy Color, Game Boy Advance, WonderSwan, WonderSwan Color and Atari Lynx games, and in slotPlusUltra Game Gear, NeoGeo Pocket, NeoGeo Pocket Color and TurboGrafx-16 games, not yet DS (softcore, never over a link cable). Set up in Settings → RetroAchievements (or `Config/retroachievements.toml`), then use Download Achievement Sets there to fetch the sets for the games on the card; a gold trophy on the shelf marks a game that has one. Achievements earned in a game are kept on the card and sent the next time Wi-Fi is up on the shelf. See [the RetroAchievements notes](crates/slot-achievements/README.md).
+- **Wallpapers:** with Wallpaper set to Shelf, a wallpaper named after a shelf (`ws.png`, `lynx.png`, `pokemini.png`, `pokedaisy.png`, and in slotPlusUltra `gg.png`, `ngp.png`, `tg16.png`, `nds.png`) shows on that shelf.
+- **RetroAchievements:** Game Boy, Game Boy Color, Game Boy Advance, WonderSwan, WonderSwan Color and Atari Lynx games, the PokeDaisy shelf's games, and in slotPlusUltra Game Gear, NeoGeo Pocket, NeoGeo Pocket Color and TurboGrafx-16 games, not yet DS (softcore, never over a link cable). Set up in Settings → RetroAchievements (or `Config/retroachievements.toml`), then use Download Achievement Sets there to fetch the sets for the games on the card; a gold trophy on the shelf marks a game that has one. Achievements earned in a game are kept on the card and sent the next time Wi-Fi is up on the shelf. See [the RetroAchievements notes](crates/slot-achievements/README.md).
 - **Wi-Fi and updates:** Settings → System → Check for Updates offers slotPlus's own releases, the right one for slotPlus or slotPlusUltra. Gamebit, Slot's page for managing the card from a browser, lists every system here.
 - **Game guides:** Slot's guides work on every system. Put a `.txt` named after the game in `Guides/<folder>/`, and Guide shows up in the in-game menu.
 - **Controls:** the In-Game controls page in Settings covers every system, so any button can be moved. The tables below show where each one starts.
@@ -317,9 +317,9 @@ A shelf for Pokémon games played on [PokeDaisy](https://github.com/lidor30/poke
 | **Core** | PokeDaisy: over armGBA for Game Boy Advance games, over mGBA for Game Boy and Game Boy Color games. |
 | **Label art** | `Labels/PokeDaisy/`, or the game's own system's (`Labels/GBA/` and so on) when that folder has none. |
 | **Picture** | PokeDaisy draws its own screen round the game, and it always fills the screen. No shader, bezel or overlay. |
-| **Cart** | Each game's own system's cart, side by side on one shelf. START opens it to its board, with the play-time sticker. |
+| **Cart** | Each game's own system's cart, side by side on one shelf. START opens it to its board, with the play-time sticker. With Cart Slot set to Bespoke, the slot is slotPlus's own: a meadow-green shell with small daisies, for all three systems' carts. |
 | **Saves** | The game's save is its system's (`Saves/GBA/` for a Game Boy Advance game), so a game moved between its shelf and this one keeps its save. Save states and the resume state are PokeDaisy's own, in `States/PokeDaisy/`. |
-| **RetroAchievements** | Not on this shelf. |
+| **RetroAchievements** | Yes, softcore, as on the game's own shelf: the same file earns from the same set. Paused while PokeDaisy's Flight Area is set to Anywhere, as PokeDaisy's own apps pause them, since flying ahead could reach a set's places early. A pill in the corner says ACHIEVEMENTS PAUSED when that starts (or when a game starts paused) and ACHIEVEMENTS ON when it ends. |
 
 ### Controls
 
@@ -329,4 +329,6 @@ A shelf for Pokémon games played on [PokeDaisy](https://github.com/lidor30/poke
 | Y | PokeDaisy's quick menu |
 | The rest | As on the game's own shelf |
 
-X and Y aren't turbo buttons on this shelf: they open PokeDaisy's companion and quick menu. Gamebit doesn't show the PokeDaisy folder yet.
+X and Y aren't turbo buttons on this shelf: they open PokeDaisy's companion and quick menu.
+
+In Gamebit, the PokeDaisy folder is one system with all three systems' games in it. A game there that's also on its own system's shelf shares its save with it: deleting it with its files keeps that save, and renaming it copies the save so both keep playing from it. A label it borrows from its system's folder shows, but Gamebit never changes or deletes it; uploading a label gives the game its own, in `Labels/PokeDaisy/`.

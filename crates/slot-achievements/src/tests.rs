@@ -1410,6 +1410,110 @@ fn the_set_list_has_each_achievement_with_what_the_card_knows() {
     assert_eq!(list.progress(), Progress { earned: 2, total: 3 });
 }
 
+#[test]
+fn a_paused_game_sends_no_frames_until_the_pause_lifts() {
+    let (controls, _controls_rx) = mpsc::channel();
+    let (frames, frames_rx) = mpsc::sync_channel(QUEUE_SIZE);
+    let (_, notices) = mpsc::channel();
+    let service = Service {
+        controls,
+        frames,
+        notices,
+        enabled: Arc::new(AtomicBool::new(true)),
+        current: Arc::new(AtomicU64::new(1)),
+        tracking: Arc::new(AtomicU64::new(0)),
+        flushing: AtomicBool::new(false),
+        flushed: Arc::new(AtomicBool::new(false)),
+        status: Arc::new(Status::default()),
+    };
+    let paused = Arc::new(AtomicBool::new(true));
+    let asked = paused.clone();
+    let mut core = service.wrap_pausing(
+        Box::<TestCore>::default(),
+        Box::new(move || asked.load(Ordering::Acquire)),
+    );
+    let mut sent = 0;
+    for _ in 0..120 {
+        core.run_frame(ButtonMask(1));
+        sent += frames_rx.try_iter().count();
+    }
+    assert_eq!(sent, 0, "nothing is checked while paused");
+    paused.store(false, Ordering::Release);
+    for _ in 0..120 {
+        core.run_frame(ButtonMask(1));
+        sent += frames_rx.try_iter().count();
+    }
+    // Within a second of the pause lifting, frames flow again (as many as the test's
+    // unrecycled buffers allow).
+    assert!(sent > 0, "frames flow once the pause lifts");
+}
+
+#[test]
+fn the_pokedaisy_shelf_is_scanned_as_one_system_of_all_three_kinds() {
+    let root = configured();
+    for (shelf, name) in [
+        ("PokeDaisy", "Emerald.gba"),
+        ("PokeDaisy", "Red.gb"),
+        ("PokeDaisy", "Crystal.gbc"),
+        ("PokeDaisy", "notes.txt"),
+        ("GBA", "Emerald.gba"),
+    ] {
+        let dir = root.path().join("Games").join(shelf);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join(name), name).unwrap();
+    }
+    use slot_store::Platform;
+    let roms = library::roms(root.path());
+    let systems: Vec<_> = roms.iter().map(|(p, _)| *p).collect();
+    assert_eq!(systems, [Platform::Gba, Platform::PdGba]);
+    let names: Vec<_> = roms[1]
+        .1
+        .iter()
+        .map(|p| p.file_name().unwrap().to_string_lossy().into_owned())
+        .collect();
+    assert_eq!(names, ["Crystal.gbc", "Emerald.gba", "Red.gb"]);
+}
+
+#[test]
+fn the_pause_is_told_once_the_set_is_active_and_forgotten_with_the_game() {
+    let (controls, _controls_rx) = mpsc::channel();
+    let (frames, _frames_rx) = mpsc::sync_channel(QUEUE_SIZE);
+    let (_, notices) = mpsc::channel();
+    let service = Service {
+        controls,
+        frames,
+        notices,
+        enabled: Arc::new(AtomicBool::new(true)),
+        current: Arc::new(AtomicU64::new(1)),
+        tracking: Arc::new(AtomicU64::new(1)),
+        flushing: AtomicBool::new(false),
+        flushed: Arc::new(AtomicBool::new(false)),
+        status: Arc::new(Status::default()),
+    };
+    assert_eq!(service.paused(), None, "nothing asked yet");
+    let paused = Arc::new(AtomicBool::new(true));
+    let asked = paused.clone();
+    let mut core = service.wrap_pausing(
+        Box::<TestCore>::default(),
+        Box::new(move || asked.load(Ordering::Acquire)),
+    );
+    core.run_frame(ButtonMask(0));
+    assert_eq!(service.paused(), Some(true));
+    paused.store(false, Ordering::Release);
+    for _ in 0..PAUSE_FRAMES {
+        core.run_frame(ButtonMask(0));
+    }
+    assert_eq!(service.paused(), Some(false));
+    service.tracking.store(0, Ordering::Release);
+    assert_eq!(service.paused(), None, "no set active");
+    service.tracking.store(1, Ordering::Release);
+    drop(core);
+    assert_eq!(service.paused(), None, "the game is gone");
+}
+
+/// How many frames apart a pause is asked about.
+const PAUSE_FRAMES: u32 = 60;
+
 /// A core that records what reaches it through the tracker.
 #[derive(Default)]
 struct Witness {

@@ -163,13 +163,15 @@ pub(crate) fn indexed(dir: &Path) -> Vec<(PathBuf, String)> {
         .collect()
 }
 
-/// The systems slot tracks achievements for, in the order a scan visits them.
-pub(crate) const SYSTEMS: [Platform; 5] = [
+/// The systems slot tracks achievements for, in the order a scan visits them. slotPlus: the
+/// PokeDaisy shelf counts as one, its three systems' games together (`PdGba` is its shelf).
+pub(crate) const SYSTEMS: [Platform; 6] = [
     Platform::Gb,
     Platform::Gbc,
     Platform::Gba,
     Platform::Ws,
     Platform::Lynx,
+    Platform::PdGba,
 ];
 
 /// Each tracked system that has games on the card, with its ROMs in name order. Hidden
@@ -186,7 +188,9 @@ pub(crate) fn roms(root: &Path) -> Vec<(Platform, Vec<PathBuf>)> {
                     .map(|e| e.path())
                     .filter(|path| {
                         path.is_file()
-                            && platform.accepts(path)
+                            && Platform::ALL
+                                .into_iter()
+                                .any(|p| p.shelf() == platform && p.accepts(path))
                             && !path
                                 .file_name()
                                 .is_some_and(|name| name.to_string_lossy().starts_with('.'))

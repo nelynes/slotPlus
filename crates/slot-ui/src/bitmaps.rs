@@ -107,6 +107,9 @@ const SLOT_LYNX_PLUGGED_PNG: &[u8] = include_bytes!("../../../assets/slot_lynx_p
 const SLOT_PM_BACK_PNG: &[u8] = include_bytes!("../../../assets/slot_pm_back.png");
 const SLOT_PM_FRONT_PNG: &[u8] = include_bytes!("../../../assets/slot_pm_front.png");
 const SLOT_PM_PLUGGED_PNG: &[u8] = include_bytes!("../../../assets/slot_pm_plugged.png");
+const SLOT_PD_BACK_PNG: &[u8] = include_bytes!("../../../assets/slot_pd_back.png");
+const SLOT_PD_FRONT_PNG: &[u8] = include_bytes!("../../../assets/slot_pd_front.png");
+const SLOT_PD_PLUGGED_PNG: &[u8] = include_bytes!("../../../assets/slot_pd_plugged.png");
 const PORT_DARK_PNG: &[u8] = include_bytes!("../../../assets/link_port_dark.png");
 const PORT_LIGHT_PNG: &[u8] = include_bytes!("../../../assets/link_port_light.png");
 const PLUG_HOST_PNG: &[u8] = include_bytes!("../../../assets/link_plug_host.png");
@@ -375,6 +378,18 @@ pub fn bespoke_slot(platform: slot_store::Platform) -> Option<[&'static [u8]; 3]
                 load(SLOT_PM_BACK_PNG, SLOT_W, SLOT_H, &B),
                 load(SLOT_PM_FRONT_PNG, SLOT_W, SLOT_H, &F),
                 load(SLOT_PM_PLUGGED_PNG, SLOT_W, SLOT_H, &P),
+            ])
+        }
+        // slotPlus's own for the PokeDaisy shelf, a meadow with daisies, for any of its three
+        // systems' carts.
+        Platform::PdGba | Platform::PdGb | Platform::PdGbc => {
+            static B: OnceLock<Vec<u8>> = OnceLock::new();
+            static F: OnceLock<Vec<u8>> = OnceLock::new();
+            static P: OnceLock<Vec<u8>> = OnceLock::new();
+            Some([
+                load(SLOT_PD_BACK_PNG, SLOT_W, SLOT_H, &B),
+                load(SLOT_PD_FRONT_PNG, SLOT_W, SLOT_H, &F),
+                load(SLOT_PD_PLUGGED_PNG, SLOT_W, SLOT_H, &P),
             ])
         }
         _ => None,

@@ -49,7 +49,13 @@ pub(super) fn key(cart: &Cart) -> String {
     let shell = cart
         .shell
         .map_or_else(|| "auto".to_string(), |c| c.to_value());
-    let state = format!("{RENDER_VERSION}\0{}\0{mtime}\0{shell}", cart.stem);
+    let mut state = format!("{RENDER_VERSION}\0{}\0{mtime}\0{shell}", cart.stem);
+    // slotPlus: the PokeDaisy shelf's systems share a folder, and a Game Boy and a Game Boy
+    // Advance game there can share a name.
+    if cart.platform.is_pokedaisy() {
+        state.push('\0');
+        state.push_str(&cart.platform.key());
+    }
     format!("{}{:016x}", stem_prefix(&cart.stem), fnv(state.as_bytes()))
 }
 

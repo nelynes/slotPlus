@@ -66,6 +66,16 @@ pub fn scan_platform(root: &Path, platform: Platform) -> Result<Vec<Cart>, Store
     scan_of(root, &[platform])
 }
 
+/// slotPlus: every cart on a platform's shelf, in the shelf's order. The same as
+/// `scan_platform` except on the PokeDaisy shelf, which gathers its three systems' carts.
+pub fn scan_shelf(root: &Path, platform: Platform) -> Result<Vec<Cart>, StoreError> {
+    let members: Vec<Platform> = Platform::ALL
+        .into_iter()
+        .filter(|p| p.shelf() == platform.shelf())
+        .collect();
+    scan_of(root, &members)
+}
+
 fn scan_of(root: &Path, platforms: &[Platform]) -> Result<Vec<Cart>, StoreError> {
     let read = |file: &str| std::fs::read_to_string(root.join(file)).unwrap_or_default();
     let shells = crate::cart_shell::layered(
