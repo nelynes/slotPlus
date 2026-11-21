@@ -6,6 +6,14 @@ Work toward slotPlus 3.1. Not released yet.
 
 - **Fixed: Reset did nothing.** The Reset shortcut never reached the game on any system with RetroAchievements (Game Boy, Game Boy Color, Game Boy Advance, WonderSwan and Atari Lynx), whether or not you'd signed in.
 - **A PokeDaisy shelf.** Put Pokémon games for Game Boy Advance, Game Boy and Game Boy Color in `Games/PokeDaisy/` and they play on [PokeDaisy](https://github.com/lidor30/pokedaisy), with its companion (party, bag, Pokédex, map, guide) on X and its quick menu on Y. Each game keeps its own system's cart and its own save, so moving a game between shelves keeps its progress. Gamebit shows the folder with all its games, and with Cart Slot set to Bespoke the shelf has a slot of its own, a meadow with daisies. Its games earn RetroAchievements (softcore) from the same sets as on their own shelves, paused while PokeDaisy's Flight Area is Anywhere, as PokeDaisy's own apps do, with a pill in the corner saying so. Based on PokeDaisy by Lidor Itzhari.
+- **Settings, regrouped.** The top level is now Look, Library, Play, Screen, Controls, Online and System, grouped by what you're doing rather than by which part of slotPlus owns a setting:
+  - **Look:** Theme, Wallpaper (and its Tint), Cart Slot, Game Titles and Shelf Life.
+  - **Library:** Shelf Mode, Recents, Fetch Missing Art, Gamebit and RomM, which used to be under Shelf and Tools.
+  - **Play:** what Gameplay held. Fast Forward's sound is now part of its speed (2×, 2× Sound…), and one Resume row says when a game picks up where you left it: on a cart going in, on power on, both or neither.
+  - **Online:** Wi-Fi, RetroAchievements and Check for Updates.
+  - **System:** Kid Mode on a page of its own, then the clock, Nickname, Lid Power Off, Battery Display and About.
+  - **Screen** shows a page only for the systems with games on the card.
+  - Nothing is stored differently, so every choice carries over.
 
 ## [1.16.0-plus3.0](https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus3.0)
 

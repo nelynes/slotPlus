@@ -23,7 +23,7 @@ Your carts now keep a record of how they've been played. Full notes are in the [
 <img src=".github/resources/new-in-3.0/06-and-more.jpg" width="49%" alt="And more: romhack patches, Kid Play Time, save backups, switching editions and fixes">
 </p>
 
-- **Shelf Life.** Games you've never played come shrink-wrapped with a price sticker, and the film tears off the first time you play. Carts left alone gather dust, and carts you play a lot show their wear. Hold B on a cart to clean it, or clean them all at once from Settings → Shelf → Shelf Life.
+- **Shelf Life.** Games you've never played come shrink-wrapped with a price sticker, and the film tears off the first time you play. Carts left alone gather dust, and carts you play a lot show their wear. Hold B on a cart to clean it, or clean them all at once from Settings → Look → Shelf Life.
 - **Every cart opens.** START opens any cart to show the board inside, now on every system: new boards for WonderSwan and Pokémon mini, and in slotPlusUltra Game Gear, NeoGeo Pocket and DS, with the back of a HuCard for the TurboGrafx-16. Your play time is handwritten on a sticker inside.
 - **Achievements on the cart and on paper.** A gold sticker inside shows how far you've got, and SELECT prints the whole set on the Game Boy Printer.
 - **Pokémon mini**, in both editions.
@@ -67,8 +67,8 @@ Each release comes in two versions. Pick the one you want from the [releases pag
 
 - **Folders:** each system's folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
 - **Carts:** each system has its own cart, drawn in Slot's look. WonderSwan games get a black cart, WonderSwan Color games a frosted clear one, and a HuCard turns over to go into the slot contacts first.
-- **RetroAchievements:** Game Boy, Game Boy Color, Game Boy Advance, WonderSwan and Atari Lynx games, the PokeDaisy shelf's too (and in slotPlusUltra, Game Gear, NeoGeo Pocket and TurboGrafx-16 games) earn softcore achievements, with a banner in Slot's style. Enter your account in Settings → RetroAchievements and download the sets for your games from there. Achievements earned with Wi-Fi off are sent from the shelf. [More](crates/slot-achievements/README.md).
-- **Cart Slot:** set Settings → Shelf → Cart Slot to Bespoke and the slot on each shelf becomes the back of that system's handheld: a pearl WonderSwan, a Lynx II and a blue Pokémon mini, a meadow of daisies on the PokeDaisy shelf, plus a Game Gear, a carbon NeoGeo Pocket Color, a TurboExpress and a silver DS Lite in Ultra. The Game Boy shelves keep Slot's own.
+- **RetroAchievements:** Game Boy, Game Boy Color, Game Boy Advance, WonderSwan and Atari Lynx games, the PokeDaisy shelf's too (and in slotPlusUltra, Game Gear, NeoGeo Pocket and TurboGrafx-16 games) earn softcore achievements, with a banner in Slot's style. Enter your account in Settings → Online → RetroAchievements and download the sets for your games from there. Achievements earned with Wi-Fi off are sent from the shelf. [More](crates/slot-achievements/README.md).
+- **Cart Slot:** set Settings → Look → Cart Slot to Bespoke and the slot on each shelf becomes the back of that system's handheld: a pearl WonderSwan, a Lynx II and a blue Pokémon mini, a meadow of daisies on the PokeDaisy shelf, plus a Game Gear, a carbon NeoGeo Pocket Color, a TurboExpress and a silver DS Lite in Ultra. The Game Boy shelves keep Slot's own.
 
 **Controls, label art sizes, bezels, saves, the DS's screen layouts and stylus, and how Lynx and WonderSwan games that turn sideways work are all in the [systems guide](SYSTEMS.md).**
 

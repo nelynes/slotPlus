@@ -18,6 +18,18 @@ use tempfile::TempDir;
 
 fn on_carousel_with(state: SlotState) -> (TempDir, App, Clock) {
     let d = tmp_root_with_carts(&["Emerald", "Fusion"]);
+    // A game for every system, so each Screen page shows.
+    for (dir, file) in [
+        ("GB", "Tetris.gb"),
+        ("GBC", "Crystal.gbc"),
+        ("WS", "Gunpey.ws"),
+        ("Lynx", "Chips.lnx"),
+        ("PokeMini", "Pinball.min"),
+    ] {
+        let dir = d.path().join("Games").join(dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join(file), vec![0u8; 0x8000]).unwrap();
+    }
     write_slot_state(
         d.path(),
         &SlotState {
@@ -240,11 +252,11 @@ fn up_and_down_move_the_bar_and_wrap_at_the_ends() {
     );
     for want in [
         QuickRow::General,
-        QuickRow::Game,
-        QuickRow::Controls,
-        QuickRow::Screen,
         QuickRow::Network,
-        QuickRow::Achievements,
+        QuickRow::Game,
+        QuickRow::Screen,
+        QuickRow::Controls,
+        QuickRow::Online,
         QuickRow::System,
         QuickRow::General,
     ] {
@@ -254,59 +266,75 @@ fn up_and_down_move_the_bar_and_wrap_at_the_ends() {
 }
 
 #[test]
-fn fast_forward_steps_through_its_speeds_wraps_at_both_ends_and_saves_each_one() {
+fn fast_forward_steps_through_each_speed_then_with_sound_and_saves_each_one() {
     let (d, mut a, _) = on_carousel();
     open_at(&mut a, QuickRow::FastForward);
+    let card = |d: &TempDir| {
+        let s = read_slot_state(d.path());
+        (s.ff_speed, s.ff_sound)
+    };
+    // From the default 6×, without sound.
     for (btn, want) in [
-        (Btn::Left, 16),
-        (Btn::Left, 12),
-        (Btn::Left, 8),
-        (Btn::Left, 6),
-        (Btn::Left, 0),
-        (Btn::Left, 24),
-        (Btn::Right, 0),
-        (Btn::Right, 6),
-        (Btn::Right, 8),
-        (Btn::Right, 12),
-        (Btn::Right, 16),
-        (Btn::Right, 24),
-        (Btn::Right, 0),
+        (Btn::Right, (24, true)),
+        (Btn::Right, (0, false)),
+        (Btn::Right, (6, false)),
+        (Btn::Right, (6, true)),
+        (Btn::Right, (8, false)),
+        (Btn::Left, (6, true)),
+        (Btn::Left, (6, false)),
+        (Btn::Left, (0, false)),
+        (Btn::Left, (24, true)),
+        (Btn::Left, (24, false)),
     ] {
         press(&mut a, btn);
-        assert_eq!(a.ff_speed(), want, "{btn:?}");
-        assert_eq!(read_slot_state(d.path()).ff_speed, want, "not on the card");
+        assert_eq!(card(&d), want, "{btn:?}");
+        assert_eq!(a.ff_speed(), want.0, "{btn:?}");
         assert_eq!(
             a.quick_value(QuickRow::FastForward),
-            QuickValue::speed(want)
+            QuickValue::speed_with(want.0, want.1)
         );
+    }
+    assert_eq!(
+        QuickValue::speed_with(8, true).map(QuickValue::text),
+        Some("2× Sound")
+    );
+}
+
+#[test]
+fn resume_is_one_row_for_a_cart_going_in_and_the_handheld_starting() {
+    let (d, mut a, _) = on_carousel();
+    let card = |d: &TempDir| {
+        let s = read_slot_state(d.path());
+        (s.resume_insert, s.resume_power_on)
+    };
+    open_at(&mut a, QuickRow::ResumeInsert);
+    assert_eq!(
+        a.quick_value(QuickRow::ResumeInsert),
+        Some(QuickValue::Both)
+    );
+    for (btn, want, shown) in [
+        (Btn::Right, (false, false), QuickValue::Off),
+        (Btn::Right, (true, false), QuickValue::Insert),
+        (Btn::Right, (false, true), QuickValue::PowerOn),
+        (Btn::Right, (true, true), QuickValue::Both),
+        (Btn::Left, (false, true), QuickValue::PowerOn),
+    ] {
+        press(&mut a, btn);
+        assert_eq!(card(&d), want, "{btn:?}");
+        assert_eq!(a.quick_value(QuickRow::ResumeInsert), Some(shown));
     }
 }
 
 #[test]
-fn rumble_and_fast_forward_sound_flip_on_either_arrow_and_save() {
+fn rumble_flips_on_either_arrow_and_saves() {
     let (d, mut a, _) = on_carousel();
-    let card = |d: &TempDir| {
-        let s = read_slot_state(d.path());
-        (s.ff_sound, s.rumble)
-    };
-    open_at(&mut a, QuickRow::FastForwardSound);
-    press(&mut a, Btn::Left);
-    assert_eq!(card(&d), (true, true));
-    assert_eq!(
-        a.quick_value(QuickRow::FastForwardSound),
-        Some(QuickValue::On)
-    );
+    open_at(&mut a, QuickRow::Rumble);
     press(&mut a, Btn::Right);
-    assert_eq!(card(&d), (false, true));
-    for _ in QuickRow::FastForwardSound.position(&[])..QuickRow::Rumble.position(&[]) {
-        press(&mut a, Btn::Down);
-    }
-    press(&mut a, Btn::Right);
-    assert_eq!(card(&d), (false, false));
+    assert!(!read_slot_state(d.path()).rumble);
     assert!(!a.rumble_enabled());
     assert_eq!(a.quick_value(QuickRow::Rumble), Some(QuickValue::Off));
     press(&mut a, Btn::Left);
-    assert_eq!(card(&d), (false, true));
+    assert!(read_slot_state(d.path()).rumble);
 }
 
 #[test]
@@ -350,37 +378,13 @@ fn each_systems_colour_correction_flips_on_either_arrow_and_saves_alone() {
 }
 
 #[test]
-fn the_game_page_flips_rewind_and_both_resume_rows_and_saves_each() {
+fn the_play_page_flips_rewind_and_saves_it() {
     let (d, mut a, _) = on_carousel();
     open_at(&mut a, QuickRow::Rewind);
-    let card = |d: &TempDir| {
-        let s = read_slot_state(d.path());
-        (s.resume_insert, s.resume_power_on, s.rewind)
-    };
-    assert_eq!(card(&d), (true, true, true));
+    assert!(read_slot_state(d.path()).rewind);
     press(&mut a, Btn::Right);
-    assert_eq!(card(&d), (true, true, false));
+    assert!(!read_slot_state(d.path()).rewind);
     assert!(!a.may_rewind(), "rewind still offered with it off");
-    common::reach(
-        &mut a,
-        QuickRow::ResumeInsert,
-        |a| a.quick_menu(),
-        |a| press(a, Btn::Down),
-    );
-    press(&mut a, Btn::Right);
-    assert_eq!(card(&d), (false, true, false));
-    assert_eq!(a.quick_value(QuickRow::ResumeInsert), Some(QuickValue::Off));
-    press(&mut a, Btn::Down);
-    assert_eq!(a.quick_menu(), Some(QuickRow::ResumePowerOn));
-    press(&mut a, Btn::Right);
-    assert_eq!(card(&d), (false, false, false));
-    assert_eq!(
-        a.quick_value(QuickRow::ResumePowerOn),
-        Some(QuickValue::Off)
-    );
-    press(&mut a, Btn::Up);
-    press(&mut a, Btn::Left);
-    assert_eq!(card(&d), (true, false, false));
     press(&mut a, Btn::B);
     assert_eq!(a.quick_menu(), Some(QuickRow::Game));
 }
@@ -616,34 +620,33 @@ fn select_start_on_about_still_restarts() {
 }
 
 #[test]
-fn tools_sits_between_screen_and_system() {
-    let at = |row| QuickRow::MAIN.iter().position(|r| *r == row);
-    assert_eq!(at(QuickRow::Network), at(QuickRow::Screen).map(|i| i + 1));
-    // slotPlus: RetroAchievements sits between Tools and System.
-    assert_eq!(at(QuickRow::Achievements), at(QuickRow::Network).map(|i| i + 1));
-    assert_eq!(at(QuickRow::System), at(QuickRow::Achievements).map(|i| i + 1));
-    assert_eq!(QuickRow::Network.label(), "Tools");
-    assert_eq!(QuickRow::General.label(), "Shelf");
+fn the_top_level_runs_look_library_play_screen_controls_online_system() {
+    assert_eq!(
+        QuickRow::MAIN.map(QuickRow::label),
+        ["Look", "Library", "Play", "Screen", "Controls", "Online", "System"]
+    );
     assert_eq!(QuickRow::WIFI, [QuickRow::WifiPower, QuickRow::Networks]);
-    // slotPlus: Shelf Life sits at the foot of the Shelf page.
+    // slotPlus: Shelf Life sits at the foot of the Look page.
     assert_eq!(QuickRow::GENERAL.last(), Some(&QuickRow::ShelfLife));
     let (_d, mut a, _) = on_carousel();
     common::connect(&mut a);
     open_at(&mut a, QuickRow::Network);
     press(&mut a, Btn::A);
-    assert_eq!(a.quick_menu(), Some(QuickRow::Server));
+    assert_eq!(a.quick_menu(), Some(QuickRow::ShelfMode));
     press(&mut a, Btn::B);
     assert_eq!(a.quick_menu(), Some(QuickRow::Network));
 }
 
 #[test]
-fn tools_holds_the_online_tools() {
+fn library_holds_how_games_are_arranged_and_how_they_arrive() {
     assert_eq!(
         QuickRow::NETWORK,
         [
+            QuickRow::ShelfMode,
+            QuickRow::Recents,
+            QuickRow::FetchArt,
             QuickRow::Server,
             QuickRow::Romm,
-            QuickRow::FetchArt,
             #[cfg(feature = "nds")]
             QuickRow::FetchBoxArt,
         ]
@@ -651,9 +654,11 @@ fn tools_holds_the_online_tools() {
     assert_eq!(
         QuickRow::NETWORK.map(QuickRow::label),
         [
+            "Shelf Mode",
+            "Recents",
+            "Fetch Missing Art",
             "Gamebit",
             "RomM",
-            "Fetch Missing Art",
             #[cfg(feature = "nds")]
             "Fetch Box Art",
         ]
@@ -661,8 +666,9 @@ fn tools_holds_the_online_tools() {
     assert_eq!(QuickRow::WIFI.map(QuickRow::label), ["Wi-Fi", "Network"]);
     assert!(!QuickRow::GENERAL.contains(&QuickRow::FetchArt));
     assert_eq!(QuickRow::FetchArt.parent(), Some(QuickRow::Network));
-    assert_eq!(QuickRow::Wifi.parent(), Some(QuickRow::System));
-    assert_eq!(QuickRow::CheckUpdates.parent(), Some(QuickRow::System));
+    assert_eq!(QuickRow::Wifi.parent(), Some(QuickRow::Online));
+    assert_eq!(QuickRow::CheckUpdates.parent(), Some(QuickRow::Online));
+    assert_eq!(QuickRow::Achievements.parent(), Some(QuickRow::Online));
     assert_eq!(QuickRow::WifiPower.parent(), Some(QuickRow::Wifi));
     let (_d, mut a, _) = on_carousel();
     common::connect(&mut a);
@@ -719,16 +725,29 @@ fn tools_stays_put_when_wifi_drops() {
 }
 
 #[test]
-fn no_wifi_hardware_hides_tools_and_wifi() {
+fn no_wifi_hardware_hides_what_needs_the_network_and_keeps_every_page() {
     let (d, mut a, _) = on_carousel();
     a.set_wifi_probe(d.path().join("net/wlan0"));
     a.tick_ms(a.now() + 1);
     let hidden = a.hidden_rows();
-    assert!(hidden.contains(&QuickRow::Network));
-    assert!(hidden.contains(&QuickRow::Wifi));
-    assert!(!QuickRow::MAIN
-        .iter()
-        .any(|r| *r != QuickRow::Network && hidden.contains(r)));
+    for row in [
+        QuickRow::Wifi,
+        QuickRow::Server,
+        QuickRow::Romm,
+        QuickRow::FetchArt,
+    ] {
+        assert!(hidden.contains(&row), "{row:?}");
+    }
+    // Library keeps how games are arranged, and Online keeps RetroAchievements and updates.
+    assert!(!QuickRow::MAIN.iter().any(|r| hidden.contains(r)));
+    for row in [
+        QuickRow::ShelfMode,
+        QuickRow::Recents,
+        QuickRow::Achievements,
+        QuickRow::CheckUpdates,
+    ] {
+        assert!(!hidden.contains(&row), "{row:?}");
+    }
 }
 
 #[test]
@@ -778,15 +797,17 @@ fn wifi_off_leaves_only_the_wifi_row_on_the_wifi_page() {
 }
 
 #[test]
-fn the_network_row_waits_for_wlan0() {
+fn the_online_rows_wait_for_wlan0() {
     let (d, mut a, _) = on_carousel();
     let wlan0 = d.path().join("net/wlan0");
     a.set_wifi_probe(wlan0.clone());
     a.tick_ms(a.now() + 1);
-    assert!(a.hidden_rows().contains(&QuickRow::Network));
+    assert!(a.hidden_rows().contains(&QuickRow::Wifi));
+    assert!(a.hidden_rows().contains(&QuickRow::Server));
     std::fs::create_dir_all(&wlan0).unwrap();
     a.tick_ms(a.now() + 1100);
-    assert!(!a.hidden_rows().contains(&QuickRow::Network));
+    assert!(!a.hidden_rows().contains(&QuickRow::Wifi));
+    assert!(!a.hidden_rows().contains(&QuickRow::Server));
     std::fs::remove_dir(&wlan0).unwrap();
     a.tick_ms(a.now() + 1100);
     assert!(!a.hidden_rows().contains(&QuickRow::Network));
@@ -1123,19 +1144,15 @@ fn only_the_selected_rows_value_is_lit() {
         "6× is not lit"
     );
     assert!(
-        drawn(&out, value(QuickValue::Off, false)),
-        "sound's OFF is not grey"
-    );
-    assert!(
         drawn(&out, value(QuickValue::On, false)),
-        "rumble's ON is not grey"
+        "rewind's ON is not grey"
     );
     press(&mut a, Btn::B);
     for _ in QuickRow::Game.position(&[])..QuickRow::System.position(&[]) {
         press(&mut a, Btn::Down);
     }
     press(&mut a, Btn::A);
-    for _ in 0..QuickRow::Wifi.position(&a.hidden_rows()) {
+    for _ in 0..QuickRow::Kid.position(&a.hidden_rows()) {
         press(&mut a, Btn::Down);
     }
     let out = frame(&a);
@@ -1525,7 +1542,7 @@ fn wallpaper_tint_hides_until_a_wallpaper_of_your_own_is_picked() {
     press(&mut a, Btn::Down);
     assert_eq!(
         a.quick_menu(),
-        Some(QuickRow::ShelfMode),
+        Some(QuickRow::CartSlot),
         "the tint row showed with no wallpaper"
     );
     press(&mut a, Btn::Up);
@@ -1541,7 +1558,7 @@ fn wallpaper_tint_hides_until_a_wallpaper_of_your_own_is_picked() {
         let below = if shown {
             QuickRow::WallpaperTint
         } else {
-            QuickRow::ShelfMode
+            QuickRow::CartSlot
         };
         assert_eq!(a.quick_menu(), Some(below), "below {pick:?}");
         press(&mut a, Btn::Up);
@@ -2072,13 +2089,22 @@ fn the_retroachievements_page_holds_the_account_mode_and_encore() {
     }
     assert_eq!(
         QuickRow::ACHIEVEMENTS.map(QuickRow::label),
-        ["Username", "Password", "Cheevo Mode", "Encore", "Download Achievement Sets"]
+        [
+            "Username",
+            "Password",
+            "Cheevo Mode",
+            "Encore",
+            "Download Achievement Sets"
+        ]
     );
     let (_d, mut a, _) = on_carousel();
     open_at(&mut a, QuickRow::Achievements);
     press(&mut a, Btn::A);
     assert_eq!(a.quick_menu(), Some(QuickRow::RaUsername));
-    assert_eq!(a.achievements_values()[..3], ["Not Set", "Not Set", "Casual"]);
+    assert_eq!(
+        a.achievements_values()[..3],
+        ["Not Set", "Not Set", "Casual"]
+    );
     assert_eq!(a.quick_value(QuickRow::RaEncore), Some(QuickValue::Off));
     press(&mut a, Btn::B);
     assert_eq!(a.quick_menu(), Some(QuickRow::Achievements));
@@ -2101,7 +2127,10 @@ fn the_username_is_typed_on_the_keyboard_and_reaches_the_file() {
     // The keyboard starts with the name already there; Start is Done.
     press(&mut a, Btn::Start);
     assert!(a.keyboard().is_none());
-    assert!(ra_file(&d).contains("token = \"old\""), "an unchanged name leaves the file be");
+    assert!(
+        ra_file(&d).contains("token = \"old\""),
+        "an unchanged name leaves the file be"
+    );
     assert!(!a.take_achievements_changed());
     press(&mut a, Btn::A);
     press(&mut a, Btn::Y);
@@ -2122,9 +2151,15 @@ fn a_password_is_never_shown_and_turns_achievements_on() {
     press(&mut a, Btn::Start);
     assert!(a.keyboard().is_none());
     let text = ra_file(&d);
-    assert!(text.contains("password = \" \"") && text.contains("enabled = true"), "{text}");
+    assert!(
+        text.contains("password = \" \"") && text.contains("enabled = true"),
+        "{text}"
+    );
     assert_eq!(a.achievements_values()[1], "Set");
-    assert!(a.take_achievements_changed(), "the service starts again with it");
+    assert!(
+        a.take_achievements_changed(),
+        "the service starts again with it"
+    );
 }
 
 #[test]
@@ -2185,11 +2220,21 @@ fn download_achievement_sets_reads_out_the_scan_and_b_stops_it() {
         ..ScanReport::default()
     });
     let values = a.achievements_values();
-    assert_eq!(values[4..], ["2 of 3", "100 new, 1 already", "61", "1200 new"]);
-    assert!(values[3].starts_with("Pokemon") && values[3].chars().count() <= 26, "{}", values[3]);
+    assert_eq!(
+        values[4..],
+        ["2 of 3", "100 new, 1 already", "61", "1200 new"]
+    );
+    assert!(
+        values[3].starts_with("Pokemon") && values[3].chars().count() <= 26,
+        "{}",
+        values[3]
+    );
     // B stops it and stays to show what was saved; B again goes back.
     press(&mut a, Btn::B);
-    assert_eq!(a.take_ra_scan_command(), Some(slot::app::RaScanCommand::Stop));
+    assert_eq!(
+        a.take_ra_scan_command(),
+        Some(slot::app::RaScanCommand::Stop)
+    );
     assert_eq!(a.quick_menu(), Some(QuickRow::RaSetsStatus));
     a.set_ra_scan_report(ScanReport {
         state: ScanState::Stopped,
@@ -2212,7 +2257,11 @@ fn retroachievements_are_greyed_out_while_switched_off() {
     let (d, mut a, _) = on_carousel();
     assert_eq!(a.disabled_rows(), &[QuickRow::Achievements]);
     open_at(&mut a, QuickRow::Achievements);
-    assert_eq!(a.quick_menu(), Some(QuickRow::Achievements), "the row can be reached");
+    assert_eq!(
+        a.quick_menu(),
+        Some(QuickRow::Achievements),
+        "the row can be reached"
+    );
     press(&mut a, Btn::A);
     assert_eq!(
         a.quick_menu(),
@@ -2349,14 +2398,22 @@ fn new_rows_and_the_way_to_them_wear_a_blue_dot() {
         .filter(|r| r.marked_new(&hidden))
         .collect();
     assert_eq!(marked, [QuickRow::General, QuickRow::Screen]);
-    assert_eq!(dots(&frame(&a)).len(), 2, "Shelf and Screen lead to new rows");
+    assert_eq!(
+        dots(&frame(&a)).len(),
+        2,
+        "Shelf and Screen lead to new rows"
+    );
 
     let (_d, mut a, _) = on_carousel();
     fake_faces(&mut a);
     open_at(&mut a, QuickRow::ShrinkWrap);
     let out = frame(&a);
     let on_page = dots(&out);
-    assert_eq!(on_page.len(), QuickRow::SHELF_LIFE.len(), "the whole page is new");
+    assert_eq!(
+        on_page.len(),
+        QuickRow::SHELF_LIFE.len(),
+        "the whole page is new"
+    );
     let [px, _, pw, _] = placed(&out, 700).expect("the pointer");
     let [lx, ly, _, lh] = placed(&out, label(QuickRow::ShrinkWrap, true)).unwrap();
     let [dx, dy, dw, dh] = on_page[0];
@@ -2367,5 +2424,40 @@ fn new_rows_and_the_way_to_them_wear_a_blue_dot() {
     let (_d, mut a, _) = on_carousel();
     fake_faces(&mut a);
     open_at(&mut a, QuickRow::SYSTEM[0]);
-    assert!(dots(&frame(&a)).is_empty(), "nothing new on the System page");
+    assert!(
+        dots(&frame(&a)).is_empty(),
+        "nothing new on the System page"
+    );
+}
+
+#[test]
+fn screen_shows_a_page_only_for_systems_with_games_on_the_card() {
+    // Two GBA games, a GBA Video pak and a PokeDaisy Game Boy game.
+    let d = tmp_root_with_carts(&["Emerald", "Fusion"]);
+    for (dir, file) in [("GBAV", "Shrek.gba"), ("PokeDaisy", "Red.gb")] {
+        let dir = d.path().join("Games").join(dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join(file), vec![0u8; 0x8000]).unwrap();
+    }
+    let mut state = read_slot_state(d.path());
+    state.clock_set = true;
+    write_slot_state(d.path(), &state).unwrap();
+    let (a, _clock) = app_booting_at(d.path(), CLOCK_IS_SET);
+    // PokeDaisy draws its own picture, so its Game Boy game shows no Game Boy page.
+    assert_eq!(
+        QuickRow::Screen.child().unwrap().shown(&a.hidden_rows()),
+        [QuickRow::ScreenGeneral, QuickRow::ScreenGba]
+    );
+}
+
+#[test]
+fn kid_mode_has_its_own_page_under_system() {
+    let (_d, mut a, _) = on_carousel();
+    open_at(&mut a, QuickRow::Kid);
+    press(&mut a, Btn::A);
+    assert_eq!(a.quick_menu(), Some(QuickRow::KidMode));
+    press(&mut a, Btn::B);
+    assert_eq!(a.quick_menu(), Some(QuickRow::Kid));
+    press(&mut a, Btn::B);
+    assert_eq!(a.quick_menu(), Some(QuickRow::System));
 }

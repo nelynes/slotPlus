@@ -239,7 +239,7 @@ fn an_ota_check_leaves_the_radio_held() {
     join_home(&mut a);
     assert!(a.wifi_up());
     a.apply(Action::QuickMenu);
-    for row in [QuickRow::System, QuickRow::CheckUpdates] {
+    for row in [QuickRow::Online, QuickRow::CheckUpdates] {
         for _ in 0..12 {
             if a.quick_menu() == Some(row) {
                 break;
