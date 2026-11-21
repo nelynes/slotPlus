@@ -85,6 +85,9 @@ pub fn parse_release(json: &str, _device: Device) -> Result<Release, UpdateFail>
 
 /// slotPlus: the other edition's zip on the same release, to switch to.
 pub fn parse_other_edition(json: &str) -> Option<Release> {
+    if !crate::edition::OFFERS_OTHER {
+        return None;
+    }
     parse_edition(json, crate::edition::OTHER_KEY, crate::edition::OTHER_ZIP).ok()
 }
 

@@ -763,21 +763,14 @@ fn device_of_target_reads_rgdsplus() {
 
 
 #[test]
-fn the_other_edition_is_read_from_the_same_release() {
+fn ultra_offers_no_other_edition_until_core_is_published() {
+    // slot-plus.zip is Ultra itself under its old name, for 3.0 slotPlus cards.
+    assert!(!slot::edition::OFFERS_OTHER);
     let json = release_json("v1.11.0", "slot-v1.11.0-h700.zip", DIGEST);
-    let other = parse_other_edition(&json).unwrap();
-    assert_eq!(other.kind, Kind::Slot);
-    assert_eq!(other.version, "1.11.0");
-    assert!(other.url.ends_with(&format!("/v1.11.0/{}", slot::edition::OTHER_ZIP)));
-    assert_ne!(slot::edition::OTHER_ZIP, slot::edition::ZIP);
-}
-
-#[test]
-fn an_up_to_date_check_still_offers_the_other_edition() {
-    let json = release_json("v1.11.0", "slot-v1.11.0-h700.zip", DIGEST);
+    assert!(parse_other_edition(&json).is_none());
     let mut fetch = |_: &str| Ok(json.clone().into_bytes());
     let (event, other) = check_editions_with(u64::MAX / 2, &mut fetch, slot_only("1.11.0"));
     assert_eq!(event, UpdateEvent::UpToDate);
-    let other = other.unwrap();
-    assert_eq!(other.running, "1.11.0");
+    assert!(other.is_none());
+    assert_ne!(slot::edition::OTHER_ZIP, slot::edition::ZIP);
 }

@@ -1,5 +1,5 @@
-//! Which slotPlus this build is, so an update fetches the same one. slotPlus's
-//! branch keeps its own copy of this file.
+//! Which slotPlus this build is, so an update fetches the same one. From 3.1 there is one
+//! line, slotPlusUltra; SlotPlus Core will be built from the same code.
 
 /// The key of this edition's zip in `versions.json`.
 pub const KEY: &str = "ultra";
@@ -12,3 +12,8 @@ pub const NAME: &str = "slotPlusUltra";
 pub const OTHER_KEY: &str = "plus";
 pub const OTHER_ZIP: &str = "slot-plus.zip";
 pub const OTHER_NAME: &str = "slotPlus";
+
+/// Whether Check for Updates offers the other edition. Not until SlotPlus Core is published:
+/// a release's `slot-plus.zip` is Ultra itself under its old name, there so 3.0 slotPlus cards
+/// update into Ultra, and switching to it would only install Ultra again.
+pub const OFFERS_OTHER: bool = false;
