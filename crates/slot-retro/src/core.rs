@@ -215,6 +215,20 @@ pub struct Pointer {
     pub pressed: bool,
 }
 
+/// slotPlus: how the frontend is running the core.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum Throttle {
+    /// At the game's own speed.
+    #[default]
+    Normal,
+    /// Fast forward, at about `rate` times the game's own speed.
+    FastForward {
+        rate: f32,
+    },
+    Rewinding,
+    Paused,
+}
+
 pub trait RetroCore: Send {
     fn load(&mut self, rom: &Path) -> Result<(), CoreError>;
     /// The pointer for the next frames, or none at all. Only a core with a
@@ -236,6 +250,9 @@ pub trait RetroCore: Send {
     }
     fn set_touch(&mut self, _at: Option<(u8, u8)>) {}
     fn set_lid(&mut self, _shut: bool) {}
+    /// slotPlus: how the frontend is running the core right now, for a core that asks
+    /// (libretro's GET_THROTTLE_STATE and GET_FASTFORWARDING).
+    fn set_throttle(&mut self, _throttle: Throttle) {}
     fn takes_xy(&self) -> bool {
         false
     }

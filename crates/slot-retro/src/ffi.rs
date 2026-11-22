@@ -18,6 +18,19 @@ pub const GET_LOG_INTERFACE: c_uint = 27;
 pub const GET_SAVE_DIRECTORY: c_uint = 31;
 pub const SET_AUDIO_BUFFER_STATUS_CALLBACK: c_uint = 62;
 pub const SET_MEMORY_MAPS: c_uint = 36 | 0x10000;
+pub const GET_FASTFORWARDING: c_uint = 49 | 0x10000;
+pub const GET_THROTTLE_STATE: c_uint = 71 | 0x10000;
+
+pub const THROTTLE_NONE: c_uint = 0;
+pub const THROTTLE_FAST_FORWARD: c_uint = 2;
+pub const THROTTLE_REWINDING: c_uint = 4;
+
+/// `struct retro_throttle_state`.
+#[repr(C)]
+pub struct ThrottleState {
+    pub mode: c_uint,
+    pub rate: f32,
+}
 
 #[repr(C)]
 #[derive(Clone, Copy)]

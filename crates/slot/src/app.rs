@@ -852,6 +852,8 @@ pub struct App {
     menu_tap: Option<(Millis, Option<QuickRow>)>,
     tint_peek: Option<Millis>,
     sticker_face: Option<(TexId, u32, u32)>,
+    /// slotPlus: the credits under the About sticker.
+    sticker_credits: Option<(TexId, u32, u32)>,
     ground: Option<TexId>,
     ground_w: u32,
     blur: Option<TexId>,
@@ -1454,6 +1456,7 @@ impl App {
             menu_tap: None,
             tint_peek: None,
             sticker_face: None,
+            sticker_credits: None,
             ground: None,
             ground_w: OUT_W,
             blur: None,
@@ -4267,6 +4270,11 @@ impl App {
 
     fn random_drawn(&self) -> bool {
         matches!(self.random_wallpaper, Some(Some(_)))
+    }
+
+    /// slotPlus: the credits shown under the About sticker.
+    pub fn set_sticker_credits(&mut self, face: TexId, w: u32, h: u32) {
+        self.sticker_credits = Some((face, w, h));
     }
 
     pub fn set_sticker_face(&mut self, face: TexId, w: u32, h: u32) {
@@ -10174,6 +10182,12 @@ impl App {
             Phase::About => {
                 slot_ui::draw_menu_ground(self.canvas(), self.menu_ground(), out);
                 draw_sticker(self.canvas(), self.sticker_face, out);
+                slot_ui::draw_sticker_credits(
+                    self.canvas(),
+                    self.sticker_face,
+                    self.sticker_credits,
+                    out,
+                );
                 self.draw_menu_footer(out);
                 return;
             }

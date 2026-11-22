@@ -915,6 +915,14 @@ impl Worker {
                 rate.restart(deadline, self.current_tick());
                 self.shared.clocked.notify_all();
             }
+            core.set_throttle(match speed {
+                _ if rewinding => slot_retro::Throttle::Rewinding,
+                Speed::Paused => slot_retro::Throttle::Paused,
+                Speed::Normal => slot_retro::Throttle::Normal,
+                Speed::Fast => slot_retro::Throttle::FastForward {
+                    rate: self.shared.fast_quarters.load(Ordering::Relaxed) as f32 / 4.0,
+                },
+            });
             let input = ButtonMask(self.shared.input.load(Ordering::Relaxed));
             core.set_touch(unpack_touch(self.shared.touch.load(Ordering::Relaxed)));
             core.set_lid(self.shared.lid.load(Ordering::Relaxed));

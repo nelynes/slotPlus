@@ -1561,6 +1561,7 @@ struct Witness {
     resets: Arc<AtomicU64>,
     touch: Arc<Mutex<Option<(u8, u8)>>>,
     lid: Arc<AtomicBool>,
+    throttle: Arc<Mutex<slot_retro::Throttle>>,
 }
 impl RetroCore for Witness {
     fn load(&mut self, _: &Path) -> Result<(), CoreError> {
@@ -1575,6 +1576,9 @@ impl RetroCore for Witness {
     }
     fn set_lid(&mut self, shut: bool) {
         self.lid.store(shut, Ordering::Relaxed);
+    }
+    fn set_throttle(&mut self, throttle: slot_retro::Throttle) {
+        *self.throttle.lock().unwrap() = throttle;
     }
     fn takes_xy(&self) -> bool {
         true
@@ -1622,10 +1626,11 @@ fn the_tracker_passes_reset_touch_the_lid_and_x_and_y_through_to_the_core() {
         status: Arc::new(Status::default()),
     };
     let witness = Witness::default();
-    let (resets, touch, lid) = (
+    let (resets, touch, lid, throttle) = (
         witness.resets.clone(),
         witness.touch.clone(),
         witness.lid.clone(),
+        witness.throttle.clone(),
     );
     let mut core = service.wrap(Box::new(witness));
     // A reset the tracker swallowed made the Reset shortcut do nothing with achievements on,
@@ -1637,4 +1642,7 @@ fn the_tracker_passes_reset_touch_the_lid_and_x_and_y_through_to_the_core() {
     assert_eq!(*touch.lock().unwrap(), Some((3, 4)));
     core.set_lid(true);
     assert!(lid.load(Ordering::Relaxed));
+    // PokeDaisy asks whether it's being fast forwarded or rewound.
+    core.set_throttle(slot_retro::Throttle::Rewinding);
+    assert_eq!(*throttle.lock().unwrap(), slot_retro::Throttle::Rewinding);
 }

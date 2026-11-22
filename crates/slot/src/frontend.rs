@@ -2950,6 +2950,10 @@ fn sync_about(app: &mut App, compositor: &mut Compositor, state: &mut AboutFace)
     let (w, h) = (face.w, face.h);
     let id = upload(compositor, &mut state.tex, face);
     app.set_sticker_face(id, w, h);
+    let credits = slot_ui::quick_description_face(&slot_ui::SLOTPLUS_CREDITS);
+    let (w, h) = (credits.w, credits.h);
+    let id = upload(compositor, &mut state.tex, credits);
+    app.set_sticker_credits(id, w, h);
 }
 
 #[derive(Default)]

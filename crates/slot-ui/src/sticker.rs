@@ -64,6 +64,12 @@ pub const COPYRIGHT: &str = "\u{a9} 2026 BRANDON T. KOWALSKI";
 
 pub const HOME: &str = "SEE README.";
 
+/// slotPlus: credits that don't fit on Slot's sticker, shown under it on the About page.
+pub const SLOTPLUS_CREDITS: [&str; 2] = [
+    "The PokeDaisy shelf is based on",
+    "PokeDaisy by Lidor Itzhari.",
+];
+
 pub fn head_rows(f: &StickerFields) -> [String; 3] {
     [
         "MODEL NO. AGS-102".into(),
@@ -743,6 +749,28 @@ pub fn sticker_rect_sized(canvas: slot_gfx::Canvas, w: u32, h: u32) -> (f32, f32
         w,
         h,
     )
+}
+
+/// slotPlus: the credits under the sticker, centred a little below it.
+pub fn draw_sticker_credits(
+    canvas: slot_gfx::Canvas,
+    sticker: Option<(TexId, u32, u32)>,
+    credits: Option<(TexId, u32, u32)>,
+    out: &mut Vec<Draw>,
+) {
+    let (Some((_, sw, sh)), Some((tex, w, h))) = (sticker, credits) else {
+        return;
+    };
+    let (_, y, _, sh) = sticker_rect_sized(canvas, sw, sh);
+    let (w, h) = (w as f32, h as f32);
+    out.push(Draw::Tex {
+        x: canvas.centred(w).round(),
+        y: (y + sh + 14.0).round(),
+        w,
+        h,
+        tex,
+        alpha: 1.0,
+    });
 }
 
 pub fn draw_sticker(

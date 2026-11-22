@@ -82,6 +82,9 @@ struct Host {
     declared: std::collections::HashMap<String, Vec<String>>,
     /// The core's memory map (SET_MEMORY_MAPS), for RetroAchievements.
     memory: Vec<MemoryDescriptor>,
+    /// slotPlus: how the core is being run, for a core that asks.
+    throttle: crate::core::Throttle,
+    fps: f32,
 }
 
 thread_local! {
@@ -129,6 +132,32 @@ unsafe extern "C" fn environment(cmd: c_uint, data: *mut c_void) -> bool {
             }
             eprintln!("slot-retro: the core turned the picture {turns} quarter turn(s)");
             with_host(|h| h.rotation = turns).is_some()
+        }
+        GET_FASTFORWARDING => {
+            if data.is_null() {
+                return false;
+            }
+            with_host(|h| {
+                *(data as *mut bool) =
+                    matches!(h.throttle, crate::core::Throttle::FastForward { .. });
+            })
+            .is_some()
+        }
+        GET_THROTTLE_STATE => {
+            if data.is_null() {
+                return false;
+            }
+            with_host(|h| {
+                use crate::core::Throttle;
+                let (mode, rate) = match h.throttle {
+                    Throttle::Normal => (THROTTLE_NONE, h.fps),
+                    Throttle::FastForward { rate } => (THROTTLE_FAST_FORWARD, h.fps * rate),
+                    Throttle::Rewinding => (THROTTLE_REWINDING, h.fps),
+                    Throttle::Paused => (THROTTLE_NONE, 0.0),
+                };
+                *(data as *mut ThrottleState) = ThrottleState { mode, rate };
+            })
+            .is_some()
         }
         GET_CAN_DUPE => {
             if data.is_null() {
@@ -729,6 +758,8 @@ impl LibretroCore {
             net: Link::default(),
             net_peer: None,
             audio_status: None,
+            throttle: crate::core::Throttle::Normal,
+            fps: 60.0,
             options: preset
                 .iter()
                 .filter_map(|(k, v)| Some((k.to_string(), CString::new(*v).ok()?)))
@@ -930,6 +961,9 @@ impl RetroCore for LibretroCore {
             fps: av.timing.fps,
             sample_rate: av.timing.sample_rate,
         };
+        if av.timing.fps > 0.0 {
+            self.host.fps = av.timing.fps as f32;
+        }
         unsafe { (self.api.set_controller_port_device)(0, DEVICE_JOYPAD) };
         Ok(())
     }
@@ -958,6 +992,10 @@ impl RetroCore for LibretroCore {
     fn set_frame_skip(&mut self, skip: bool) {
         let _a = Active::bind(&mut self.host);
         unsafe { report_audio_status(skip) };
+    }
+
+    fn set_throttle(&mut self, throttle: crate::core::Throttle) {
+        self.host.throttle = throttle;
     }
 
     fn video_xrgb8888(&self) -> &[u8] {
@@ -1179,6 +1217,8 @@ mod tests {
             net: Link::default(),
             net_peer: None,
             audio_status: None,
+            throttle: crate::core::Throttle::Normal,
+            fps: 60.0,
             options,
             options_dirty,
             declared: HashMap::new(),
@@ -1250,6 +1290,29 @@ mod tests {
 
         assert!(ok);
         assert!(host.declared.is_empty(), "a stale declaration survived");
+    }
+
+    #[test]
+    fn a_core_that_asks_is_told_when_it_is_fast_forwarded_or_rewound() {
+        use crate::core::Throttle;
+        let mut host = host_with(HashMap::new(), false);
+        host.fps = 60.0;
+        let ask = |host: &mut Host| {
+            let _active = Active::bind(host);
+            let mut state = ThrottleState { mode: 99, rate: -1.0 };
+            let mut ff = true;
+            let ok = unsafe {
+                environment(GET_THROTTLE_STATE, &mut state as *mut _ as *mut c_void)
+                    && environment(GET_FASTFORWARDING, &mut ff as *mut bool as *mut c_void)
+            };
+            assert!(ok);
+            (state.mode, state.rate, ff)
+        };
+        assert_eq!(ask(&mut host), (THROTTLE_NONE, 60.0, false));
+        host.throttle = Throttle::FastForward { rate: 4.0 };
+        assert_eq!(ask(&mut host), (THROTTLE_FAST_FORWARD, 240.0, true));
+        host.throttle = Throttle::Rewinding;
+        assert_eq!(ask(&mut host), (THROTTLE_REWINDING, 60.0, false));
     }
 
     #[test]
