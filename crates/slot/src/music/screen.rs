@@ -10,13 +10,61 @@ use slot_retro::{GBA_H, GBA_W};
 pub const W: usize = GBA_W as usize;
 pub const H: usize = GBA_H as usize;
 
-pub const BACK: [u8; 3] = [0, 0, 0];
-pub const LINE: [u8; 3] = [0x58, 0xce, 0xd6];
-pub const DIM: [u8; 3] = [0x2e, 0x80, 0x8c];
-pub const NOTE: [u8; 3] = [0xf0, 0x6e, 0xc8];
-pub const INK: [u8; 3] = [0xf0, 0xf6, 0xfa];
-pub const PICK: [u8; 3] = [0x18, 0x34, 0xbe];
-pub const PICK_STRIPE: [u8; 3] = [0x28, 0x5a, 0xe6];
+/// The player's colours. Two themes: the classic cyan and pink on black, and a
+/// Monochrome-ish one in greys with red for what matters, like a Game Boy Pocket.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Palette {
+    pub back: [u8; 3],
+    /// The stairs, frames and small print.
+    pub line: [u8; 3],
+    pub dim: [u8; 3],
+    /// A step's name, and the name on the picked step.
+    pub text: [u8; 3],
+    pub text_on: [u8; 3],
+    pub note: [u8; 3],
+    /// The picked step's band, and its lighter ripple.
+    pub pick: [u8; 3],
+    pub pick_hi: [u8; 3],
+    /// The cart that climbs: his body, and the label with his face.
+    pub body: [u8; 3],
+    pub face: [u8; 3],
+    /// The big play and pause signs.
+    pub big: [u8; 3],
+    pub pipe: [u8; 3],
+    pub door: [u8; 3],
+}
+
+pub const CLASSIC: Palette = Palette {
+    back: [0, 0, 0],
+    line: [0x58, 0xce, 0xd6],
+    dim: [0x2e, 0x80, 0x8c],
+    text: [0x58, 0xce, 0xd6],
+    text_on: [0xf0, 0xf6, 0xfa],
+    note: [0xf0, 0x6e, 0xc8],
+    pick: [0x18, 0x34, 0xbe],
+    pick_hi: [0x3c, 0x6c, 0xf0],
+    body: [0xf0, 0xf6, 0xfa],
+    face: [0x2e, 0x80, 0x8c],
+    big: [0x14, 0x30, 0xe8],
+    pipe: [0x4c, 0xc8, 0x64],
+    door: [0x58, 0xce, 0xd6],
+};
+
+pub const MONOCHROME: Palette = Palette {
+    back: [0xe4, 0xe4, 0xe0],
+    line: [0x26, 0x26, 0x26],
+    dim: [0x9a, 0x9a, 0x98],
+    text: [0x9a, 0x9a, 0x98],
+    text_on: [0x16, 0x16, 0x16],
+    note: [0xd8, 0x18, 0x18],
+    pick: [0xcc, 0xcc, 0xc8],
+    pick_hi: [0xf4, 0xf4, 0xf2],
+    body: [0x1c, 0x1c, 0x1c],
+    face: [0xd8, 0x18, 0x18],
+    big: [0xd8, 0x18, 0x18],
+    pipe: [0x5a, 0x5a, 0x5a],
+    door: [0x8a, 0x8a, 0x88],
+};
 
 /// The titles' type: DotGothic16, a pixel font with Japanese too, at the size it's drawn for.
 const TITLE_TTF: &[u8] = include_bytes!("../../assets/DotGothic16-Regular.ttf");
@@ -66,6 +114,7 @@ type Glyph = (fontdue::Metrics, Vec<u8>);
 /// The screen as `xrgb8888`, with a cache of the glyphs it has drawn.
 pub struct Screen {
     pub px: Vec<u8>,
+    pub pal: Palette,
     glyphs: HashMap<(char, Type), Glyph>,
 }
 
@@ -73,6 +122,7 @@ impl Default for Screen {
     fn default() -> Self {
         Screen {
             px: vec![0; W * H * 4],
+            pal: CLASSIC,
             glyphs: HashMap::new(),
         }
     }
@@ -173,7 +223,7 @@ impl Screen {
         self.rect(x + 2, floor - 13, 5, 2, c);
         self.put(x + 1, floor - 12, c);
         self.put(x + 7, floor - 12, c);
-        self.put(x + 6, floor - 6, BACK);
+        self.put(x + 6, floor - 6, self.pal.back);
     }
 
     /// The same door open: its frame, with `shut` of its 9 columns closed from the left.
@@ -189,32 +239,78 @@ impl Screen {
         }
     }
 
-    /// The EXIT door at the top of a folder: an archway with a list on it, and its word.
-    pub fn exit_door(&mut self, x: i32, floor: i32) {
-        self.vline(x, floor - 16, floor - 1, LINE);
-        self.vline(x + 12, floor - 16, floor - 1, LINE);
-        self.hline(x, x + 12, floor - 1, LINE);
-        self.hline(x + 3, x + 9, floor - 20, LINE);
-        self.put(x + 1, floor - 17, LINE);
-        self.put(x + 2, floor - 18, LINE);
-        self.put(x + 2, floor - 19, LINE);
-        self.put(x + 11, floor - 17, LINE);
-        self.put(x + 10, floor - 18, LINE);
-        self.put(x + 10, floor - 19, LINE);
-        for (k, len) in [2, 4, 6].into_iter().enumerate() {
-            self.hline(x + 3, x + 3 + len, floor - 12 + 3 * k as i32, LINE);
+    /// The EXIT door: an archway with a list on it and its word, flying on a propeller
+    /// whose blades turn with `frame`.
+    pub fn exit_door(&mut self, x: i32, floor: i32, frame: u64) {
+        let c = self.pal.door;
+        self.vline(x, floor - 16, floor - 1, c);
+        self.vline(x + 12, floor - 16, floor - 1, c);
+        self.hline(x, x + 12, floor - 1, c);
+        self.hline(x + 3, x + 9, floor - 20, c);
+        for (dx, dy) in [(1, 17), (2, 18), (2, 19), (11, 17), (10, 18), (10, 19)] {
+            self.put(x + dx, floor - dy, c);
         }
-        self.text(
-            "EXIT",
-            Type::Small,
-            x - 2,
-            floor + 1,
-            (0, W as i32),
-            0,
-            LINE,
-        );
+        for (k, len) in [2, 4, 6].into_iter().enumerate() {
+            self.hline(x + 3, x + 3 + len, floor - 12 + 3 * k as i32, c);
+        }
+        // The propeller: a shaft, and blades that turn.
+        self.vline(x + 6, floor - 23, floor - 21, c);
+        let reach = [8, 5, 1, 5][((frame / 3) % 4) as usize];
+        self.hline(x + 6 - reach, x + 6 + reach, floor - 24, c);
+        self.text("EXIT", Type::Small, x - 2, floor + 1, (0, W as i32), 0, c);
     }
 
+    /// A warp pipe standing on `floor`, 13 across: back to the top of the music.
+    pub fn pipe(&mut self, x: i32, floor: i32) {
+        let (c, b) = (self.pal.pipe, self.pal.back);
+        self.rect(x + 1, floor - 8, 11, 8, c);
+        self.rect(x, floor - 12, 13, 4, c);
+        self.hline(x + 1, x + 11, floor - 9, b);
+        self.vline(x + 3, floor - 7, floor - 1, b);
+        self.vline(x + 2, floor - 11, floor - 10, b);
+    }
+
+    /// The big play sign, `h` tall.
+    pub fn big_play(&mut self, x: i32, y: i32, h: i32) {
+        let c = self.pal.big;
+        for r in 0..h {
+            let half = r.min(h - 1 - r);
+            self.hline(x, x + half, y + r, c);
+        }
+    }
+
+    pub fn big_pause(&mut self, x: i32, y: i32, h: i32) {
+        let c = self.pal.big;
+        self.rect(x, y, 7, h, c);
+        self.rect(x + 12, y, 7, h, c);
+    }
+
+    /// The band on a step: plain for the picked step, rippling out from its left end while
+    /// its song plays (`phase` turns), and fading away to the right.
+    pub fn band(&mut self, x0: i32, top: i32, h: i32, phase: Option<f32>, picked: bool) {
+        let (lo, hi) = (self.pal.pick, self.pal.pick_hi);
+        let w = W as i32 - x0;
+        for dx in 0..w {
+            let fade = 1.0 - dx as f32 / w as f32;
+            let wave = match phase {
+                Some(p) => (0.5 + 0.5 * ((dx as f32) * 0.55 - p).sin()) * fade,
+                None => match dx % 12 == 0 {
+                    true => 0.6 * fade,
+                    false => 0.0,
+                },
+            };
+            // Three hard steps of colour, as a cart's screen would have.
+            let (c, on) = match (picked, wave) {
+                (true, w) if w > 0.55 => (hi, true),
+                (true, _) => (lo, true),
+                (false, w) if w > 0.62 => (lo, true),
+                (false, _) => (lo, false),
+            };
+            if on && (picked || fade > 0.25) {
+                self.vline(x0 + dx, top, top + h - 1, c);
+            }
+        }
+    }
     /// A note, its foot at `foot`.
     pub fn note(&mut self, x: i32, foot: i32, c: [u8; 3]) {
         self.rect(x, foot - 4, 3, 3, c);
@@ -234,6 +330,7 @@ impl Screen {
     /// on `floor`. `shown` rows of it, from the top, are drawn (for going through a door).
     pub fn guide(&mut self, x: i32, floor: i32, pose: Pose, shown: i32) {
         let top = floor - 16;
+        let (body, face) = (self.pal.body, self.pal.face);
         let px = |s: &mut Screen, gx: i32, gy: i32, c: [u8; 3]| {
             if gy - top < shown {
                 s.put(gx, gy, c);
@@ -245,24 +342,24 @@ impl Screen {
             for xx in x + 1..=x + 9 {
                 let corner = yy == y - 15 && (xx == x + 1 || xx == x + 9);
                 if !corner {
-                    px(self, xx, yy, INK);
+                    px(self, xx, yy, body);
                 }
             }
         }
         // Its label, with a face.
         for yy in y - 13..=y - 8 {
             for xx in x + 3..=x + 7 {
-                px(self, xx, yy, DIM);
+                px(self, xx, yy, face);
             }
         }
-        px(self, x + 4, y - 11, INK);
-        px(self, x + 6, y - 11, INK);
+        px(self, x + 4, y - 11, body);
+        px(self, x + 6, y - 11, body);
         for xx in x + 4..=x + 6 {
-            px(self, xx, y - 9, INK);
+            px(self, xx, y - 9, body);
         }
         // The contacts' edge.
         for xx in x + 2..=x + 8 {
-            px(self, xx, y - 4, INK);
+            px(self, xx, y - 4, body);
         }
         let limbs: &[(i32, i32)] = match pose {
             Pose::Stand => &[
@@ -323,7 +420,7 @@ impl Screen {
             ],
         };
         for (dx, dy) in limbs {
-            px(self, x + dx, y + dy, INK);
+            px(self, x + dx, y + dy, body);
         }
     }
 
@@ -333,11 +430,12 @@ impl Screen {
             for xx in 0..11 {
                 let (dx, dy) = (xx as f32 - 5.0, yy as f32 - 5.0);
                 if dx * dx + dy * dy <= 30.0 {
-                    self.put(x + xx, y + yy, LINE);
+                    self.put(x + xx, y + yy, self.pal.line);
                 }
             }
         }
-        self.text("B", Type::Small, x + 3, y, (x, x + 10), 0, BACK);
+        let back = self.pal.back;
+        self.text("B", Type::Small, x + 3, y, (x, x + 10), 0, back);
     }
 }
 

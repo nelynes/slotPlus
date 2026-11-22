@@ -2,13 +2,17 @@
 //! comes out, pauses and saves like any other.
 //!
 //! In the spirit of the music carts sold for the GBA: each file is a step on a staircase,
-//! folders are doors and songs are notes (playlists two), and a little cart climbs it.
+//! folders are doors and songs are notes (playlists two), and a little cart climbs it,
+//! picking the step he stands on. At the top of a folder's stairs a warp pipe takes him
+//! back to the top of the music, and the EXIT door flies along beside him on a propeller.
 //! Left and Right hop him down and up a step (faster the longer they're held), Up and Down
 //! a few at once, A plays a song (and the rest of its folder or playlist after it) or takes
-//! him through a door, B takes him back out of the EXIT door, START pauses, L and R skip
-//! back and on (held, they wind ten seconds at a time), and SELECT changes the order: in
-//! order, repeat all, repeat one, shuffle. While a song plays he dances on its step, and Up
-//! and Down are the handheld's volume (slotPlus takes them before they reach the player).
+//! him through a door or down the pipe, and B pauses, then stops, then takes him out of the
+//! EXIT door. START plays and pauses, L and R skip back and on (held, they wind ten seconds
+//! at a time), SELECT changes the order (in order, repeat all, repeat one, shuffle), and
+//! SELECT held switches the theme: classic, or Monochrome-ish. While a song plays he dances
+//! on its step, the notes dance with him, and Up and Down are the handheld's volume
+//! (slotPlus takes them before they reach the player).
 //!
 //! What it was playing, and where, is kept as the cart's save, so it picks up there.
 
@@ -18,23 +22,30 @@ use slot_retro::{AvInfo, ButtonMask, CoreError, RetroCore};
 
 use super::decode::{Song, OUT_RATE};
 use super::library::{self, Entry};
-use super::screen::{
-    self, clock, Pose, Screen, Type, BACK, DIM, INK, LINE, NOTE, PICK, PICK_STRIPE,
-};
+use super::screen::{self, clock, Palette, Pose, Screen, Type, CLASSIC, MONOCHROME};
 
 const FPS: f64 = 60.0;
 
 /// The staircase: each step `STEP` across and `ROW` up from the one before, the first with
-/// its tread at `BASE`. `VISIBLE` steps fit under the band along the top.
+/// its tread at `BASE`. A file's name sits to the right of its step's riser, and its door or
+/// note, and he, stand on the tread above it. `VISIBLE` names fit on screen.
 const ROW: i32 = 17;
 const STEP: i32 = 17;
 const X0: i32 = 2;
-const BASE: i32 = 158;
+const BASE: i32 = 145;
 const VISIBLE: usize = 7;
-const BAND: i32 = 34;
-/// Where the EXIT door stands, in the band.
-const EXIT_X: i32 = 8;
-const EXIT_FLOOR: i32 = 24;
+/// The line along the bottom that shows how far into the song it is.
+const BAR_Y: i32 = 150;
+/// Where the EXIT door waits while a song plays, and where it starts in a new folder.
+const DOOR_CORNER: (f32, f32) = (4.0, 30.0);
+const DOOR_START: (f32, f32) = (40.0, 44.0);
+/// How far from him the door flies, and how quickly it catches up.
+const DOOR_OFFSET: (f32, f32) = (-30.0, -40.0);
+const DOOR_EASE: f32 = 0.12;
+/// How tall the warp pipe is: he stands on top of it.
+const PIPE_H: f32 = 12.0;
+/// SELECT held this long switches the theme.
+const THEME_HOLD: u32 = 40;
 
 /// A held Left or Right hops again after `REPEAT_AFTER` frames, then every `REPEAT_FIRST`
 /// frames, one frame sooner each hop down to `REPEAT_FASTEST`.
@@ -159,6 +170,40 @@ enum Move {
     Emerge {
         t: u32,
     },
+    /// Down the warp pipe, to the top of the music.
+    Pipe {
+        t: u32,
+    },
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Theme {
+    #[default]
+    Classic,
+    Monochrome,
+}
+
+impl Theme {
+    fn palette(self) -> Palette {
+        match self {
+            Theme::Classic => CLASSIC,
+            Theme::Monochrome => MONOCHROME,
+        }
+    }
+
+    fn word(self) -> &'static str {
+        match self {
+            Theme::Classic => "classic",
+            Theme::Monochrome => "monochrome",
+        }
+    }
+
+    fn parse(s: &str) -> Theme {
+        match s {
+            "monochrome" => Theme::Monochrome,
+            _ => Theme::Classic,
+        }
+    }
 }
 
 pub struct MusicPlayer {
@@ -188,6 +233,12 @@ pub struct MusicPlayer {
     gap: u32,
     /// How long L or R has been held.
     shoulder_for: u32,
+    /// How long SELECT has been held, and whether this hold already switched the theme.
+    select_for: u32,
+    select_used: bool,
+    theme: Theme,
+    /// Where the EXIT door is flying, on screen.
+    door: (f32, f32),
     screen: Screen,
     audio: Vec<i16>,
     frame: u64,
@@ -239,6 +290,10 @@ impl MusicPlayer {
             next_hop: 0,
             gap: REPEAT_FIRST,
             shoulder_for: 0,
+            select_for: 0,
+            select_used: false,
+            theme: Theme::Classic,
+            door: DOOR_START,
             screen: Screen::default(),
             audio: Vec::new(),
             frame: 0,
@@ -271,6 +326,25 @@ impl MusicPlayer {
         self.order
     }
 
+    pub fn theme(&self) -> Theme {
+        self.theme
+    }
+
+    /// Whether this folder's stairs end in a warp pipe (every folder but the top).
+    fn has_pipe(&self) -> bool {
+        self.dir != self.top
+    }
+
+    /// How many places he can stand: a step for each file, and the pipe.
+    fn spots(&self) -> usize {
+        self.entries.len() + self.has_pipe() as usize
+    }
+
+    /// Whether he's standing on the warp pipe.
+    pub fn on_pipe(&self) -> bool {
+        self.has_pipe() && self.cursor == self.entries.len()
+    }
+
     pub fn position_ms(&self) -> u64 {
         self.song.as_ref().map_or(0, Song::position_ms)
     }
@@ -299,7 +373,7 @@ impl MusicPlayer {
 
     fn keep_cursor_shown(&mut self) {
         // Keep a step above him in view while there is one, so he can see where he's going.
-        let top_room = (self.cursor + 2).min(self.entries.len());
+        let top_room = (self.cursor + 2).min(self.spots());
         if self.cursor < self.scroll {
             self.scroll = self.cursor;
         } else if top_room > self.scroll + VISIBLE {
@@ -309,7 +383,7 @@ impl MusicPlayer {
 
     /// Hop `by` steps, as far as the stairs go.
     fn hop(&mut self, by: i32) {
-        let n = self.entries.len();
+        let n = self.spots();
         if n == 0 {
             return;
         }
@@ -353,7 +427,21 @@ impl MusicPlayer {
                 };
                 self.start(at, 0);
             }
+            None if self.on_pipe() => self.moving = Move::Pipe { t: 0 },
             None => {}
+        }
+    }
+
+    /// B: pause what's playing; again, stop it; with nothing playing, out of the EXIT door.
+    fn b(&mut self) {
+        match (&self.song, self.paused) {
+            (Some(_), false) => {
+                self.paused = true;
+                self.keep();
+            }
+            (Some(_), true) => self.stop(),
+            (None, _) if self.playing.is_some() => self.stop(),
+            (None, _) => self.back(),
         }
     }
 
@@ -485,14 +573,29 @@ impl MusicPlayer {
             return self.pick();
         }
         if pressed(ButtonMask::B) {
-            return self.back();
+            return self.b();
         }
         if pressed(ButtonMask::START) {
             self.toggle_pause();
         }
-        if pressed(ButtonMask::SELECT) {
-            self.order = self.order.next();
-            self.keep();
+        // SELECT: tapped, the order; held, the theme.
+        if mask & ButtonMask::SELECT != 0 {
+            self.select_for += 1;
+            if self.select_for >= THEME_HOLD && !self.select_used {
+                self.select_used = true;
+                self.theme = match self.theme {
+                    Theme::Classic => Theme::Monochrome,
+                    Theme::Monochrome => Theme::Classic,
+                };
+                self.keep();
+            }
+        } else {
+            if released & ButtonMask::SELECT != 0 && !self.select_used {
+                self.order = self.order.next();
+                self.keep();
+            }
+            self.select_for = 0;
+            self.select_used = false;
         }
         if pressed(ButtonMask::UP) {
             self.hop(PAGE);
@@ -585,7 +688,22 @@ impl MusicPlayer {
                 if *t >= DOOR_FRAMES {
                     let to = to.clone();
                     self.open_dir(to, None);
+                    self.door = DOOR_START;
                     self.moving = Move::Drop { t: 0 };
+                }
+            }
+            Move::Pipe { t } => {
+                *t += 1;
+                if *t >= DOOR_FRAMES + 6 {
+                    // Back at the top, out of the door of the folder he was under.
+                    let first = self
+                        .dir
+                        .strip_prefix(&self.top)
+                        .ok()
+                        .and_then(|rel| rel.components().next())
+                        .map(|c| self.top.join(c.as_os_str()));
+                    self.open_dir(self.top.clone(), first.as_deref());
+                    self.moving = Move::Emerge { t: 0 };
                 }
             }
             Move::Drop { t } => {
@@ -610,6 +728,33 @@ impl MusicPlayer {
                 }
             }
         }
+        // The EXIT door flies after him, or to its corner while there's a song on. It holds still
+        // while he goes in or out of it.
+        if !matches!(self.moving, Move::Drop { .. } | Move::Leave { .. }) {
+            let target = match self.song.is_some() {
+                true => DOOR_CORNER,
+                false => {
+                    let (gx, gy) = self.spot(self.guide, self.view);
+                    (
+                        (gx + DOOR_OFFSET.0).clamp(4.0, 200.0),
+                        (gy + DOOR_OFFSET.1).clamp(30.0, 130.0),
+                    )
+                }
+            };
+            self.door.0 += (target.0 - self.door.0) * DOOR_EASE;
+            self.door.1 += (target.1 - self.door.1) * DOOR_EASE;
+        }
+    }
+
+    /// Where he stands on spot `g`, on screen: the tread above its name, or the pipe's top.
+    fn spot(&self, g: f32, view: f32) -> (f32, f32) {
+        let (xs, yb) = step_at(g + 1.0 - view);
+        let n = self.entries.len() as f32;
+        let lift = match self.has_pipe() {
+            true => PIPE_H * (1.0 - (g - n).abs()).clamp(0.0, 1.0),
+            false => 0.0,
+        };
+        (xs + 4.0, yb - lift)
     }
 
     /// What the cart keeps: what's playing (from the music folder), its place in the queue,
@@ -631,8 +776,9 @@ impl MusicPlayer {
             _ => (String::new(), 0, 0),
         };
         self.kept = format!(
-            "{SAVE_MAGIC}\n{source}\n{index}\n{at}\n{}\n",
-            self.order.word()
+            "{SAVE_MAGIC}\n{source}\n{index}\n{at}\n{}\n{}\n",
+            self.order.word(),
+            self.theme.word()
         )
         .into_bytes();
     }
@@ -652,7 +798,9 @@ impl MusicPlayer {
                     .next()
                     .and_then(|s| s.trim().parse().ok())
                     .unwrap_or(0);
-                (source, index, at, lines.next().unwrap_or_default())
+                let order = lines.next().unwrap_or_default();
+                self.theme = Theme::parse(lines.next().unwrap_or_default().trim());
+                (source, index, at, order)
             }
             Some(SAVE_MAGIC_1) => {
                 let source = lines.next().unwrap_or_default().to_string();
@@ -696,195 +844,237 @@ impl MusicPlayer {
 
     fn draw(&mut self) {
         let frame = self.frame;
+        let pal = self.theme.palette();
+        self.screen.pal = pal;
         let playing_step = self.playing_step().map(Path::to_path_buf);
-        let dancing = self.song.is_some() && !self.paused;
-        let pose_now = match (frame / DANCE_FRAMES).is_multiple_of(2) {
+        let sounding = self.song.is_some() && !self.paused;
+        let dance = match (frame / DANCE_FRAMES).is_multiple_of(2) {
             true => Pose::DanceLeft,
             false => Pose::DanceRight,
         };
         let view = self.view;
+        let n = self.entries.len();
         let first = (view.floor() as isize - 1).max(0) as usize;
-        let last = (view.ceil() as usize + VISIBLE + 1).min(self.entries.len());
-        // What each step on screen shows: him in front of it, or its door part-shut.
+        let last = (view.ceil() as usize + VISIBLE + 1).min(n);
+        // What each step on screen shows: him in front of its door or note, or its door
+        // part-shut.
         let marks: Vec<(bool, Option<i32>)> = (first..last)
             .map(|i| {
                 let here = (self.guide - i as f32).abs() < 0.5 && !self.walking_away_from(i);
                 (here, self.door_open_at(i))
             })
             .collect();
+        let (gx, gy, pose, shown) = self.guide_spot(view, dance, sounding, playing_step.as_deref());
+        let pipe = self.has_pipe().then(|| {
+            let (xs, yb) = step_at(n as f32 + 1.0 - view);
+            (xs.round() as i32 + 2, yb.round() as i32)
+        });
+        let door = (self.door.0.round() as i32, self.door.1.round() as i32);
+        let door_shown = self.has_pipe() && !self.door_hidden();
+        let place = match self.dir.strip_prefix(&self.top) {
+            Ok(rel) if !rel.as_os_str().is_empty() => rel
+                .file_name()
+                .map(|f| f.to_string_lossy().into_owned())
+                .unwrap_or_default(),
+            _ => "Music".to_string(),
+        };
+        let title = match (&self.song, self.now_playing()) {
+            (Some(song), Some(path)) => Some(song.tags.title.clone().unwrap_or_else(|| {
+                path.file_stem()
+                    .map(|f| f.to_string_lossy().into_owned())
+                    .unwrap_or_default()
+            })),
+            _ => None,
+        };
+        let times = self
+            .song
+            .as_ref()
+            .map(|song| (song.position_ms(), song.length_ms));
+        let inside = self.has_pipe();
         let entries = std::mem::take(&mut self.entries);
+        let w = screen::W as i32;
         let s = &mut self.screen;
-        s.fill(BACK);
+        s.fill(pal.back);
 
         if entries.is_empty() {
-            s.text(
-                "No music here",
-                Type::Title,
-                40,
-                80,
-                (0, screen::W as i32),
-                0,
-                LINE,
-            );
+            s.text("No music here", Type::Title, 60, 70, (0, w), 0, pal.text);
         }
-        // The stairs, bottom to top, with what each step holds.
+        // The staircase's outline, from the bottom step up and off the top of the screen.
+        let lowest = (view.floor() as i32 - 1).max(0);
+        for i in lowest..lowest + VISIBLE as i32 + 6 {
+            let (xs, yb) = step_at(i as f32 - view);
+            let (xs, yb) = (xs.round() as i32, yb.round() as i32);
+            if yb < -ROW {
+                break;
+            }
+            s.hline(xs, xs + STEP, yb, pal.line);
+            s.vline(xs + STEP, yb - ROW, yb, pal.line);
+        }
+        // Each file's name to the right of its riser, the picked one and the one playing lit,
+        // and its door or note on the tread above.
+        let ripple = sounding.then_some(frame as f32 * 0.3);
         for i in first..last {
-            let k = i as f32 - view;
-            let (xs, yb) = step_at(k);
+            let (xs, yb) = step_at(i as f32 - view);
             let (xs, yb) = (xs.round() as i32, yb.round() as i32);
             let xt = xs + STEP;
-            s.hline(xs, screen::W as i32 - 1, yb, LINE);
-            s.vline(xt, yb - ROW, yb, LINE);
-            if i + 1 == entries.len() {
-                s.hline(xt, screen::W as i32 - 1, yb - ROW, LINE);
-            }
-            let here = i == self.cursor;
-            if here {
-                s.rect(
-                    xt + 1,
-                    yb - ROW + 1,
-                    screen::W as i32 - xt - 1,
-                    ROW - 1,
-                    PICK,
-                );
-                let mut x = xt + 1;
-                while x < screen::W as i32 {
-                    s.vline(x, yb - ROW + 1, yb - 1, PICK_STRIPE);
-                    x += 12;
-                }
-            }
             let e = &entries[i];
             let lit = playing_step.as_deref() == Some(e.path());
-            // A step's own mark, unless he's standing in front of it.
-            let (guide_here, open) = marks[i - first];
-            match e {
-                Entry::Folder { .. } => match open {
-                    Some(shut) => s.doorway(xs + 4, yb, shut, LINE),
-                    None if !guide_here => s.door(xs + 4, yb, LINE),
-                    None => s.doorway(xs + 4, yb, 0, LINE),
-                },
-                Entry::Song { .. } if !guide_here => {
-                    let bob = if lit && dancing && (frame / 15).is_multiple_of(2) {
-                        1
-                    } else {
-                        0
-                    };
-                    s.note(xs + 6, yb - 1 - bob, NOTE)
-                }
-                Entry::Playlist { .. } if !guide_here => s.notes(xs + 4, yb - 1, NOTE),
+            let picked = i == self.cursor;
+            match (picked, lit) {
+                (true, true) => s.band(xt + 1, yb - ROW + 1, ROW - 1, ripple, true),
+                (true, false) => s.band(xt + 1, yb - ROW + 1, ROW - 1, None, true),
+                (false, true) if sounding => s.band(xt + 1, yb - ROW + 1, ROW - 1, ripple, false),
                 _ => {}
             }
-            let ink = if here { INK } else { LINE };
+            let (guide_here, open) = marks[i - first];
+            let (ix, floor) = (xt + 4, yb - ROW);
+            // While a song plays the notes dance: each bobs in turn, the playing one most.
+            let bob = match sounding {
+                true if lit => [0, 1, 2, 1][((frame / 6) % 4) as usize],
+                true => ((frame / 12 + i as u64) % 2) as i32,
+                false => 0,
+            };
+            let sway = match sounding && lit {
+                true => [0, 1, 0, -1][((frame / 8) % 4) as usize],
+                false => 0,
+            };
+            match e {
+                Entry::Folder { .. } => match open {
+                    Some(shut) => s.doorway(ix, floor, shut, pal.door),
+                    None if !guide_here => s.door(ix, floor, pal.door),
+                    None => s.doorway(ix, floor, 0, pal.door),
+                },
+                Entry::Song { .. } if !guide_here => {
+                    s.note(ix + 2 + sway, floor - 1 - bob, pal.note)
+                }
+                Entry::Playlist { .. } if !guide_here => {
+                    s.notes(ix + sway, floor - 1 - bob, pal.note)
+                }
+                _ => {}
+            }
+            let ink = if picked { pal.text_on } else { pal.text };
             let name = e.name().to_string();
             s.text(
                 &name,
                 Type::Title,
                 xt + 3,
                 yb - ROW - 3,
-                (xt + 1, screen::W as i32 - 1),
+                (xt + 1, w - 1),
                 0,
                 ink,
             );
         }
-
         self.entries = entries;
-        // Him.
-        let (gx, gy, pose, shown) =
-            self.guide_spot(view, pose_now, dancing, playing_step.as_deref());
-        if shown > 0 {
-            self.screen.guide(gx, gy, pose, shown);
+        let s = &mut self.screen;
+        if let Some((px, floor)) = pipe {
+            s.pipe(px, floor);
+            s.text("TOP", Type::Small, px, floor + 1, (0, w), 0, pal.dim);
         }
 
-        // The band along the top: the EXIT door, and what's playing.
-        let inside = self.dir != self.top;
-        let now = self.now_playing().map(Path::to_path_buf);
-        let place = match self.dir.strip_prefix(&self.top) {
-            Ok(rel) if !rel.as_os_str().is_empty() => rel
-                .file_name()
-                .map(|n| n.to_string_lossy().into_owned())
-                .unwrap_or_default(),
-            _ => "Music".to_string(),
-        };
-        let s = &mut self.screen;
-        s.rect(0, 0, screen::W as i32, BAND + 4, BACK);
-        if inside {
-            s.exit_door(EXIT_X, EXIT_FLOOR);
+        // Him.
+        if shown > 0 {
+            s.guide(gx, gy, pose, shown);
         }
-        let left = 32;
-        let right = screen::W as i32 - 4;
-        match (&self.song, now) {
-            (Some(song), Some(path)) => {
-                let title = song.tags.title.clone().unwrap_or_else(|| {
-                    path.file_stem()
-                        .map(|n| n.to_string_lossy().into_owned())
-                        .unwrap_or_default()
-                });
-                let w = s.width(&title, Type::Title);
-                let room = right - left;
+        if door_shown {
+            s.exit_door(door.0, door.1, frame);
+        }
+
+        // What's playing: its title in a frame at the top, the big play or pause sign, and
+        // how far in it is along the bottom.
+        match &title {
+            Some(title) => {
+                let (bx, by, bw, bh) = (24, 2, 94, 19);
+                s.rect(bx, by, bw, bh, pal.back);
+                s.hline(bx, bx + bw - 1, by, pal.line);
+                s.hline(bx, bx + bw - 1, by + bh - 1, pal.line);
+                s.vline(bx, by, by + bh - 1, pal.line);
+                s.vline(bx + bw - 1, by, by + bh - 1, pal.line);
+                let (left, right) = (bx + 3, bx + bw - 4);
+                let tw = s.width(title, Type::Title);
                 // A long title scrolls by, after a moment's pause at the start.
-                let skip = match w > room {
+                let skip = match tw > right - left {
                     true => {
-                        let span = (w + 24) as u64;
-                        let t = (frame / 2) % (span + 60);
-                        t.saturating_sub(60) as i32
+                        let span = (tw + 24) as u64;
+                        ((frame / 2) % (span + 60)).saturating_sub(60) as i32
                     }
                     false => 0,
                 };
-                s.text(&title, Type::Title, left, -1, (left, right), skip, INK);
+                s.text(
+                    title,
+                    Type::Title,
+                    left,
+                    by - 1,
+                    (left, right),
+                    skip,
+                    pal.text,
+                );
                 if skip > 0 {
                     s.text(
-                        &title,
+                        title,
                         Type::Title,
-                        left + w + 24,
-                        -1,
+                        left + tw + 24,
+                        by - 1,
                         (left, right),
                         skip,
-                        INK,
+                        pal.text,
                     );
                 }
-                let (at, len) = (song.position_ms(), song.length_ms);
-                s.rect(left, 18, room - 40, 3, DIM);
-                if let Some(len) = len.filter(|l| *l > 0) {
-                    let fill = ((room - 40) as u64 * at.min(len) / len) as i32;
-                    s.rect(left, 18, fill, 3, NOTE);
+                match sounding {
+                    true => s.big_play(26, 50, 37),
+                    false => s.big_pause(26, 52, 33),
                 }
-                if self.paused {
-                    s.rect(right - 30, 16, 2, 7, LINE);
-                    s.rect(right - 26, 16, 2, 7, LINE);
-                }
-                let times = match len {
-                    Some(len) => format!("{} / {}", clock(at), clock(len)),
-                    None => clock(at),
-                };
-                s.text(&times, Type::Small, left, 22, (left, right), 0, LINE);
             }
-            _ => {
+            None => {
                 let say = match &self.trouble {
                     Some(name) => format!("Can't play {name}"),
                     None => place,
                 };
-                s.text(&say, Type::Title, left, -1, (left, right), 0, DIM);
+                s.text(&say, Type::Title, 24, 1, (24, 118), 0, pal.dim);
             }
         }
+        // The bottom line: how far into the song, the play order, and the time.
+        s.rect(0, BAR_Y, w, screen::H as i32 - BAR_Y, pal.back);
+        s.hline(4, w - 5, BAR_Y, pal.line);
         let order = self.order.text();
-        let ow = s.width(order, Type::Small);
-        s.text(
-            order,
-            Type::Small,
-            right - ow,
-            22,
-            (left, right + 1),
-            0,
-            DIM,
-        );
-        if inside {
-            s.b_button(screen::W as i32 - 13, screen::H as i32 - 13);
+        s.text(order, Type::Small, 4, BAR_Y + 1, (0, w), 0, pal.dim);
+        match times {
+            Some((at, len)) => {
+                if let Some(len) = len.filter(|l| *l > 0) {
+                    let x = 4 + ((w - 12) as u64 * at.min(len) / len) as i32;
+                    s.rect(x, BAR_Y - 1, 3, 3, pal.note);
+                }
+                let t = match len {
+                    Some(len) => format!("{} / {}", clock(at), clock(len)),
+                    None => clock(at),
+                };
+                let tw = s.width(&t, Type::Small);
+                s.text(&t, Type::Small, w - 4 - tw, BAR_Y + 1, (0, w), 0, pal.line);
+            }
+            None if inside => {
+                s.b_button(w - 14, BAR_Y + 1);
+                let ew = s.width("EXIT", Type::Small);
+                s.text(
+                    "EXIT",
+                    Type::Small,
+                    w - 17 - ew,
+                    BAR_Y + 1,
+                    (0, w),
+                    0,
+                    pal.dim,
+                );
+            }
+            None => {}
         }
+    }
+
+    /// Whether the EXIT door is out of sight: he's just gone in it, or not yet out.
+    fn door_hidden(&self) -> bool {
+        false
     }
 
     /// Whether he's on his way out of step `i` (so its door or note shows behind him).
     fn walking_away_from(&self, i: usize) -> bool {
-        matches!(self.moving, Move::Leave { .. }) && i == self.cursor
+        matches!(self.moving, Move::Leave { .. } | Move::Pipe { .. }) && i == self.cursor
     }
 
     /// How shut the door on step `i` is, while he goes through it.
@@ -916,11 +1106,8 @@ impl MusicPlayer {
         dancing: bool,
         playing_step: Option<&Path>,
     ) -> (i32, i32, Pose, i32) {
-        let spot = |g: f32| {
-            let (xs, yb) = step_at(g - view);
-            (xs + 5.0, yb)
-        };
-        let exit = (EXIT_X as f32 + 1.0, EXIT_FLOOR as f32);
+        let spot = |g: f32| self.spot(g, view);
+        let exit = (self.door.0 + 1.0, self.door.1);
         let arc = |a: (f32, f32), b: (f32, f32), p: f32, high: f32| {
             let e = ease(p);
             let x = a.0 + (b.0 - a.0) * e;
@@ -936,12 +1123,21 @@ impl MusicPlayer {
             }
             Move::Enter { t, .. } => {
                 // He steps into the doorway and the door shuts on him.
-                let half = DOOR_FRAMES / 2;
-                let shown = match *t < half {
+                let shown = match *t < DOOR_FRAMES / 2 {
                     true => full,
                     false => 0,
                 };
                 (spot(self.cursor as f32), Pose::Stand, shown)
+            }
+            Move::Pipe { t } => {
+                // A little hop, then down the pipe.
+                let (x, y) = spot(self.cursor as f32);
+                let sink = (*t as i32 - 4).clamp(0, full);
+                let hop = match *t < 4 {
+                    true => [0.0, 2.0, 3.0, 2.0][*t as usize],
+                    false => 0.0,
+                };
+                ((x, y - hop + sink as f32), Pose::Hop, full - sink)
             }
             Move::Drop { t } => {
                 let p = *t as f32 / DROP_FRAMES as f32;
@@ -1268,6 +1464,95 @@ mod tests {
         tap(&mut p, ButtonMask::A);
         assert!(p.trouble.as_deref() == Some("Broken"));
         assert_eq!(run(&mut p, 3).len(), 3 * 735 * 2);
+    }
+
+    #[test]
+    fn b_pauses_then_stops_then_leaves_the_folder() {
+        let (_d, m) = card();
+        let mut p = MusicPlayer::new();
+        p.load(&m).unwrap();
+        through(&mut p, ButtonMask::A);
+        tap(&mut p, ButtonMask::A);
+        assert!(p.now_playing().is_some() && !p.paused());
+        tap(&mut p, ButtonMask::B);
+        assert!(p.paused(), "the first B pauses");
+        assert!(p.now_playing().is_some());
+        tap(&mut p, ButtonMask::B);
+        assert_eq!(p.now_playing(), None, "the second stops");
+        assert_eq!(p.dir(), m.join("Album"), "and he's still in the folder");
+        through(&mut p, ButtonMask::B);
+        assert_eq!(p.dir(), m, "the third takes him out");
+    }
+
+    #[test]
+    fn the_warp_pipe_at_the_top_of_a_folder_goes_back_to_the_top_of_the_music() {
+        let (_d, m) = card();
+        std::fs::create_dir_all(m.join("Album/Disc 2")).unwrap();
+        wav(&m.join("Album/Disc 2/01 Third.wav"), 44_100, 2, 0.5);
+        let mut p = MusicPlayer::new();
+        p.load(&m).unwrap();
+        assert!(!p.has_pipe(), "no pipe at the top");
+        tap(&mut p, ButtonMask::RIGHT);
+        run(&mut p, 10);
+        assert_eq!(p.cursor(), 1, "the top has only its two steps");
+        tap(&mut p, ButtonMask::LEFT);
+        run(&mut p, 10);
+        through(&mut p, ButtonMask::A);
+        through(&mut p, ButtonMask::A);
+        assert_eq!(p.dir(), m.join("Album/Disc 2"));
+        tap(&mut p, ButtonMask::RIGHT);
+        run(&mut p, 10);
+        assert!(p.on_pipe(), "the step after the last song is the pipe");
+        tap(&mut p, ButtonMask::RIGHT);
+        run(&mut p, 10);
+        assert!(p.on_pipe(), "and it's the top");
+        through(&mut p, ButtonMask::A);
+        assert_eq!(p.dir(), m, "down the pipe to the top of the music");
+        assert_eq!(p.cursor(), 0, "out of the door of the folder he was under");
+    }
+
+    #[test]
+    fn select_tapped_changes_the_order_and_held_changes_the_theme() {
+        let (_d, m) = card();
+        let mut p = MusicPlayer::new();
+        p.load(&m).unwrap();
+        tap(&mut p, ButtonMask::SELECT);
+        assert_eq!(p.order(), Order::RepeatAll);
+        assert_eq!(p.theme(), Theme::Classic);
+        for _ in 0..THEME_HOLD + 5 {
+            p.run_frame(ButtonMask(ButtonMask::SELECT));
+        }
+        p.run_frame(ButtonMask(0));
+        assert_eq!(p.theme(), Theme::Monochrome);
+        assert_eq!(
+            p.order(),
+            Order::RepeatAll,
+            "a hold doesn't change the order"
+        );
+        assert_eq!(p.screen.pal, MONOCHROME);
+        let mut again = MusicPlayer::new();
+        again.load(&m).unwrap();
+        again.load_save_ram(&p.save_ram().unwrap()).unwrap();
+        assert_eq!(again.theme(), Theme::Monochrome, "the cart remembers it");
+    }
+
+    #[test]
+    fn the_exit_door_follows_him_and_flies_to_its_corner_while_a_song_plays() {
+        let (_d, m) = card();
+        let mut p = MusicPlayer::new();
+        p.load(&m).unwrap();
+        through(&mut p, ButtonMask::A);
+        run(&mut p, 60);
+        let near = p.door;
+        tap(&mut p, ButtonMask::RIGHT);
+        run(&mut p, 60);
+        assert!(
+            p.door.0 > near.0 && p.door.1 < near.1,
+            "up the stairs with him"
+        );
+        tap(&mut p, ButtonMask::A);
+        run(&mut p, 25);
+        assert!((p.door.0 - DOOR_CORNER.0).abs() < 2.0 && (p.door.1 - DOOR_CORNER.1).abs() < 2.0);
     }
 
     #[test]
