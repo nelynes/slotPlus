@@ -58,8 +58,8 @@ pub fn has_music(root: &Path) -> bool {
 
 /// The label slotPlus ships for the cart, in `System/`.
 pub const MUSIC_LABEL: &str = "System/music_label.png";
-/// The cart's plastic: black, like the music carts sold for the GBA.
-pub const MUSIC_SHELL: &str = "auto 1c1c21 solid";
+/// The cart's plastic: white.
+pub const MUSIC_SHELL: &str = "auto efefea solid";
 
 /// The music cart: the card's own label for it if `Labels/GBA/` has one, or the one slotPlus
 /// ships.
@@ -104,7 +104,7 @@ mod tests {
         assert!(is_music(&cart));
         assert_eq!(cart.title, "Music");
         assert_eq!(cart.label, None);
-        assert!(cart.shell.is_some(), "a black cart");
+        assert!(cart.shell.is_some(), "a white cart");
         std::fs::create_dir_all(d.path().join("System")).unwrap();
         std::fs::write(d.path().join(MUSIC_LABEL), b"png").unwrap();
         assert_eq!(music_cart(d.path()).label, Some(d.path().join(MUSIC_LABEL)));
