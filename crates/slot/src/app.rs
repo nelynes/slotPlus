@@ -4314,10 +4314,19 @@ impl App {
         }
     }
 
+    /// slotPlus: the PokeDaisy sticker, for the PokeDaisy shelf's carts on Favorites and in
+    /// collections.
+    pub fn set_daisy_face(&mut self, face: TexId, w: u32, h: u32) {
+        for (_, shelf) in &mut self.shelves {
+            shelf.set_daisy(face, w, h);
+        }
+    }
+
     fn mark_hearts(&mut self) {
         let state = &self.state;
-        for (_, shelf) in &mut self.shelves {
+        for (rack, shelf) in &mut self.shelves {
             shelf.mark_hearted(|c| state.is_favorite(c.platform, &c.stem));
+            shelf.mark_daisies(matches!(rack, Rack::Favorites | Rack::Collection(_)));
         }
     }
 
