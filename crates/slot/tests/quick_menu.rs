@@ -2610,6 +2610,46 @@ fn screen_shows_a_page_only_for_systems_with_games_on_the_card() {
         QuickRow::Screen.child().unwrap().shown(&a.hidden_rows()),
         [QuickRow::ScreenGeneral, QuickRow::ScreenGba]
     );
+    // The GBA's shortcuts stay; the Game Boy's palettes go.
+    let shortcuts = QuickRow::Shortcuts.child().unwrap().shown(&a.hidden_rows());
+    for row in [
+        QuickRow::ScSunlightDown,
+        QuickRow::ScSunlightUp,
+        QuickRow::ScColour,
+    ] {
+        assert!(shortcuts.contains(&row), "{row:?} is for the GBA");
+    }
+    for row in [QuickRow::ScPaletteBack, QuickRow::ScPaletteNext] {
+        assert!(!shortcuts.contains(&row), "{row:?} is for the Game Boy");
+    }
+}
+
+#[test]
+fn a_card_with_no_game_boy_family_games_shows_none_of_their_settings() {
+    let d = tmp_root_with_carts(&[]);
+    let dir = d.path().join("Games").join("WS");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("Klonoa.ws"), vec![0u8; 0x8000]).unwrap();
+    let mut state = read_slot_state(d.path());
+    state.clock_set = true;
+    write_slot_state(d.path(), &state).unwrap();
+    let (a, _clock) = app_booting_at(d.path(), CLOCK_IS_SET);
+    let hidden = a.hidden_rows();
+    assert_eq!(
+        QuickRow::Screen.child().unwrap().shown(&hidden),
+        [QuickRow::ScreenGeneral, QuickRow::ScreenWs]
+    );
+    let shortcuts = QuickRow::Shortcuts.child().unwrap().shown(&hidden);
+    for row in [
+        QuickRow::ScPaletteBack,
+        QuickRow::ScPaletteNext,
+        QuickRow::ScSunlightDown,
+        QuickRow::ScSunlightUp,
+        QuickRow::ScColour,
+    ] {
+        assert!(!shortcuts.contains(&row), "{row:?} has no game to act on");
+    }
+    assert!(shortcuts.contains(&QuickRow::ScShaderNext));
 }
 
 #[test]

@@ -37,7 +37,7 @@ The top level is now **Look, Library, Play, Screen, Controls, Online and System*
 | RetroAchievements | **Online → RetroAchievements** |
 | System → Wi-Fi, Check for Updates | **Online** |
 | System → Date & Time, Nickname, Lid Power Off, Battery Display, About | **System**, unchanged |
-| Screen, Controls | Unchanged, except that **Screen** now shows a page only for the systems with games on the card |
+| Screen, Controls | Unchanged, except that a system with no games on the card no longer shows anywhere: **Screen** has a page only for the systems with games, and **Controls → Shortcuts** offers the Game Boy's palettes, the GBA's sunlight and colour correction only when there are games they act on |
 
 **Help in the menus.** A line just above the slot says, in a sentence, what the chosen row does, on every page of Settings and in the menu in a game.
 

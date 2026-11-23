@@ -4237,6 +4237,21 @@ impl App {
                 hidden.push(row);
             }
         }
+        // slotPlus 3.1: likewise the shortcuts that only one system's games answer: the Game
+        // Boy's palettes, the GBA's solar sensor, and colour correction, which only the
+        // Game Boy family has.
+        if !self.has_games_for(Platform::Gb) {
+            hidden.extend([QuickRow::ScPaletteBack, QuickRow::ScPaletteNext]);
+        }
+        if !self.has_games_for(Platform::Gba) {
+            hidden.extend([QuickRow::ScSunlightDown, QuickRow::ScSunlightUp]);
+        }
+        if ![Platform::Gba, Platform::Gbc, Platform::Gb]
+            .into_iter()
+            .any(|p| self.has_games_for(p))
+        {
+            hidden.push(QuickRow::ScColour);
+        }
         if self.state.wifi_off {
             hidden.push(QuickRow::Networks);
         }

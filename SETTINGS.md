@@ -55,6 +55,7 @@ Nothing is stored differently, so every choice you made on 3.0 carries over.
 | Check for Updates | System | **Online** |
 | Date & Time, Nickname, Lid Power Off, Battery Display, About | System | **System** |
 | Shaders, bezels and the rest of the picture | Screen | **Screen**, which now only shows a page for systems with games on the card |
+| Palette, sunlight and colour-correction shortcuts | Controls → Shortcuts | **Controls → Shortcuts**, shown only when the card has games they act on |
 | Button mapping and shortcuts | Controls | **Controls**, unchanged |
 
 The in-game menu (MENU in a game) hasn't changed, except that it has the same line of help.
@@ -109,7 +110,7 @@ In a game, SELECT + B / A steps through that system's shaders. The [systems guid
 ### Controls
 
 - **Shelf** and **Collections:** the buttons on the shelf
-- **Shortcuts:** the in-game shortcuts (save and load a state, reset, rewind, fast forward, screenshot, guide, brightness, blue light, colour correction, palette, shader and the sunlight sensor)
+- **Shortcuts:** the in-game shortcuts (save and load a state, reset, rewind, fast forward, screenshot, guide, brightness, blue light, colour correction, palette, shader and the sunlight sensor). The palette shortcuts show only with Game Boy games on the card, sunlight only with Game Boy Advance games, and colour correction only with games from the Game Boy family
 - **In-Game:** where each of the game's buttons sits, for every system, including Turbo A and Turbo B
 
 ### Online
