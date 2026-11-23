@@ -6,7 +6,7 @@
 
 ---
 
-# New in 3.1: Pokedaisy and Play or Tinker
+# New in 3.1: Pokedaisy, and Play or Tinker
 
 - **A PokeDaisy shelf.** Pokémon games in `Games/PokeDaisy/` play on [PokeDaisy](https://github.com/lidor30/pokedaisy), with its companion on X and its quick menu on Y.
 
