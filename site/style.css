@@ -804,7 +804,7 @@ kbd{
   font-family:Nunito,"Open Sans",sans-serif;
   font-size:16px;
 }
-.plus-ed .ed-name{color:var(--ink)}
+.plus-ed .ed-name,.core-ed .ed-name{color:var(--ink)}
 .plus-ed .ed-name::after{content:"+";color:var(--plus);margin-left:1px;text-shadow:0 0 6px rgba(0,255,255,.6)}
 .ultra-ed .ed-name{
   font-family:Orbitron,"Open Sans",sans-serif;
@@ -827,7 +827,7 @@ kbd{
   padding:20px 22px 22px;
   background:#202027;
 }
-.ed-card.plus-ed{border-color:rgba(0,255,255,.35)}
+.ed-card.plus-ed,.ed-card.core-ed{border-color:rgba(0,255,255,.35)}
 .ed-card.ultra-ed{border-color:rgba(70,220,255,.5);box-shadow:0 0 28px rgba(70,220,255,.08)}
 .ed-card h3{display:flex;align-items:center;gap:12px;margin:0;font-size:21px}
 .ed-tab{
@@ -855,7 +855,7 @@ kbd{
   line-height:1.6;
   border:1px solid;
 }
-.badge.plus{color:#bffcff;border-color:rgba(0,255,255,.55);background:rgba(0,255,255,.08);text-shadow:none}
+.badge.plus,.badge.core{color:#bffcff;border-color:rgba(0,255,255,.55);background:rgba(0,255,255,.08);text-shadow:none}
 .badge.ultra{color:#d7f6ff;border-color:rgba(70,220,255,.6);background:rgba(70,220,255,.1);font-family:Orbitron,"Open Sans",sans-serif;font-weight:800;font-size:11px;letter-spacing:.06em}
 .badge.extras{color:#ffe7c4;border-color:rgba(255,178,64,.6);background:rgba(255,178,64,.1)}
 .systems .subpanel > .badges{margin:0 0 16px}
@@ -905,4 +905,6 @@ kbd{
 .news-list li{margin:0 0 6px}
 .news-list strong{color:var(--ink)}
 .news-list .badge{vertical-align:2px;margin-right:2px}
+.news-item .keys{margin-top:12px}
+.news-item .key dd{line-height:1.6}
 .new-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#2f8cff;margin-right:8px;vertical-align:2px}

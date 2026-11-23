@@ -2560,25 +2560,21 @@ fn new_rows_and_the_way_to_them_wear_a_blue_dot() {
         .into_iter()
         .filter(|r| r.marked_new(&hidden))
         .collect();
-    assert_eq!(marked, [QuickRow::General, QuickRow::Screen]);
+    assert_eq!(marked, [QuickRow::Game, QuickRow::Online, QuickRow::System]);
     assert_eq!(
         dots(&frame(&a)).len(),
-        2,
-        "Shelf and Screen lead to new rows"
+        3,
+        "Play, Online and System lead to what's new"
     );
 
     let (_d, mut a, _) = on_carousel();
     fake_faces(&mut a);
-    open_at(&mut a, QuickRow::ShrinkWrap);
+    open_at(&mut a, QuickRow::FastForward);
     let out = frame(&a);
     let on_page = dots(&out);
-    assert_eq!(
-        on_page.len(),
-        QuickRow::SHELF_LIFE.len(),
-        "the whole page is new"
-    );
+    assert_eq!(on_page.len(), 2, "Fast Forward and Resume are new");
     let [px, _, pw, _] = placed(&out, 700).expect("the pointer");
-    let [lx, ly, _, lh] = placed(&out, label(QuickRow::ShrinkWrap, true)).unwrap();
+    let [lx, ly, _, lh] = placed(&out, label(QuickRow::FastForward, true)).unwrap();
     let [dx, dy, dw, dh] = on_page[0];
     assert!(px + pw <= dx, "the dot clears the pointer");
     assert!(dx + dw <= lx + MENU_PAD as f32, "the dot clears the label");
@@ -2586,11 +2582,8 @@ fn new_rows_and_the_way_to_them_wear_a_blue_dot() {
 
     let (_d, mut a, _) = on_carousel();
     fake_faces(&mut a);
-    open_at(&mut a, QuickRow::SYSTEM[0]);
-    assert!(
-        dots(&frame(&a)).is_empty(),
-        "nothing new on the System page"
-    );
+    open_at(&mut a, QuickRow::GENERAL[0]);
+    assert!(dots(&frame(&a)).is_empty(), "nothing new on the Look page");
 }
 
 #[test]

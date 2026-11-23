@@ -892,18 +892,12 @@ impl QuickRow {
     /// slotPlus: the rows added in this version. Each gets a blue dot beside it, and so does
     /// every row on the way to one, so someone who has just updated can find what's new.
     /// Start the list again for each new version.
-    pub const NEW: [QuickRow; 11] = [
-        QuickRow::KidAllowance,
-        QuickRow::ShelfLife,
-        QuickRow::ShrinkWrap,
-        QuickRow::Dust,
-        QuickRow::Wear,
-        QuickRow::CleanResets,
-        QuickRow::CleanAllCarts,
-        QuickRow::ScreenPm,
-        QuickRow::PmShader,
-        QuickRow::PmBezel,
-        QuickRow::PmFullScreen,
+    pub const NEW: [QuickRow; 4] = [
+        // 3.1: the pages the regrouping added, and the rows that now hold two settings.
+        QuickRow::Online,
+        QuickRow::Kid,
+        QuickRow::FastForward,
+        QuickRow::ResumeInsert,
     ];
 
     /// slotPlus: whether this row wears the blue dot: it's new, or it opens a page with a new

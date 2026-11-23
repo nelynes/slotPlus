@@ -6,9 +6,21 @@
 
 ---
 
-# New on 3.0: The Cart Remembers
+# New in 3.1: Play or Tinker
 
-Your carts now keep a record of how they've been played. Full notes are in the [3.0 release](https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus3.0).
+One slotPlus with every system, in two editions, and Settings regrouped by what you're doing. Full notes are in the [3.1 release](https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus3.1).
+
+- **Two editions.** Both play every system. **slotPlus Core** comes set up for you and just plays. **slotPlus Ultra** has every option, and is what everyone on 3.0 updates into. [Which one is for you?](#which-edition)
+- **Settings, regrouped.** The top level is now Look, Library, Play, Screen, Controls, Online and System. Your choices carry over. Looking for something? The [settings guide](SETTINGS.md#where-things-moved-in-31) shows where everything moved.
+- **A PokeDaisy shelf.** Pokémon games in `Games/PokeDaisy/` play on [PokeDaisy](https://github.com/lidor30/pokedaisy), with its companion on X and its quick menu on Y.
+- **Fixes:** the Reset shortcut works again on every system with RetroAchievements.
+
+> [!NOTE]
+> **Updating from slotPlus 3.0 (the Plus edition)?** Check for Updates brings you slotPlus Ultra, with your games, saves and settings as they were. The Game Gear, NeoGeo Pocket, TurboGrafx-16 and DS shelves appear once you put games in their folders.
+
+## Last time, 3.0: The Cart Remembers
+
+Your carts keep a record of how they've been played. Full notes are in the [3.0 release](https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus3.0).
 
 <p align="center">
 <img src=".github/resources/new-in-3.0/01-shelf-life.jpg" width="49%" alt="Shelf Life: a shrink-wrapped cart, three levels of dust and three of wear">
@@ -24,20 +36,19 @@ Your carts now keep a record of how they've been played. Full notes are in the [
 </p>
 
 - **Shelf Life.** Games you've never played come shrink-wrapped with a price sticker, and the film tears off the first time you play. Carts left alone gather dust, and carts you play a lot show their wear. Hold B on a cart to clean it, or clean them all at once from Settings → Look → Shelf Life.
-- **Every cart opens.** START opens any cart to show the board inside, now on every system: new boards for WonderSwan and Pokémon mini, and in slotPlusUltra Game Gear, NeoGeo Pocket and DS, with the back of a HuCard for the TurboGrafx-16. Your play time is handwritten on a sticker inside.
+- **Every cart opens.** START opens any cart to show the board inside, now on every system: new boards for WonderSwan, Pokémon mini, Game Gear, NeoGeo Pocket and DS, with the back of a HuCard for the TurboGrafx-16. Your play time is handwritten on a sticker inside.
 - **Achievements on the cart and on paper.** A gold sticker inside shows how far you've got, and SELECT prints the whole set on the Game Boy Printer.
-- **Pokémon mini**, in both editions.
+- **Pokémon mini.**
 - **Romhack and translation patches** (`.ips`, `.bps`, `.ups`) applied as the game loads.
 - **Kid Play Time**, a daily limit for Kid Mode.
 - **Save backups:** the last three versions of each save are kept.
-- **Switch between slotPlus and slotPlusUltra** from Check for Updates.
 - **New options in Settings are marked with a blue dot.**
-- In slotPlusUltra, **the DS uses your Nickname and the real time**, and DSperate and Gearsystem are updated.
+- **The DS uses your Nickname and the real time**, and DSperate and Gearsystem are updated.
 - **Fixes:** WonderSwan games run at full speed again, and there's no more green border on a TV.
 
 # Coming Soon
 
-<img src=".github/resources/roadmap.jpg" width="100%" alt="The slotPlus roadmap: 3.0, The Cart Remembers, is out now, with 3.1 and later releases to come">
+<img src=".github/resources/roadmap.jpg" width="100%" alt="The slotPlus roadmap: 3.0, The Cart Remembers, and 3.1, Play or Tinker, are out, with 3.2, Shelf Life Part Two, and 3.3, More to Play, to come">
 
 # What is slotPlus?
 
@@ -45,32 +56,37 @@ A modified Slot. Alongside Slot's Game Boy Advance, Game Boy and Game Boy Color,
 
 **See it in action, and find installing steps and what each system adds, at [nelynes.github.io/slotPlus](https://nelynes.github.io/slotPlus/).**
 
-Each release comes in two versions. Pick the one you want from the [releases page](https://github.com/nelynes/slotPlus/releases):
+## Which edition?
 
-- **`slot-plus.zip`, slotPlus:** Game Boy Advance, Game Boy and Game Boy Color, plus WonderSwan, Atari Lynx and Pokémon mini.
-- **`slot-plusultra.zip`, slotPlusUltra:** everything in slotPlus, plus Game Gear, NeoGeo Pocket, TurboGrafx-16 and Nintendo DS.
+Both editions play every system, and a system only gets a shelf when it has games on the card. Pick by how much you want to set up, from the [releases page](https://github.com/nelynes/slotPlus/releases):
 
-| System | Version | Put games in | Files | Core | BIOS |
-|---|---|---|---|---|---|
-| WonderSwan / Color | Plus and Ultra | `Games/WS/` | `.ws` `.wsc` | Beetle WonderSwan (Cygne) | Not needed |
-| Atari Lynx | Plus and Ultra | `Games/Lynx/` | `.lnx` `.lyx` | Beetle Lynx | `lynxboot.img` in `BIOS/` |
-| Pokémon mini | Plus and Ultra | `Games/PokeMini/` | `.min` | PokeMini | Not needed |
-| Sega Game Gear | Ultra | `Games/GG/` | `.gg` | Gearsystem | Not needed |
-| NeoGeo Pocket / Color | Ultra | `Games/NGP/` | `.ngp` `.ngc` `.ngpc` | Beetle NeoPop | Not needed |
-| TurboGrafx-16 / TurboExpress | Ultra | `Games/TG16/` | `.pce` (HuCards) | Beetle PCE Fast | Not needed |
-| Nintendo DS | Ultra | `Games/NDS/` | `.nds` | DSperate | Not needed |
+- **`slot-core.zip`, slotPlus Core:** for putting games on the card and playing. A gift, a child's handheld, or anyone who'd rather not open a menu. Each system comes set up, most options are a plain On or Off, and there are no accounts to sign in to. No RetroAchievements, RomM, Gamebit, in-game save-state menu or screenshots menu.
+- **`slot-plusultra.zip`, slotPlus Ultra:** for tinkerers. Every option: RetroAchievements, RomM and Gamebit, save states with undo, screenshots, guides, and shaders, overlays and bezels for every system. The release's `slot-plus.zip` is the same download under its old name.
+
+Switch between them any time from Settings → Online → Check for Updates, or by swapping the `System` folder. Your games and saves stay. The [settings guide](SETTINGS.md#which-edition-is-for-you) compares them in full.
+
+| System | Put games in | Files | Core | BIOS |
+|---|---|---|---|---|
+| WonderSwan / Color | `Games/WS/` | `.ws` `.wsc` | Beetle WonderSwan (Cygne) | Not needed |
+| Atari Lynx | `Games/Lynx/` | `.lnx` `.lyx` | Beetle Lynx | `lynxboot.img` in `BIOS/` |
+| Pokémon mini | `Games/PokeMini/` | `.min` | PokeMini | Not needed |
+| Sega Game Gear | `Games/GG/` | `.gg` | Gearsystem | Not needed |
+| NeoGeo Pocket / Color | `Games/NGP/` | `.ngp` `.ngc` `.ngpc` | Beetle NeoPop | Not needed |
+| TurboGrafx-16 / TurboExpress | `Games/TG16/` | `.pce` (HuCards) | Beetle PCE Fast | Not needed |
+| Nintendo DS | `Games/NDS/` | `.nds` | DSperate | Not needed |
+| PokeDaisy (Pokémon games for GBA, GB, GBC) | `Games/PokeDaisy/` | `.gba` `.gb` `.gbc` | PokeDaisy | Not needed |
 
 > [!IMPORTANT]
 > Atari Lynx games need `lynxboot.img`, the Lynx boot ROM. It is **not included**. Put your own copy in `BIOS/`.
 
-**Installing:** for a fresh install, unzip and copy everything onto the Slot card. To upgrade, unzip and replace the `System` folder on your card with the new one. Switching between Plus and Ultra works the same way, and your games, saves and settings stay put. Going back from Ultra to Plus leaves the Game Gear, NeoGeo Pocket, TurboGrafx-16 and DS games and saves on the card, without their shelves.
+**Installing:** for a fresh install, unzip and copy everything onto the Slot card. To upgrade, unzip and replace the `System` folder on your card with the new one, or use Settings → Online → Check for Updates. Your games, saves and settings stay put.
 
 - **Folders:** each system's folders under `Games`, `Labels`, `Saves`, `States` and `Bezels` are created for you on first boot.
 - **Carts:** each system has its own cart, drawn in Slot's look. WonderSwan games get a black cart, WonderSwan Color games a frosted clear one, and a HuCard turns over to go into the slot contacts first.
-- **RetroAchievements:** Game Boy, Game Boy Color, Game Boy Advance, WonderSwan and Atari Lynx games, the PokeDaisy shelf's too (and in slotPlusUltra, Game Gear, NeoGeo Pocket and TurboGrafx-16 games) earn softcore achievements, with a banner in Slot's style. Enter your account in Settings → Online → RetroAchievements and download the sets for your games from there. Achievements earned with Wi-Fi off are sent from the shelf. [More](crates/slot-achievements/README.md).
-- **Cart Slot:** set Settings → Look → Cart Slot to Bespoke and the slot on each shelf becomes the back of that system's handheld: a pearl WonderSwan, a Lynx II and a blue Pokémon mini, a meadow of daisies on the PokeDaisy shelf, plus a Game Gear, a carbon NeoGeo Pocket Color, a TurboExpress and a silver DS Lite in Ultra. The Game Boy shelves keep Slot's own.
+- **RetroAchievements** (Ultra): Game Boy, Game Boy Color, Game Boy Advance, WonderSwan, Atari Lynx, Game Gear, NeoGeo Pocket and TurboGrafx-16 games, the PokeDaisy shelf's too, earn softcore achievements, with a banner in Slot's style. Enter your account in Settings → Online → RetroAchievements and download the sets for your games from there. Achievements earned with Wi-Fi off are sent from the shelf. [More](crates/slot-achievements/README.md).
+- **Cart Slot:** set Settings → Look → Cart Slot to Bespoke (Core starts there) and the slot on each shelf becomes the back of that system's handheld: a pearl WonderSwan, a Lynx II, a blue Pokémon mini, a Game Gear, a carbon NeoGeo Pocket Color, a TurboExpress, a silver DS Lite, and a meadow of daisies on the PokeDaisy shelf. The Game Boy shelves keep Slot's own.
 
-**Controls, label art sizes, bezels, saves, the DS's screen layouts and stylus, and how Lynx and WonderSwan games that turn sideways work are all in the [systems guide](SYSTEMS.md).**
+**Where everything is in Settings, and what moved in 3.1, is in the [settings guide](SETTINGS.md). Controls, label art sizes, bezels, saves, the DS's screen layouts and stylus, and how Lynx and WonderSwan games that turn sideways work are all in the [systems guide](SYSTEMS.md).**
 
 ## Label Art
 

@@ -1,19 +1,59 @@
 # Changelog
 
-## [Unreleased]
+## [1.16.0-plus3.1](https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus3.1)
 
-Work toward slotPlus 3.1. Not released yet.
+slotPlus 3.1, "Play or Tinker": one slotPlus with every system, in two editions. **slotPlus Core** is set up for you and just plays. **slotPlus Ultra** has every option, and is what slotPlus and slotPlusUltra 3.0 both become. Settings are regrouped by what you're doing, and Pokémon games get a shelf of their own. Still built on Slot 1.16.0.
 
-- **Fixed: Reset did nothing.** The Reset shortcut never reached the game on any system with RetroAchievements (Game Boy, Game Boy Color, Game Boy Advance, WonderSwan and Atari Lynx), whether or not you'd signed in.
-- **A PokeDaisy shelf.** Put Pokémon games for Game Boy Advance, Game Boy and Game Boy Color in `Games/PokeDaisy/` and they play on [PokeDaisy](https://github.com/lidor30/pokedaisy), with its companion (party, bag, Pokédex, map, guide) on X and its quick menu on Y. Each game keeps its own system's cart and its own save, so moving a game between shelves keeps its progress. Gamebit shows the folder with all its games, and with Cart Slot set to Bespoke the shelf has a slot of its own, a meadow with daisies. Its games earn RetroAchievements (softcore) from the same sets as on their own shelves, paused while PokeDaisy's Flight Area is Anywhere, as PokeDaisy's own apps do, with a pill in the corner saying so. Based on PokeDaisy by Lidor Itzhari, as the About page now says under its sticker. PokeDaisy is told when slotPlus fast forwards or rewinds, so its expanded view keeps up while fast forwarding and its shortcuts stand down while rewinding.
-- **Settings, regrouped.** The top level is now Look, Library, Play, Screen, Controls, Online and System, grouped by what you're doing rather than by which part of slotPlus owns a setting:
-  - **Look:** Theme, Wallpaper (and its Tint), Cart Slot, Game Titles and Shelf Life.
-  - **Library:** Shelf Mode, Recents, Fetch Missing Art, Gamebit and RomM, which used to be under Shelf and Tools.
-  - **Play:** what Gameplay held. Fast Forward's sound is now part of its speed (2×, 2× Sound…), and one Resume row says when a game picks up where you left it: on a cart going in, on power on, both or neither.
-  - **Online:** Wi-Fi, RetroAchievements and Check for Updates.
-  - **System:** Kid Mode on a page of its own, then the clock, Nickname, Lid Power Off, Battery Display and About.
-  - **Screen** shows a page only for the systems with games on the card.
-  - Nothing is stored differently, so every choice carries over.
+To upgrade, use Settings → Online → Check for Updates (Settings → System → Check for Updates on 3.0), or replace the `System` folder on your card with the one from the zip.
+
+### Two editions: Core and Ultra
+
+Both editions play every system: Game Boy Advance, Game Boy and Game Boy Color, WonderSwan and WonderSwan Color, Atari Lynx, Pokémon mini, Game Gear, NeoGeo Pocket and Pocket Color, TurboGrafx-16 and the Nintendo DS. A system only gets a shelf when it has games on the card, so a card with only Game Boy games looks just as it did. What sets them apart is how much there is to set up.
+
+- **slotPlus Ultra** (`slot-plusultra.zip`) is for tinkerers: every menu and every option, RetroAchievements, RomM and Gamebit, save states with undo, screenshots, guides, shaders, overlays and bezels for every system. Everyone on 3.0 updates into Ultra, with their games, saves and settings as they were:
+  - **On slotPlusUltra 3.0,** nothing changes but the menus.
+  - **On slotPlus 3.0,** Check for Updates brings you Ultra (the release's `slot-plus.zip` is Ultra under its old name), so the Game Gear, NeoGeo Pocket, TurboGrafx-16 and DS shelves are yours now too: put games in `Games/GG/`, `Games/NGP/`, `Games/TG16/` and `Games/NDS/`.
+- **slotPlus Core** (`slot-core.zip`) is for people who want to put games on the card and play, closer to a real handheld: a gift for someone who won't open a menu, a handheld for a child, or for anyone who'd rather not tinker. Each system comes set up the way most people end up setting it (the bespoke cart slot for every shelf, colour correction on, Game Boy games filling the screen, 4× fast forward, games picking up where you left them), and most choices are a plain On or Off:
+  - **Shelf Life** is one switch for shrink wrap, dust and wear.
+  - **Screen** is one Shader row for each system, Clean or LCD.
+  - **Kid Mode** is Off or One Shelf.
+  - **Left out:** RetroAchievements, RomM, Gamebit, Recents and Collections, in-game save states, screenshots, guides and undo, and the finer picture settings (blue light, saturation, contrast, overlays, frame blending and bezels). The shortcuts to save and load a state, and to take a screenshot, still work.
+  - Fetch Missing Art stays, for labels.
+- **Switching** is in Settings → Online → Check for Updates: when you're up to date, X offers the other edition, and A installs it in place. Your games and saves stay. Going to Core starts you on Core's own settings, since most of Ultra's choices have no row in Core.
+
+### Settings, regrouped
+
+The top level is now **Look, Library, Play, Screen, Controls, Online and System**, grouped by what you're doing rather than by which part of slotPlus owns a setting. Nothing is stored differently, so every choice carries over. Where things went:
+
+| On 3.0 | On 3.1 |
+|---|---|
+| Shelf → Theme, Wallpaper, Wallpaper Tint, Cart Slot, Game Titles, Shelf Life | **Look** |
+| Shelf → Shelf Mode, Recents | **Library** |
+| Shelf → Kid Mode, Kid Shelf, Kid Play Time | **System → Kid Mode** (Mode, Kid Shelf, Play Time) |
+| Gameplay | **Play** |
+| Gameplay → Fast Forward and Fast Forward Sound | **Play → Fast Forward**, one row: Off, 1.5×, 1.5× Sound, 2×, 2× Sound… |
+| Gameplay → Resume on Insert and Resume on Power On | **Play → Resume**, one row: Off, Insert, Power On or Both |
+| Tools → Gamebit, RomM, Fetch Missing Art (and Fetch Box Art) | **Library** |
+| RetroAchievements | **Online → RetroAchievements** |
+| System → Wi-Fi, Check for Updates | **Online** |
+| System → Date & Time, Nickname, Lid Power Off, Battery Display, About | **System**, unchanged |
+| Screen, Controls | Unchanged, except that **Screen** now shows a page only for the systems with games on the card |
+
+The menu in a game is as it was. The [settings guide](SETTINGS.md) lists every page and row.
+
+### A PokeDaisy shelf
+
+- Put Pokémon games for Game Boy Advance, Game Boy and Game Boy Color in `Games/PokeDaisy/` and they play on [PokeDaisy](https://github.com/lidor30/pokedaisy), with its companion (party, bag, Pokédex, map, guide) on X and its quick menu on Y.
+- Each game keeps its own system's cart and its own save, so moving a game between shelves keeps its progress.
+- Gamebit shows the folder with all its games, and with Cart Slot set to Bespoke the shelf has a slot of its own, a meadow with daisies.
+- In Ultra, its games earn RetroAchievements (softcore) from the same sets as on their own shelves. They pause while PokeDaisy's Flight Area is Anywhere, as PokeDaisy's own apps do, with a pill in the corner saying so.
+- PokeDaisy is told when slotPlus fast forwards or rewinds, so its expanded view keeps up while fast forwarding and its shortcuts stand down while rewinding.
+- Based on PokeDaisy by Lidor Itzhari, as the About page now says under its sticker.
+
+### Fixes
+
+- **Reset did nothing.** The Reset shortcut never reached the game on any system with RetroAchievements (Game Boy, Game Boy Color, Game Boy Advance, WonderSwan, Atari Lynx, Game Gear, NeoGeo Pocket and TurboGrafx-16), whether or not you'd signed in.
+- **New options are marked again.** The blue dots in Settings now mark what's new in 3.1 (the Online and Kid Mode pages, and the new Fast Forward and Resume rows) instead of 3.0's additions.
 
 ## [1.16.0-plus3.0](https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus3.0)
 
