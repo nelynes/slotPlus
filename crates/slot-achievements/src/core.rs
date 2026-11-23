@@ -156,6 +156,9 @@ impl RetroCore for Tracked {
     fn takes_xy(&self) -> bool {
         self.core.takes_xy()
     }
+    fn lcd_icons(&self) -> u8 {
+        self.core.lcd_icons()
+    }
     fn video_xrgb8888(&self) -> &[u8] {
         self.core.video_xrgb8888()
     }

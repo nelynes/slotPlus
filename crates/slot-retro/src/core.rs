@@ -74,17 +74,16 @@ impl ButtonMask {
     }
 
     /// The WonderSwan remap for a game laid out `layout`. Horizontal games
-    /// use the shoulder-modifier scheme above and never see SELECT, so the
-    /// core cannot rotate them. Vertical games drop the
-    /// modifiers: the D-pad is the Y pad, the face diamond is the X pad and
+    /// use the shoulder-modifier scheme above; SELECT passes through so the
+    /// core can turn the picture upright for the vertical stages some of them
+    /// have (Klonoa), and the session then lays them out `Upright`. Vertical
+    /// layouts drop the modifiers: the D-pad is the Y pad, the face diamond is the X pad and
     /// the shoulders are A (L) and B (R), as in the core's own portrait map.
     /// The core is told to read the landscape map, so this is the only mapping.
     pub fn wonderswan_for(self, layout: WsLayout) -> ButtonMask {
         let held = |bit: u16| self.0 & bit != 0;
         let sideways = match layout {
-            // A horizontal game has nothing to gain from turning the picture, and
-            // the buttons would not follow it, so SELECT does nothing.
-            WsLayout::Horizontal => return ButtonMask(self.wonderswan().0 & !Self::SELECT),
+            WsLayout::Horizontal => return self.wonderswan(),
             WsLayout::Upright => false,
             WsLayout::Sideways => true,
         };
@@ -154,12 +153,19 @@ impl ButtonMask {
     }
 }
 
+/// The WonderSwan's vertical icon (port 0x15, bit 1): the game wants the
+/// handheld held on its side.
+pub const LCD_VERTICAL: u8 = 1 << 1;
+/// The WonderSwan's horizontal icon (port 0x15, bit 2).
+pub const LCD_HORIZONTAL: u8 = 1 << 2;
+
 /// How a WonderSwan game wants to be played.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum WsLayout {
-    /// A horizontal game.
+    /// A horizontal game, or its picture as it was made to be shown.
     Horizontal,
-    /// A vertical game shown upright on a device that stays upright.
+    /// A vertical game, or a horizontal game turned with SELECT for its
+    /// vertical stages, shown upright on a device that stays upright.
     Upright,
     /// A vertical game shown sideways on a device turned 90 degrees
     /// counter-clockwise.
@@ -255,6 +261,12 @@ pub trait RetroCore: Send {
     fn set_throttle(&mut self, _throttle: Throttle) {}
     fn takes_xy(&self) -> bool {
         false
+    }
+    /// slotPlus: the LCD icons a WonderSwan game has lit (port 0x15), 0 for any
+    /// other core. A game lights `LCD_VERTICAL` when it wants to be held on its
+    /// side, as Klonoa does for some of its stages.
+    fn lcd_icons(&self) -> u8 {
+        0
     }
     fn video_xrgb8888(&self) -> &[u8];
     /// Width and height of the buffer `video_xrgb8888` returns.
