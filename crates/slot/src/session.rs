@@ -954,7 +954,7 @@ impl Session {
         // Tracked for the Game Boy family, the WonderSwan, the Lynx, the Game Gear, the
         // NeoGeo Pocket and the TurboGrafx-16, never over a link cable.
         // slotPlus: and the PokeDaisy shelf, paused while its Flight Area is Anywhere.
-        let tracked = crate::ACHIEVEMENTS
+        let tracked = crate::achievements_on()
             && (matches!(
                 loaded.platform,
                 Platform::Gb

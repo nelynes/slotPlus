@@ -3,8 +3,11 @@ use slot_ui::{quick_description_face, QuickRow};
 #[test]
 fn every_row_has_a_sentence_of_help_that_fits_on_one_line() {
     let mut long = Vec::new();
-    for row in QuickRow::ALL {
-        let help = row.help();
+    for (row, core) in QuickRow::ALL
+        .into_iter()
+        .flat_map(|r| [(r, false), (r, true)])
+    {
+        let help = row.help_for(core);
         assert!(help.ends_with('.'), "{row:?}: {help}");
         assert!(
             help.chars().next().is_some_and(char::is_uppercase),

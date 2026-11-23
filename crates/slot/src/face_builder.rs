@@ -69,7 +69,7 @@ impl FaceBuilder {
                     if let Some(secs) = ask.played {
                         play_sticker(&mut board, cart, &slot_store::play_time_text(secs));
                     }
-                    let progress = crate::ACHIEVEMENTS
+                    let progress = crate::achievements_on()
                         .then(|| slot_achievements::progress(&root, &cart.rom))
                         .flatten();
                     let has_set = progress.is_some();

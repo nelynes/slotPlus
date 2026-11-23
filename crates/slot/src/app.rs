@@ -1091,6 +1091,104 @@ fn shelves_of(carts: Vec<Cart>, collections: usize) -> Vec<(Rack, Shelf)> {
 }
 
 const SHELF_FALLBACK_WALLPAPER: &str = "default";
+/// slotPlus Core: where its own wallpapers ship, under `System/`.
+const CORE_WALLPAPERS: &str = "wallpapers";
+
+/// slotPlus Core: Fast Forward's one speed when it's on: 4×, in quarters.
+const CORE_FF_SPEED: u8 = 16;
+
+/// slotPlus Core: the rows it leaves out, each set for you (`App::pin_core`) or left unused.
+/// See the project's "SlotPlus Core definition".
+const CORE_HIDDEN: [QuickRow; 61] = [
+    // Look: only the one Shelf Life switch.
+    QuickRow::Theme,
+    QuickRow::Wallpaper,
+    QuickRow::WallpaperTint,
+    QuickRow::CartSlot,
+    QuickRow::ShowTitles,
+    QuickRow::ShelfLife,
+    // Library: only Fetch Missing Art.
+    QuickRow::ShelfMode,
+    QuickRow::Recents,
+    QuickRow::Server,
+    QuickRow::Romm,
+    // Play: Fast Forward and Rewind.
+    QuickRow::FastForwardSound,
+    QuickRow::Rumble,
+    QuickRow::LeftStick,
+    QuickRow::ResumeInsert,
+    QuickRow::ResumePowerOn,
+    // Screen: brightness, and each system's Shader (Clean or Retro), with Color Correction on
+    // the GBA and Game Boy Color and Palette on the Game Boy.
+    QuickRow::BlueLight,
+    QuickRow::Saturation,
+    QuickRow::Contrast,
+    QuickRow::PlayBlueLight,
+    QuickRow::PlaySaturation,
+    QuickRow::PlayContrast,
+    QuickRow::GbaOverlay,
+    QuickRow::GbOverlay,
+    QuickRow::GbcOverlay,
+    QuickRow::Overlay,
+    QuickRow::GbaBlending,
+    QuickRow::GbBlending,
+    QuickRow::GbcBlending,
+    QuickRow::Blending,
+    QuickRow::GbaBezel,
+    QuickRow::GbBezel,
+    QuickRow::GbcBezel,
+    QuickRow::WsBezel,
+    QuickRow::LynxBezel,
+    QuickRow::GgBezel,
+    QuickRow::NgpBezel,
+    QuickRow::Tg16Bezel,
+    QuickRow::NdsBezel,
+    QuickRow::PmBezel,
+    QuickRow::Bezel,
+    QuickRow::GbaScale,
+    QuickRow::GbScale,
+    QuickRow::GbcScale,
+    QuickRow::Scale,
+    QuickRow::GbStretch,
+    QuickRow::GbcStretch,
+    QuickRow::Stretch,
+    QuickRow::PmFullScreen,
+    QuickRow::GbColourCorrection,
+    // Controls: only the game's own buttons.
+    QuickRow::ControlsShelf,
+    QuickRow::ControlsCollections,
+    QuickRow::Shortcuts,
+    // Online: Wi-Fi and updates.
+    QuickRow::Achievements,
+    // System.
+    QuickRow::LidOff,
+    QuickRow::BatteryDisplay,
+    // In a game: Resume, Settings and Exit Game.
+    QuickRow::UndoSave,
+    QuickRow::UndoLoad,
+    QuickRow::UndoReset,
+    QuickRow::States,
+    QuickRow::Screenshots,
+    QuickRow::Guide,
+];
+
+/// slotPlus Core: Retro, a system's original screen: the Game Boy family's unlit pixels
+/// (and the Pokémon mini's), the LCD grid on every other screen.
+fn retro_shader(system: Platform) -> Shader {
+    match system {
+        Platform::Gb | Platform::Gbc | Platform::Pm => Shader::Transparent,
+        _ => Shader::Lcd3x,
+    }
+}
+
+/// slotPlus Core: Clean, sharp pixels: Shimmerless where a system's list has it, and plain
+/// pixels where the picture already sits at a whole multiple (the GBA on a 3:2 screen).
+fn clean_shader(choices: &[Shader]) -> Shader {
+    match choices.contains(&Shader::Shimmerless) {
+        true => Shader::Shimmerless,
+        false => Shader::Off,
+    }
+}
 
 fn wallpaper_of_rack(rack: Rack, files: &[String]) -> Option<String> {
     std::iter::once(rack)
@@ -1544,6 +1642,7 @@ impl App {
         if turbo_off {
             app.turbo_off_moves_to_controls(root);
         }
+        app.settle_edition(root);
         app.install_collections(slot_store::read_collections(root));
         app.restock_recents();
         app.restock_favorites();
@@ -3073,6 +3172,11 @@ impl App {
     }
 
     pub fn quick_value(&self, row: QuickRow) -> Option<QuickValue> {
+        if crate::edition::is_core() {
+            if let Some(value) = self.core_value(row) {
+                return Some(value);
+            }
+        }
         match row {
             // The in-game rows show the playing system's own row. A system
             // with no row of its own (no colour correction on a WonderSwan,
@@ -3187,6 +3291,9 @@ impl App {
             QuickRow::WifiPower => Some(QuickValue::flag(!self.state.wifi_off)),
             QuickRow::RaEncore => Some(QuickValue::flag(self.achievement_settings.encore)),
             QuickRow::ShrinkWrap => Some(QuickValue::flag(self.state.shrink_wrap)),
+            QuickRow::ShelfLifeSwitch => Some(QuickValue::flag(
+                self.state.shrink_wrap || self.state.dust || self.state.wear,
+            )),
             QuickRow::KidAllowance => Some(
                 QuickValue::ALLOWANCE
                     .into_iter()
@@ -3964,6 +4071,14 @@ impl App {
         self.state.wallpaper.clone()
     }
 
+    /// The wallpaper the shelf draws: the one picked, or in slotPlus Core its own per shelf.
+    fn wallpaper_pick(&self) -> WallpaperPick {
+        match crate::edition::is_core() {
+            true => WallpaperPick::Shelf,
+            false => self.state.wallpaper.clone(),
+        }
+    }
+
     pub fn resolved_wallpaper(&self) -> WallpaperPick {
         match &self.state.wallpaper {
             WallpaperPick::File(name) if !self.wallpaper_files().iter().any(|n| n == name) => {
@@ -3974,6 +4089,11 @@ impl App {
     }
 
     pub fn shown_wallpaper(&mut self) -> Option<String> {
+        if crate::edition::is_core() {
+            self.collection_wallpaper = None;
+            self.shelf_wallpaper = self.shown_rack().and_then(|rack| self.core_wallpaper(rack));
+            return self.shelf_wallpaper.clone();
+        }
         self.collection_wallpaper = self.collection_wallpaper_here();
         if let Some(name) = &self.collection_wallpaper {
             return Some(name.clone());
@@ -4015,11 +4135,37 @@ impl App {
             .map(|file| format!("Collections/{file}"))
     }
 
+    /// slotPlus Core: its own wallpaper for a shelf, from `System/wallpapers/`, named as the
+    /// wallpaper loader names files (from `Wallpapers/`). A shelf without one shows Core's
+    /// default.
+    fn core_wallpaper(&self, rack: Rack) -> Option<String> {
+        let dir = self.root.as_ref()?.join("System").join(CORE_WALLPAPERS);
+        std::iter::once(rack)
+            .chain(rack.platform().map(|p| Rack::Of(p.hardware())))
+            .map(|rack| rack.key())
+            .chain(std::iter::once(SHELF_FALLBACK_WALLPAPER.to_owned()))
+            .map(|key| format!("{key}.png"))
+            .find(|file| dir.join(file).is_file())
+            .map(|file| format!("../System/{CORE_WALLPAPERS}/{file}"))
+    }
+
     pub fn wallpapers_preload(&self) -> bool {
-        self.state.wallpaper == WallpaperPick::Shelf || !self.collection_pngs.is_empty()
+        crate::edition::is_core()
+            || self.state.wallpaper == WallpaperPick::Shelf
+            || !self.collection_pngs.is_empty()
     }
 
     pub fn shelf_wallpapers(&self) -> Vec<String> {
+        if crate::edition::is_core() {
+            let mut names: Vec<String> = self
+                .shelves
+                .iter()
+                .filter_map(|(rack, _)| self.core_wallpaper(*rack))
+                .collect();
+            names.sort();
+            names.dedup();
+            return names;
+        }
         let files = self.wallpaper_files();
         let mut names: Vec<String> = match self.state.wallpaper {
             WallpaperPick::Shelf => self
@@ -4097,7 +4243,7 @@ impl App {
         if self.collection_wallpaper.is_some() {
             return own;
         }
-        match &self.state.wallpaper {
+        match &self.wallpaper_pick() {
             WallpaperPick::None => None,
             WallpaperPick::Default | WallpaperPick::Blur => blur,
             WallpaperPick::Random if !self.random_drawn() => None,
@@ -4108,7 +4254,7 @@ impl App {
 
     fn draw_background(&self, out: &mut Vec<Draw>) {
         let [ground, blur, own] = self.grounds();
-        let face = match &self.state.wallpaper {
+        let face = match &self.wallpaper_pick() {
             _ if self.collection_wallpaper.is_some() => own,
             WallpaperPick::None => None,
             WallpaperPick::Default => ground,
@@ -4134,7 +4280,7 @@ impl App {
         if self.collection_wallpaper.is_some() {
             return self.wallpaper.is_some();
         }
-        match self.state.wallpaper {
+        match self.wallpaper_pick() {
             WallpaperPick::File(_) => self.wallpaper.is_some(),
             WallpaperPick::Random => self.random_drawn() && self.wallpaper.is_some(),
             WallpaperPick::Shelf => self.shelf_wallpaper.is_some() && self.wallpaper.is_some(),
@@ -4265,6 +4411,27 @@ impl App {
         if self.romm.protocol == crate::romm::Protocol::Http {
             hidden.push(QuickRow::RommSelfSigned);
         }
+        match crate::edition::is_core() {
+            true => {
+                hidden.extend(CORE_HIDDEN);
+                // The colour correction a Game Boy game's menu would show is out of Core.
+                if self.playing_platform().hardware() == Platform::Gb {
+                    hidden.push(QuickRow::ColourCorrection);
+                }
+            }
+            false => hidden.push(QuickRow::ShelfLifeSwitch),
+        }
+        // A page with nothing left on it isn't offered either.
+        for _ in 0..3 {
+            for row in QuickRow::ALL {
+                let empty = row
+                    .child()
+                    .is_some_and(|first| first.page().iter().all(|r| hidden.contains(r)));
+                if empty && !hidden.contains(&row) {
+                    hidden.push(row);
+                }
+            }
+        }
         hidden
     }
 
@@ -4273,6 +4440,255 @@ impl App {
     fn has_games_for(&self, system: Platform) -> bool {
         self.carts()
             .any(|c| !c.platform.is_pokedaisy() && c.platform.hardware() == system)
+    }
+
+    /// slotPlus Core: a system's Shader row's setting, the choices its system has here, and
+    /// the system.
+    fn core_shader_slot(&mut self, row: QuickRow) -> Option<(&mut Shader, Vec<Shader>, Platform)> {
+        let gba = self.gba_shaders().to_vec();
+        let s = &mut self.state;
+        Some(match row {
+            QuickRow::GbaShader => (&mut s.shader_gba, gba, Platform::Gba),
+            QuickRow::GbShader => (&mut s.shader_gb, Shader::GB.to_vec(), Platform::Gb),
+            QuickRow::GbcShader => (&mut s.shader_gbc, Shader::GB.to_vec(), Platform::Gbc),
+            QuickRow::WsShader => (&mut s.shader_ws, Shader::WS.to_vec(), Platform::Ws),
+            QuickRow::LynxShader => (&mut s.shader_lynx, Shader::LYNX.to_vec(), Platform::Lynx),
+            QuickRow::GgShader => (&mut s.shader_gg, Shader::GG.to_vec(), Platform::Gg),
+            QuickRow::NgpShader => (&mut s.shader_ngp, Shader::NGP.to_vec(), Platform::Ngp),
+            QuickRow::Tg16Shader => (&mut s.shader_tg16, Shader::TG16.to_vec(), Platform::Tg16),
+            QuickRow::NdsShader => (&mut s.shader_nds, Shader::NDS.to_vec(), Platform::Nds),
+            QuickRow::PmShader => (&mut s.shader_pm, Shader::PM.to_vec(), Platform::Pm),
+            _ => return None,
+        })
+    }
+
+    /// slotPlus Core: what a row it shows differently says.
+    fn core_value(&self, row: QuickRow) -> Option<QuickValue> {
+        let s = &self.state;
+        match row {
+            QuickRow::FastForward => Some(QuickValue::flag(s.ff_speed > 0)),
+            QuickRow::ShelfLifeSwitch => Some(QuickValue::flag(s.shrink_wrap || s.dust || s.wear)),
+            _ => {
+                let shader = match row {
+                    QuickRow::GbaShader => s.shader_gba,
+                    QuickRow::GbShader => s.shader_gb,
+                    QuickRow::GbcShader => s.shader_gbc,
+                    QuickRow::WsShader => s.shader_ws,
+                    QuickRow::LynxShader => s.shader_lynx,
+                    QuickRow::GgShader => s.shader_gg,
+                    QuickRow::NgpShader => s.shader_ngp,
+                    QuickRow::Tg16Shader => s.shader_tg16,
+                    QuickRow::NdsShader => s.shader_nds,
+                    QuickRow::PmShader => s.shader_pm,
+                    _ => return None,
+                };
+                let system = match row {
+                    QuickRow::GbShader => Platform::Gb,
+                    QuickRow::GbcShader => Platform::Gbc,
+                    QuickRow::PmShader => Platform::Pm,
+                    _ => Platform::Gba,
+                };
+                Some(match shader == retro_shader(system) {
+                    true => QuickValue::Retro,
+                    false => QuickValue::Clean,
+                })
+            }
+        }
+    }
+
+    /// slotPlus Core: the rows it makes simpler. Fast Forward is on (at 4×) or off, Kid Mode
+    /// is off or one shelf, Shelf Life is one switch, and each system's Shader is Clean or
+    /// Retro. Whether it handled the row.
+    fn change_core_setting(&mut self, row: QuickRow) -> bool {
+        let s = &mut self.state;
+        match row {
+            QuickRow::FastForward => {
+                s.ff_speed = if s.ff_speed > 0 { 0 } else { CORE_FF_SPEED };
+                s.ff_sound = false;
+                true
+            }
+            QuickRow::KidMode => {
+                s.kid_mode = match s.kid_mode {
+                    KidMode::Off => KidMode::OneShelf,
+                    _ => KidMode::Off,
+                };
+                true
+            }
+            QuickRow::ShelfLifeSwitch => {
+                let on = !(s.shrink_wrap || s.dust || s.wear);
+                (s.shrink_wrap, s.dust, s.wear) = (on, on, on);
+                self.reface_all();
+                true
+            }
+            _ => {
+                let Some((shader, choices, system)) = self.core_shader_slot(row) else {
+                    return false;
+                };
+                let retro = retro_shader(system);
+                *shader = match *shader == retro {
+                    true => clean_shader(&choices),
+                    false => retro,
+                };
+                true
+            }
+        }
+    }
+
+    /// slotPlus Core: what it sets for you, every time it starts. A row it leaves out keeps
+    /// the value it is set to here, and so does a shortcut it leaves out (none).
+    fn pin_core(&mut self) {
+        let s = &mut self.state;
+        s.appearance = Default::default();
+        s.wallpaper_tint = WallpaperTint::Off;
+        s.shelf_mode = ShelfMode::All;
+        s.show_recents = false;
+        s.show_titles = true;
+        s.bespoke_slot = true;
+        s.clean_resets = CleanResets::Both;
+        let life = s.shrink_wrap || s.dust || s.wear;
+        (s.shrink_wrap, s.dust, s.wear) = (life, life, life);
+        s.rumble = true;
+        s.left_stick_dpad = true;
+        (s.resume_insert, s.resume_power_on) = (true, true);
+        s.ff_sound = false;
+        if s.ff_speed > 0 {
+            s.ff_speed = CORE_FF_SPEED;
+        }
+        (s.blue_light, s.saturation, s.contrast) = (0, 0, 0);
+        (s.overlay_gba, s.overlay_gb, s.overlay_gbc) = (None, None, None);
+        (s.blending_gba, s.blending_gb, s.blending_gbc) =
+            (Blending::Off, Blending::Off, Blending::Off);
+        for bezel in [
+            &mut s.bezel_gba,
+            &mut s.bezel_gb,
+            &mut s.bezel_gbc,
+            &mut s.bezel_ws,
+            &mut s.bezel_lynx,
+            &mut s.bezel_gg,
+            &mut s.bezel_ngp,
+            &mut s.bezel_tg16,
+            &mut s.bezel_nds,
+            &mut s.bezel_pm,
+        ] {
+            *bezel = BezelPick::None;
+        }
+        (s.scale_gba, s.scale_gb, s.scale_gbc) = (Scale::Fit, Scale::Fit, Scale::Fit);
+        (s.stretch_gb, s.stretch_gbc) = (Stretch::FullScreen, Stretch::FullScreen);
+        s.pm_full_screen = true;
+        s.colour_correction_gb = false;
+        s.lid_off_min = Some(1);
+        s.battery_display = BatteryDisplay::Icon;
+        if s.kid_mode == KidMode::Shelves {
+            s.kid_mode = KidMode::OneShelf;
+        }
+        for (shader, system) in [
+            (&mut s.shader_gba, Platform::Gba),
+            (&mut s.shader_gb, Platform::Gb),
+            (&mut s.shader_gbc, Platform::Gbc),
+            (&mut s.shader_ws, Platform::Ws),
+            (&mut s.shader_lynx, Platform::Lynx),
+            (&mut s.shader_gg, Platform::Gg),
+            (&mut s.shader_ngp, Platform::Ngp),
+            (&mut s.shader_tg16, Platform::Tg16),
+            (&mut s.shader_nds, Platform::Nds),
+            (&mut s.shader_pm, Platform::Pm),
+        ] {
+            if !matches!(*shader, Shader::Shimmerless | Shader::Off)
+                && *shader != retro_shader(system)
+            {
+                *shader = retro_shader(system);
+            }
+        }
+        // The shortcuts are Slot's own, less those Core leaves out.
+        let mut keys = ShortcutKeys::default();
+        for gone in [
+            slot_store::Shortcut::Reset,
+            slot_store::Shortcut::FastForwardToggle,
+            slot_store::Shortcut::Guide,
+            slot_store::Shortcut::BlueLightDown,
+            slot_store::Shortcut::BlueLightUp,
+            slot_store::Shortcut::ColorCorrection,
+            slot_store::Shortcut::ShaderBack,
+            slot_store::Shortcut::ShaderNext,
+            slot_store::Shortcut::SunlightDown,
+            slot_store::Shortcut::SunlightUp,
+        ] {
+            keys.set(gone, None);
+        }
+        self.shortcuts = keys;
+        self.carousel = CarouselKeys::default();
+    }
+
+    /// slotPlus Core: a card that last ran Ultra (or nothing) starts on Core's own settings.
+    /// The clock, Wi-Fi, brightness, volume, Nickname, favorites and the game in the slot
+    /// carry over; every row Core shows starts where Core starts it.
+    fn start_core_fresh(&mut self) {
+        let d = SlotState::default();
+        let s = &mut self.state;
+        (s.shrink_wrap, s.dust, s.wear) = (true, true, true);
+        s.ff_speed = CORE_FF_SPEED;
+        s.rewind = d.rewind;
+        for (shader, system) in [
+            (&mut s.shader_gba, Platform::Gba),
+            (&mut s.shader_gb, Platform::Gb),
+            (&mut s.shader_gbc, Platform::Gbc),
+            (&mut s.shader_ws, Platform::Ws),
+            (&mut s.shader_lynx, Platform::Lynx),
+            (&mut s.shader_gg, Platform::Gg),
+            (&mut s.shader_ngp, Platform::Ngp),
+            (&mut s.shader_tg16, Platform::Tg16),
+            (&mut s.shader_nds, Platform::Nds),
+            (&mut s.shader_pm, Platform::Pm),
+        ] {
+            *shader = retro_shader(system);
+        }
+        (s.colour_correction_gba, s.colour_correction_gbc) = (true, true);
+        (s.gb_palettes, s.gb_palette) = (d.gb_palettes, d.gb_palette);
+        s.kid_mode = KidMode::Off;
+        s.kid_shelf = d.kid_shelf;
+        s.kid_allowance = d.kid_allowance;
+        self.controls = Controls::default();
+    }
+
+    /// slotPlus: which edition last ran on the card, and Core's settings when it is Core.
+    fn settle_edition(&mut self, root: &Path) {
+        let mark = root.join("Config").join(crate::edition::MARK_FILE);
+        let was = std::fs::read_to_string(&mark).unwrap_or_default();
+        let now = match crate::edition::is_core() {
+            true => "core",
+            false => "ultra",
+        };
+        if !crate::edition::is_core() {
+            if was.trim() != now {
+                let _ = slot_store::atomic_write(&mark, now.as_bytes());
+            }
+            return;
+        }
+        let before = (
+            self.state.clone(),
+            self.controls,
+            self.shortcuts.clone(),
+            self.carousel.clone(),
+        );
+        if was.trim() != now {
+            self.start_core_fresh();
+        }
+        self.pin_core();
+        if self.state != before.0 {
+            let _ = write_slot_state(root, &self.state);
+        }
+        if self.controls != before.1 {
+            let _ = write_controls(root, &self.controls);
+        }
+        if self.shortcuts != before.2 {
+            let _ = write_shortcuts(root, &self.shortcuts);
+        }
+        if self.carousel != before.3 {
+            let _ = write_carousel(root, &self.carousel);
+        }
+        if was.trim() != now {
+            let _ = slot_store::atomic_write(&mark, now.as_bytes());
+        }
     }
 
     pub fn lid_off_min(&self) -> u8 {
@@ -4402,10 +4818,12 @@ impl App {
 
     /// slotPlus: the cart under the shelf's pointer has a downloaded set.
     fn selected_has_set(&self) -> bool {
-        self.shelf()
-            .carts
-            .get(self.shelf().index)
-            .is_some_and(|c| self.achievement_sets.contains(&c.rom))
+        crate::achievements_on()
+            && self
+                .shelf()
+                .carts
+                .get(self.shelf().index)
+                .is_some_and(|c| self.achievement_sets.contains(&c.rom))
     }
 
     /// slotPlus: the gold trophy, at the left over the wallpaper, just above the slot.
@@ -4597,7 +5015,7 @@ impl App {
 
     /// slotPlus: menu rows shown greyed out, reached but not opened.
     pub fn disabled_rows(&self) -> &'static [QuickRow] {
-        match crate::ACHIEVEMENTS {
+        match crate::achievements_on() {
             true => &[],
             false => &[QuickRow::Achievements],
         }
@@ -5379,6 +5797,9 @@ impl App {
     }
 
     fn scale_of(&self, platform: Platform) -> Scale {
+        if crate::edition::is_core() && matches!(platform, Platform::Gb | Platform::Gbc) {
+            return Scale::Fit;
+        }
         match platform {
             Platform::Gba | Platform::Gbav => self.state.scale_gba,
             #[cfg(feature = "nds")]
@@ -5390,6 +5811,9 @@ impl App {
     }
 
     fn stretch_of(&self, platform: Platform) -> Stretch {
+        if crate::edition::is_core() && matches!(platform, Platform::Gb | Platform::Gbc) {
+            return Stretch::FullScreen;
+        }
         match platform {
             Platform::Gb => self.state.stretch_gb,
             Platform::Gbc => self.state.stretch_gbc,
@@ -6431,6 +6855,10 @@ impl App {
             || self.playing_platform() != Platform::Gba
         {
             return None;
+        }
+        // slotPlus Core: the solar sensor stays in full sun.
+        if crate::edition::is_core() {
+            return Some(SUNLIGHT_MAX);
         }
         Some(
             self.sunlight_manual
@@ -7838,7 +8266,7 @@ impl App {
             QuickRow::WifiPower => self.set_wifi_off(!self.state.wifi_off),
             QuickRow::Networks => self.open_networks(),
             // Greyed out while RetroAchievements is switched off in this build.
-            QuickRow::Achievements if !crate::ACHIEVEMENTS => {}
+            QuickRow::Achievements if !crate::achievements_on() => {}
             QuickRow::Achievements => {
                 self.achievement_settings = self.read_achievement_settings();
                 self.phase = Phase::QuickMenu {
@@ -7976,6 +8404,7 @@ impl App {
             | QuickRow::KidShelf
             | QuickRow::KidAllowance
             | QuickRow::ShrinkWrap
+            | QuickRow::ShelfLifeSwitch
             | QuickRow::Dust
             | QuickRow::Wear
             | QuickRow::CleanResets
@@ -8103,6 +8532,10 @@ impl App {
             return;
         }
         let row = self.playing_row(row);
+        if crate::edition::is_core() && self.change_core_setting(row) {
+            self.persist();
+            return;
+        }
         if let QuickRow::Saturation | QuickRow::Contrast = row {
             let (level, max) = match row {
                 QuickRow::Saturation => (&mut self.state.saturation, SATURATION_MAX),
@@ -8376,7 +8809,7 @@ impl App {
                 self.reface_all();
             }
             QuickRow::CleanResets => s.clean_resets = s.clean_resets.step(right),
-            QuickRow::ShelfLife => return,
+            QuickRow::ShelfLife | QuickRow::ShelfLifeSwitch => return,
             QuickRow::KidAllowance => {
                 let all = QuickValue::ALLOWANCE;
                 let now = all
@@ -12004,7 +12437,7 @@ impl App {
     }
 
     fn can_print_set(&self) -> bool {
-        crate::ACHIEVEMENTS
+        crate::achievements_on()
             && self.core_has_set
             && self.core_faces_ready()
             && self.root.is_some()
@@ -15631,7 +16064,10 @@ impl App {
     }
 
     fn server_allowed(&self) -> bool {
-        self.root.is_some() && self.seated_cart().is_none() && !self.link_active()
+        !crate::edition::is_core()
+            && self.root.is_some()
+            && self.seated_cart().is_none()
+            && !self.link_active()
     }
 
     fn open_server(&mut self) {
@@ -16744,7 +17180,12 @@ impl App {
             ),
             UpdateState::Switch(r) => (
                 format!("Switch to {}?", crate::edition::OTHER_NAME),
-                format!("A installs {} {}. Saves stay.", crate::edition::OTHER_NAME, r.version),
+                // Moving to Core starts its settings fresh (`settle_edition`), so it says so
+                // in place of the version.
+                match crate::edition::OTHER_KEY {
+                    "core" => "Saves stay. Core starts on its own settings.".into(),
+                    _ => format!("A installs {}. Saves stay.", r.version),
+                },
             ),
             UpdateState::CheckFailed => (
                 "Could not fetch update info".into(),

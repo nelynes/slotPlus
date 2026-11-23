@@ -17,12 +17,13 @@ fn release_json(tag: &str, zip: &str, sha256: &str) -> String {
         false => zip,
     };
     // The zip under test goes in this build's own edition; the other keeps its own.
-    let (plus, ultra) = match slot::edition::KEY {
-        "plus" => (zip, "slot-plusultra.zip"),
-        _ => ("slot-plus.zip", zip),
+    // slot-plus.zip is Ultra under its old name, for cards on slotPlus 3.0.
+    let (core, ultra) = match slot::edition::KEY {
+        "core" => (zip, "slot-plusultra.zip"),
+        _ => ("slot-core.zip", zip),
     };
-    let (plus_size, ultra_size) = match slot::edition::KEY {
-        "plus" => (6919551, 26996984),
+    let (core_size, ultra_size) = match slot::edition::KEY {
+        "core" => (6919551, 26996984),
         _ => (26996984, 6919551),
     };
     format!(
@@ -30,8 +31,9 @@ fn release_json(tag: &str, zip: &str, sha256: &str) -> String {
   "stable": {{
     "version": "{version}",
     "tag": "{tag}",
-    "plus": {{ "zip": "{plus}", "size": {plus_size}, "sha256": "{sha256}" }},
-    "ultra": {{ "zip": "{ultra}", "size": {ultra_size}, "sha256": "{sha256}" }}
+    "plus": {{ "zip": "slot-plus.zip", "size": {ultra_size}, "sha256": "{sha256}" }},
+    "ultra": {{ "zip": "{ultra}", "size": {ultra_size}, "sha256": "{sha256}" }},
+    "core": {{ "zip": "{core}", "size": {core_size}, "sha256": "{sha256}" }}
   }}
 }}"#
     )
@@ -763,14 +765,29 @@ fn device_of_target_reads_rgdsplus() {
 
 
 #[test]
-fn ultra_offers_no_other_edition_until_core_is_published() {
-    // slot-plus.zip is Ultra itself under its old name, for 3.0 slotPlus cards.
-    assert!(!slot::edition::OFFERS_OTHER);
+fn each_edition_offers_the_other() {
+    assert!(slot::edition::OFFERS_OTHER);
     let json = release_json("v1.11.0", "slot-v1.11.0-h700.zip", DIGEST);
-    assert!(parse_other_edition(&json).is_none());
+    let other = parse_other_edition(&json).expect("the other edition's zip");
+    assert!(
+        other.url.ends_with(slot::edition::OTHER_ZIP),
+        "{}",
+        other.url
+    );
     let mut fetch = |_: &str| Ok(json.clone().into_bytes());
     let (event, other) = check_editions_with(u64::MAX / 2, &mut fetch, slot_only("1.11.0"));
     assert_eq!(event, UpdateEvent::UpToDate);
-    assert!(other.is_none());
+    assert!(other.is_some());
     assert_ne!(slot::edition::OTHER_ZIP, slot::edition::ZIP);
+}
+
+#[test]
+fn a_release_from_before_core_offers_nothing_to_switch_to() {
+    let json = release_json("v1.11.0", "slot-v1.11.0-h700.zip", DIGEST);
+    let mut v: serde_json::Value = serde_json::from_str(&json).unwrap();
+    v["stable"]
+        .as_object_mut()
+        .unwrap()
+        .remove(slot::edition::OTHER_KEY);
+    assert!(parse_other_edition(&v.to_string()).is_none());
 }
