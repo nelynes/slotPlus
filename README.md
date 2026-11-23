@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src=".github/resources/banner.png" width="100%" alt="slot. A bespoke, Game Boy-centric frontend for the Anbernic RG SP. slot plays Game Boy Advance, Game Boy Color and Game Boy. slotPlus, for the 3:2 fan, adds WonderSwan, WonderSwan Color and Atari Lynx. slotPlusUltra, for the ultimate handheld, adds Game Gear, NeoGeo Pocket, TurboGrafx-16 and Nintendo DS on top of that. Every version adds HDMI out to your TV, pixel transparency for GB and GBC, and RetroAchievements.">
+<img src=".github/resources/banner.png" width="100%" alt="slot.+, Slot's Game Boy-centric frontend for the Anbernic RG SP, with every handheld on the shelf. Core or Ultra: a shrink-wrapped cart handwritten Just Play, for Core, set up for you so you put games on the card and play; or the same cart opened to its board with a Mastered sticker and 312 hours of play time, for Ultra, every option to open up and tinker with. Below, a shelf with a cart for every system in both: Game Boy Advance, Game Boy, Game Boy Color, WonderSwan, Atari Lynx, Pokémon mini, Game Gear, NeoGeo Pocket, TurboGrafx-16, Nintendo DS and PokeDaisy.">
 
 </div>
 
@@ -128,12 +128,12 @@ A full user guide can be found at [slot-cfw.fyi](https://slot-cfw.fyi).
 
 <p align="center">
 <img src=".github/resources/screenshots/plus-shelves.gif" width="48%" alt="slotPlus: scrolling the Game Boy Color, Game Boy Advance, Atari Lynx and WonderSwan shelves, then putting Mr. Driller in the slot and resuming at its title screen">
-<img src=".github/resources/screenshots/ultra-shelves.gif" width="48%" alt="slotPlusUltra: scrolling the Game Gear and NeoGeo Pocket shelves, then the TurboGrafx-16 shelf, where a HuCard turns over, goes in the slot and Devil's Crush starts">
+<img src=".github/resources/screenshots/ultra-shelves.gif" width="48%" alt="slotPlus Ultra: scrolling the Game Gear and NeoGeo Pocket shelves, then the TurboGrafx-16 shelf, where a HuCard turns over, goes in the slot and Devil's Crush starts">
 </p>
 
 <p align="center">
-<img src=".github/resources/screenshots/ds-layouts.gif" width="48%" alt="slotPlusUltra on the RG SP: scrolling the Nintendo DS shelf, putting Mario Kart DS in and resuming mid-race, swapping the screens with L2, then stepping through Full Screen, Side by Side, Picture in Picture, Both Screens and One Screen with SELECT and L2">
-<img src=".github/resources/screenshots/cart-slot.gif" width="48%" alt="slotPlusUltra: setting Cart Slot to Bespoke in Settings, then scrolling every shelf: the Game Boy shelves keep Slot's slot, and the WonderSwan, Lynx, Game Gear, NeoGeo Pocket and TurboGrafx-16 shelves each show the back of their own handheld">
+<img src=".github/resources/screenshots/ds-layouts.gif" width="48%" alt="slotPlus Ultra on the RG SP: scrolling the Nintendo DS shelf, putting Mario Kart DS in and resuming mid-race, swapping the screens with L2, then stepping through Full Screen, Side by Side, Picture in Picture, Both Screens and One Screen with SELECT and L2">
+<img src=".github/resources/screenshots/cart-slot.gif" width="48%" alt="slotPlus Ultra: setting Cart Slot to Bespoke in Settings, then scrolling every shelf: the Game Boy shelves keep Slot's slot, and the WonderSwan, Lynx, Game Gear, NeoGeo Pocket and TurboGrafx-16 shelves each show the back of their own handheld">
 </p>
 
 ---

@@ -1,0 +1,71 @@
+<!-- The README banner. Carts are slotPlus's own faces (cart_face_with, board_face with play_sticker and achievement_sticker), saved as PNGs. Render: node shot.js "$PWD/banner.html" out.png (Nunito, Orbitron and Open Sans woff2 beside it). -->
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:Nunito;font-weight:900;src:url(nunito-latin-900-normal.woff2)}
+@font-face{font-family:Nunito;font-weight:800;src:url(nunito-latin-800-normal.woff2)}
+@font-face{font-family:"Open Sans";font-weight:400;src:url(open-sans-latin-400-normal.woff2)}
+@font-face{font-family:"Open Sans";font-weight:600;src:url(open-sans-latin-600-normal.woff2)}
+@font-face{font-family:"Open Sans";font-weight:700;src:url(open-sans-latin-700-normal.woff2)}
+@font-face{font-family:Orbitron;font-weight:800;src:url(orbitron-latin-800-normal.woff2)}
+:root{--page:#1b1b21;--ink:#f4f5f9;--muted:#bcbdc9;--rule:#3a3a46;--plus:#00ffff;--ultra:#46dcff}
+*{box-sizing:border-box;margin:0}
+body{width:1600px;height:1040px;background:var(--page);color:var(--ink);font-family:"Open Sans",sans-serif;position:relative;overflow:hidden}
+.glow{position:absolute;inset:0;background:
+ radial-gradient(38% 46% at 27% 52%,rgba(255,255,255,.07),transparent 70%),
+ radial-gradient(38% 46% at 73% 52%,rgba(70,220,255,.10),transparent 70%)}
+header{position:absolute;left:80px;right:80px;top:58px;display:flex;align-items:flex-end;justify-content:space-between}
+.wm{font-family:"Open Sans";font-weight:700;font-size:150px;letter-spacing:-.045em;line-height:.8}
+.wm .p{color:var(--plus);font-weight:600;font-size:.62em;vertical-align:.62em;margin-left:4px;text-shadow:0 0 18px rgba(0,255,255,.7)}
+.tag{font-size:27px;line-height:1.4;color:var(--ink);text-align:right;max-width:760px;padding-bottom:8px}
+.tag b{font-weight:600;color:var(--muted)}
+.duo{position:absolute;top:238px;left:80px;right:80px;display:grid;grid-template-columns:1fr 120px 1fr;align-items:start}
+.side{display:flex;flex-direction:column;align-items:center;text-align:center}
+.side .art{height:310px;display:flex;align-items:center;justify-content:center}
+.side img{width:500px;image-rendering:auto;filter:drop-shadow(0 18px 26px rgba(0,0,0,.6))}
+.core img{transform:rotate(-4deg)}
+.ultra img{transform:rotate(3deg)}
+.or{align-self:center;margin-top:-90px;text-align:center;font:900 46px/1 Nunito;color:var(--muted)}
+.or span{display:inline-grid;place-items:center;width:92px;height:92px;border-radius:50%;border:2px solid var(--rule);background:#202027}
+.tab{display:inline-block;padding:4px 26px 4px 18px;background:#121216;clip-path:polygon(0 0,100% 0,calc(100% - 14px) 100%,0 100%);margin-top:16px}
+.core .tab{font:900 38px/1.3 Nunito}
+.ultra .tab{font:800 32px/1.55 Orbitron;color:#ebfaff;text-shadow:0 0 12px rgba(90,225,255,.85)}
+.side h2{font-size:31px;font-weight:700;margin-top:14px;letter-spacing:-.01em}
+.side p{font-size:21px;color:var(--muted);margin-top:6px;line-height:1.45}
+.shelf{position:absolute;left:0;right:0;bottom:0;height:230px}
+.row{position:absolute;left:0;right:0;bottom:104px;display:flex;justify-content:center;align-items:flex-end;gap:16px}
+.row img{height:92px;filter:drop-shadow(0 6px 8px rgba(0,0,0,.6))}
+.row img.tall{height:118px}
+.plank{position:absolute;left:0;right:0;bottom:0;height:104px;background:#1a1a1d url(footer-plastic.png) repeat;border-top:1px solid #000;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.plank p{position:absolute;left:40px;right:40px;top:22px;text-align:center;font-size:16.5px;white-space:nowrap;color:var(--muted);letter-spacing:.01em}
+.plank p b{color:var(--ink);font-weight:600}
+.plank small{position:absolute;left:0;right:0;top:60px;text-align:center;font-size:16px;color:#8d8e9b}
+</style></head><body>
+<div class="glow"></div>
+<header>
+  <div class="wm">slot.<span class="p">+</span></div>
+  <div class="tag">Slot's Game Boy-centric frontend for the Anbernic RG SP, <b>with every handheld on the shelf.</b></div>
+</header>
+<div class="duo">
+  <div class="side core">
+    <div class="art"><img src="core.png"></div>
+    <div class="tab">Core</div>
+    <h2>Put games on the card and play.</h2>
+    <p>Set up for you. Most options a plain On or Off.<br>For a gift, a child's handheld, or anyone.</p>
+  </div>
+  <div class="or"><span>or</span></div>
+  <div class="side ultra">
+    <div class="art"><img src="ultra.png"></div>
+    <div class="tab">Ultra</div>
+    <h2>Open it up and tinker.</h2>
+    <p>Every option, RetroAchievements, RomM and Gamebit,<br>shaders and bezels for every system.</p>
+  </div>
+</div>
+<div class="shelf">
+  <div class="row">
+    <img src="gba.png"><img class="tall" src="gb.png"><img class="tall" src="gbc.png"><img src="ws.png"><img class="tall" src="lynx.png"><img src="pm.png"><img class="tall" src="gg.png"><img src="ngp.png"><img class="tall" src="tg16.png"><img class="tall" src="nds.png"><img src="pd.png">
+  </div>
+  <div class="plank">
+    <p><b>Every system in both:</b> Game Boy Advance · Game Boy · Game Boy Color · WonderSwan · Atari Lynx · Pokémon mini · Game Gear · NeoGeo Pocket · TurboGrafx-16 · Nintendo DS · PokeDaisy</p>
+    <small>Plus HDMI out to your TV, pixel transparency for Game Boy, Shelf Life, and a cart that opens for every game</small>
+  </div>
+</div>
+</body></html>
