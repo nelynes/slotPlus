@@ -163,3 +163,33 @@ fn turbo_a_and_b_fire_from_whatever_they_are_bound_to() {
     pad.apply(Action::GbaDown(Btn::L2));
     assert_eq!(pad.mask(&c).turbo(0).0, ButtonMask::A);
 }
+
+/// slotPlus: PokeDaisy's companion and quick menu, and the DS's X and Y, are the game's own
+/// X and Y. A card that has unbound the turbo buttons still presses them with X and Y.
+#[test]
+fn a_core_with_its_own_x_and_y_gets_them_with_the_turbo_buttons_unbound() {
+    use slot::input::Pad;
+    use slot_input::Action;
+    use slot_retro::ButtonMask;
+    use slot_store::{Binding, Controls, Device, GameButton};
+    let mut c = Controls::default();
+    c.set_game(GameButton::TurboA, None);
+    c.set_game(GameButton::TurboB, None);
+    let mut pad = Pad::default();
+    pad.apply(Action::GbaDown(Btn::X));
+    assert_eq!(pad.mask(&c).0, 0, "elsewhere, X still presses nothing");
+    assert_eq!(pad.mask_with_own_xy(&c).0, ButtonMask::X);
+    pad.apply(Action::GbaDown(Btn::Y));
+    assert_eq!(pad.mask_with_own_xy(&c).0, ButtonMask::X | ButtonMask::Y);
+    c.set_game(GameButton::A, Binding::plain(Device::X));
+    assert_eq!(
+        pad.mask_with_own_xy(&c).0,
+        ButtonMask::A | ButtonMask::Y,
+        "X bound to A presses A"
+    );
+    let d = Controls::default();
+    pad.apply(Action::GbaUp(Btn::Y));
+    pad.apply(Action::GbaUp(Btn::X));
+    pad.apply(Action::GbaDown(Btn::X));
+    assert_eq!(pad.mask_with_own_xy(&d).0, ButtonMask::X, "bound as usual");
+}

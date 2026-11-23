@@ -6,17 +6,18 @@
 
 ---
 
-# New in 3.1: Play or Tinker
+# New in 3.1: PokeDaisy, and Play or Tinker
+
+- **A PokeDaisy shelf.** Pokémon games in `Games/PokeDaisy/` play on [PokeDaisy](https://github.com/lidor30/pokedaisy), with its companion on X and its quick menu on Y.
 
 One slotPlus with every system, in two editions, and Settings regrouped by what you're doing. Full notes are in the [3.1 release](https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus3.1).
 
 - **Two editions.** Both play every system. **slotPlus Core** comes set up for you and just plays. **slotPlus Ultra** has every option, and is what everyone on 3.0 updates into. [Which one is for you?](#which-edition)
 - **Settings, regrouped.** The top level is now Look, Library, Play, Screen, Controls, Online and System. Your choices carry over. Looking for something? The [settings guide](SETTINGS.md#where-things-moved-in-31) shows where everything moved. And a line above the slot now says what each row does.
-- **A PokeDaisy shelf.** Pokémon games in `Games/PokeDaisy/` play on [PokeDaisy](https://github.com/lidor30/pokedaisy), with its companion on X and its quick menu on Y.
 - **Fixes:** the Reset shortcut works again on every system with RetroAchievements.
 
 > [!NOTE]
-> **Updating from slotPlus 3.0 (the Plus edition)?** Check for Updates brings you slotPlus Ultra, with your games, saves and settings as they were. The Game Gear, NeoGeo Pocket, TurboGrafx-16 and DS shelves appear once you put games in their folders.
+> **Updating from slotPlus 3.0 (the Plus edition)?** Check for Updates brings you slotPlus Ultra, with your games, saves and settings as they were. The Game Gear, NeoGeo Pocket, TurboGrafx-16 and DS shelves appear only if you put games in their folders.
 
 ## Last time, 3.0: The Cart Remembers
 

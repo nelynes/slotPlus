@@ -235,6 +235,9 @@ fn newer_compares_numerically() {
     assert!(!newer("1.11.0", "1.11.0"));
     assert!(!newer("1.11.0", "1.12.0"));
     assert!(!newer("1.12.0-rc1", "1.11.0"));
+    // A slotPlus patch release adds a number of its own.
+    assert!(newer("1.16.0-plus3.1.1", "1.16.0-plus3.1"));
+    assert!(newer("1.16.0-plus3.2", "1.16.0-plus3.1.1"));
 }
 
 #[test]

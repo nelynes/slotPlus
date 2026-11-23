@@ -42,6 +42,25 @@ impl Pad {
         ButtonMask(bits)
     }
 
+    /// slotPlus: `mask` for a core with X and Y buttons of its own (PokeDaisy, the DS). There X
+    /// and Y are the game's own buttons, so the handheld's X and Y press them even when the
+    /// card has unbound the turbo buttons they press elsewhere, unless they're bound to
+    /// another of the game's buttons.
+    pub fn mask_with_own_xy(&self, controls: &Controls) -> ButtonMask {
+        let bound = |b: Btn| {
+            GameButton::ALL.into_iter().any(|g| {
+                controls
+                    .game(g)
+                    .is_some_and(|x| x.modifier.is_none() && device_btn(x.button) == b)
+            })
+        };
+        let own = [(Btn::X, ButtonMask::X), (Btn::Y, ButtonMask::Y)]
+            .into_iter()
+            .filter(|(b, _)| self.held.contains(b) && !bound(*b))
+            .fold(0, |bits, (_, bit)| bits | bit);
+        ButtonMask(self.mask(controls).0 | own)
+    }
+
     pub fn clear(&mut self) {
         self.held.clear();
         self.chorded.clear();

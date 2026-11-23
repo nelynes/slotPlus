@@ -408,7 +408,13 @@ impl Session {
             self.pad.apply(Action::GbaUp(btn));
         }
         if let Some(emu) = &self.emu {
-            let mask = self.pad.mask(&self.app.controls());
+            let controls = self.app.controls();
+            let mask = match self.app.core() {
+                Core::PokedaisyGba | Core::PokedaisyGbc | Core::Dsperate => {
+                    self.pad.mask_with_own_xy(&controls)
+                }
+                _ => self.pad.mask(&controls),
+            };
             let mask = match self.app.core() {
                 Core::Cygne => mask.wonderswan_for(self.ws_layout()),
                 Core::Lynx if self.lynx_select => mask.without_select(),

@@ -7,6 +7,14 @@ Work toward slotPlus 3.2. Not released yet.
 - **A music cart.** Put songs in a `Music/` folder on the card (MP3, OGG, FLAC, WAV or M4A, in folders as deep as you like, and `.m3u` playlists) and a white Music cart, with a label of its own, joins your Game Boy Advance games. Inside, in the spirit of the music carts sold for the GBA, every file is a step on a staircase: folders are doors, songs are notes and playlists are two, and a little cart climbs it, picking the step he stands on. Left and Right hop him down and up (faster the longer you hold them), Up and Down a few steps at once, and A plays a song and the rest of its folder or playlist, or takes him through a door. The EXIT door flies along beside him on a propeller, and a warp pipe at the top of every folder's stairs takes him straight back to the top. While a song plays a big play sign shows, he dances on its step, the notes dance with him, a ripple runs through the song's step, and Up and Down are the volume. B pauses, B again stops, and with nothing playing B takes him out of the EXIT door. START plays and pauses, L and R skip (hold to wind ten seconds at a time), SELECT switches between in order, repeat all, repeat one and shuffle, and holding SELECT switches between the classic look and Monochrome-ish, in greys with red. Take it out and it remembers the song, where you were and the look. Shut the lid while a song plays and only the screen goes off: the music plays on (the volume buttons still work), and the handheld sleeps once the music stops.
 - **Print your screenshots.** Press SELECT on a screenshot in the viewer and the Game Boy Printer prints it in its four greys, under the game's name and over when you took it. The print is kept beside the screenshot as its own picture, torn edges and all.
 
+## [1.16.0-plus3.1.1](https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus3.1.1)
+
+A small fix to slotPlus 3.1, in both editions. Update from Settings → Online → Check for Updates, or replace the `System` folder on your card.
+
+### Fixes
+
+- **X and Y on the PokeDaisy shelf and the DS.** A card whose Turbo A and Turbo B were unbound in Settings → Controls → In-Game got nothing from X and Y in PokeDaisy (no companion, no quick menu) or in a DS game. There X and Y are the game's own buttons, so they now press them whatever the turbo rows say, unless they're bound to another of the game's buttons.
+
 ## [1.16.0-plus3.1](https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus3.1)
 
 slotPlus 3.1, "Play or Tinker": one slotPlus with every system, in two editions. **slotPlus Core** is set up for you and just plays. **slotPlus Ultra** has every option, and is what slotPlus and slotPlus Ultra 3.0 both become. Settings are regrouped by what you're doing, and Pokémon games get a shelf of their own. Still built on Slot 1.16.0.
