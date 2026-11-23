@@ -444,8 +444,8 @@ impl QuickRow {
         QuickRow::WallpaperTint,
         QuickRow::CartSlot,
         QuickRow::ShowTitles,
-        QuickRow::ShelfLife,
         QuickRow::ShelfLifeSwitch,
+        QuickRow::ShelfLife,
     ];
 
     pub const SYSTEM: [QuickRow; 6] = [
