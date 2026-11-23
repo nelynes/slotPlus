@@ -983,10 +983,13 @@ impl MusicPlayer {
         // how far in it is along the bottom.
         match &title {
             Some(title) => {
-                let (bx, by, bw, bh) = (24, 2, 94, 21);
+                let (bx, by, bw, bh) = (24, 2, 94, 19);
                 s.rect(bx, by, bw, bh, pal.back);
-                s.frame(bx, by, bw, bh, pal.line);
-                let (left, right) = (bx + 4, bx + bw - 5);
+                s.hline(bx, bx + bw - 1, by, pal.line);
+                s.hline(bx, bx + bw - 1, by + bh - 1, pal.line);
+                s.vline(bx, by, by + bh - 1, pal.line);
+                s.vline(bx + bw - 1, by, by + bh - 1, pal.line);
+                let (left, right) = (bx + 3, bx + bw - 4);
                 let tw = s.width(title, Type::Title);
                 // A long title scrolls by, after a moment's pause at the start.
                 let skip = match tw > right - left {
@@ -996,13 +999,21 @@ impl MusicPlayer {
                     }
                     false => 0,
                 };
-                s.text(title, Type::Title, left, by, (left, right), skip, pal.text);
+                s.text(
+                    title,
+                    Type::Title,
+                    left,
+                    by - 1,
+                    (left, right),
+                    skip,
+                    pal.text,
+                );
                 if skip > 0 {
                     s.text(
                         title,
                         Type::Title,
                         left + tw + 24,
-                        by,
+                        by - 1,
                         (left, right),
                         skip,
                         pal.text,
@@ -1023,14 +1034,14 @@ impl MusicPlayer {
         }
         // The bottom line: how far into the song, the play order, and the time.
         s.rect(0, BAR_Y, w, screen::H as i32 - BAR_Y, pal.back);
-        s.hline2(4, w - 5, BAR_Y - 1, pal.line);
+        s.hline(4, w - 5, BAR_Y, pal.line);
         let order = self.order.text();
         s.text(order, Type::Small, 4, BAR_Y + 1, (0, w), 0, pal.dim);
         match times {
             Some((at, len)) => {
                 if let Some(len) = len.filter(|l| *l > 0) {
                     let x = 4 + ((w - 12) as u64 * at.min(len) / len) as i32;
-                    s.rect(x, BAR_Y - 2, 4, 4, pal.note);
+                    s.rect(x, BAR_Y - 1, 3, 3, pal.note);
                 }
                 let t = match len {
                     Some(len) => format!("{} / {}", clock(at), clock(len)),

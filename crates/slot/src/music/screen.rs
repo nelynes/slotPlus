@@ -9,8 +9,8 @@ use slot_retro::{GBA_H, GBA_W};
 
 pub const W: usize = GBA_W as usize;
 pub const H: usize = GBA_H as usize;
-/// How thick the player's lines are: the stairs, door frames, the title's frame and the bar.
-pub const LINE: i32 = 2;
+/// How thick the staircase's lines are.
+pub const STAIR: i32 = 2;
 
 /// The player's colours. Two themes: the classic cyan and pink on black, and a
 /// Monochrome-ish one in greys with red for what matters, like a Game Boy Pocket.
@@ -155,22 +155,14 @@ impl Screen {
         self.rect(x, y0, 1, y1 - y0 + 1, c);
     }
 
-    /// A line 2 pixels thick: `hline` and the row below it.
+    /// A line `STAIR` thick: `hline` and the rows below it.
     pub fn hline2(&mut self, x0: i32, x1: i32, y: i32, c: [u8; 3]) {
-        self.rect(x0, y, x1 - x0 + 1, LINE, c);
+        self.rect(x0, y, x1 - x0 + 1, STAIR, c);
     }
 
-    /// A line 2 pixels thick: `vline` and the column to its right.
+    /// A line `STAIR` thick: `vline` and the columns to its right.
     pub fn vline2(&mut self, x: i32, y0: i32, y1: i32, c: [u8; 3]) {
-        self.rect(x, y0, LINE, y1 - y0 + 1, c);
-    }
-
-    /// A frame `LINE` thick around the box at (x, y), w by h.
-    pub fn frame(&mut self, x: i32, y: i32, w: i32, h: i32, c: [u8; 3]) {
-        self.hline2(x, x + w - 1, y, c);
-        self.hline2(x, x + w - 1, y + h - LINE, c);
-        self.vline2(x, y, y + h - 1, c);
-        self.vline2(x + w - LINE, y, y + h - 1, c);
+        self.rect(x, y0, STAIR, y1 - y0 + 1, c);
     }
 
     pub fn fill(&mut self, c: [u8; 3]) {
@@ -248,11 +240,11 @@ impl Screen {
 
     /// The same door open: its frame, with `shut` of its 9 columns closed from the left.
     pub fn doorway(&mut self, x: i32, floor: i32, shut: i32, c: [u8; 3]) {
-        self.vline2(x, floor - 11, floor - 1, c);
-        self.vline2(x + 7, floor - 11, floor - 1, c);
-        self.hline2(x + 2, x + 6, floor - 13, c);
-        self.rect(x + 1, floor - 12, 2, 1, c);
-        self.rect(x + 6, floor - 12, 2, 1, c);
+        self.vline(x, floor - 11, floor - 1, c);
+        self.vline(x + 8, floor - 11, floor - 1, c);
+        self.hline(x + 2, x + 6, floor - 13, c);
+        self.put(x + 1, floor - 12, c);
+        self.put(x + 7, floor - 12, c);
         if shut > 0 {
             self.rect(x, floor - 11, shut.min(9), 11, c);
             self.rect(x + 2, floor - 13, (shut - 2).clamp(0, 5), 2, c);
@@ -263,22 +255,20 @@ impl Screen {
     /// whose blades turn with `frame`.
     pub fn exit_door(&mut self, x: i32, floor: i32, frame: u64) {
         let c = self.pal.door;
-        self.vline2(x, floor - 16, floor - 1, c);
-        self.vline2(x + 11, floor - 16, floor - 1, c);
-        self.hline2(x, x + 12, floor - 2, c);
-        self.hline2(x + 3, x + 9, floor - 21, c);
+        self.vline(x, floor - 16, floor - 1, c);
+        self.vline(x + 12, floor - 16, floor - 1, c);
+        self.hline(x, x + 12, floor - 1, c);
+        self.hline(x + 3, x + 9, floor - 20, c);
         for (dx, dy) in [(1, 17), (2, 18), (2, 19), (11, 17), (10, 18), (10, 19)] {
-            let inward = if dx < 6 { 1 } else { -1 };
             self.put(x + dx, floor - dy, c);
-            self.put(x + dx + inward, floor - dy, c);
         }
         for (k, len) in [2, 4, 6].into_iter().enumerate() {
-            self.hline(x + 3, x + 3 + len, floor - 13 + 3 * k as i32, c);
+            self.hline(x + 3, x + 3 + len, floor - 12 + 3 * k as i32, c);
         }
         // The propeller: a shaft, and blades that turn.
-        self.vline2(x + 6, floor - 24, floor - 22, c);
+        self.vline(x + 6, floor - 23, floor - 21, c);
         let reach = [8, 5, 1, 5][((frame / 3) % 4) as usize];
-        self.hline2(x + 7 - reach, x + 6 + reach, floor - 26, c);
+        self.hline(x + 6 - reach, x + 6 + reach, floor - 24, c);
         self.text("EXIT", Type::Small, x - 2, floor + 1, (0, W as i32), 0, c);
     }
 
@@ -335,18 +325,17 @@ impl Screen {
     }
     /// A note, its foot at `foot`.
     pub fn note(&mut self, x: i32, foot: i32, c: [u8; 3]) {
-        self.rect(x, foot - 4, 4, 3, c);
-        self.put(x + 1, foot - 5, c);
-        self.vline2(x + 2, foot - 11, foot - 3, c);
-        self.rect(x + 4, foot - 11, 1, 2, c);
-        self.rect(x + 5, foot - 10, 1, 2, c);
-        self.rect(x + 6, foot - 9, 1, 2, c);
+        self.rect(x, foot - 4, 3, 3, c);
+        self.vline(x + 2, foot - 11, foot - 3, c);
+        self.put(x + 3, foot - 11, c);
+        self.put(x + 4, foot - 10, c);
+        self.vline(x + 5, foot - 9, foot - 8, c);
     }
 
     /// A playlist: two notes.
     pub fn notes(&mut self, x: i32, foot: i32, c: [u8; 3]) {
         self.note(x, foot, c);
-        self.note(x + 6, foot - 2, c);
+        self.note(x + 5, foot - 2, c);
     }
 
     /// slotPlus's guide: a little cart with arms and legs and a face on its label, its feet
@@ -442,11 +431,8 @@ impl Screen {
                 (12, -13),
             ],
         };
-        // Each limb two pixels thick: every pixel gets a twin on its outer side.
         for (dx, dy) in limbs {
-            let out = if *dx < 5 { -1 } else { 1 };
             px(self, x + dx, y + dy, body);
-            px(self, x + dx + out, y + dy, body);
         }
     }
 
