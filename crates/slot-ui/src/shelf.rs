@@ -60,6 +60,7 @@ pub const REPEAT_DELAY_MS: Millis = 400;
 pub const HEART_SCALE: u32 = 2;
 pub const HEART_INK: [u8; 3] = [0xe8, 0x3a, 0x3f];
 const HEART_INSET: f32 = 5.0;
+const DAISY_INSET: f32 = 4.0;
 const REPEAT_MS: [Millis; 4] = [110, 85, 65, 50];
 
 pub fn repeat_gap(fired: usize) -> Millis {
@@ -79,6 +80,10 @@ pub struct Shelf {
     backings: [Option<TexId>; Mould::ALL.len()],
     hearted: Vec<bool>,
     heart: Option<(TexId, f32, f32)>,
+    /// slotPlus: the PokeDaisy sticker, and whether this shelf puts it on the PokeDaisy
+    /// shelf's carts (Favorites and collections do, where those carts mix with the rest).
+    daisy: Option<(TexId, f32, f32)>,
+    marks_daisies: bool,
     ride: f32,
     vel: f32,
     held: Option<(i32, Millis, usize)>,
@@ -93,6 +98,8 @@ impl Shelf {
             interiors: vec![None; carts.len()],
             hearted: vec![false; carts.len()],
             heart: None,
+            daisy: None,
+            marks_daisies: false,
             carts,
             index: 0,
             scroll: 0.0,
@@ -170,6 +177,7 @@ impl Shelf {
             shadows: self.shadows,
             backings: self.backings,
             heart: self.heart,
+            daisy: self.daisy,
             ..Shelf::new(Vec::new())
         }
     }
@@ -215,6 +223,15 @@ impl Shelf {
 
     pub fn set_heart(&mut self, face: TexId, w: u32, h: u32) {
         self.heart = Some((face, w as f32, h as f32));
+    }
+
+    pub fn set_daisy(&mut self, face: TexId, w: u32, h: u32) {
+        self.daisy = Some((face, w as f32, h as f32));
+    }
+
+    /// slotPlus: whether the PokeDaisy shelf's carts wear the PokeDaisy sticker here.
+    pub fn mark_daisies(&mut self, on: bool) {
+        self.marks_daisies = on;
     }
 
     pub fn mark_hearted(&mut self, hearted: impl Fn(&Cart) -> bool) {
@@ -755,6 +772,19 @@ impl Shelf {
                 out.push(Draw::Tex {
                     x: (x + (lx + lw) * w - sw - HEART_INSET).round(),
                     y: (y + ly * h + HEART_INSET).round(),
+                    w: sw,
+                    h: sh,
+                    tex,
+                    alpha: alpha * dim,
+                });
+            }
+            if let (true, true, Some((tex, sw, sh))) =
+                (self.marks_daisies, cart.platform.is_pokedaisy(), self.daisy)
+            {
+                let (lx, ly, _, _) = mould_label_rect(self.mould(i));
+                out.push(Draw::Tex {
+                    x: (x + lx * w + DAISY_INSET).round(),
+                    y: (y + ly * h + DAISY_INSET).round(),
                     w: sw,
                     h: sh,
                     tex,

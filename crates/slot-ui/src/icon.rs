@@ -186,6 +186,15 @@ const HEART: [&str; 8] = [
     "....#....",
 ];
 
+/// slotPlus: PokeDaisy's app icon as a small sticker (used with Lidor Itzhari's permission),
+/// on a cart that came from the PokeDaisy shelf when it sits on Favorites or a collection,
+/// where it would otherwise look like the same game from its own system's shelf.
+pub fn pokedaisy_sticker_face() -> CartFace {
+    const PNG: &[u8] = include_bytes!("../../../assets/pokedaisy_sticker.png");
+    let (rgba, w, h) = crate::art::decode_png_bytes(PNG).expect("the PokeDaisy sticker decodes");
+    CartFace { rgba, w, h }
+}
+
 pub fn heart_face(scale: u32, colour: [u8; 3]) -> CartFace {
     let (gw, gh) = (HEART[0].len() as i32, HEART.len() as i32);
     let ink = |x: i32, y: i32| {

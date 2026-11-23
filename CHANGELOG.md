@@ -22,7 +22,7 @@ Both editions play every system: Game Boy Advance, Game Boy and Game Boy Color, 
   - **On slotPlus 3.0,** Check for Updates brings you Ultra (the release's `slot-plus.zip` is Ultra under its old name), so the Game Gear, NeoGeo Pocket, TurboGrafx-16 and DS shelves are yours now too: put games in `Games/GG/`, `Games/NGP/`, `Games/TG16/` and `Games/NDS/`.
 - **slotPlus Core** (`slot-core.zip`) is for people who want to put games on the card and play, closer to a real handheld: a gift for someone who won't open a menu, a handheld for a child, or for anyone who'd rather not tinker. Each system comes set up the way most people end up setting it (the bespoke cart slot for every shelf, colour correction on, Game Boy games filling the screen, 4× fast forward, games picking up where you left them), and most choices are a plain On or Off:
   - **Shelf Life** is one switch for shrink wrap, dust and wear.
-  - **Screen** is one Shader row for each system, Clean or LCD.
+  - **Screen** is one Shader row for each system, Clean or Retro.
   - **Kid Mode** is Off or One Shelf.
   - **Left out:** RetroAchievements, RomM, Gamebit, Recents and Collections, in-game save states, screenshots, guides and undo, and the finer picture settings (blue light, saturation, contrast, overlays, frame blending and bezels). The shortcuts to save and load a state, and to take a screenshot, still work.
   - Fetch Missing Art stays, for labels.
@@ -56,6 +56,7 @@ The menu in a game is otherwise as it was. The [settings guide](SETTINGS.md) lis
 - Each game keeps its own system's cart and its own save, so moving a game between shelves keeps its progress.
 - Gamebit shows the folder with all its games, and with Cart Slot set to Bespoke the shelf has a slot of its own, a meadow with daisies.
 - In Ultra, its games earn RetroAchievements (softcore) from the same sets as on their own shelves. They pause while PokeDaisy's Flight Area is Anywhere, as PokeDaisy's own apps do, with a pill in the corner saying so.
+- On Favorites and in collections, a game from the PokeDaisy shelf wears PokeDaisy's own icon as a sticker in the corner of its label, so it can be told from the same game favorited from its own system's shelf.
 - PokeDaisy is told when slotPlus fast forwards or rewinds, so its expanded view keeps up while fast forwarding and its shortcuts stand down while rewinding.
 - Based on PokeDaisy by Lidor Itzhari, as the About page now says under its sticker.
 

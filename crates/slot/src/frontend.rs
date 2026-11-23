@@ -816,6 +816,9 @@ impl Frontend {
         let heart = slot_ui::heart_face(slot_ui::HEART_SCALE, slot_ui::HEART_INK);
         let id = compositor.create_texture_nearest(heart.w, heart.h, &heart.rgba);
         self.session.app_mut().set_heart_face(id, heart.w, heart.h);
+        let daisy = slot_ui::pokedaisy_sticker_face();
+        let id = compositor.create_texture(daisy.w, daisy.h, &daisy.rgba);
+        self.session.app_mut().set_daisy_face(id, daisy.w, daisy.h);
         let shadow = cart_shadow();
         let id = compositor.create_texture(shadow.w, shadow.h, &shadow.rgba);
         self.session.app_mut().set_cart_shadow(id);

@@ -1189,6 +1189,52 @@ fn only_a_hearted_cart_wears_the_heart_in_its_label_top_right_corner() {
     );
 }
 
+/// slotPlus: on Favorites and in collections, a cart from the PokeDaisy shelf wears the
+/// PokeDaisy sticker in its label's top left corner, so it can be told from the same game
+/// on its own system's shelf. Elsewhere, and on other carts, there is none.
+#[test]
+fn a_pokedaisy_cart_wears_its_sticker_where_the_shelf_marks_them() {
+    let daisy = TexId::from_raw(11);
+    let cart = |platform, stem: &str| Cart {
+        platform,
+        stem: stem.into(),
+        rom: format!("Games/x/{stem}.gba").into(),
+        label: None,
+        code: String::new(),
+        shell: None,
+        title: stem.to_uppercase(),
+        tags: Vec::new(),
+    };
+    let mut s = Shelf::new(vec![
+        cart(Platform::Gba, "Sapphire"),
+        cart(Platform::PdGba, "Sapphire"),
+        cart(Platform::Gba, "Golden Sun"),
+    ]);
+    s.set_daisy(daisy, 38, 38);
+    s.select(1);
+    settle(&mut s);
+    let stickers = |s: &Shelf| -> Vec<(f32, f32)> {
+        let mut out = Vec::new();
+        s.draw_row(Canvas::FRAMED, None, 0.0, 0.0, 1.0, &mut out);
+        out.iter()
+            .filter_map(|d| match *d {
+                Draw::Tex { x, y, tex, .. } if tex == daisy => Some((x, y)),
+                _ => None,
+            })
+            .collect()
+    };
+    assert!(stickers(&s).is_empty(), "a system shelf marks none");
+    s.mark_daisies(true);
+    let on = stickers(&s);
+    assert_eq!(on.len(), 1, "only the PokeDaisy cart: {on:?}");
+    let (left, top) = on[0];
+    let x0 = 360.0 - CART_W as f32 / 2.0;
+    let y0 = rest_y(slot_ui::Canvas::FRAMED, CART_H as f32);
+    let (lx, ly) = (x0 + LABEL_X as f32, y0 + LABEL_Y as f32);
+    assert!(left >= lx && left < lx + 12.0, "sticker left {left}, label left {lx}");
+    assert!(top >= ly && top < ly + 12.0, "sticker top {top}, label top {ly}");
+}
+
 fn screen_is_full_of_carts(s: &Shelf) -> Result<(), String> {
     let mut out = Vec::new();
     s.draw_row(Canvas::FRAMED, None, 0.0, 0.0, 1.0, &mut out);

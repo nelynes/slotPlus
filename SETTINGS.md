@@ -22,7 +22,7 @@ Both editions play every system slotPlus has: Game Boy Advance, Game Boy and Gam
 | **RetroAchievements** | No | Yes |
 | **RomM and Gamebit** | No | Yes |
 | **Save states, screenshots, guides in a game** | The save, load and screenshot shortcuts only | The full in-game menu, with undo |
-| **Picture** | One Shader row per system: Clean or LCD | Shaders, overlays, frame blending, bezels, scale, stretch, blue light, saturation and contrast |
+| **Picture** | One Shader row per system: Clean or Retro | Shaders, overlays, frame blending, bezels, scale, stretch, blue light, saturation and contrast |
 | **Download** | `slot-core.zip` | `slot-plusultra.zip` (also published as `slot-plus.zip`) |
 
 **Not sure?** Ultra is what slotPlus has always been, and what you get if you're updating from 3.0. Core is for handing someone a handheld that just plays.
@@ -161,7 +161,7 @@ Core is Ultra with the setting-up done for you. Its menus follow the same Look, 
 
 - **Shelf Life** is one switch for shrink wrap, dust and wear, starting On. Holding B on a cart still cleans it.
 - **Kid Mode** is Off or One Shelf.
-- **Screen** has one Shader row for each system with games on the card: **Clean** (sharp pixels) or **LCD** (the look of the handheld's own screen, with Game Boy and Game Boy Color pixels you can see through), starting on LCD. Color Correction stays an On/Off row for the Game Boy Advance and Game Boy Color, and Palette stays on the Game Boy page.
+- **Screen** has one Shader row for each system with games on the card: **Clean** (sharp pixels) or **Retro** (the look of the handheld's own screen, with Game Boy and Game Boy Color pixels you can see through), starting on Retro. Color Correction stays an On/Off row for the Game Boy Advance and Game Boy Color, and Palette stays on the Game Boy page.
 
 **Kept as in Ultra:** Fetch Missing Art, the In-Game button mapping, the save, load and screenshot shortcuts, Wi-Fi, Check for Updates, Date & Time, Nickname and About.
 
