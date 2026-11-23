@@ -4,7 +4,8 @@ name: release
 # slotPlus Ultra, and slotPlus Core (the same code with the core feature).
 #
 # The same zip is published a second time as slot-plus.zip: a 3.0 slotPlus card
-# looks for that name in versions.json, so it updates into Ultra.
+# looks for that name in versions.json, so it updates into Ultra. Planned to go in
+# 3.3, once 3.0 Plus cards have had a few releases to update (the user, 2026-11-22).
 #
 # Run by hand from any branch to try that branch on a card.
 
