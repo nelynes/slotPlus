@@ -1014,6 +1014,13 @@ impl RetroCore for LibretroCore {
         (self.host.shown_w, self.host.shown_h)
     }
 
+    fn lcd_icons(&self) -> u8 {
+        match (self.loaded, self.api.lcd_icons) {
+            (true, Some(icons)) => unsafe { icons() },
+            _ => 0,
+        }
+    }
+
     fn take_audio(&mut self) -> Vec<i16> {
         std::mem::take(&mut self.host.audio)
     }

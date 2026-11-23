@@ -256,16 +256,18 @@ The WonderSwan has two sets of four direction buttons: the X pad (left side) and
 | Start                       | Start                                           |
 | Hold **L1** + D-pad         | Y pad (up / right / down / left)                |
 | Hold **R1** + X / A / B / Y | Y pad (X = up, A = right, B = down, Y = left)   |
-| Select                      | Nothing in horizontal games                     |
+| Select                      | Turns the picture upright (see below)           |
 
 The stretch shortcuts are off for WonderSwan games, so L1 and R1 can act as the Y-pad modifiers.
 
 ### Vertical games
 
-Games made for vertical play are recognised from the ROM. Play them one of two ways:
+Games made for vertical play are recognised from the ROM. A horizontal game that turns some of its stages on their side, such as Klonoa, is recognised when it lights the WonderSwan's vertical icon, and the buttons turn with the stage. Play them one of two ways:
 
 - **Handheld upright:** press SELECT and the picture turns upright, at 2x with black bars at the sides.
 - **Handheld turned 90 degrees counter-clockwise:** leave the picture sideways at full size.
+
+In a horizontal game, press SELECT again when the game goes back to horizontal.
 
 Either way the D-pad is the Y pad, the four face buttons are the X pad, L1 is A and R1 is B. Upright, D-pad up is up in the game; turned, the buttons keep the WonderSwan's own directions. The L1 / R1 Y-pad modifiers above are for horizontal games only.
 

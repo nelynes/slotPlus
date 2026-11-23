@@ -190,6 +190,9 @@ pub struct Api {
     pub unserialize: unsafe extern "C" fn(*const c_void, usize) -> bool,
     pub get_memory_data: unsafe extern "C" fn(c_uint) -> *mut c_void,
     pub get_memory_size: unsafe extern "C" fn(c_uint) -> usize,
+    /// slotPlus: the WonderSwan's lit LCD icons (port 0x15), from slotPlus's own
+    /// build of Cygne. No other core has it.
+    pub lcd_icons: Option<unsafe extern "C" fn() -> u8>,
 }
 
 impl Api {
@@ -221,6 +224,10 @@ impl Api {
             unserialize: get!("retro_unserialize"),
             get_memory_data: get!("retro_get_memory_data"),
             get_memory_size: get!("retro_get_memory_size"),
+            lcd_icons: lib
+                .get::<unsafe extern "C" fn() -> u8>(b"retro_slot_wswan_lcd_icons\0")
+                .ok()
+                .map(|f| *f),
         })
     }
 }

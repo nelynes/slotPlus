@@ -3,7 +3,7 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use slot_input::{Action, Btn, Chord, Contexts, Entry, Gestures, Millis, Mod, RawEvent};
-use slot_retro::{Rumble, WsLayout, HANDHELD_TURN_OPTION};
+use slot_retro::{Rumble, WsLayout, HANDHELD_TURN_OPTION, LCD_VERTICAL};
 use slot_store::{Core, Platform};
 use slot_ui::FfState;
 
@@ -469,10 +469,17 @@ impl Session {
     }
 
     fn ws_layout(&self) -> WsLayout {
-        match (self.ws_vertical, self.app.frame_is_tall()) {
-            (false, _) => WsLayout::Horizontal,
-            (true, true) => WsLayout::Upright,
+        // A game held on its side is one the cart says is vertical, or one that
+        // has lit the WonderSwan's vertical icon: Klonoa turns some of its
+        // stages on their side and lights it, so the buttons turn with them.
+        let icons = self.emu.as_ref().map_or(0, EmuHandle::lcd_icons);
+        let vertical = self.ws_vertical || icons & LCD_VERTICAL != 0;
+        // A tall frame is upright whichever way the game was made: SELECT
+        // turns either kind.
+        match (vertical, self.app.frame_is_tall()) {
+            (_, true) => WsLayout::Upright,
             (true, false) => WsLayout::Sideways,
+            (false, false) => WsLayout::Horizontal,
         }
     }
 
