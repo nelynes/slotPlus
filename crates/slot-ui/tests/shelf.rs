@@ -1189,7 +1189,7 @@ fn only_a_hearted_cart_wears_the_heart_in_its_label_top_right_corner() {
     );
 }
 
-/// slotPlus: on Favorites and in collections, a cart from the PokeDaisy shelf wears the
+/// slotPlus: on Recents, Favorites, collections and All Games, a cart from the PokeDaisy shelf wears the
 /// PokeDaisy sticker in its label's top left corner, so it can be told from the same game
 /// on its own system's shelf. Elsewhere, and on other carts, there is none.
 #[test]

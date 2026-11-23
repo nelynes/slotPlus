@@ -81,7 +81,8 @@ pub struct Shelf {
     hearted: Vec<bool>,
     heart: Option<(TexId, f32, f32)>,
     /// slotPlus: the PokeDaisy sticker, and whether this shelf puts it on the PokeDaisy
-    /// shelf's carts (Favorites and collections do, where those carts mix with the rest).
+    /// shelf's carts (Recents, Favorites, collections and All Games do, where those carts mix
+    /// with the rest).
     daisy: Option<(TexId, f32, f32)>,
     marks_daisies: bool,
     ride: f32,
