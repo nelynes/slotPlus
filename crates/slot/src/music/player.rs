@@ -907,8 +907,8 @@ impl MusicPlayer {
             if yb < -ROW {
                 break;
             }
-            s.hline(xs, xs + STEP, yb, pal.line);
-            s.vline(xs + STEP, yb - ROW, yb, pal.line);
+            s.hline2(xs, xs + STEP, yb, pal.line);
+            s.vline2(xs + STEP, yb - ROW, yb + 1, pal.line);
         }
         // Each file's name to the right of its riser, the picked one and the one playing lit,
         // and its door or note on the tread above.
@@ -921,9 +921,9 @@ impl MusicPlayer {
             let lit = playing_step.as_deref() == Some(e.path());
             let picked = i == self.cursor;
             match (picked, lit) {
-                (true, true) => s.band(xt + 1, yb - ROW + 1, ROW - 1, ripple, true),
-                (true, false) => s.band(xt + 1, yb - ROW + 1, ROW - 1, None, true),
-                (false, true) if sounding => s.band(xt + 1, yb - ROW + 1, ROW - 1, ripple, false),
+                (true, true) => s.band(xt + 2, yb - ROW + 2, ROW - 2, ripple, true),
+                (true, false) => s.band(xt + 2, yb - ROW + 2, ROW - 2, None, true),
+                (false, true) if sounding => s.band(xt + 2, yb - ROW + 2, ROW - 2, ripple, false),
                 _ => {}
             }
             let (guide_here, open) = marks[i - first];
@@ -957,9 +957,9 @@ impl MusicPlayer {
             s.text(
                 &name,
                 Type::Title,
-                xt + 3,
+                xt + 4,
                 yb - ROW - 3,
-                (xt + 1, w - 1),
+                (xt + 2, w - 1),
                 0,
                 ink,
             );
@@ -983,13 +983,10 @@ impl MusicPlayer {
         // how far in it is along the bottom.
         match &title {
             Some(title) => {
-                let (bx, by, bw, bh) = (24, 2, 94, 19);
+                let (bx, by, bw, bh) = (24, 2, 94, 21);
                 s.rect(bx, by, bw, bh, pal.back);
-                s.hline(bx, bx + bw - 1, by, pal.line);
-                s.hline(bx, bx + bw - 1, by + bh - 1, pal.line);
-                s.vline(bx, by, by + bh - 1, pal.line);
-                s.vline(bx + bw - 1, by, by + bh - 1, pal.line);
-                let (left, right) = (bx + 3, bx + bw - 4);
+                s.frame(bx, by, bw, bh, pal.line);
+                let (left, right) = (bx + 4, bx + bw - 5);
                 let tw = s.width(title, Type::Title);
                 // A long title scrolls by, after a moment's pause at the start.
                 let skip = match tw > right - left {
@@ -999,21 +996,13 @@ impl MusicPlayer {
                     }
                     false => 0,
                 };
-                s.text(
-                    title,
-                    Type::Title,
-                    left,
-                    by - 1,
-                    (left, right),
-                    skip,
-                    pal.text,
-                );
+                s.text(title, Type::Title, left, by, (left, right), skip, pal.text);
                 if skip > 0 {
                     s.text(
                         title,
                         Type::Title,
                         left + tw + 24,
-                        by - 1,
+                        by,
                         (left, right),
                         skip,
                         pal.text,
@@ -1034,14 +1023,14 @@ impl MusicPlayer {
         }
         // The bottom line: how far into the song, the play order, and the time.
         s.rect(0, BAR_Y, w, screen::H as i32 - BAR_Y, pal.back);
-        s.hline(4, w - 5, BAR_Y, pal.line);
+        s.hline2(4, w - 5, BAR_Y - 1, pal.line);
         let order = self.order.text();
         s.text(order, Type::Small, 4, BAR_Y + 1, (0, w), 0, pal.dim);
         match times {
             Some((at, len)) => {
                 if let Some(len) = len.filter(|l| *l > 0) {
                     let x = 4 + ((w - 12) as u64 * at.min(len) / len) as i32;
-                    s.rect(x, BAR_Y - 1, 3, 3, pal.note);
+                    s.rect(x, BAR_Y - 2, 4, 4, pal.note);
                 }
                 let t = match len {
                     Some(len) => format!("{} / {}", clock(at), clock(len)),
