@@ -31,7 +31,7 @@ impl QuickRow {
             QuickRow::CleanAllCarts => "Cleans and unwraps every cart at once.",
 
             // Library.
-            QuickRow::ShelfMode => "A shelf for each system, or your collections instead.",
+            QuickRow::ShelfMode => "Arrange games by system or by collections.",
             QuickRow::Recents => "Adds a shelf of the games you played last.",
             QuickRow::FetchArt => "Downloads label art for games that don't have any yet.",
             QuickRow::Server => "Manage the card from a browser on the same Wi-Fi.",
@@ -171,7 +171,7 @@ impl QuickRow {
             QuickRow::CheckUpdates => "Looks for a newer slotPlus and installs it.",
             QuickRow::RaUsername => "Your RetroAchievements username.",
             QuickRow::RaPassword => "Your RetroAchievements password.",
-            QuickRow::RaMode => "Casual keeps save states, rewind and fast forward on.",
+            QuickRow::RaMode => "Currently only Casual mode is supported.",
             QuickRow::RaEncore => "Earn achievements again that your account already has.",
             QuickRow::RaDownload => "Downloads achievement sets for the games on your card.",
             QuickRow::RaSetsStatus => "How the download is going.",
