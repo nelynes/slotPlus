@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixes
+
+- **X and Y on the PokeDaisy shelf and the DS.** A card whose Turbo A and Turbo B were unbound in Settings → Controls → In-Game got nothing from X and Y in PokeDaisy (no companion, no quick menu) or in a DS game. There X and Y are the game's own buttons, so they now press them whatever the turbo rows say, unless they're bound to another of the game's buttons.
+
 ## [1.16.0-plus3.1](https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus3.1)
 
 slotPlus 3.1, "Play or Tinker": one slotPlus with every system, in two editions. **slotPlus Core** is set up for you and just plays. **slotPlus Ultra** has every option, and is what slotPlus and slotPlus Ultra 3.0 both become. Settings are regrouped by what you're doing, and Pokémon games get a shelf of their own. Still built on Slot 1.16.0.
