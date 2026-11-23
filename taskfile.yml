@@ -749,13 +749,15 @@ tasks:
         fi
 
   build:device:
-    desc: Build for the H700, in an arm64 container unless this is already one
+    desc: Build for the H700, in an arm64 container unless this is already one. FEATURES adds cargo features (core for slotPlus Core)
+    vars:
+      FEATURES: '{{.FEATURES | default ""}}'
     cmds:
       - task: device:sh
         vars:
           CMD: >-
             cargo build --profile device --target-dir target-device
-            -p slot --no-default-features --features device
+            -p slot --no-default-features --features device{{if .FEATURES}},{{.FEATURES}}{{end}}
       - file target-device/device/slot | grep -q aarch64
       - 'echo "built target-device/device/slot"'
 
@@ -784,10 +786,27 @@ tasks:
       - 'echo "built target-device/device/examples/core_bench, adb push it to /tmp/core_bench"'
 
   dist:device:
-    desc: Build the SD2 tree for an H700 device, OUT defaults to ./dist-device
-    deps: [core:device, core:gpsp, core:gambatte, core:cygne, core:lynx, core:gearsystem, core:ngp, core:pce, core:pokemini, core:pokedaisy, core:dsperate, fsck:exfat, build:device, web]
+    desc: Build the SD2 tree for an H700 device, OUT defaults to ./dist-device. EDITION=core builds slotPlus Core
+    deps:
+      - core:device
+      - core:gpsp
+      - core:gambatte
+      - core:cygne
+      - core:lynx
+      - core:gearsystem
+      - core:ngp
+      - core:pce
+      - core:pokemini
+      - core:pokedaisy
+      - core:dsperate
+      - fsck:exfat
+      - task: build:device
+        vars:
+          FEATURES: '{{if eq .EDITION "core"}}core{{end}}'
+      - web
     vars:
       OUT: '{{.OUT | default "dist-device"}}'
+      EDITION: '{{.EDITION | default "ultra"}}'
     cmds:
       - rm -rf {{.OUT}}
       - task: device:sh
@@ -795,6 +814,8 @@ tasks:
           CMD: ./target-device/device/slot --init-root {{.OUT}}
       - cp target-device/device/slot {{.OUT}}/System/slot
       - cp -R card/System/* {{.OUT}}/System/
+      # slotPlus Core's own files: its wallpaper for each shelf.
+      - '{{if eq .EDITION "core"}}cp -R card/Core/System/* {{.OUT}}/System/{{else}}true{{end}}'
       - cp crates/slot-achievements/retroachievements.toml.example {{.OUT}}/Config/
       - cp -R web/dist {{.OUT}}/System/web
       - for d in Bezels Labels Wallpapers; do cp card/$d/README.txt {{.OUT}}/$d/; done

@@ -1,7 +1,7 @@
 name: release
 
-# A tag on main releases one card tree, slotPlus Ultra, built from the tagged
-# commit. From 3.1 main is Ultra and there is no other branch to bring along.
+# A tag on main releases two card trees built from the tagged commit:
+# slotPlus Ultra, and slotPlus Core (the same code with the core feature).
 #
 # The same zip is published a second time as slot-plus.zip: a 3.0 slotPlus card
 # looks for that name in versions.json, so it updates into Ultra.
@@ -28,6 +28,9 @@ jobs:
           - edition: ultra
             suffix: '-ultra'
             zip: slot-plusultra.zip
+          - edition: core
+            suffix: '-core'
+            zip: slot-core.zip
     steps:
       - uses: actions/checkout@v7
 
@@ -44,7 +47,7 @@ jobs:
         # The version slot reports, and compares with versions.json to offer an update.
         env:
           SLOT_VERSION: ${{ github.ref_name }}
-        run: task dist:device OUT="slot-${GITHUB_REF_NAME}${{ matrix.suffix }}"
+        run: task dist:device OUT="slot-${GITHUB_REF_NAME}${{ matrix.suffix }}" EDITION=${{ matrix.edition }}
 
       - name: Check what is about to ship
         run: |
@@ -116,7 +119,7 @@ jobs:
         run: |
           set -eu
           tag="$GITHUB_REF_NAME"
-          for f in CHANGELOG.md slot-plusultra.zip; do
+          for f in CHANGELOG.md slot-plusultra.zip slot-core.zip; do
             test -s "$f" || { echo "::error::$f is missing or empty"; exit 1; }
           done
           # 3.0 slotPlus cards update to whatever is published as slot-plus.zip.
@@ -145,8 +148,8 @@ jobs:
           PY
           cat >> notes.md <<NOTES
 
-          **Fresh install:** download \`slot-plusultra.zip\`, unzip, and move all contents into the Slot card.
-          **Upgrade install:** download \`slot-plusultra.zip\`, unzip, and replace the 'System' folder in your card with the new one from the release.
+          **Fresh install:** download \`slot-plusultra.zip\` (slotPlus Ultra, every option) or \`slot-core.zip\` (slotPlus Core, set up for you), unzip, and move all contents into the Slot card.
+          **Upgrade install:** download the same edition, unzip, and replace the 'System' folder in your card with the new one from the release, or use Settings → Online → Check for Updates.
 
           \`slot-plus.zip\` is the same download under its old name, so cards on slotPlus 3.0 update straight into slotPlus Ultra over Wi-Fi.
 
@@ -154,7 +157,7 @@ jobs:
 
           Atari Lynx games need \`lynxboot.img\`, which is not included. Put your own copy in \`BIOS/\`.
           NOTES
-          gh release create "$tag" slot-plus.zip slot-plusultra.zip --repo "$GITHUB_REPOSITORY" \
+          gh release create "$tag" slot-plus.zip slot-plusultra.zip slot-core.zip --repo "$GITHUB_REPOSITORY" \
             --title "$tag" --notes-file notes.md
 
       # Republish the site so versions.json offers this release to cards over Wi-Fi.

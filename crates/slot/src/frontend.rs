@@ -1831,7 +1831,7 @@ impl UiFaces {
             ],
             help: QuickRow::ALL
                 .iter()
-                .map(|r| quick_description_face(&[r.help()]))
+                .map(|r| quick_description_face(&[r.help_for(crate::edition::is_core())]))
                 .collect(),
             sockets: slot_store::Core::choices(slot_store::Platform::Gba)
                 .iter()

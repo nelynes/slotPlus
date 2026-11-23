@@ -163,6 +163,8 @@ Core is Ultra with the setting-up done for you. Its menus follow the same Look, 
 - **Kid Mode** is Off or One Shelf.
 - **Screen** has one Shader row for each system with games on the card: **Clean** (sharp pixels) or **Retro** (the look of the handheld's own screen, with Game Boy and Game Boy Color pixels you can see through), starting on Retro. Color Correction stays an On/Off row for the Game Boy Advance and Game Boy Color, and Palette stays on the Game Boy page.
 
-**Kept as in Ultra:** Fetch Missing Art, the In-Game button mapping, the save, load and screenshot shortcuts, Wi-Fi, Check for Updates, Date & Time, Nickname and About.
+**Kept as in Ultra:** Rewind, Brightness, Kid Shelf and Play Time, Fetch Missing Art, the In-Game button mapping, the shortcuts to save and load a state, rewind, fast forward, take a screenshot, change the brightness and change a Game Boy's palette, Wi-Fi, Check for Updates, Date & Time, Nickname and About.
+
+**Moving to Core** starts every row Core shows where Core starts it. The clock, Wi-Fi, brightness, volume, Nickname, favorites and the game in the slot carry over, and your games, saves, save states and labels are never touched. Moving back to Ultra keeps the settings you had in Core.
 
 **Left out:** RetroAchievements, RomM, Gamebit, Recents and Collections, the in-game States, Screenshots, Guide and Undo rows, Wallpaper Tint, Clean All Carts, Blue Light, Saturation, Contrast, Overlays, Frame Blending, Bezels, the GBA's Scale, and the shortcuts for reset, fast-forward toggle, guide, blue light, colour correction, shader and sunlight.

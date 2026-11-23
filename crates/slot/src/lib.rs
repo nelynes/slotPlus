@@ -12,9 +12,14 @@ mod achievement_ui;
 /// Settings → RetroAchievements is greyed out and won't open.
 pub const ACHIEVEMENTS: bool = true;
 
+/// Whether RetroAchievements run: switched on, and not slotPlus Core, which leaves them out.
+pub fn achievements_on() -> bool {
+    ACHIEVEMENTS && !edition::is_core()
+}
+
 /// The RetroAchievements service, or one that does nothing while they're switched off.
 pub(crate) fn achievement_service(root: &std::path::Path) -> slot_achievements::Service {
-    match ACHIEVEMENTS {
+    match achievements_on() {
         true => slot_achievements::Service::start(root.to_path_buf()),
         false => slot_achievements::Service::off(),
     }

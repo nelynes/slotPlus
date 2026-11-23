@@ -25,6 +25,7 @@ impl QuickRow {
             QuickRow::ShowTitles => "Writes each game's name under its cart.",
             QuickRow::ShelfLife => "Shrink wrap, dust and wear that carts pick up over time.",
             QuickRow::ShrinkWrap => "Unplayed games stay shrink-wrapped, price sticker on.",
+            QuickRow::ShelfLifeSwitch => "Shrink wrap, dust and wear that carts pick up over time.",
             QuickRow::Dust => "Carts you haven't played in a while slowly gather dust.",
             QuickRow::Wear => "Carts you play a lot slowly show it on their labels.",
             QuickRow::CleanResets => "What holding B on a cart cleans off: dust, wear or both.",
@@ -203,6 +204,37 @@ impl QuickRow {
             QuickRow::UndoReset => "Goes back to where you were before the reset.",
             QuickRow::PlayGameplay => "Fast forward, rewind, rumble and resume.",
             QuickRow::PlayControls => "Buttons and shortcuts.",
+        }
+    }
+
+    /// What the row does in this edition: slotPlus Core has fewer rows, so some say less.
+    pub fn help_for(self, core: bool) -> &'static str {
+        if !core {
+            return self.help();
+        }
+        match self {
+            QuickRow::General => "How your carts age on the shelf.",
+            QuickRow::Network => "Downloads label art for your games.",
+            QuickRow::Game => "Fast forward and rewind.",
+            QuickRow::Screen => "Brightness, and how each system's games look.",
+            QuickRow::Controls => "Which handheld button presses each game button.",
+            QuickRow::Online => "Wi-Fi and updates.",
+            QuickRow::System => "Kid Mode, clock, nickname and more.",
+            QuickRow::FastForward => "Hold R2 in a game to run it at 4×.",
+            QuickRow::KidMode => "Keeps the handheld on one shelf.",
+            QuickRow::GbaShader
+            | QuickRow::GbShader
+            | QuickRow::GbcShader
+            | QuickRow::WsShader
+            | QuickRow::LynxShader
+            | QuickRow::GgShader
+            | QuickRow::NgpShader
+            | QuickRow::Tg16Shader
+            | QuickRow::NdsShader
+            | QuickRow::PmShader
+            | QuickRow::Shader => "Clean for sharp pixels, Retro for the old screen's look.",
+            QuickRow::CheckUpdates => "Looks for a newer slotPlus, or switches to Ultra.",
+            row => row.help(),
         }
     }
 }

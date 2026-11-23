@@ -193,10 +193,13 @@ pub enum QuickRow {
     Online,
     /// slotPlus 3.1: Kid Mode's own page, under System.
     Kid,
+    /// slotPlus Core: one switch for all of Shelf Life (shrink wrap, dust and wear), in place
+    /// of its page.
+    ShelfLifeSwitch,
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 178 + cfg!(feature = "nds") as usize] = [
+    pub const ALL: [QuickRow; 179 + cfg!(feature = "nds") as usize] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -377,6 +380,7 @@ impl QuickRow {
         QuickRow::KidAllowance,
         QuickRow::Online,
         QuickRow::Kid,
+        QuickRow::ShelfLifeSwitch,
     ];
 
     /// slotPlus 3.1: grouped by what someone is trying to do. Look is how the shelf looks
@@ -434,12 +438,13 @@ impl QuickRow {
     ];
 
     /// Look. Wallpaper Tint shows only once a picture is the wallpaper.
-    pub const GENERAL: [QuickRow; 6] = [
+    pub const GENERAL: [QuickRow; 7] = [
         QuickRow::Theme,
         QuickRow::Wallpaper,
         QuickRow::WallpaperTint,
         QuickRow::CartSlot,
         QuickRow::ShowTitles,
+        QuickRow::ShelfLifeSwitch,
         QuickRow::ShelfLife,
     ];
 
@@ -722,7 +727,8 @@ impl QuickRow {
             | QuickRow::Theme
             | QuickRow::ShowTitles
             | QuickRow::CartSlot
-            | QuickRow::ShelfLife => &QuickRow::GENERAL,
+            | QuickRow::ShelfLife
+            | QuickRow::ShelfLifeSwitch => &QuickRow::GENERAL,
             QuickRow::KidMode | QuickRow::KidShelf | QuickRow::KidAllowance => &QuickRow::KID,
             QuickRow::ShrinkWrap
             | QuickRow::Dust
@@ -977,7 +983,7 @@ impl QuickRow {
             QuickRow::KidAllowance => "Play Time",
             QuickRow::Kid => "Kid Mode",
             QuickRow::Online => "Online",
-            QuickRow::ShelfLife => "Shelf Life",
+            QuickRow::ShelfLife | QuickRow::ShelfLifeSwitch => "Shelf Life",
             QuickRow::ShrinkWrap => "Shrink Wrap",
             QuickRow::Dust => "Dust",
             QuickRow::Wear => "Wear",
@@ -1318,10 +1324,13 @@ pub enum QuickValue {
     /// slotPlus 3.1: when Resume picks up a game: a cart going in, the handheld starting up.
     Insert,
     PowerOn,
+    /// slotPlus Core: a system's two looks, sharp pixels or its original screen's.
+    Clean,
+    Retro,
 }
 
 impl QuickValue {
-    pub const ALL: [QuickValue; 74] = [
+    pub const ALL: [QuickValue; 76] = [
         QuickValue::Speed1_5,
         QuickValue::Speed2,
         QuickValue::Speed3,
@@ -1396,6 +1405,8 @@ impl QuickValue {
         QuickValue::Speed6Sound,
         QuickValue::Insert,
         QuickValue::PowerOn,
+        QuickValue::Clean,
+        QuickValue::Retro,
     ];
 
     /// slotPlus: a day's play in a locked Kid Mode.
@@ -1457,6 +1468,8 @@ impl QuickValue {
             QuickValue::Speed6Sound => "6× Sound",
             QuickValue::Insert => "Insert",
             QuickValue::PowerOn => "Power On",
+            QuickValue::Clean => "Clean",
+            QuickValue::Retro => "Retro",
             QuickValue::Lcd3x => "LCD",
             QuickValue::Grid => "Grid",
             QuickValue::Dot => "Dot",
