@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src=".github/resources/banner.png" width="100%" alt="slot.+, Slot's Game Boy-centric frontend for the Anbernic RG SP, with every handheld on the shelf. Core or Ultra: a shrink-wrapped cart handwritten Just Play, for Core, set up for you so you put games on the card and play; or the same cart opened to its board with a Mastered sticker and 312 hours of play time, for Ultra, every option to open up and tinker with. Below, a shelf with a cart for every system in both: Game Boy Advance, Game Boy, Game Boy Color, WonderSwan, Atari Lynx, Pokémon mini, Game Gear, NeoGeo Pocket, TurboGrafx-16, Nintendo DS and PokeDaisy.">
+<img src=".github/resources/banner.png" width="100%" alt="slot.+ Ultra: everything Slot does for the Game Boy family, and eight more shelves, each with its own cart. Beside Slot's Game Boy Advance, Game Boy and Game Boy Color carts, a shelf of carts for the WonderSwan, Atari Lynx, Pokémon mini, Game Gear, NeoGeo Pocket, TurboGrafx-16, Nintendo DS and PokeDaisy. Below, the major extras: Shelf Life (shrink wrap, dust and wear), every cart opens to its board with your play time on a sticker, RetroAchievements with progress on the cart and the set on the Game Boy Printer, play on your TV over HDMI, see-through Game Boy pixels, and a bespoke slot for each shelf. Also save backups, romhack patches, Kid Mode with play time, DS screen layouts and stylus, RomM and Gamebit. Rather just play? slotPlus Core has the same shelves, set up for you.">
 
 </div>
 

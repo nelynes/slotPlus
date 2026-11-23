@@ -1,71 +1,96 @@
-<!-- The README banner. Carts are slotPlus's own faces (cart_face_with, board_face with play_sticker and achievement_sticker), saved as PNGs. Render: node shot.js "$PWD/banner.html" out.png (Nunito, Orbitron and Open Sans woff2 beside it). -->
+<!-- The README banner. Carts are slotPlus's own faces (cart_face_with, apply_look, board_face with play_sticker and achievement_sticker), saved as PNGs; ach.png is a crop of board.png. Render: node shot.js "$PWD/banner.html" out.png (Nunito, Orbitron and Open Sans woff2 beside it). -->
 <!doctype html><html><head><meta charset="utf-8"><style>
 @font-face{font-family:Nunito;font-weight:900;src:url(nunito-latin-900-normal.woff2)}
-@font-face{font-family:Nunito;font-weight:800;src:url(nunito-latin-800-normal.woff2)}
 @font-face{font-family:"Open Sans";font-weight:400;src:url(open-sans-latin-400-normal.woff2)}
 @font-face{font-family:"Open Sans";font-weight:600;src:url(open-sans-latin-600-normal.woff2)}
 @font-face{font-family:"Open Sans";font-weight:700;src:url(open-sans-latin-700-normal.woff2)}
 @font-face{font-family:Orbitron;font-weight:800;src:url(orbitron-latin-800-normal.woff2)}
-:root{--page:#1b1b21;--ink:#f4f5f9;--muted:#bcbdc9;--rule:#3a3a46;--plus:#00ffff;--ultra:#46dcff}
+:root{--page:#1b1b21;--ink:#f4f5f9;--muted:#bcbdc9;--dim:#8d8e9b;--rule:#3a3a46;--plus:#00ffff;--ultra:#46dcff;--tile:#222229}
 *{box-sizing:border-box;margin:0}
-body{width:1600px;height:1040px;background:var(--page);color:var(--ink);font-family:"Open Sans",sans-serif;position:relative;overflow:hidden}
-.glow{position:absolute;inset:0;background:
- radial-gradient(38% 46% at 27% 52%,rgba(255,255,255,.07),transparent 70%),
- radial-gradient(38% 46% at 73% 52%,rgba(70,220,255,.10),transparent 70%)}
-header{position:absolute;left:80px;right:80px;top:58px;display:flex;align-items:flex-end;justify-content:space-between}
-.wm{font-family:"Open Sans";font-weight:700;font-size:150px;letter-spacing:-.045em;line-height:.8}
+body{width:1600px;height:990px;background:var(--page);color:var(--ink);font-family:"Open Sans",sans-serif;position:relative;overflow:hidden}
+.glow{position:absolute;inset:0;background:radial-gradient(55% 34% at 58% 33%,rgba(70,220,255,.10),transparent 70%)}
+header{position:absolute;left:72px;right:72px;top:52px;display:flex;align-items:center;gap:34px}
+.wm{font-weight:700;font-size:132px;letter-spacing:-.045em;line-height:.8}
 .wm .p{color:var(--plus);font-weight:600;font-size:.62em;vertical-align:.62em;margin-left:4px;text-shadow:0 0 18px rgba(0,255,255,.7)}
-.tag{font-size:27px;line-height:1.4;color:var(--ink);text-align:right;max-width:760px;padding-bottom:8px}
+.ed{display:inline-block;padding:6px 34px 6px 22px;background:#101014;clip-path:polygon(0 0,100% 0,calc(100% - 18px) 100%,0 100%);font:800 44px/1.3 Orbitron;color:#ebfaff;text-shadow:0 0 14px rgba(90,225,255,.9);margin-top:22px}
+.tag{margin-left:auto;font-size:25px;line-height:1.42;text-align:right;max-width:600px}
 .tag b{font-weight:600;color:var(--muted)}
-.duo{position:absolute;top:238px;left:80px;right:80px;display:grid;grid-template-columns:1fr 120px 1fr;align-items:start}
-.side{display:flex;flex-direction:column;align-items:center;text-align:center}
-.side .art{height:310px;display:flex;align-items:center;justify-content:center}
-.side img{width:500px;image-rendering:auto;filter:drop-shadow(0 18px 26px rgba(0,0,0,.6))}
-.core img{transform:rotate(-4deg)}
-.ultra img{transform:rotate(3deg)}
-.or{align-self:center;margin-top:-90px;text-align:center;font:900 46px/1 Nunito;color:var(--muted)}
-.or span{display:inline-grid;place-items:center;width:92px;height:92px;border-radius:50%;border:2px solid var(--rule);background:#202027}
-.tab{display:inline-block;padding:4px 26px 4px 18px;background:#121216;clip-path:polygon(0 0,100% 0,calc(100% - 14px) 100%,0 100%);margin-top:16px}
-.core .tab{font:900 38px/1.3 Nunito}
-.ultra .tab{font:800 32px/1.55 Orbitron;color:#ebfaff;text-shadow:0 0 12px rgba(90,225,255,.85)}
-.side h2{font-size:31px;font-weight:700;margin-top:14px;letter-spacing:-.01em}
-.side p{font-size:21px;color:var(--muted);margin-top:6px;line-height:1.45}
-.shelf{position:absolute;left:0;right:0;bottom:0;height:230px}
-.row{position:absolute;left:0;right:0;bottom:104px;display:flex;justify-content:center;align-items:flex-end;gap:16px}
-.row img{height:92px;filter:drop-shadow(0 6px 8px rgba(0,0,0,.6))}
-.row img.tall{height:118px}
-.plank{position:absolute;left:0;right:0;bottom:0;height:104px;background:#1a1a1d url(footer-plastic.png) repeat;border-top:1px solid #000;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
-.plank p{position:absolute;left:40px;right:40px;top:22px;text-align:center;font-size:16.5px;white-space:nowrap;color:var(--muted);letter-spacing:.01em}
-.plank p b{color:var(--ink);font-weight:600}
-.plank small{position:absolute;left:0;right:0;top:60px;text-align:center;font-size:16px;color:#8d8e9b}
+/* the shelf */
+.shelf{position:absolute;left:0;right:0;top:128px;height:300px}
+.row{position:absolute;left:0;right:0;bottom:62px;display:flex;justify-content:center;align-items:flex-end}
+.grp{display:flex;align-items:flex-end;gap:12px}
+.fig{display:flex;flex-direction:column;align-items:center}
+.fig img{filter:drop-shadow(0 8px 10px rgba(0,0,0,.6))}
+.old img{height:62px;opacity:.55;filter:grayscale(.4) drop-shadow(0 6px 8px rgba(0,0,0,.6))}
+.old .tall img{height:82px}
+.new img{height:98px}
+.new .tall img{height:128px}
+.plus{font:700 96px/1 "Open Sans";color:var(--plus);text-shadow:0 0 22px rgba(0,255,255,.75);margin:0 26px 22px}
+.plank{position:absolute;left:0;right:0;bottom:0;height:62px;background:#1a1a1d url(footer-plastic.png) repeat;border-top:1px solid #000;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.names{position:absolute;left:0;right:0;bottom:0;height:62px;display:flex;justify-content:center;align-items:center;gap:0;font-size:17px;color:var(--muted)}
+.names span{padding:0 13px}
+.names span+span{border-left:1px solid #4a4a56}
+.names .o{color:var(--dim)}
+.names .n{color:var(--ink);font-weight:600}
+/* features */
+.grid{position:absolute;left:72px;right:72px;top:478px;display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.t{background:var(--tile);border:1px solid var(--rule);border-radius:14px;height:186px;display:grid;grid-template-columns:190px 1fr;align-items:center;gap:18px;padding:0 22px 0 16px;overflow:hidden}
+.v{height:140px;display:flex;align-items:center;justify-content:center;position:relative}
+.v img{filter:drop-shadow(0 6px 8px rgba(0,0,0,.55))}
+.t h3{font-size:22.5px;font-weight:700;letter-spacing:-.01em;margin-bottom:6px}
+.t p{font-size:16px;line-height:1.45;color:var(--muted)}
+.trio img{position:absolute;width:104px}
+.trio img:nth-child(1){left:0;top:34px;transform:rotate(-10deg)}
+.trio img:nth-child(2){left:44px;top:26px;transform:rotate(0deg)}
+.trio img:nth-child(3){left:88px;top:34px;transform:rotate(10deg)}
+.slots{flex-direction:column;gap:7px}
+.slots img{width:190px;filter:none;border-radius:3px}
+.tv{width:178px;height:112px;border-radius:10px;background:#0c0c10;border:5px solid #34343c;box-shadow:0 10px 20px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;position:relative}
+.tv::after{content:'';position:absolute;bottom:-18px;left:50%;width:56px;height:12px;margin-left:-28px;background:#34343c;border-radius:0 0 6px 6px}
+.tv img{width:112px;filter:none}
+.px{display:grid;grid-template-columns:repeat(8,17px);gap:2px;padding:10px;border-radius:8px;background:linear-gradient(135deg,#cfc7a8,#b8ae8a);box-shadow:0 8px 16px rgba(0,0,0,.5)}
+.px i{width:17px;height:17px;background:#3c4a2e;box-shadow:2px 2px 3px rgba(40,30,10,.45)}
+.px i.l{background:rgba(255,255,255,.0);box-shadow:none}
+.px i.m{background:#7c8a5a;box-shadow:2px 2px 2px rgba(40,30,10,.3)}
+.ach{width:168px}
+.also{position:absolute;left:72px;right:72px;bottom:62px;font-size:17px;color:var(--dim);text-align:center}
+.also b{color:var(--muted);font-weight:600}
+.core{position:absolute;left:72px;right:72px;bottom:18px;text-align:center;font-size:16px;color:var(--dim)}
+.core span{display:inline-block;padding:0 14px 0 9px;margin-right:8px;background:#101014;clip-path:polygon(0 0,100% 0,calc(100% - 8px) 100%,0 100%);font:900 15px/1.6 Nunito;color:var(--ink)}
 </style></head><body>
 <div class="glow"></div>
 <header>
   <div class="wm">slot.<span class="p">+</span></div>
-  <div class="tag">Slot's Game Boy-centric frontend for the Anbernic RG SP, <b>with every handheld on the shelf.</b></div>
+  <div class="ed">Ultra</div>
+  <div class="tag">Everything Slot does for the Game Boy family, <b>and eight more shelves, each with its own cart.</b></div>
 </header>
-<div class="duo">
-  <div class="side core">
-    <div class="art"><img src="core.png"></div>
-    <div class="tab">Core</div>
-    <h2>Put games on the card and play.</h2>
-    <p>Set up for you. Most options a plain On or Off.<br>For a gift, a child's handheld, or anyone.</p>
-  </div>
-  <div class="or"><span>or</span></div>
-  <div class="side ultra">
-    <div class="art"><img src="ultra.png"></div>
-    <div class="tab">Ultra</div>
-    <h2>Open it up and tinker.</h2>
-    <p>Every option, RetroAchievements, RomM and Gamebit,<br>shaders and bezels for every system.</p>
-  </div>
-</div>
 <div class="shelf">
   <div class="row">
-    <img src="gba.png"><img class="tall" src="gb.png"><img class="tall" src="gbc.png"><img src="ws.png"><img class="tall" src="lynx.png"><img src="pm.png"><img class="tall" src="gg.png"><img src="ngp.png"><img class="tall" src="tg16.png"><img class="tall" src="nds.png"><img src="pd.png">
+    <div class="grp old">
+      <div class="fig"><img src="gba.png"></div><div class="fig tall"><img src="gb.png"></div><div class="fig tall"><img src="gbc.png"></div>
+    </div>
+    <div class="plus">+</div>
+    <div class="grp new">
+      <div class="fig"><img src="ws.png"></div><div class="fig tall"><img src="lynx.png"></div><div class="fig"><img src="pm.png"></div><div class="fig tall"><img src="gg.png"></div><div class="fig"><img src="ngp.png"></div><div class="fig tall"><img src="tg16.png"></div><div class="fig tall"><img src="nds.png"></div><div class="fig"><img src="pd.png"></div>
+    </div>
   </div>
-  <div class="plank">
-    <p><b>Every system in both:</b> Game Boy Advance · Game Boy · Game Boy Color · WonderSwan · Atari Lynx · Pokémon mini · Game Gear · NeoGeo Pocket · TurboGrafx-16 · Nintendo DS · PokeDaisy</p>
-    <small>Plus HDMI out to your TV, pixel transparency for Game Boy, Shelf Life, and a cart that opens for every game</small>
-  </div>
+  <div class="plank"></div>
+  <div class="names"><span class="o">GBA · GB · GBC</span><span class="n">WonderSwan</span><span class="n">Atari Lynx</span><span class="n">Pokémon mini</span><span class="n">Game Gear</span><span class="n">NeoGeo Pocket</span><span class="n">TurboGrafx-16</span><span class="n">Nintendo DS</span><span class="n">PokeDaisy</span></div>
 </div>
+<div class="grid">
+  <div class="t"><div class="v trio"><img src="wrap.png"><img src="dust.png"><img src="worn.png"></div><div><h3>Shelf Life</h3><p>Shrink wrap on games never played, dust on carts left alone, wear on the ones you love.</p></div></div>
+  <div class="t"><div class="v"><img src="ws_board.png" style="width:196px"></div><div><h3>Every cart opens</h3><p>START shows the board inside, with your play time on a sticker.</p></div></div>
+  <div class="t"><div class="v"><img src="ach.png" style="width:184px;transform:rotate(-3deg)"></div><div><h3>RetroAchievements</h3><p>On every system but the DS, with your progress on the cart and the set on the Game Boy Printer.</p></div></div>
+  <div class="t"><div class="v"><div class="tv"><img src="pd.png"></div></div><div><h3>Play on your TV</h3><p>HDMI out at 1080p. Pull the cable mid-game and play on in your hands.</p></div></div>
+  <div class="t"><div class="v"><div class="px">
+    <i class="l"></i><i class="l"></i><i></i><i></i><i></i><i></i><i class="l"></i><i class="l"></i>
+    <i class="l"></i><i></i><i class="m"></i><i class="m"></i><i class="m"></i><i class="m"></i><i></i><i class="l"></i>
+    <i></i><i class="m"></i><i class="l"></i><i class="m"></i><i class="m"></i><i class="l"></i><i class="m"></i><i></i>
+    <i></i><i class="m"></i><i class="m"></i><i class="m"></i><i class="m"></i><i class="m"></i><i class="m"></i><i></i>
+    <i class="l"></i><i></i><i class="m"></i><i class="l"></i><i class="l"></i><i class="m"></i><i></i><i class="l"></i>
+  </div></div><div><h3>See-through pixels</h3><p>Game Boy pixels that let a warm backing show through, with soft shadows.</p></div></div>
+  <div class="t"><div class="v slots"><img src="slot_ws_front.png"><img src="slot_lynx_front.png"><img src="slot_tg16_front.png"><img src="slot_pd_front.png"></div><div><h3>A slot for each shelf</h3><p>The back of each system's own handheld, from a pearl WonderSwan to a DS Lite.</p></div></div>
+</div>
+<p class="also"><b>Also:</b> save backups · romhack patches · Kid Mode with play time · DS screen layouts and stylus · RomM and Gamebit · Settings grouped by what you're doing</p>
+<p class="core"><span>Core</span>Rather just play? slotPlus Core has the same shelves, set up for you.</p>
 </body></html>
