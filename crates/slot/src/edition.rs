@@ -1,12 +1,12 @@
 //! Which slotPlus this build is, so an update fetches the same one. From 3.1 there is one
-//! line, slotPlusUltra; SlotPlus Core will be built from the same code.
+//! line, slotPlus Ultra; slotPlus Core will be built from the same code.
 
 /// The key of this edition's zip in `versions.json`.
 pub const KEY: &str = "ultra";
 /// This edition's zip on each release.
 pub const ZIP: &str = "slot-plusultra.zip";
 /// The name the update screens use.
-pub const NAME: &str = "slotPlusUltra";
+pub const NAME: &str = "slotPlus Ultra";
 
 /// slotPlus: the other edition, which Check for Updates offers to switch to.
 pub const OTHER_KEY: &str = "plus";

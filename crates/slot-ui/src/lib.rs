@@ -1,6 +1,7 @@
 mod art;
 pub use art::{cover, cover_bytes, decode_png_bytes};
 mod bitmaps;
+mod help;
 pub use bitmaps::{
     bespoke_slot, bespoke_slot_light, link_port, link_port_light, slot_back, slot_back_light,
     slot_front, slot_front_light, slot_plugged, slot_plugged_light, Mould, SLOT_H, SLOT_W,
@@ -190,8 +191,9 @@ pub use slot_chrome::{
     MOUTH_H, MOUTH_W,
 };
 pub use sticker::{
-    draw_sticker, ds_head_rows, ds_sticker_face, ds_sticker_lines, head_rows, sticker_face,
-    sticker_lines, sticker_rect, sticker_rect_sized, StickerFields, COPYRIGHT, CREDITS, DC,
-    DS_CREDITS, DS_STICKER_H, DS_STICKER_W, HOME, ORIGIN, STICKER_H, STICKER_W,
+    draw_sticker, draw_sticker_credits, ds_head_rows, ds_sticker_face, ds_sticker_lines, head_rows,
+    sticker_face, sticker_lines, sticker_rect, sticker_rect_sized, StickerFields, COPYRIGHT,
+    CREDITS, DC, DS_CREDITS, DS_STICKER_H, DS_STICKER_W, HOME, ORIGIN, SLOTPLUS_CREDITS, STICKER_H,
+    STICKER_W,
 };
 pub use toast::{toast_box, toast_face, toast_face_text, toast_rect, Toast, DS_LAYOUTS};

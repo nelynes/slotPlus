@@ -854,6 +854,8 @@ pub struct App {
     menu_tap: Option<(Millis, Option<QuickRow>)>,
     tint_peek: Option<Millis>,
     sticker_face: Option<(TexId, u32, u32)>,
+    /// slotPlus: the credits under the About sticker.
+    sticker_credits: Option<(TexId, u32, u32)>,
     ground: Option<TexId>,
     ground_w: u32,
     blur: Option<TexId>,
@@ -1457,6 +1459,7 @@ impl App {
             menu_tap: None,
             tint_peek: None,
             sticker_face: None,
+            sticker_credits: None,
             ground: None,
             ground_w: OUT_W,
             blur: None,
@@ -4237,6 +4240,21 @@ impl App {
                 hidden.push(row);
             }
         }
+        // slotPlus 3.1: likewise the shortcuts that only one system's games answer: the Game
+        // Boy's palettes, the GBA's solar sensor, and colour correction, which only the
+        // Game Boy family has.
+        if !self.has_games_for(Platform::Gb) {
+            hidden.extend([QuickRow::ScPaletteBack, QuickRow::ScPaletteNext]);
+        }
+        if !self.has_games_for(Platform::Gba) {
+            hidden.extend([QuickRow::ScSunlightDown, QuickRow::ScSunlightUp]);
+        }
+        if ![Platform::Gba, Platform::Gbc, Platform::Gb]
+            .into_iter()
+            .any(|p| self.has_games_for(p))
+        {
+            hidden.push(QuickRow::ScColour);
+        }
         if self.state.wifi_off {
             hidden.push(QuickRow::Networks);
         }
@@ -4270,6 +4288,11 @@ impl App {
 
     fn random_drawn(&self) -> bool {
         matches!(self.random_wallpaper, Some(Some(_)))
+    }
+
+    /// slotPlus: the credits shown under the About sticker.
+    pub fn set_sticker_credits(&mut self, face: TexId, w: u32, h: u32) {
+        self.sticker_credits = Some((face, w, h));
     }
 
     pub fn set_sticker_face(&mut self, face: TexId, w: u32, h: u32) {
@@ -5842,15 +5865,18 @@ impl App {
         }
     }
 
+    /// The line just above the slot: while a button is being set, which buttons it takes;
+    /// otherwise, slotPlus's help for the row.
     fn description(&self, row: QuickRow) -> Option<(TexId, u32, u32)> {
         let faces = self.quick_menu_faces.as_ref()?;
-        if row.shortcut().is_some() || row.carousel_action().is_some() {
-            Some(faces.descriptions[1])
-        } else if row.binds() {
-            Some(faces.descriptions[0])
-        } else {
-            None
+        if self.capture_row() == Some(row) {
+            if row.shortcut().is_some() || row.carousel_action().is_some() {
+                return Some(faces.descriptions[1]);
+            } else if row.binds() {
+                return Some(faces.descriptions[0]);
+            }
         }
+        faces.help.get(row.index()).copied()
     }
 
     pub fn carousel(&self) -> CarouselKeys {
@@ -10203,6 +10229,12 @@ impl App {
             Phase::About => {
                 slot_ui::draw_menu_ground(self.canvas(), self.menu_ground(), out);
                 draw_sticker(self.canvas(), self.sticker_face, out);
+                slot_ui::draw_sticker_credits(
+                    self.canvas(),
+                    self.sticker_face,
+                    self.sticker_credits,
+                    out,
+                );
                 self.draw_menu_footer(out);
                 return;
             }

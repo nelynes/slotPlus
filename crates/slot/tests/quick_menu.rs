@@ -982,6 +982,9 @@ fn fake_faces(a: &mut App) {
             (id(407), 90),
         ],
         descriptions: [(id(410), 300, 44), (id(411), 340, 44)],
+        help: (0..QuickRow::ALL.len())
+            .map(|i| (id(900 + i), 400, 23))
+            .collect(),
     });
     a.set_quick_clock_faces((id(500), 150, 40), (id(501), 150, 40));
     a.set_clock_legend_faces(
@@ -1469,6 +1472,9 @@ fn no_row_in_hand_runs_its_value_into_its_label() {
             (id(407), 90),
         ],
         descriptions: [(id(410), 300, 44), (id(411), 340, 44)],
+        help: (0..QuickRow::ALL.len())
+            .map(|i| (id(900 + i), 400, 23))
+            .collect(),
     });
     for page in [
         &QuickRow::SCREEN_GBA[..],
@@ -2560,25 +2566,21 @@ fn new_rows_and_the_way_to_them_wear_a_blue_dot() {
         .into_iter()
         .filter(|r| r.marked_new(&hidden))
         .collect();
-    assert_eq!(marked, [QuickRow::General, QuickRow::Screen]);
+    assert_eq!(marked, [QuickRow::Game, QuickRow::Online, QuickRow::System]);
     assert_eq!(
         dots(&frame(&a)).len(),
-        2,
-        "Shelf and Screen lead to new rows"
+        3,
+        "Play, Online and System lead to what's new"
     );
 
     let (_d, mut a, _) = on_carousel();
     fake_faces(&mut a);
-    open_at(&mut a, QuickRow::ShrinkWrap);
+    open_at(&mut a, QuickRow::FastForward);
     let out = frame(&a);
     let on_page = dots(&out);
-    assert_eq!(
-        on_page.len(),
-        QuickRow::SHELF_LIFE.len(),
-        "the whole page is new"
-    );
+    assert_eq!(on_page.len(), 2, "Fast Forward and Resume are new");
     let [px, _, pw, _] = placed(&out, 700).expect("the pointer");
-    let [lx, ly, _, lh] = placed(&out, label(QuickRow::ShrinkWrap, true)).unwrap();
+    let [lx, ly, _, lh] = placed(&out, label(QuickRow::FastForward, true)).unwrap();
     let [dx, dy, dw, dh] = on_page[0];
     assert!(px + pw <= dx, "the dot clears the pointer");
     assert!(dx + dw <= lx + MENU_PAD as f32, "the dot clears the label");
@@ -2586,11 +2588,8 @@ fn new_rows_and_the_way_to_them_wear_a_blue_dot() {
 
     let (_d, mut a, _) = on_carousel();
     fake_faces(&mut a);
-    open_at(&mut a, QuickRow::SYSTEM[0]);
-    assert!(
-        dots(&frame(&a)).is_empty(),
-        "nothing new on the System page"
-    );
+    open_at(&mut a, QuickRow::GENERAL[0]);
+    assert!(dots(&frame(&a)).is_empty(), "nothing new on the Look page");
 }
 
 #[test]
@@ -2611,6 +2610,46 @@ fn screen_shows_a_page_only_for_systems_with_games_on_the_card() {
         QuickRow::Screen.child().unwrap().shown(&a.hidden_rows()),
         [QuickRow::ScreenGeneral, QuickRow::ScreenGba]
     );
+    // The GBA's shortcuts stay; the Game Boy's palettes go.
+    let shortcuts = QuickRow::Shortcuts.child().unwrap().shown(&a.hidden_rows());
+    for row in [
+        QuickRow::ScSunlightDown,
+        QuickRow::ScSunlightUp,
+        QuickRow::ScColour,
+    ] {
+        assert!(shortcuts.contains(&row), "{row:?} is for the GBA");
+    }
+    for row in [QuickRow::ScPaletteBack, QuickRow::ScPaletteNext] {
+        assert!(!shortcuts.contains(&row), "{row:?} is for the Game Boy");
+    }
+}
+
+#[test]
+fn a_card_with_no_game_boy_family_games_shows_none_of_their_settings() {
+    let d = tmp_root_with_carts(&[]);
+    let dir = d.path().join("Games").join("WS");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("Klonoa.ws"), vec![0u8; 0x8000]).unwrap();
+    let mut state = read_slot_state(d.path());
+    state.clock_set = true;
+    write_slot_state(d.path(), &state).unwrap();
+    let (a, _clock) = app_booting_at(d.path(), CLOCK_IS_SET);
+    let hidden = a.hidden_rows();
+    assert_eq!(
+        QuickRow::Screen.child().unwrap().shown(&hidden),
+        [QuickRow::ScreenGeneral, QuickRow::ScreenWs]
+    );
+    let shortcuts = QuickRow::Shortcuts.child().unwrap().shown(&hidden);
+    for row in [
+        QuickRow::ScPaletteBack,
+        QuickRow::ScPaletteNext,
+        QuickRow::ScSunlightDown,
+        QuickRow::ScSunlightUp,
+        QuickRow::ScColour,
+    ] {
+        assert!(!shortcuts.contains(&row), "{row:?} has no game to act on");
+    }
+    assert!(shortcuts.contains(&QuickRow::ScShaderNext));
 }
 
 #[test]

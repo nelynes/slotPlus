@@ -26,7 +26,7 @@
     <span class="menu-bars" aria-hidden="true"></span>
   </button>
   <nav class="tabs" id="section-tabs" role="tablist" aria-label="Sections">
-    <button class="tab" role="tab" id="t-new" aria-controls="new" aria-selected="false" tabindex="-1">New in 3.0</button>
+    <button class="tab" role="tab" id="t-new" aria-controls="new" aria-selected="false" tabindex="-1">New in 3.1</button>
     <button class="tab" role="tab" id="t-install" aria-controls="install" aria-selected="false" tabindex="-1">Installing</button>
     <button class="tab" role="tab" id="t-features" aria-controls="features" aria-selected="false" tabindex="-1"><span class="tab-plus">+</span>Features</button>
     <button class="tab" role="tab" id="t-systems" aria-controls="systems" aria-selected="false" tabindex="-1">Systems</button>
@@ -47,15 +47,15 @@
     </div>
     <p class="tagline">Slot's bespoke, Game Boy-centric frontend for the Anbernic RG SP, with more handhelds on the shelf and a TV on the end of a cable.</p>
     <div class="actions">
-      <a class="btn" href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-plus.zip">Download Plus</a>
+      <a class="btn" href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-core.zip">Download Core</a>
       <a class="btn ultra" href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-plusultra.zip">Download Ultra</a>
     </div>
-    <ul class="editions" aria-label="The two versions">
-      <li class="edition plus-ed"><span class="ed-name">Plus</span><span class="ed-sys">WonderSwan, WonderSwan Color, Atari Lynx, Pokémon mini</span></li>
-      <li class="edition ultra-ed"><span class="ed-name">Ultra</span><span class="ed-sys">All of Plus, and Game Gear, NeoGeo Pocket, TurboGrafx-16, Nintendo DS</span></li>
+    <ul class="editions" aria-label="The two editions">
+      <li class="edition core-ed"><span class="ed-name">Core</span><span class="ed-sys">Set up for you. Put games on the card and play.</span></li>
+      <li class="edition ultra-ed"><span class="ed-name">Ultra</span><span class="ed-sys">Every option, RetroAchievements, RomM and more, for tinkerers.</span></li>
     </ul>
-    <p class="sub news-link"><span class="new-dot" aria-hidden="true"></span>slotPlus 3.0 is out. <a href="#new">See what's new</a></p>
-    <p class="sub">Both keep everything Slot does for Game Boy, Game Boy Color and Game Boy Advance. <a href="https://github.com/nelynes/slotPlus/releases/latest">All releases</a></p>
+    <p class="sub news-link"><span class="new-dot" aria-hidden="true"></span>slotPlus 3.1 is out. <a href="#new">See what's new</a></p>
+    <p class="sub">Both play WonderSwan, Atari Lynx, Pokémon mini, Game Gear, NeoGeo Pocket, TurboGrafx-16, Nintendo DS and Pokémon games on PokeDaisy, beside everything Slot does for Game Boy, Game Boy Color and Game Boy Advance. <a href="https://github.com/nelynes/slotPlus/releases/latest">All releases</a></p>
   </div>
 
   <div class="hero-device">
@@ -90,13 +90,61 @@
 
 <section class="panel reference news" id="new" role="tabpanel" aria-labelledby="t-new" hidden>
   <div class="wrap">
-    <h2>New in 3.0: The Cart Remembers</h2>
-    <p class="lede">Your carts now keep a record of how they've been played. Every change is in the <a href="https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus3.0">release notes</a>.</p>
+    <h2>New in 3.1: Play or Tinker</h2>
+    <p class="lede">One slotPlus with every system, in two editions, and Settings regrouped by what you're doing. Every change is in the <a href="https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus3.1">release notes</a>.</p>
+
+    <figure class="news-item" id="new-editions">
+      <img src="media/new/roadmap.jpg" width="1600" height="900" loading="lazy" alt="The slotPlus 3 roadmap: 3.0, The Cart Remembers, and 3.1, Play or Tinker, are out, with 3.2 and 3.3 to come">
+      <figcaption>
+        <p class="badges"><span class="badge core">Core</span><span class="badge ultra">Ultra</span></p>
+        <h3>Two Editions, Every System</h3>
+        <p>Both editions play every system, and a system only gets a shelf when it has games on the card. <strong>Core</strong> comes set up for you, with most options a plain On or Off and no accounts to sign in to: for a gift, a child's handheld, or anyone who'd rather just play. <strong>Ultra</strong> has every option, with RetroAchievements, RomM, Gamebit, save states with undo, and shaders and bezels for every system. Everyone on 3.0 updates into Ultra, with their games, saves and settings. <a href="#install-which">Which one is for you?</a></p>
+      </figcaption>
+    </figure>
+
+    <figure class="news-item" id="new-settings">
+      <figcaption>
+        <p class="badges"><span class="badge core">Core</span><span class="badge ultra">Ultra</span></p>
+        <h3>Settings, Regrouped</h3>
+        <p>The top level is now Look, Library, Play, Screen, Controls, Online and System, grouped by what you're doing. Your choices carry over. Here's where everything went:</p>
+        <dl class="keys">
+          <div class="key"><dt>Look</dt><dd>Theme, Wallpaper, Cart Slot, Game Titles and Shelf Life, from Shelf.</dd></div>
+          <div class="key"><dt>Library</dt><dd>Shelf Mode and Recents, from Shelf; Gamebit, RomM and Fetch Missing Art, from Tools.</dd></div>
+          <div class="key"><dt>Play</dt><dd>What Gameplay held. Fast Forward's sound is part of its speed (2×, 2× Sound…), and one Resume row says when a game picks up where you left it: Insert, Power On, Both or Off.</dd></div>
+          <div class="key"><dt>Screen</dt><dd>As before, with a page only for the systems with games on the card.</dd></div>
+          <div class="key"><dt>Controls</dt><dd>As before.</dd></div>
+          <div class="key"><dt>Online</dt><dd>Wi-Fi and Check for Updates, from System, and RetroAchievements.</dd></div>
+          <div class="key"><dt>System</dt><dd>Kid Mode on a page of its own (from Shelf), then Date &amp; Time, Nickname, Lid Power Off, Battery Display and About.</dd></div>
+        </dl>
+        <p>A line just above the slot now says what each row does, in Settings and in a game. Every page and row is in the <a href="https://github.com/nelynes/slotPlus/blob/main/SETTINGS.md">settings guide</a>.</p>
+      </figcaption>
+    </figure>
+
+    <figure class="news-item" id="new-pokedaisy">
+      <figcaption>
+        <p class="badges"><span class="badge core">Core</span><span class="badge ultra">Ultra</span></p>
+        <h3>A PokeDaisy Shelf</h3>
+        <p>Put Pokémon games for Game Boy Advance, Game Boy and Game Boy Color in <code>Games/PokeDaisy/</code> and they play on <a href="https://github.com/lidor30/pokedaisy">PokeDaisy</a>, with its companion (party, bag, Pokédex, map, guide) on <kbd>X</kbd> and its quick menu on <kbd>Y</kbd>. Each game keeps its own cart and its own save, and with Cart Slot on Bespoke the shelf's slot is a meadow with daisies. In Ultra, its games earn RetroAchievements too. <a href="#sys-pokedaisy">Details</a></p>
+      </figcaption>
+    </figure>
+
+    <figure class="news-item" id="new-fixes">
+      <figcaption>
+        <h3>Fixes</h3>
+        <ul class="news-list">
+          <li><strong>Reset works again</strong> on every system with RetroAchievements, signed in or not.</li>
+          <li><strong>The blue dots</strong> in Settings mark what's new in 3.1.</li>
+        </ul>
+      </figcaption>
+    </figure>
+
+    <h2>Last time, 3.0: The Cart Remembers</h2>
+    <p class="lede">Your carts keep a record of how they've been played. Every change is in the <a href="https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus3.0">3.0 release notes</a>.</p>
 
     <figure class="news-item" id="new-shelf-life">
       <img src="media/new/01-shelf-life.jpg" width="1600" height="900" loading="lazy" alt="A shrink-wrapped cart, then three levels of dust and three of wear">
       <figcaption>
-        <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+        <p class="badges"><span class="badge core">Core</span><span class="badge ultra">Ultra</span></p>
         <h3>Shelf Life</h3>
         <p>Carts left alone gather dust: a little after two weeks, thick after three months. Carts you play show their wear after 3, 8 and 25 hours. Hold <kbd>B</kbd> on a cart to clean it, choose what the clean takes off, or clean every cart at once. It's all in Settings → Look → Shelf Life.</p>
       </figcaption>
@@ -105,7 +153,7 @@
     <figure class="news-item" id="new-shrink-wrap">
       <img src="media/new/02-price-stickers.jpg" width="1600" height="900" loading="lazy" alt="Shrink-wrapped carts with price stickers in dollars, yen and euros">
       <figcaption>
-        <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+        <p class="badges"><span class="badge core">Core</span><span class="badge ultra">Ultra</span></p>
         <h3>Still in the Shrink Wrap</h3>
         <p>A game you've never played sits in shrink wrap with a price sticker, priced in dollars, yen or euros by where the game was sold. The first time you put it in, the film rips open with a crackle of cellophane.</p>
       </figcaption>
@@ -114,25 +162,25 @@
     <figure class="news-item" id="new-carts-open">
       <img src="media/new/03-every-cart-opens.jpg" width="1600" height="900" loading="lazy" alt="The boards inside each system's cart, with play-time and achievement stickers">
       <figcaption>
-        <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+        <p class="badges"><span class="badge core">Core</span><span class="badge ultra">Ultra</span></p>
         <h3>Every Cart Opens</h3>
-        <p>START opens any cart to the board inside, now on every system: new boards for WonderSwan and Pokémon mini, and in Ultra the Game Gear, NeoGeo Pocket and DS. A HuCard turns over to a printed back with your Nickname on it. Your play time is handwritten on a sticker inside.</p>
+        <p>START opens any cart to the board inside, now on every system: new boards for WonderSwan and Pokémon mini, the Game Gear, NeoGeo Pocket and DS. A HuCard turns over to a printed back with your Nickname on it. Your play time is handwritten on a sticker inside.</p>
       </figcaption>
     </figure>
 
     <figure class="news-item" id="new-achievements">
       <img src="media/new/04-achievement-printout.jpg" width="1600" height="900" loading="lazy" alt="A gold achievements sticker inside the cart, and the whole set printed on the Game Boy Printer">
       <figcaption>
-        <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+        <p class="badges"><span class="badge ultra">Ultra</span></p>
         <h3>Your Progress, on the Cart and on Paper</h3>
-        <p>A gold sticker inside the cart shows how many of a game's RetroAchievements you've earned. With the cart open, <kbd>SELECT</kbd> prints the whole set on the Game Boy Printer, and the printout is kept beside your screenshots.</p>
+        <p>In Ultra, a gold sticker inside the cart shows how many of a game's RetroAchievements you've earned. With the cart open, <kbd>SELECT</kbd> prints the whole set on the Game Boy Printer, and the printout is kept beside your screenshots.</p>
       </figcaption>
     </figure>
 
     <figure class="news-item" id="new-pokemon-mini">
       <img src="media/new/05-pokemon-mini.jpg" width="1600" height="900" loading="lazy" alt="Pokémon mini carts on their own shelf">
       <figcaption>
-        <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+        <p class="badges"><span class="badge core">Core</span><span class="badge ultra">Ultra</span></p>
         <h3>Pokémon mini</h3>
         <p>Put <code>.min</code> games in <code>Games/PokeMini/</code>. They get their own shelf and little carts, and with Cart Slot on Bespoke the slot is the back of a blue Pokémon mini. <a href="#sys-pm">Controls and details</a></p>
       </figcaption>
@@ -146,9 +194,8 @@
           <li><strong>Romhacks and translations:</strong> put a <code>.ips</code>, <code>.bps</code> or <code>.ups</code> patch beside a game with the same name and it's applied as the game loads.</li>
           <li><strong>Kid Play Time:</strong> a daily limit for Kid Mode, from 15 minutes to 2 hours.</li>
           <li><strong>Save backups:</strong> the last three versions of each save are kept in <code>Saves/Backups/</code>.</li>
-          <li><strong>Switch editions:</strong> move between Plus and Ultra from Settings → Online → Check for Updates.</li>
           <li><strong>What's new is marked:</strong> a blue dot in Settings beside every new option.</li>
-          <li><strong>Nintendo DS</strong> <span class="badge ultra">Ultra</span> uses your Nickname and the real time, on DSperate v3.4.1.</li>
+          <li><strong>Nintendo DS</strong> uses your Nickname and the real time, on DSperate v3.4.1.</li>
           <li><strong>Fixes:</strong> WonderSwan games run at full speed again, and no more green border on a TV.</li>
         </ul>
       </figcaption>
@@ -160,7 +207,7 @@
   <div class="wrap">
     <h2>Installing</h2>
     <nav class="subtabs" role="tablist" aria-label="Installing">
-      <button class="subtab" role="tab" id="t-install-which" aria-controls="install-which" aria-selected="true">Which Version?</button>
+      <button class="subtab" role="tab" id="t-install-which" aria-controls="install-which" aria-selected="true">Which Edition?</button>
       <button class="subtab" role="tab" id="t-install-single" aria-controls="install-single" aria-selected="false" tabindex="-1">Single SD Card</button>
       <button class="subtab" role="tab" id="t-install-dual" aria-controls="install-dual" aria-selected="false" tabindex="-1">Dual SD Cards</button>
       <button class="subtab" role="tab" id="t-install-from-slot" aria-controls="install-from-slot" aria-selected="false" tabindex="-1">Coming from slot</button>
@@ -168,33 +215,32 @@
     </nav>
 
     <div class="subpanel" id="install-which" role="tabpanel" aria-labelledby="t-install-which">
-      <p class="lede">Every release comes in two versions. Both are built from the same code, so pick by the systems you want on your shelf.</p>
+      <p class="lede">Every release comes in two editions, built from the same code. Both play every system, and a system only gets a shelf when it has games on the card. Pick by how much you want to set up.</p>
       <div class="ed-cards">
-        <div class="ed-card plus-ed">
-          <h3><span class="ed-tab">Plus<span class="plus" aria-hidden="true">+</span></span> slotPlus</h3>
-          <p class="ed-for">For the 3:2 fan</p>
+        <div class="ed-card core-ed">
+          <h3><span class="ed-tab">Core</span> slotPlus Core</h3>
+          <p class="ed-for">Put games on the card and play</p>
           <ul>
-            <li>Game Boy Advance, Game Boy Color and Game Boy</li>
-            <li>WonderSwan and WonderSwan Color</li>
-            <li>Atari Lynx</li>
-            <li>Pokémon mini</li>
+            <li>For a gift, a child's handheld, or anyone who'd rather not open a menu</li>
+            <li>Every system comes set up: the bespoke cart slot, colour correction, Game Boy games filling the screen, games resuming where you left them</li>
+            <li>Most options are a plain On or Off</li>
+            <li>No accounts: no RetroAchievements, RomM or Gamebit</li>
           </ul>
-          <a class="btn" href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-plus.zip">Download <code>slot-plus.zip</code></a>
+          <a class="btn" href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-core.zip">Download <code>slot-core.zip</code></a>
         </div>
         <div class="ed-card ultra-ed">
-          <h3><span class="ed-tab ultra-tab">Ultra</span> slotPlusUltra</h3>
-          <p class="ed-for">For the ultimate handheld</p>
+          <h3><span class="ed-tab ultra-tab">Ultra</span> slotPlus Ultra</h3>
+          <p class="ed-for">Every door open, for tinkerers</p>
           <ul>
-            <li>Everything in slotPlus</li>
-            <li>Sega Game Gear</li>
-            <li>NeoGeo Pocket and NeoGeo Pocket Color</li>
-            <li>TurboGrafx-16 HuCards</li>
-            <li>Nintendo DS</li>
+            <li>Every menu and every option</li>
+            <li>RetroAchievements, RomM and Gamebit</li>
+            <li>Save states with undo, screenshots and guides in a game</li>
+            <li>Shaders, overlays, frame blending and bezels for every system</li>
           </ul>
           <a class="btn ultra" href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-plusultra.zip">Download <code>slot-plusultra.zip</code></a>
         </div>
       </div>
-      <p class="install-note">Not sure? Start with Plus. Moving to Ultra later is just a matter of swapping one folder, and your games, saves and settings stay put. Moving back works the same way.</p>
+      <p class="install-note">Not sure? Ultra is what slotPlus has always been, and what everyone on 3.0 updates into. Switch any time from Settings → Online → Check for Updates, or by swapping the <code>System/</code> folder; your games and saves stay. Going to Core starts you on Core's own settings. <a href="https://github.com/nelynes/slotPlus/blob/main/SETTINGS.md#which-edition-is-for-you">The two compared</a></p>
     </div>
 
     <div class="subpanel" id="install-single" role="tabpanel" aria-labelledby="t-install-single" hidden>
@@ -213,7 +259,7 @@
         </li>
         <li>
           <h3>Download the latest release</h3>
-          <p>Fetch <a href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-plus.zip"><code>slot-plus.zip</code></a> or <a href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-plusultra.zip"><code>slot-plusultra.zip</code></a> from the <a href="https://github.com/nelynes/slotPlus/releases/latest">latest release</a>.</p>
+          <p>Fetch <a href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-core.zip"><code>slot-core.zip</code></a> or <a href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-plusultra.zip"><code>slot-plusultra.zip</code></a> from the <a href="https://github.com/nelynes/slotPlus/releases/latest">latest release</a>. <a href="#install-which">Which one?</a></p>
         </li>
         <li>
           <h3>Copy it onto your SD Card</h3>
@@ -249,7 +295,7 @@
         </li>
         <li>
           <h3>Download the latest release</h3>
-          <p>Fetch <a href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-plus.zip"><code>slot-plus.zip</code></a> or <a href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-plusultra.zip"><code>slot-plusultra.zip</code></a> from the <a href="https://github.com/nelynes/slotPlus/releases/latest">latest release</a>.</p>
+          <p>Fetch <a href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-core.zip"><code>slot-core.zip</code></a> or <a href="https://github.com/nelynes/slotPlus/releases/latest/download/slot-plusultra.zip"><code>slot-plusultra.zip</code></a> from the <a href="https://github.com/nelynes/slotPlus/releases/latest">latest release</a>. <a href="#install-which">Which one?</a></p>
         </li>
         <li>
           <h3>Copy it onto SD2</h3>
@@ -279,8 +325,8 @@
       <p class="lede">Already playing on slot? slotPlus drops in over it. Everything you have stays: games, saves, save states, labels, wallpapers, favorites and settings. You can go back to slot the same way.</p>
       <ol class="install-steps">
         <li>
-          <h3>Download Plus or Ultra</h3>
-          <p>Pick a version on the <a href="#install-which">Which Version?</a> tab and unzip it.</p>
+          <h3>Download Core or Ultra</h3>
+          <p>Pick an edition on the <a href="#install-which">Which Edition?</a> tab and unzip it.</p>
         </li>
         <li>
           <h3>Replace the <code>System/</code> folder</h3>
@@ -296,14 +342,15 @@
           <p>slotPlus creates the new systems' folders under <code>Games</code>, <code>Labels</code>, <code>Saves</code>, <code>States</code> and <code>Bezels</code>. Fill <code>Games/</code> and the new shelves appear.</p>
         </li>
       </ol>
-      <p class="install-note"><strong>Switching between Plus and Ultra</strong> works the same way: replace <code>System/</code> with the other version's. Going from Ultra back to Plus leaves the Game Gear, NeoGeo Pocket, TurboGrafx-16 and DS games and saves on the card, just without their shelves.</p>
+      <p class="install-note"><strong>Switching between Core and Ultra</strong> works the same way: replace <code>System/</code> with the other edition's, or use Settings → Online → Check for Updates. Your games and saves stay.</p>
     </div>
 
     <div class="subpanel" id="install-update" role="tabpanel" aria-labelledby="t-install-update" hidden>
       <ol class="install-steps">
         <li>
           <h3>Download the latest release</h3>
-          <p>Fetch the same version you're running, Plus or Ultra, from the <a href="https://github.com/nelynes/slotPlus/releases/latest">latest release</a> and unzip it.</p>
+          <p>The easy way: Settings → Online → Check for Updates, over Wi-Fi. Or fetch the same edition you're running, Core or Ultra, from the <a href="https://github.com/nelynes/slotPlus/releases/latest">latest release</a> and unzip it.</p>
+          <p>On slotPlus 3.0 (the Plus edition)? Take Ultra: it's what Plus became, with the Game Gear, NeoGeo Pocket, TurboGrafx-16 and DS shelves added.</p>
         </li>
         <li>
           <h3>Replace the <code>System/</code> folder</h3>
@@ -363,19 +410,19 @@
   <p class="guide-intro">What slotPlus adds to slot. For everything else, slot's own guide has you covered.</p>
   <ol class="guide-steps">
       <li class="step" id="shelves" data-clip="main.mp4">
-        <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+        <p class="badges"><span class="badge core">Core</span><span class="badge ultra">Ultra</span></p>
         <h3>More Shelves</h3>
-        <p><kbd>L1</kbd> and <kbd>R1</kbd> switch shelves, just like slot.<br>Plus adds WonderSwan and Atari Lynx.<br>Ultra adds Game Gear, NeoGeo Pocket, TurboGrafx-16 and Nintendo DS.</p>
+        <p><kbd>L1</kbd> and <kbd>R1</kbd> switch shelves, just like slot.<br>WonderSwan, Atari Lynx, Pokémon mini, Game Gear, NeoGeo Pocket, TurboGrafx-16, Nintendo DS and PokeDaisy each get one, as soon as they have games on the card.</p>
       </li>
       <li class="step" id="carts" data-still="carts.webp">
-        <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+        <p class="badges"><span class="badge core">Core</span><span class="badge ultra">Ultra</span></p>
         <h3>A Cart for Every System</h3>
         <p>Each system gets its own cart, drawn in slot's look.<br>WonderSwan games come in black, WonderSwan Color games in frosted clear.<br>Give any game its own shell in <code>Config/cart_shell.txt</code>.</p>
       </li>
       <li class="step" id="cartslot" data-clip="cartslot.mp4">
-        <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+        <p class="badges"><span class="badge core">Core</span><span class="badge ultra">Ultra</span></p>
         <h3>A Cart Slot for Every System</h3>
-        <p>Set Settings &gt; Shelf &gt; Cart Slot to Bespoke and the slot on each shelf becomes the back of that system's handheld.<br>Plus has a pearl WonderSwan, a Lynx II and a blue Pokémon mini. Ultra adds a Game Gear, a carbon NeoGeo Pocket Color, a TurboExpress and a silver DS Lite.<br>The Game Boy shelves keep slot's own.</p>
+        <p>Set Settings &gt; Look &gt; Cart Slot to Bespoke (Core starts there) and the slot on each shelf becomes the back of that system's handheld.<br>A pearl WonderSwan, a Lynx II, a blue Pokémon mini, a Game Gear, a carbon NeoGeo Pocket Color, a TurboExpress, a silver DS Lite, and daisies for PokeDaisy.<br>The Game Boy shelves keep slot's own.</p>
       </li>
       <li class="step" id="hucard" data-clip="hucard.mp4">
         <p class="badges"><span class="badge ultra">Ultra</span></p>
@@ -388,34 +435,34 @@
         <p>DS games play on DSperate, at full speed.<br><kbd>L2</kbd> swaps the main screen, and <kbd>SELECT</kbd> + <kbd>L2</kbd> steps through Both Screens, One Screen, Full Screen, Side by Side and Picture in Picture.<br>Hold <kbd>R2</kbd> and the D-pad moves a stylus over the bottom screen, and <kbd>A</kbd> touches.</p>
       </li>
       <li class="step" id="turned" data-clip="turned.mp4">
-        <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+        <p class="badges"><span class="badge core">Core</span><span class="badge ultra">Ultra</span></p>
         <h3>Games Made to Be Held Sideways</h3>
         <p>Vertical WonderSwan games and sideways Lynx games are drawn turned, for playing with the handheld on its side.<br><kbd>START</kbd> on a Lynx cart turns it over to choose how you'll hold it.<br><kbd>SELECT</kbd> stands the picture upright instead.</p>
       </li>
       <li class="step" id="stretch" data-clip="stretch.mp4">
-        <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+        <p class="badges"><span class="badge core">Core</span><span class="badge ultra">Ultra</span></p>
         <h3>Stretch Every System</h3>
         <p><kbd>L1</kbd> stretches Game Gear, NeoGeo Pocket and TurboGrafx-16 games.<br><kbd>R1</kbd> puts them back.<br>WonderSwan and Lynx games stretch with a line in <code>Config/video_mode.txt</code>.</p>
       </li>
       <li class="step" id="screen" data-clip="screen.mp4">
-        <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+        <p class="badges"><span class="badge core">Core</span><span class="badge ultra">Ultra</span></p>
         <h3>Shaders and Bezels for Each System</h3>
-        <p>Each system has its own page under Screen, with its own Shader and Bezel.<br><kbd>SELECT</kbd> + <kbd>B</kbd> / <kbd>A</kbd> steps through that system's shaders.<br>Ultra bundles bezels for the Game Gear, NeoGeo Pocket, TurboGrafx-16 and Nintendo DS.</p>
+        <p>In Ultra, each system has its own page under Screen, with its own Shader and Bezel, and bundled bezels for the Game Gear, NeoGeo Pocket, TurboGrafx-16 and Nintendo DS.<br><kbd>SELECT</kbd> + <kbd>B</kbd> / <kbd>A</kbd> steps through that system's shaders.<br>Core keeps it to one choice per system: Clean or LCD.</p>
       </li>
       <li class="step" id="transparency" data-clip="transparency.mp4">
-        <p class="badges"><span class="badge extras">Every version</span></p>
+        <p class="badges"><span class="badge core">Core</span><span class="badge ultra">Ultra</span></p>
         <h3>Pixel Transparency</h3>
         <p>A new Transparent shader for Game Boy and Game Boy Color.<br>Light pixels let a warm, grainy backing show through, and dark pixels cast soft shadows onto it.</p>
       </li>
       <li class="step" id="hdmi" data-clip="main.mp4" data-tv>
-        <p class="badges"><span class="badge extras">Every version</span></p>
+        <p class="badges"><span class="badge core">Core</span><span class="badge ultra">Ultra</span></p>
         <h3>HDMI Support</h3>
         <p>Plug a TV into the mini-HDMI port and the shelf and games move to it, sound and all.<br>Pull the cable mid-game and slotPlus saves, moves back to the handheld and carries on.</p>
       </li>
       <li class="step" id="achievements" data-clip="achievements.mp4">
-        <p class="badges"><span class="badge extras">Every version</span></p>
+        <p class="badges"><span class="badge ultra">Ultra</span></p>
         <h3>RetroAchievements</h3>
-        <p>Game Boy, Game Boy Color, Game Boy Advance, WonderSwan and Atari Lynx games (and in slotPlusUltra, Game Gear, NeoGeo Pocket and TurboGrafx-16 games) earn achievements, with a banner and the achievement's own badge.<br>Enter your account in Settings &gt; RetroAchievements and pick Download Achievement Sets. A gold trophy on the shelf marks a game that has one.<br>Wi-Fi stays off while you play; what you earn is sent when you're back on the shelf.</p>
+        <p>Game Boy, Game Boy Color, Game Boy Advance, WonderSwan, Atari Lynx, Game Gear, NeoGeo Pocket and TurboGrafx-16 games, and PokeDaisy's, earn achievements, with a banner and the achievement's own badge.<br>Enter your account in Settings &gt; Online &gt; RetroAchievements and pick Download Achievement Sets. A gold trophy on the shelf marks a game that has one.<br>Wi-Fi stays off while you play; what you earn is sent when you're back on the shelf.</p>
       </li>
   </ol>
   <div class="stepper">
@@ -439,6 +486,7 @@
       <button class="subtab" role="tab" id="t-sys-ngp" aria-controls="sys-ngp" aria-selected="false" tabindex="-1">NeoGeo Pocket</button>
       <button class="subtab" role="tab" id="t-sys-tg16" aria-controls="sys-tg16" aria-selected="false" tabindex="-1">TurboGrafx-16</button>
       <button class="subtab" role="tab" id="t-sys-nds" aria-controls="sys-nds" aria-selected="false" tabindex="-1">Nintendo DS</button>
+      <button class="subtab" role="tab" id="t-sys-pokedaisy" aria-controls="sys-pokedaisy" aria-selected="false" tabindex="-1">PokeDaisy</button>
     </nav>
 
     <div class="subpanel" id="sys-shared" role="tabpanel" aria-labelledby="t-sys-shared">
@@ -447,18 +495,18 @@
         <div class="key"><dt>Shelf</dt><dd>Each system gets its own shelf. Its folders under <code>Games</code>, <code>Labels</code>, <code>Saves</code>, <code>States</code> and <code>Bezels</code> are created on first boot.</dd></div>
         <div class="key"><dt>Label art</dt><dd>Optional PNGs in <code>Labels/&lt;folder&gt;/&lt;game name&gt;.png</code>, named after the game's file without its extension. Art of another size is scaled to cover the label and cropped, except on HuCards, which keep the art's own shape.</dd></div>
         <div class="key"><dt>Controls</dt><dd>The In-Game controls page in Settings covers every system, so any of the buttons below can be moved. The tables show where they start.</dd></div>
-        <div class="key"><dt>Screen menu</dt><dd>Each system has its own page under Screen, with its own Shader and Bezel, beside General for Brightness and Blue Light. <kbd>SELECT</kbd> + <kbd>B</kbd> / <kbd>A</kbd> in a game steps through that system's shaders.</dd></div>
+        <div class="key"><dt>Screen menu</dt><dd>Each system with games on the card has its own page under Screen, with its own Shader and Bezel, beside General for Brightness and Blue Light (in Core, one Shader row: Clean or LCD). <kbd>SELECT</kbd> + <kbd>B</kbd> / <kbd>A</kbd> in a game steps through that system's shaders.</dd></div>
         <div class="key"><dt>Your own bezels</dt><dd>PNGs in <code>Bezels/&lt;folder&gt;/</code> the size of the screen, with the screen area transparent: 720x480, or 640x480 on a 4:3 handheld such as the RG 35XXSP, where it shows pixel for pixel and the SP frame is offered too. A bezel shows at actual size, not when the picture is stretched.</dd></div>
         <div class="key"><dt>Stretch</dt><dd>Game Gear, NeoGeo Pocket and TurboGrafx-16: <kbd>L1</kbd> stretches, <kbd>R1</kbd> gives back actual size. Lynx and WonderSwan use L1 and R1 as game buttons, so a game is set to stretch in <code>Config/video_mode.txt</code>, as <code>Game Name (USA) = stretch</code>. Each game remembers its choice. The Nintendo DS has screen layouts instead.</dd></div>
         <div class="key"><dt>Cart shells</dt><dd>Each system's carts have a default shell. <code>Config/cart_shell.txt</code> gives a single game its own.</dd></div>
         <div class="key"><dt>Two-tone carts</dt><dd>Famicom Mini carts are red in front and white behind, as they came. Give any game a two-tone shell with a fourth colour in <code>Config/cart_shell.txt</code>.</dd></div>
-        <div class="key"><dt>RetroAchievements</dt><dd>Game Boy, Game Boy Color, Game Boy Advance, WonderSwan and Atari Lynx games earn softcore achievements, and in slotPlusUltra Game Gear, NeoGeo Pocket and TurboGrafx-16 games too. Enter your account in Settings → Online → RetroAchievements and use Download Achievement Sets there (X refreshes them all). Achievements earned while playing are kept on the card and sent when you're back on the shelf.</dd></div>
+        <div class="key"><dt>RetroAchievements</dt><dd>In Ultra, Game Boy, Game Boy Color, Game Boy Advance, WonderSwan, Atari Lynx, Game Gear, NeoGeo Pocket and TurboGrafx-16 games, and PokeDaisy's, earn softcore achievements. Enter your account in Settings → Online → RetroAchievements and use Download Achievement Sets there (X refreshes them all). Achievements earned while playing are kept on the card and sent when you're back on the shelf.</dd></div>
         <div class="key"><dt>States and resume</dt><dd>Save states and the resume state work as they do for every other system.</dd></div>
       </dl>
     </div>
 
     <div class="subpanel" id="sys-ws" role="tabpanel" aria-labelledby="t-sys-ws" hidden>
-      <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+      <p class="badges"><span class="badge core">Core</span><span class="badge ultra">Ultra</span></p>
       <dl class="keys">
         <div class="key"><dt>Games</dt><dd><code>.ws</code> and <code>.wsc</code> in <code>Games/WS/</code>. Both share one shelf.</dd></div>
         <div class="key"><dt>BIOS</dt><dd>Not needed</dd></div>
@@ -490,7 +538,7 @@
     </div>
 
     <div class="subpanel" id="sys-lynx" role="tabpanel" aria-labelledby="t-sys-lynx" hidden>
-      <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+      <p class="badges"><span class="badge core">Core</span><span class="badge ultra">Ultra</span></p>
       <aside class="admonition" role="note">
         <p class="admonition-title">Lynx games need <code>lynxboot.img</code></p>
         <p>The Lynx boot ROM is not included. Put your own copy in <code>BIOS/</code>.</p>
@@ -524,7 +572,7 @@
     </div>
 
     <div class="subpanel" id="sys-pm" role="tabpanel" aria-labelledby="t-sys-pm" hidden>
-      <p class="badges"><span class="badge plus">Plus</span><span class="badge ultra">Ultra</span></p>
+      <p class="badges"><span class="badge core">Core</span><span class="badge ultra">Ultra</span></p>
       <dl class="keys">
         <div class="key"><dt>Games</dt><dd><code>.min</code> in <code>Games/PokeMini/</code></dd></div>
         <div class="key"><dt>BIOS</dt><dd>Not needed: PokeMini has its own</dd></div>
@@ -549,7 +597,7 @@
     </div>
 
     <div class="subpanel" id="sys-gg" role="tabpanel" aria-labelledby="t-sys-gg" hidden>
-      <p class="badges"><span class="badge ultra">Ultra</span></p>
+      <p class="badges"><span class="badge core">Core</span><span class="badge ultra">Ultra</span></p>
       <dl class="keys">
         <div class="key"><dt>Games</dt><dd><code>.gg</code> in <code>Games/GG/</code></dd></div>
         <div class="key"><dt>BIOS</dt><dd>Not needed</dd></div>
@@ -573,7 +621,7 @@
     </div>
 
     <div class="subpanel" id="sys-ngp" role="tabpanel" aria-labelledby="t-sys-ngp" hidden>
-      <p class="badges"><span class="badge ultra">Ultra</span></p>
+      <p class="badges"><span class="badge core">Core</span><span class="badge ultra">Ultra</span></p>
       <dl class="keys">
         <div class="key"><dt>Games</dt><dd><code>.ngp</code>, <code>.ngc</code> and <code>.ngpc</code> in <code>Games/NGP/</code>. Black-and-white and colour games share one shelf.</dd></div>
         <div class="key"><dt>BIOS</dt><dd>Not needed: the core stands in for it</dd></div>
@@ -601,7 +649,7 @@
     </div>
 
     <div class="subpanel" id="sys-tg16" role="tabpanel" aria-labelledby="t-sys-tg16" hidden>
-      <p class="badges"><span class="badge ultra">Ultra</span></p>
+      <p class="badges"><span class="badge core">Core</span><span class="badge ultra">Ultra</span></p>
       <dl class="keys">
         <div class="key"><dt>Games</dt><dd>HuCard games as <code>.pce</code> in <code>Games/TG16/</code>. CD and SuperGrafx games are not supported.</dd></div>
         <div class="key"><dt>BIOS</dt><dd>Not needed: HuCards boot straight in</dd></div>
@@ -625,7 +673,7 @@
       </dl>
     </div>
     <div class="subpanel" id="sys-nds" role="tabpanel" aria-labelledby="t-sys-nds" hidden>
-      <p class="badges"><span class="badge ultra">Ultra</span></p>
+      <p class="badges"><span class="badge core">Core</span><span class="badge ultra">Ultra</span></p>
       <dl class="keys">
         <div class="key"><dt>Games</dt><dd><code>.nds</code> in <code>Games/NDS/</code></dd></div>
         <div class="key"><dt>BIOS</dt><dd>Not needed: DSperate boots games straight in. Your own <code>bios7.bin</code>, <code>bios9.bin</code> and <code>firmware.bin</code> in <code>BIOS/</code> are used if they're there.</dd></div>
@@ -658,6 +706,27 @@
         <div class="key"><dt>Hold <kbd>R2</kbd></dt><dd>The stylus: the D-pad moves it over the bottom screen, <kbd>A</kbd> touches. While it's out, the bottom screen is the main one.</dd></div>
       </dl>
       <p class="note">L2 and R2 are the DS's here, so for fast forward bind the Fast Forward Toggle shortcut, or move Fast Forward, on the Shortcuts page.</p>
+    </div>
+
+    <div class="subpanel" id="sys-pokedaisy" role="tabpanel" aria-labelledby="t-sys-pokedaisy" hidden>
+      <p class="badges"><span class="badge core">Core</span><span class="badge ultra">Ultra</span></p>
+      <p class="lede">A shelf for Pokémon games played on <a href="https://github.com/lidor30/pokedaisy">PokeDaisy</a> by Lidor Itzhari, which runs them with a companion: your party, bag, Pokédex, map and a guide, read live from the game, plus a quick menu of shortcuts.</p>
+      <dl class="keys">
+        <div class="key"><dt>Games</dt><dd><code>.gba</code>, <code>.gb</code> and <code>.gbc</code> together in <code>Games/PokeDaisy/</code>. Putting a game there is how you choose PokeDaisy for it; the same game can stay on its own shelf too.</dd></div>
+        <div class="key"><dt>BIOS</dt><dd>Not needed</dd></div>
+        <div class="key"><dt>Core</dt><dd>PokeDaisy: over armGBA for Game Boy Advance games, over mGBA for Game Boy and Game Boy Color games</dd></div>
+        <div class="key"><dt>Label art</dt><dd><code>Labels/PokeDaisy/</code>, or the game's own system's folder when that has none</dd></div>
+        <div class="key"><dt>Picture</dt><dd>PokeDaisy draws its own screen round the game, and it always fills the screen. No shader, bezel or overlay.</dd></div>
+        <div class="key"><dt>Cart</dt><dd>Each game's own system's cart, side by side on one shelf. With Cart Slot on Bespoke, the slot is a meadow-green shell with small daisies.</dd></div>
+        <div class="key"><dt>Saves</dt><dd>The game's save is its system's (<code>Saves/GBA/</code> for a Game Boy Advance game), so a game moved between shelves keeps its progress. Save states and the resume state are in <code>States/PokeDaisy/</code>.</dd></div>
+        <div class="key"><dt>RetroAchievements</dt><dd>In Ultra, softcore, from the same set as on the game's own shelf. Paused while PokeDaisy's Flight Area is Anywhere, with a pill in the corner saying so.</dd></div>
+      </dl>
+      <h3>Controls</h3>
+      <dl class="keys">
+        <div class="key"><dt><kbd>X</kbd></dt><dd>PokeDaisy's companion</dd></div>
+        <div class="key"><dt><kbd>Y</kbd></dt><dd>PokeDaisy's quick menu</dd></div>
+        <div class="key"><dt>The rest</dt><dd>As on the game's own shelf</dd></div>
+      </dl>
     </div>
   </div>
 </section>
@@ -700,7 +769,7 @@
 
     <h3>Type</h3>
     <dl class="keys">
-      <div class="key"><dt>Typeface</dt><dd><a href="https://github.com/googlefonts/opensans">Open Sans</a>, with <a href="https://github.com/googlefonts/nunito">Nunito</a> and <a href="https://github.com/theleagueof/orbitron">Orbitron</a> for the Plus and Ultra tabs, all under the SIL Open Font License</dd></div>
+      <div class="key"><dt>Typeface</dt><dd><a href="https://github.com/googlefonts/opensans">Open Sans</a>, with <a href="https://github.com/googlefonts/nunito">Nunito</a> and <a href="https://github.com/theleagueof/orbitron">Orbitron</a> for the Core and Ultra tabs, all under the SIL Open Font License</dd></div>
       <div class="key"><dt>Symbols</dt><dd><a href="https://www.nerdfonts.com">Nerd Fonts</a> by Ryan L. McIntyre, under MIT</dd></div>
     </dl>
 

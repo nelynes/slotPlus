@@ -150,6 +150,9 @@ impl RetroCore for Tracked {
     fn set_lid(&mut self, shut: bool) {
         self.core.set_lid(shut);
     }
+    fn set_throttle(&mut self, throttle: slot_retro::Throttle) {
+        self.core.set_throttle(throttle);
+    }
     fn takes_xy(&self) -> bool {
         self.core.takes_xy()
     }
