@@ -240,6 +240,8 @@ struct Shared {
     lid: AtomicBool,
     speed: AtomicU8,
     observed: AtomicU8,
+    /// slotPlus: the LCD icons a WonderSwan game last had lit.
+    lcd_icons: AtomicU8,
     state: AtomicU8,
     rewind: AtomicBool,
     rewind_fill: AtomicU8,
@@ -353,6 +355,7 @@ impl EmuHandle {
             lid: AtomicBool::new(false),
             speed: AtomicU8::new(Speed::Paused as u8),
             observed: AtomicU8::new(Speed::Paused as u8),
+            lcd_icons: AtomicU8::new(0),
             state: AtomicU8::new(CoreState::Loading as u8),
             rewind: AtomicBool::new(false),
             rewind_fill: AtomicU8::new(0),
@@ -547,6 +550,11 @@ impl EmuHandle {
 
     pub fn published_count(&self) -> u64 {
         self.shared.published.load(Ordering::Relaxed)
+    }
+
+    /// slotPlus: the LCD icons the WonderSwan game last had lit, 0 for any other core.
+    pub fn lcd_icons(&self) -> u8 {
+        self.shared.lcd_icons.load(Ordering::Relaxed)
     }
 
     pub fn observed_speed(&self) -> Speed {
@@ -951,6 +959,9 @@ impl Worker {
                     core.set_frame_skip(false);
                     core.run_frame(ButtonMask(0));
                     self.publish(core.video_xrgb8888(), core.frame_size());
+                    self.shared
+                        .lcd_icons
+                        .store(core.lcd_icons(), Ordering::Relaxed);
                 }
                 self.shared
                     .rewind_fill
@@ -1095,6 +1106,9 @@ impl Worker {
                 }
                 flush_outbound(&mut transport, &link);
                 self.publish(core.video_xrgb8888(), core.frame_size());
+                self.shared
+                    .lcd_icons
+                    .store(core.lcd_icons(), Ordering::Relaxed);
                 self.frame_done(served);
 
                 since_snapshot += 1;
@@ -1242,6 +1256,9 @@ impl Worker {
                     core.set_frame_skip(false);
                     core.run_frame(ButtonMask(0));
                     self.publish(core.video_xrgb8888(), core.frame_size());
+                    self.shared
+                        .lcd_icons
+                        .store(core.lcd_icons(), Ordering::Relaxed);
                     let _ = core.take_audio();
                     if let Err(e) = core.unserialize(&state) {
                         eprintln!("slot: refresh: {e}");

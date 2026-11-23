@@ -18,6 +18,7 @@ mod rumble;
 pub use achievement_memory::{AchievementMemory, AchievementRegion, ACHIEVEMENT_RAM_SIZE};
 pub use core::{
     mask_for, AvInfo, ButtonMask, CoreError, Pointer, RetroCore, Throttle, WsLayout, GBA_H, GBA_W,
+    LCD_HORIZONTAL, LCD_VERTICAL,
 };
 pub use dsperate::{ds_buttons, DsperateCore, DS_H, DS_W};
 pub use ffi::{

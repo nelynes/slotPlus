@@ -1,0 +1,18 @@
+diff --git a/mednafen/wswan/gfx.c b/mednafen/wswan/gfx.c
+index d1d5ee7..eadfdf2 100644
+--- a/mednafen/wswan/gfx.c
++++ b/mednafen/wswan/gfx.c
+@@ -57,6 +57,13 @@ static uint8 FGXScroll, FGYScroll;
+ static uint8 LCDControl, LCDIcons;
+ static uint8 LCDVtotal;
+ 
++/* slotPlus: the LCD icons (port 0x15) the game has lit, so the frontend can
++ * see which way the game asks to be held. Bit 1 is vertical, bit 2 horizontal. */
++uint8 retro_slot_wswan_lcd_icons(void)
++{
++   return LCDIcons;
++}
++
+ static uint8 BTimerControl;
+ static uint16 HBTimerPeriod;
+ static uint16 VBTimerPeriod;

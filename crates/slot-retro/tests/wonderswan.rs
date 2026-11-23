@@ -110,10 +110,13 @@ mod vertical {
     }
 
     #[test]
-    fn select_does_nothing_in_a_horizontal_game_so_it_cannot_be_turned() {
+    fn select_reaches_a_horizontal_game_so_its_vertical_stages_can_be_turned() {
         let out = ButtonMask(ButtonMask::SELECT | ButtonMask::START | ButtonMask::A)
             .wonderswan_for(WsLayout::Horizontal);
-        assert_eq!(out.0, ButtonMask::START | ButtonMask::A);
+        assert_eq!(
+            out.0,
+            ButtonMask::SELECT | ButtonMask::START | ButtonMask::A
+        );
     }
 
     #[test]

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- **WonderSwan games that turn on their side partway through.** Klonoa turns some stages (from 1-3) on their side and lights the WonderSwan's vertical icon, but the buttons stayed horizontal. They now turn with the stage, as in a vertical game: the D-pad is the Y pad, the face buttons the X pad, L1 is A and R1 is B. SELECT also works in horizontal games now, turning the picture upright at 2x for anyone who'd rather not turn the handheld.
+
 ## [1.16.0-plus3.1.1](https://github.com/nelynes/slotPlus/releases/tag/v1.16.0-plus3.1.1)
 
 A small fix to slotPlus 3.1, in both editions. Update from Settings → Online → Check for Updates, or replace the `System` folder on your card.
