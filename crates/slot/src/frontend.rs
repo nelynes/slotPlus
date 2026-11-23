@@ -1094,6 +1094,7 @@ impl Frontend {
             .map(|v| v.map(&mut up))
             .collect();
         let descriptions = faces.descriptions.map(&mut up);
+        let help = faces.help.into_iter().map(&mut up).collect();
         let mut pack_legend = |faces: [UndoFace; 8]| {
             faces.map(|f| {
                 let (tex, w, _) = up(f);
@@ -1156,6 +1157,7 @@ impl Frontend {
             legend,
             legend_light,
             descriptions,
+            help,
         });
         app.set_core_part_faces(sockets, chips, blank, shadow);
         app.set_core_gb_part_faces(gb_sockets, gb_chips, gb_blank);
@@ -1755,6 +1757,7 @@ struct UiFaces {
     quick_legend: [UndoFace; 8],
     quick_legend_light: [UndoFace; 8],
     descriptions: [UndoFace; 2],
+    help: Vec<UndoFace>,
     sockets: Vec<CartFace>,
     chips: Vec<CartFace>,
     blank_chip: CartFace,
@@ -1823,6 +1826,10 @@ impl UiFaces {
                 quick_description_face(&["Supports single button and MENU+button."]),
                 quick_description_face(&["Supports single button and two button chords."]),
             ],
+            help: QuickRow::ALL
+                .iter()
+                .map(|r| quick_description_face(&[r.help()]))
+                .collect(),
             sockets: slot_store::Core::choices(slot_store::Platform::Gba)
                 .iter()
                 .map(|c| socket_face(*c))

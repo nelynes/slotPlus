@@ -2,7 +2,7 @@
 
 Where everything is in Settings from slotPlus 3.1, what moved from 3.0, and how the two editions, **slotPlus Core** and **slotPlus Ultra**, differ.
 
-MENU opens Settings on the shelf, and the in-game menu in a game, as in Slot.
+MENU opens Settings on the shelf, and the in-game menu in a game, as in Slot. A line just above the slot says what the chosen row does.
 
 - [Which edition is for you?](#which-edition-is-for-you)
 - [Where things moved in 3.1](#where-things-moved-in-31)
@@ -57,7 +57,7 @@ Nothing is stored differently, so every choice you made on 3.0 carries over.
 | Shaders, bezels and the rest of the picture | Screen | **Screen**, which now only shows a page for systems with games on the card |
 | Button mapping and shortcuts | Controls | **Controls**, unchanged |
 
-The in-game menu (MENU in a game) hasn't changed.
+The in-game menu (MENU in a game) hasn't changed, except that it has the same line of help.
 
 ---
 

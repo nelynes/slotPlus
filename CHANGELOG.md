@@ -39,7 +39,9 @@ The top level is now **Look, Library, Play, Screen, Controls, Online and System*
 | System → Date & Time, Nickname, Lid Power Off, Battery Display, About | **System**, unchanged |
 | Screen, Controls | Unchanged, except that **Screen** now shows a page only for the systems with games on the card |
 
-The menu in a game is as it was. The [settings guide](SETTINGS.md) lists every page and row.
+**Help in the menus.** A line just above the slot says, in a sentence, what the chosen row does, on every page of Settings and in the menu in a game.
+
+The menu in a game is otherwise as it was. The [settings guide](SETTINGS.md) lists every page and row.
 
 ### A PokeDaisy shelf
 

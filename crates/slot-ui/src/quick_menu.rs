@@ -1602,6 +1602,8 @@ pub(crate) const LEGEND_Y: f32 = 427.0;
 pub(crate) const DIM_INK: [u8; 3] = [0x9a, 0x9a, 0xa4];
 const DESCRIPTION_PX: f32 = 16.0;
 const DESCRIPTION_GAP: f32 = 8.0;
+/// slotPlus: the room the help line takes above the slot, its gap included.
+const HELP_H: f32 = 23.0 + DESCRIPTION_GAP; // a line of DESCRIPTION_PX * 1.4, rounded up
 const PANEL_GAP: f32 = 12.0;
 const WARNING_PX: f32 = 22.0;
 const WARNING_GAP: u32 = 10;
@@ -2240,6 +2242,8 @@ pub struct QuickMenuFaces {
     pub legend: [(TexId, u32); 8],
     pub legend_light: [(TexId, u32); 8],
     pub descriptions: [(TexId, u32, u32); 2],
+    /// slotPlus: each row's help line (`QuickRow::help`), by `QuickRow::index`.
+    pub help: Vec<(TexId, u32, u32)>,
 }
 
 pub struct QuickMenu<'a> {
@@ -2591,7 +2595,8 @@ pub fn quick_row_top_at(
     };
     let rows = QUICK_PITCH * held as f32;
     let top = match row.page() == QuickRow::PLAY_SCREEN {
-        true => canvas.h - MOUTH_H - PANEL_GAP - rows,
+        // slotPlus: above the help line, which sits just over the slot.
+        true => canvas.h - MOUTH_H - HELP_H - PANEL_GAP - rows,
         false => (legend_y(canvas) - rows) / 2.0,
     };
     top + QUICK_PITCH * (row.position(hidden) as f32 - start as f32)
