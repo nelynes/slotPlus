@@ -177,5 +177,5 @@ the emulated console's RAM while a game ran; like any RAM dump they hold a
 few kilobytes the game copied there from its ROM. They aren't in the app.
 
 slotPlus shows PokeDaisy's app icon (linux/icon.png in PokeDaisy's source) as a small
-sticker on the PokeDaisy shelf's carts on Favorites and in collections, with Lidor
-Itzhari's permission. It is in slotPlus's source as assets/pokedaisy_sticker.png.
+sticker on the PokeDaisy shelf's carts on Recents, Favorites, collections and All
+Games, with Lidor Itzhari's permission. It is in slotPlus's source as assets/pokedaisy_sticker.png.

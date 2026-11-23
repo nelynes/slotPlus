@@ -56,7 +56,7 @@ The menu in a game is otherwise as it was. The [settings guide](SETTINGS.md) lis
 - Each game keeps its own system's cart and its own save, so moving a game between shelves keeps its progress.
 - Gamebit shows the folder with all its games, and with Cart Slot set to Bespoke the shelf has a slot of its own, a meadow with daisies.
 - In Ultra, its games earn RetroAchievements (softcore) from the same sets as on their own shelves. They pause while PokeDaisy's Flight Area is Anywhere, as PokeDaisy's own apps do, with a pill in the corner saying so.
-- On Favorites and in collections, a game from the PokeDaisy shelf wears PokeDaisy's own icon as a sticker in the corner of its label, so it can be told from the same game favorited from its own system's shelf.
+- On Recents, Favorites, collections and All Games, a game from the PokeDaisy shelf wears PokeDaisy's own icon as a sticker in the corner of its label, so it can be told from the same game from its own system's shelf.
 - PokeDaisy is told when slotPlus fast forwards or rewinds, so its expanded view keeps up while fast forwarding and its shortcuts stand down while rewinding.
 - Based on PokeDaisy by Lidor Itzhari, as the About page now says under its sticker.
 
