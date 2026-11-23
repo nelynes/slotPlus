@@ -15,7 +15,7 @@ Both editions play every system: Game Boy Advance, Game Boy and Game Boy Color, 
   - **On slotPlus 3.0,** Check for Updates brings you Ultra (the release's `slot-plus.zip` is Ultra under its old name), so the Game Gear, NeoGeo Pocket, TurboGrafx-16 and DS shelves are yours now too: put games in `Games/GG/`, `Games/NGP/`, `Games/TG16/` and `Games/NDS/`.
 - **slotPlus Core** (`slot-core.zip`) is for people who want to put games on the card and play, closer to a real handheld: a gift for someone who won't open a menu, a handheld for a child, or for anyone who'd rather not tinker. Each system comes set up the way most people end up setting it (the bespoke cart slot for every shelf, colour correction on, Game Boy games filling the screen, 4× fast forward, games picking up where you left them), and most choices are a plain On or Off:
   - **Shelf Life** is one switch for shrink wrap, dust and wear.
-  - **Screen** is one Shader row for each system, Clean or LCD.
+  - **Screen** is one Shader row for each system, Clean or Retro.
   - **Kid Mode** is Off or One Shelf.
   - **Left out:** RetroAchievements, RomM, Gamebit, Recents and Collections, in-game save states, screenshots, guides and undo, and the finer picture settings (blue light, saturation, contrast, overlays, frame blending and bezels). The shortcuts to save and load a state, and to take a screenshot, still work.
   - Fetch Missing Art stays, for labels.
