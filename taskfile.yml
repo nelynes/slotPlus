@@ -802,7 +802,8 @@ tasks:
       - fsck:exfat
       - task: build:device
         vars:
-          FEATURES: '{{if eq .EDITION "core"}}core{{end}}'
+          # Ultra carries RomM (from 3.2); Core leaves it out.
+          FEATURES: '{{if eq .EDITION "core"}}core{{else}}romm{{end}}'
       - web
     vars:
       OUT: '{{.OUT | default "dist-device"}}'

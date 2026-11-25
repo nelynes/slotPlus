@@ -72,13 +72,15 @@ fn romm_row_reads_offline_when_paired_and_not_yet_heard_from() {
 }
 
 #[test]
-fn tools_lists_romm_after_gamebit() {
+fn library_lists_romm_after_gamebit() {
     assert_eq!(
         QuickRow::NETWORK.map(QuickRow::label),
         [
+            "Shelf Mode",
+            "Recents",
+            "Fetch Missing Art",
             "Gamebit",
             "RomM",
-            "Fetch Missing Art",
             #[cfg(feature = "nds")]
             "Fetch Box Art",
         ]
